@@ -61,28 +61,6 @@ cd platforms/raspberrypi4
 make
 ```
 
-### Raspberry Pi 2 & 3 - Raspbian (CLI)
-
-- Install and configure [SDL 2](http://www.libsdl.org/download-2.0.php) for development:
-
-``` shell
-sudo apt-get update
-sudo apt-get upgrade
-sudo apt-get install build-essential libfreeimage-dev libopenal-dev libpango1.0-dev libsndfile-dev libudev-dev libasound2-dev libjpeg-dev libtiff5-dev libwebp-dev automake
-cd ~
-wget https://www.libsdl.org/release/SDL2-2.0.12.tar.gz
-tar zxvf SDL2-2.0.12.tar.gz
-cd SDL2-2.0.12 && mkdir build && cd build
-../configure --disable-pulseaudio --disable-esd --disable-video-mir --disable-video-wayland --disable-video-x11 --disable-video-opengl --host=armv7l-raspberry-linux-gnueabihf
-make -j 4
-sudo make install
-```
-
-- Install libconfig library dependencies for development: `sudo apt-get install libconfig++-dev`
-- Use `make -j 4` in the `platforms/raspberrypi3/x64/` folder to build the project.
-- Use `export SDL_AUDIODRIVER=ALSA` before running the emulator for the best performance.
-- Gearcoleco generates a `gearcoleco.cfg` configuration file where you can customize keyboard and gamepads. Key codes are from [SDL](https://wiki.libsdl.org/SDL_Keycode).
-
 ## Contributors
 
 Thank you to all the people who have already contributed to Gearcoleco!
