@@ -22,19 +22,23 @@
 #include <fstream>
 #include "Memory.h"
 #include "Processor.h"
+#include "Cartridge.h"
 
-Memory::Memory()
+Memory::Memory(Cartridge* pCartridge)
 {
+    m_pCartridge = pCartridge;
     InitPointer(m_pProcessor);
     InitPointer(m_pDisassembledROMMap);
     InitPointer(m_pRunToBreakpoint);
     InitPointer(m_pBios);
+    InitPointer(m_pRam);
     m_bBiosLoaded = false;
 }
 
 Memory::~Memory()
 {
     SafeDeleteArray(m_pBios);
+    SafeDeleteArray(m_pRam);
 
     if (IsValidPointer(m_pDisassembledROMMap))
     {
@@ -53,6 +57,9 @@ void Memory::SetProcessor(Processor* pProcessor)
 
 void Memory::Init()
 {
+    m_pRam = new u8[0x0400];
+    m_pBios = new u8[0x2000];
+
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
     m_pDisassembledROMMap = new stDisassembleRecord*[MAX_ROM_SIZE];
     for (int i = 0; i < MAX_ROM_SIZE; i++)
@@ -72,10 +79,10 @@ void Memory::Init()
 void Memory::Reset()
 {
     // TODO
-    // for (int i = 0; i < 0x10000; i++)
-    // {
-    //     m_pMap[i] = 0x00;
-    // }
+    for (int i = 0; i < 0x400; i++)
+    {
+        m_pRam[i] = rand() % 256;
+    }
 }
 
 void Memory::SaveState(std::ostream& stream)
@@ -114,6 +121,8 @@ void Memory::LoadBios(const char* szFilePath)
 {
     using namespace std;
 
+    m_bBiosLoaded = false;
+
     ifstream file(szFilePath, ios::in | ios::binary | ios::ate);
 
     if (file.is_open())
@@ -126,13 +135,11 @@ void Memory::LoadBios(const char* szFilePath)
             return;
         }
 
-        SafeDelete(m_pBios);
-
-        m_pBios = new u8[size];
-
         file.seekg(0, ios::beg);
         file.read(reinterpret_cast<char*>(m_pBios), size);
         file.close();
+
+        m_bBiosLoaded = true;
 
         Log("BIOS %s loaded (%d bytes)", szFilePath, size);
     }
@@ -145,6 +152,11 @@ void Memory::LoadBios(const char* szFilePath)
 u8* Memory::GetBios()
 {
     return m_pBios;
+}
+
+bool Memory::IsBiosLoaded()
+{
+    return m_bBiosLoaded;
 }
 
 void Memory::CheckBreakpoints(u16 address, bool write)

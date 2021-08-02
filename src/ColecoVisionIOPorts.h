@@ -34,8 +34,8 @@ public:
     ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory);
     ~ColecoVisionIOPorts();
     void Reset();
-    u8 DoInput(u8 port);
-    void DoOutput(u8 port, u8 value);
+    u8 In(u8 port);
+    void Out(u8 port, u8 value);
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
 private:
@@ -52,15 +52,65 @@ private:
 #include "Cartridge.h"
 #include "Memory.h"
 
-inline u8 ColecoVisionIOPorts::DoInput(u8 port)
+inline u8 ColecoVisionIOPorts::In(u8 port)
 {
+    switch(port & 0xE0) {
+        case 0xA0:
+        {
+            if (port & 0x01)
+            {
+                return m_pVideo->GetStatusFlags();
+            }
+            else
+            {
+                return m_pVideo->GetDataPort();
+            }
+            break;
+        }
+        case 0xE0:
+        {
+            return 0xFF;
+        }
+    }
+
     Log("--> ** Attempting to read from port $%X", port);
+
     return 0xFF;
 }
 
-inline void ColecoVisionIOPorts::DoOutput(u8 port, u8 value)
+inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
 {
-    Log("--> ** Output to port $%X: %X", port, value);
+    switch(port & 0xE0) {
+        case 0x80:
+        {
+            break;
+        }
+        case 0xA0:
+        {
+            if (port & 0x01)
+            {
+                m_pVideo->WriteControl(value);
+            }
+            else
+            {
+                m_pVideo->WriteData(value);
+            }
+            break;
+        }
+        case 0xC0:
+        {
+            break;
+        }
+        case 0xE0:
+        {
+            m_pAudio->WriteAudioRegister(value);
+            break;
+        }
+        default:
+        {
+            Log("--> ** Output to port $%X: %X", port, value);
+        }
+    }
 }
 
 #endif	/* COLECOVISIONIOPORTS_H */

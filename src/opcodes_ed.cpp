@@ -374,7 +374,7 @@ void Processor::OPCodeED0x71()
 {
     // OUT (C),0*
     UndocumentedOPCode();
-    m_pIOPorts->DoOutput(BC.GetLow(), 0);
+    m_pIOPorts->Out(BC.GetLow(), 0);
 }
 
 void Processor::OPCodeED0x72()

@@ -376,7 +376,7 @@ inline void Processor::OPCodes_RET_Conditional(bool condition)
 
 inline void Processor::OPCodes_IN_C(u8* reg)
 {
-    u8 result = m_pIOPorts->DoInput(BC.GetLow());
+    u8 result = m_pIOPorts->In(BC.GetLow());
     if (IsValidPointer(reg))
         *reg = result;
     IsSetFlag(FLAG_CARRY) ? SetFlag(FLAG_CARRY) : ClearAllFlags();
@@ -389,7 +389,7 @@ inline void Processor::OPCodes_IN_C(u8* reg)
 inline void Processor::OPCodes_INI()
 {
     WZ.SetValue(BC.GetValue() + 1);
-    u8 result = m_pIOPorts->DoInput(BC.GetLow());
+    u8 result = m_pIOPorts->In(BC.GetLow());
     m_pMemory->Write(HL.GetValue(), result);
     OPCodes_DEC(BC.GetHighRegister());
     HL.Increment();
@@ -416,7 +416,7 @@ inline void Processor::OPCodes_INI()
 inline void Processor::OPCodes_IND()
 {
     WZ.SetValue(BC.GetValue() - 1);
-    u8 result = m_pIOPorts->DoInput(BC.GetLow());
+    u8 result = m_pIOPorts->In(BC.GetLow());
     m_pMemory->Write(HL.GetValue(), result);
     OPCodes_DEC(BC.GetHighRegister());
     HL.Decrement();
@@ -442,13 +442,13 @@ inline void Processor::OPCodes_IND()
 
 inline void Processor::OPCodes_OUT_C(u8* reg)
 {
-    m_pIOPorts->DoOutput(BC.GetLow(), *reg);
+    m_pIOPorts->Out(BC.GetLow(), *reg);
 }
 
 inline void Processor::OPCodes_OUTI()
 {
     u8 result = m_pMemory->Read(HL.GetValue());
-    m_pIOPorts->DoOutput(BC.GetLow(), result);
+    m_pIOPorts->Out(BC.GetLow(), result);
     OPCodes_DEC(BC.GetHighRegister());
     WZ.SetValue(BC.GetValue() + 1);
     HL.Increment();
@@ -475,7 +475,7 @@ inline void Processor::OPCodes_OUTI()
 inline void Processor::OPCodes_OUTD()
 {
     u8 result = m_pMemory->Read(HL.GetValue());
-    m_pIOPorts->DoOutput(BC.GetLow(), result);
+    m_pIOPorts->Out(BC.GetLow(), result);
     OPCodes_DEC(BC.GetHighRegister());
     WZ.SetValue(BC.GetValue() - 1);
     HL.Decrement();

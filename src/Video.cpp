@@ -211,7 +211,14 @@ bool Video::Tick(unsigned int clockCycles)
     {
         m_LineEvents.vintFlag = true;
         if (m_iRenderLine == (max_height + 1))
+        {
+            bool oldFlag = IsSetBit(m_VdpStatus, 7);
+
             m_VdpStatus = SetBit(m_VdpStatus, 7);
+
+            if (IsSetBit(m_VdpRegister[1], 5) && !oldFlag)
+                m_pProcessor->RequestNMI();
+        }
     }
 
     ///// RENDER /////

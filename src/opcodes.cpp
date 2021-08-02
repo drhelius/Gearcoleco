@@ -1370,7 +1370,7 @@ void Processor::OPCode0xD3()
     // OUT (n),A
     u8 port = m_pMemory->Read(PC.GetValue());
     PC.Increment();
-    m_pIOPorts->DoOutput(port, AF.GetHigh());
+    m_pIOPorts->Out(port, AF.GetHigh());
     WZ.SetLow((port + 1) & 0xFF);
     WZ.SetHigh(AF.GetHigh());
 }
@@ -1428,7 +1428,7 @@ void Processor::OPCode0xDB()
         u8 a = AF.GetHigh();
         u8 port = m_pMemory->Read(PC.GetValue());
         PC.Increment();
-        AF.SetHigh(m_pIOPorts->DoInput(port));
+        AF.SetHigh(m_pIOPorts->In(port));
         WZ.SetValue((a << 8) | (port + 1));
         m_iTStates -= 10;
         m_bInputLastCycle = false;

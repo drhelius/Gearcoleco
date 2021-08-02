@@ -20,19 +20,46 @@
 #ifndef MEMORY_INLINE_H
 #define	MEMORY_INLINE_H
 
+#include "Cartridge.h"
+
 inline u8 Memory::Read(u16 address)
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
     CheckBreakpoints(address, false);
     #endif
 
-    // TODO
-    // if (address < 0xC000)
-    //     return 0xFF;
-    // else
-    //     return m_pBootromMemoryRule->PerformRead(address);
+    switch (address & 0xE000)
+    {
+        case 0x0000:
+        {
+            return m_pBios[address];
+        }
+        case 0x2000:
+        case 0x4000:
+        {
+            Log("--> ** Attempting to read from expansion: %X", address);
+            return 0xFF;
+        }
+        case 0x6000:
+        {
+            return m_pRam[address & 0x03FF];
+        }
+        case 0x8000:
+        case 0xA000:
+        case 0xC000:
+        case 0xE000:
+        {
+            u8* pRom = m_pCartridge->GetROM();
+            int romSize = m_pCartridge->GetROMSize();
 
-    return 0xFF;
+            if (address >= (romSize + 0x8000))
+                return 0xFF;
+
+            return pRom[address & 0x7FFF];
+        }
+        default:
+            return 0xFF;
+    }
 }
 
 inline void Memory::Write(u16 address, u8 value)
@@ -41,13 +68,33 @@ inline void Memory::Write(u16 address, u8 value)
     CheckBreakpoints(address, true);
     #endif
 
-    // TODO
-    // if (m_MediaSlot == m_DesiredMediaSlot)
-    //     m_pCurrentMemoryRule->PerformWrite(address, value);
-    // else if (m_MediaSlot == BiosSlot)
-    //     m_pBootromMemoryRule->PerformWrite(address, value);
-    // else if (address >= 0xC000)
-    //     m_pBootromMemoryRule->PerformWrite(address, value);
+    switch (address & 0xE000)
+    {
+        case 0x0000:
+        {
+            Log("--> ** Attempting to write on BIOS: %X %X", address, value);
+            break;
+        }
+        case 0x2000:
+        case 0x4000:
+        {
+            Log("--> ** Attempting to write on expansion: %X %X", address, value);
+            break;
+        }
+        case 0x6000:
+        {
+            m_pRam[address & 0x03FF] = value;
+            break;
+        }
+        case 0x8000:
+        case 0xA000:
+        case 0xC000:
+        case 0xE000:
+        {
+            Log("--> ** Attempting to write on ROM: %X %X", address, value);
+            break;
+        }
+    }
 }
 
 inline Memory::stDisassembleRecord** Memory::GetDisassembledROMMemoryMap()

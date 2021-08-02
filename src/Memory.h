@@ -24,6 +24,7 @@
 #include <vector>
 
 class Processor;
+class Cartridge;
 
 class Memory
 {
@@ -50,7 +51,7 @@ public:
     };
 
 public:
-    Memory();
+    Memory(Cartridge* pCartridge);
     ~Memory();
     void SetProcessor(Processor* pProcessor);
     void Init();
@@ -66,6 +67,7 @@ public:
     void SetRunToBreakpoint(stDisassembleRecord* pBreakpoint);
     void LoadBios(const char* szFilePath);
     u8* GetBios();
+    bool IsBiosLoaded();
     void ResetRomDisassembledMemory();
 
 private:
@@ -73,12 +75,14 @@ private:
 
 private:
     Processor* m_pProcessor;
+    Cartridge* m_pCartridge;
     stDisassembleRecord** m_pDisassembledROMMap;
     std::vector<stDisassembleRecord*> m_BreakpointsCPU;
     std::vector<stMemoryBreakpoint> m_BreakpointsMem;
     stDisassembleRecord* m_pRunToBreakpoint;
     bool m_bBiosLoaded;
     u8* m_pBios;
+    u8* m_pRam;
 };
 
 #include "Memory_inline.h"
