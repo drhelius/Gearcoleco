@@ -120,7 +120,7 @@ void Memory::LoadBios(const char* szFilePath)
     {
         int size = static_cast<int> (file.tellg());
 
-        if (size != 0x4000)
+        if (size != 0x2000)
         {
             Log("Incorrect BIOS size %d: %s", size, szFilePath);
             return;
