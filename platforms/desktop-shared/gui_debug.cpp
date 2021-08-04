@@ -611,7 +611,7 @@ static void debug_window_disassembler(void)
 
                 ImGui::SameLine();
                 ImGui::TextColored(color_addr, "%02X:%04X ", vec[item].record->bank, vec[item].record->address);
-                
+
                 if (show_mem)
                 {
                     ImGui::SameLine();
@@ -628,7 +628,7 @@ static void debug_window_disassembler(void)
                 {
                     ImGui::TextColored(yellow, "  ");
                 }
-                
+
                 ImGui::SameLine();
                 ImGui::TextColored(color_name, "%s", vec[item].record->name);
 
