@@ -314,82 +314,28 @@ void Processor::UndocumentedOPCode()
 
 bool Processor::Disassemble(u16 address)
 {
-    Memory::stDisassembleRecord** romMap = m_pMemory->GetDisassembledROMMemoryMap();
+    Memory::stDisassembleRecord* record = m_pMemory->GetDisassembleRecord(address, true);
 
-    Memory::stDisassembleRecord** map = NULL;
-
-    int offset = address;
-    int bank = 0;
-    bool rom = false;
-
-    //TODO
-
-    switch (address & 0xC000)
+    if (!IsValidPointer(record))
     {
-    case 0x0000:
-        //bank = m_pMemory->GetCurrentRule()->GetBank(0);
-        offset = (0x4000 * bank) + address;
-        map = romMap;
-        rom = true;
-        break;
-    case 0x4000:
-        //bank = m_pMemory->GetCurrentRule()->GetBank(1);
-        offset = (0x4000 * bank) + (address & 0x3FFF);
-        map = romMap;
-        rom = true;
-        break;
-    case 0x8000:
-        //bank = m_pMemory->GetCurrentRule()->GetBank(2);
-        offset = (0x4000 * bank) + (address & 0x3FFF);
-        map = romMap;
-        rom = true;
-        break;
-    default:
-        //map = memoryMap;
-        map = romMap;
-        rom = false;
-    }
-
-    if (!IsValidPointer(map[offset]))
-    {
-        map[offset] = new Memory::stDisassembleRecord;
-
-        if (rom)
-        {
-            map[offset]->address = offset & 0x3FFF;
-            map[offset]->bank = offset >> 14;
-        }
-        else
-        {
-            map[offset]->address = offset;
-            map[offset]->bank = 0;
-        }
-
-        map[offset]->name[0] = 0;
-        map[offset]->bytes[0] = 0;
-        map[offset]->size = 0;
-        for (int i = 0; i < 4; i++)
-            map[offset]->opcodes[i] = 0;
-        map[offset]->jump = false;
-        map[offset]->jump_address = 0;
+        return false;
     }
 
     u8 opcodes[6];
     bool changed = false;
-    int maxSize = std::min(map[offset]->size, 4);
+    int maxSize = std::min(record->size, 4);
 
     for (int i = 0; i < maxSize; i++)
     {
         opcodes[i] = m_pMemory->Read(address + i);
 
-        if (opcodes[i] != map[offset]->opcodes[i])
+        if (opcodes[i] != record->opcodes[i])
             changed = true;
     }
 
-    if ((map[offset]->size == 0) || changed)
+    if ((record->size == 0) || changed)
     {
-        map[offset]->bank = bank;
-        map[offset]->address = address;
+        record->address = address;
 
         std::vector<u8> bytes; 
         u16 opcode_temp_addr = address;
@@ -449,25 +395,25 @@ bool Processor::Disassemble(u16 address)
                 info = kOPCodeNames[opcode];
         }
 
-        map[offset]->size = info.size + (first > 1 ? (first - 1) : 0);
-        map[offset]->bytes[0] = 0;
+        record->size = info.size + (first > 1 ? (first - 1) : 0);
+        record->bytes[0] = 0;
 
         for (int i = 0; i < (int)bytes.size(); i++)
         {
-            if (i < map[offset]->size)
+            if (i < record->size)
             {
                 char value[8];
                 sprintf(value, "%02X", bytes[i]);
-                strcat(map[offset]->bytes, value);
-                strcat(map[offset]->bytes, " ");
+                strcat(record->bytes, value);
+                strcat(record->bytes, " ");
             }
             else if (i < 4)
             {
-                strcat(map[offset]->bytes, "   ");
+                strcat(record->bytes, "   ");
             }
 
             if (i < 4)
-                map[offset]->opcodes[i] = bytes[i];
+                record->opcodes[i] = bytes[i];
         }
 
         first += prefixed ? 1 : 0;
@@ -475,32 +421,32 @@ bool Processor::Disassemble(u16 address)
         switch (info.type)
         {
             case 0:
-                strcpy(map[offset]->name, info.name);
+                strcpy(record->name, info.name);
                 break;
             case 1:
-                sprintf(map[offset]->name, info.name, bytes[first]);
+                sprintf(record->name, info.name, bytes[first]);
                 break;
             case 2:
-                sprintf(map[offset]->name, info.name, bytes[first + 1]);
+                sprintf(record->name, info.name, bytes[first + 1]);
                 break;
             case 3:
-                map[offset]->jump = true;
-                map[offset]->jump_address = (bytes[first + 2] << 8) | bytes[first + 1];
-                sprintf(map[offset]->name, info.name, map[offset]->jump_address);
+                record->jump = true;
+                record->jump_address = (bytes[first + 2] << 8) | bytes[first + 1];
+                sprintf(record->name, info.name, record->jump_address);
                 break;
             case 4:
-                sprintf(map[offset]->name, info.name, (s8)bytes[first + 1]);
+                sprintf(record->name, info.name, (s8)bytes[first + 1]);
                 break;
             case 5:
-                map[offset]->jump = true;
-                map[offset]->jump_address = address + info.size + (s8)bytes[first + 1];
-                sprintf(map[offset]->name, info.name, map[offset]->jump_address, (s8)bytes[first + 1]);
+                record->jump = true;
+                record->jump_address = address + info.size + (s8)bytes[first + 1];
+                sprintf(record->name, info.name, record->jump_address, (s8)bytes[first + 1]);
                 break;
             case 6:
-                sprintf(map[offset]->name, info.name, (s8)bytes[first + 1], bytes[first + 2]);
+                sprintf(record->name, info.name, (s8)bytes[first + 1], bytes[first + 2]);
                 break;
             default:
-                strcpy(map[offset]->name, "PARSE ERROR");
+                strcpy(record->name, "PARSE ERROR");
         }
     }
 
@@ -509,7 +455,7 @@ bool Processor::Disassemble(u16 address)
 
     if (IsValidPointer(runtobreakpoint))
     {
-        if (runtobreakpoint == map[offset])
+        if (runtobreakpoint == record)
         {
             m_pMemory->SetRunToBreakpoint(NULL);
             return true;
@@ -523,7 +469,7 @@ bool Processor::Disassemble(u16 address)
 
         for (long unsigned int b = 0; b < size; b++)
         {
-            if ((*breakpoints)[b] == map[offset])
+            if ((*breakpoints)[b] == record)
             {
                 return true;
             }

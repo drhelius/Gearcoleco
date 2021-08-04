@@ -216,27 +216,11 @@ static void debug_window_memory(void)
     if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
     {
         //TODO
-        /*
-        if (ImGui::BeginTabItem("PAGE0"))
-        {
-            ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetCurrentRule()->GetPage(0), 0x4000, 0);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
 
-        if (ImGui::BeginTabItem("PAGE1"))
+        if (ImGui::BeginTabItem("BIOS"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetCurrentRule()->GetPage(1), 0x4000, 0x4000);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("PAGE2"))
-        {
-            ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetCurrentRule()->GetPage(2), 0x4000, 0x8000);
+            mem_edit.DrawContents(memory->GetBios(), 0x2000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -244,11 +228,19 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetMemoryMap() + 0xC000, 0x4000, 0xC000);
+            mem_edit.DrawContents(memory->GetRam(), 0x400, 0x6000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
-*/
+
+        if (ImGui::BeginTabItem("ROM"))
+        {
+            ImGui::PushFont(gui_default_font);
+            mem_edit.DrawContents(cart->GetROM(), 0x8000, 0x8000);
+            ImGui::PopFont();
+            ImGui::EndTabItem();
+        }
+
         if (ImGui::BeginTabItem("VRAM"))
         {
             ImGui::PushFont(gui_default_font);
@@ -284,8 +276,6 @@ static void debug_window_disassembler(void)
     Memory* memory = core->GetMemory();
     std::vector<Memory::stDisassembleRecord*>* breakpoints_cpu = memory->GetBreakpointsCPU();
     std::vector<Memory::stMemoryBreakpoint>* breakpoints_mem = memory->GetBreakpointsMem();
-    Memory::stDisassembleRecord** rom_map = memory->GetDisassembledROMMemoryMap();
-    Memory::stDisassembleRecord** map = NULL;
 
     int pc = proc_state->PC->GetValue();
 
@@ -304,10 +294,12 @@ static void debug_window_disassembler(void)
     static bool follow_pc = true;
     static bool show_mem = true;
     static bool show_symbols = true;
+    static bool show_segment = true;
 
     ImGui::Checkbox("Follow PC", &follow_pc); ImGui::SameLine();
-    ImGui::Checkbox("Show Memory", &show_mem);  ImGui::SameLine();
-    ImGui::Checkbox("Show Symbols", &show_symbols);
+    ImGui::Checkbox("Opcodes", &show_mem);  ImGui::SameLine();
+    ImGui::Checkbox("Symbols", &show_symbols);  ImGui::SameLine();
+    ImGui::Checkbox("Segments", &show_segment);
 
     ImGui::Separator();
 
@@ -513,37 +505,13 @@ static void debug_window_disassembler(void)
         
         for (int i = 0; i < 0x10000; i++)
         {
-            int offset = i;
-            int bank = 0;
-// TODO
-            switch (i & 0xC000)
-            {
-            case 0x0000:
-                //bank = memory->GetCurrentRule()->GetBank(0);
-                offset = (0x4000 * bank) + i;
-                map = rom_map;
-                break;
-            case 0x4000:
-                //bank = memory->GetCurrentRule()->GetBank(1);
-                offset = (0x4000 * bank) + (i & 0x3FFF);
-                map = rom_map;
-                break;
-            case 0x8000:
-                //bank = memory->GetCurrentRule()->GetBank(2);
-                offset = (0x4000 * bank) + (i & 0x3FFF);
-                map = rom_map;
-                break;
-            default:
-            
-                map = rom_map;
-                //map = memory_map;
-            }
+            Memory::stDisassembleRecord* record = memory->GetDisassembleRecord(i, false);
 
-            if (IsValidPointer(map[offset]) && (map[offset]->name[0] != 0))
+            if (IsValidPointer(record) && (record->name[0] != 0))
             {
                 for (long unsigned int s = 0; s < symbols.size(); s++)
                 {
-                    if ((symbols[s].bank == bank) && (symbols[s].address == offset) && show_symbols)
+                    if ((symbols[s].bank == record->bank) && (symbols[s].address == i) && show_symbols)
                     {
                         vec[dis_size].is_symbol = true;
                         vec[dis_size].symbol = symbols[s].text;
@@ -552,7 +520,7 @@ static void debug_window_disassembler(void)
                 }
 
                 vec[dis_size].is_symbol = false;
-                vec[dis_size].record = map[offset];
+                vec[dis_size].record = record;
 
                 if (vec[dis_size].record->address == pc)
                     pc_pos = dis_size;
@@ -630,49 +598,39 @@ static void debug_window_disassembler(void)
                 if (is_selected)
                     ImGui::SetItemDefaultFocus();
 
-                if (vec[item].is_breakpoint)
+                ImVec4 color_segment = vec[item].is_breakpoint ? red : magenta;
+                ImVec4 color_addr = vec[item].is_breakpoint ? red : cyan;
+                ImVec4 color_opcodes = vec[item].is_breakpoint ? red : gray;
+                ImVec4 color_name = vec[item].is_breakpoint ? red : white;
+
+                if (show_segment)
                 {
                     ImGui::SameLine();
-                    if (vec[item].record->address == pc)
-                    {
-                        if (show_mem)
-                            ImGui::TextColored(red, " %02X:%04X  %s", vec[item].record->bank, vec[item].record->address, vec[item].record->bytes);
-                        else
-                            ImGui::TextColored(red, " %02X:%04X ", vec[item].record->bank, vec[item].record->address);
-                        ImGui::SameLine();
-                        ImGui::TextColored(yellow, "->");
-                        ImGui::SameLine();
-                        ImGui::TextColored(red, "%s", vec[item].record->name);
-                    }
-                    else
-                    {
-                        if (show_mem)
-                            ImGui::TextColored(red, " %02X:%04X  %s    %s", vec[item].record->bank, vec[item].record->address, vec[item].record->bytes, vec[item].record->name);
-                        else
-                            ImGui::TextColored(red, " %02X:%04X:    %s", vec[item].record->bank, vec[item].record->address, vec[item].record->name);
-                    }
-                } 
-                else if (vec[item].record->address == pc)
+                    ImGui::TextColored(color_segment, "%s ", vec[item].record->segment);
+                }
+
+                ImGui::SameLine();
+                ImGui::TextColored(color_addr, "%02X:%04X ", vec[item].record->bank, vec[item].record->address);
+                
+                if (show_mem)
                 {
                     ImGui::SameLine();
-                    if (show_mem)
-                        ImGui::TextColored(yellow, " %02X:%04X  %s -> %s", vec[item].record->bank, vec[item].record->address, vec[item].record->bytes, vec[item].record->name);
-                    else
-                        ImGui::TextColored(yellow, " %02X:%04X  -> %s", vec[item].record->bank, vec[item].record->address, vec[item].record->name);
+                    ImGui::TextColored(color_opcodes, "%s ", vec[item].record->bytes);
+                }
+
+                ImGui::SameLine();
+                if (vec[item].record->address == pc)
+                {
+                    ImGui::TextColored(yellow, "->");
+                    color_name = yellow;
                 }
                 else
                 {
-                    ImGui::SameLine();
-                    ImGui::TextColored(cyan, " %02X:%04X ", vec[item].record->bank, vec[item].record->address);
-                    ImGui::SameLine();
-                    if (show_mem)
-                        ImGui::TextColored(gray, "%s   ", vec[item].record->bytes);
-                    else
-                        ImGui::TextColored(gray, "  ");
-                    
-                    ImGui::SameLine();
-                    ImGui::TextColored(white, "%s", vec[item].record->name);
+                    ImGui::TextColored(yellow, "  ");
                 }
+                
+                ImGui::SameLine();
+                ImGui::TextColored(color_name, "%s", vec[item].record->name);
 
                 ImGui::PopID();
             }
@@ -1326,7 +1284,6 @@ static void add_breakpoint_cpu(void)
     int input_len = (int)strlen(brk_address_cpu);
     u16 target_address = 0;
     int target_bank = 0;
-    int target_offset = 0;
 
     try
     {
@@ -1358,38 +1315,18 @@ static void add_breakpoint_cpu(void)
         return;
     }
 
-    Memory::stDisassembleRecord** romMap = emu_get_core()->GetMemory()->GetDisassembledROMMemoryMap();
-    Memory::stDisassembleRecord** map = NULL;
-
-    bool rom = true;
-// TODO
-    if ((target_address & 0xC000) == 0x0000)
-    {
-        target_offset = (0x4000 * target_bank) + target_address;
-        map = romMap;
-    }
-    else if ((target_address & 0xC000) == 0x4000)
-    {
-        target_offset = (0x4000 * target_bank) + (target_address & 0x3FFF);
-        map = romMap;
-    }
-    else
-    {
-        //map = memoryMap;
-        map = romMap;
-        rom = false;
-    }
+    Memory::stDisassembleRecord* record = emu_get_core()->GetMemory()->GetDisassembleRecord(target_address, true);
 
     brk_address_cpu[0] = 0;
 
     bool found = false;
     std::vector<Memory::stDisassembleRecord*>* breakpoints = emu_get_core()->GetMemory()->GetBreakpointsCPU();
 
-    if (IsValidPointer(map[target_offset]))
+    if (IsValidPointer(record))
     {
         for (long unsigned int b = 0; b < breakpoints->size(); b++)
         {
-            if ((*breakpoints)[b] == map[target_offset])
+            if ((*breakpoints)[b] == record)
             {
                 found = true;
                 break;
@@ -1399,31 +1336,7 @@ static void add_breakpoint_cpu(void)
 
     if (!found)
     {
-        if (!IsValidPointer(map[target_offset]))
-        {
-            map[target_offset] = new Memory::stDisassembleRecord;
-
-            if (rom)
-            {
-                map[target_offset]->address = target_offset & 0x3FFF;
-                map[target_offset]->bank = target_offset >> 14;
-            }
-            else
-            {
-                map[target_offset]->address = 0;
-                map[target_offset]->bank = 0;
-            }
-
-            map[target_offset]->name[0] = 0;
-            map[target_offset]->bytes[0] = 0;
-            map[target_offset]->size = 0;
-            map[target_offset]->jump = false;
-            map[target_offset]->jump_address = 0;
-            for (int i = 0; i < 4; i++)
-                map[target_offset]->opcodes[i] = 0;
-        }
-
-        breakpoints->push_back(map[target_offset]);
+        breakpoints->push_back(record);
     }
 }
 

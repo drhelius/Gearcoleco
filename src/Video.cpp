@@ -158,7 +158,7 @@ bool Video::Tick(unsigned int clockCycles)
     {
         m_LineEvents.vint = true;
         if ((m_iRenderLine == (max_height + 1)) && (IsSetBit(m_VdpRegister[1], 5)))
-            m_pProcessor->RequestINT(true);
+            m_pProcessor->RequestNMI();
     }
 
     ///// DISPLAY ON/OFF /////
@@ -212,12 +212,7 @@ bool Video::Tick(unsigned int clockCycles)
         m_LineEvents.vintFlag = true;
         if (m_iRenderLine == (max_height + 1))
         {
-            bool oldFlag = IsSetBit(m_VdpStatus, 7);
-
             m_VdpStatus = SetBit(m_VdpStatus, 7);
-
-            if (IsSetBit(m_VdpRegister[1], 5) && !oldFlag)
-                m_pProcessor->RequestNMI();
         }
     }
 
@@ -293,8 +288,7 @@ u8 Video::GetStatusFlags()
 {
     u8 ret = m_VdpStatus;
     m_bFirstByteInSequence = true;
-    m_VdpStatus = 0x00;
-    m_pProcessor->RequestINT(false);
+    m_VdpStatus &= 0x1f;
     return ret;
 }
 

@@ -53,7 +53,10 @@ inline u8 Memory::Read(u16 address)
             int romSize = m_pCartridge->GetROMSize();
 
             if (address >= (romSize + 0x8000))
+            {
+                Log("--> ** Attempting to read from outer ROM: %X. ROM Size: %X", address, romSize);
                 return 0xFF;
+            }
 
             return pRom[address & 0x7FFF];
         }
@@ -97,9 +100,24 @@ inline void Memory::Write(u16 address, u8 value)
     }
 }
 
-inline Memory::stDisassembleRecord** Memory::GetDisassembledROMMemoryMap()
+inline Memory::stDisassembleRecord** Memory::GetDisassembledRomMemoryMap()
 {
-    return m_pDisassembledROMMap;
+    return m_pDisassembledRomMap;
+}
+
+inline Memory::stDisassembleRecord** Memory::GetDisassembledRamMemoryMap()
+{
+    return m_pDisassembledRamMap;
+}
+
+inline Memory::stDisassembleRecord** Memory::GetDisassembledBiosMemoryMap()
+{
+    return m_pDisassembledBiosMap;
+}
+
+inline Memory::stDisassembleRecord** Memory::GetDisassembledExpansionMemoryMap()
+{
+    return m_pDisassembledExpansionMap;
 }
 
 #endif	/* MEMORY_INLINE_H */

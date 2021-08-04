@@ -28,9 +28,10 @@ Memory::Memory(Cartridge* pCartridge)
 {
     m_pCartridge = pCartridge;
     InitPointer(m_pProcessor);
-    InitPointer(m_pDisassembledROMMap);
-    InitPointer(m_pDisassembledRAMMap);
-    InitPointer(m_pDisassembledBIOSMap);
+    InitPointer(m_pDisassembledRomMap);
+    InitPointer(m_pDisassembledRamMap);
+    InitPointer(m_pDisassembledBiosMap);
+    InitPointer(m_pDisassembledExpansionMap);
     InitPointer(m_pRunToBreakpoint);
     InitPointer(m_pBios);
     InitPointer(m_pRam);
@@ -42,31 +43,40 @@ Memory::~Memory()
     SafeDeleteArray(m_pBios);
     SafeDeleteArray(m_pRam);
 
-    if (IsValidPointer(m_pDisassembledROMMap))
+    if (IsValidPointer(m_pDisassembledRomMap))
     {
         for (int i = 0; i < MAX_ROM_SIZE; i++)
         {
-            SafeDelete(m_pDisassembledROMMap[i]);
+            SafeDelete(m_pDisassembledRomMap[i]);
         }
-        SafeDeleteArray(m_pDisassembledROMMap);
+        SafeDeleteArray(m_pDisassembledRomMap);
     }
 
-    if (IsValidPointer(m_pDisassembledRAMMap))
+    if (IsValidPointer(m_pDisassembledRamMap))
     {
         for (int i = 0; i < 0x400; i++)
         {
-            SafeDelete(m_pDisassembledRAMMap[i]);
+            SafeDelete(m_pDisassembledRamMap[i]);
         }
-        SafeDeleteArray(m_pDisassembledRAMMap);
+        SafeDeleteArray(m_pDisassembledRamMap);
     }
 
-    if (IsValidPointer(m_pDisassembledBIOSMap))
+    if (IsValidPointer(m_pDisassembledBiosMap))
     {
         for (int i = 0; i < 0x2000; i++)
         {
-            SafeDelete(m_pDisassembledBIOSMap[i]);
+            SafeDelete(m_pDisassembledBiosMap[i]);
         }
-        SafeDeleteArray(m_pDisassembledBIOSMap);
+        SafeDeleteArray(m_pDisassembledBiosMap);
+    }
+
+    if (IsValidPointer(m_pDisassembledExpansionMap))
+    {
+        for (int i = 0; i < 0x4000; i++)
+        {
+            SafeDelete(m_pDisassembledExpansionMap[i]);
+        }
+        SafeDeleteArray(m_pDisassembledExpansionMap);
     }
 }
 
@@ -81,22 +91,28 @@ void Memory::Init()
     m_pBios = new u8[0x2000];
 
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-    m_pDisassembledROMMap = new stDisassembleRecord*[MAX_ROM_SIZE];
+    m_pDisassembledRomMap = new stDisassembleRecord*[MAX_ROM_SIZE];
     for (int i = 0; i < MAX_ROM_SIZE; i++)
     {
-        InitPointer(m_pDisassembledROMMap[i]);
+        InitPointer(m_pDisassembledRomMap[i]);
     }
 
-    m_pDisassembledRAMMap = new stDisassembleRecord*[0x400];
+    m_pDisassembledRamMap = new stDisassembleRecord*[0x400];
     for (int i = 0; i < 0x400; i++)
     {
-        InitPointer(m_pDisassembledRAMMap[i]);
+        InitPointer(m_pDisassembledRamMap[i]);
     }
 
-    m_pDisassembledBIOSMap = new stDisassembleRecord*[0x2000];
+    m_pDisassembledBiosMap = new stDisassembleRecord*[0x2000];
     for (int i = 0; i < 0x2000; i++)
     {
-        InitPointer(m_pDisassembledBIOSMap[i]);
+        InitPointer(m_pDisassembledBiosMap[i]);
+    }
+
+    m_pDisassembledExpansionMap = new stDisassembleRecord*[0x4000];
+    for (int i = 0; i < 0x4000; i++)
+    {
+        InitPointer(m_pDisassembledExpansionMap[i]);
     }
 #endif
 
@@ -178,6 +194,11 @@ void Memory::LoadBios(const char* szFilePath)
     }
 }
 
+u8* Memory::GetRam()
+{
+    return m_pRam;
+}
+
 u8* Memory::GetBios()
 {
     return m_pBios;
@@ -231,13 +252,126 @@ void Memory::ResetRomDisassembledMemory()
 
     m_BreakpointsCPU.clear();
 
-    if (IsValidPointer(m_pDisassembledROMMap))
+    if (IsValidPointer(m_pDisassembledRomMap))
     {
         for (int i = 0; i < MAX_ROM_SIZE; i++)
         {
-            SafeDelete(m_pDisassembledROMMap[i]);
+            SafeDelete(m_pDisassembledRomMap[i]);
         }
     }
+
+    if (IsValidPointer(m_pDisassembledRamMap))
+    {
+        for (int i = 0; i < 0x400; i++)
+        {
+            SafeDelete(m_pDisassembledRamMap[i]);
+        }
+    }
+
+    if (IsValidPointer(m_pDisassembledBiosMap))
+    {
+        for (int i = 0; i < 0x2000; i++)
+        {
+            SafeDelete(m_pDisassembledBiosMap[i]);
+        }
+    }
+
+    if (IsValidPointer(m_pDisassembledExpansionMap))
+    {
+        for (int i = 0; i < 0x4000; i++)
+        {
+            SafeDelete(m_pDisassembledExpansionMap[i]);
+        }
+    }
+
+    #endif
+}
+
+Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool createIfNotFound)
+{
+    #ifndef GEARCOLECO_DISABLE_DISSSEMBLER
+
+    stDisassembleRecord** map = NULL;
+    int offset = address;
+    int bank = 0;
+    int segment = 0;
+
+    switch (address & 0xE000)
+    {
+        case 0x0000:
+        {
+            offset = address;
+            map = m_pDisassembledBiosMap;
+            segment = 0;
+            break;
+        }
+        case 0x2000:
+        case 0x4000:
+        {
+            offset = address - 0x2000;
+            map = m_pDisassembledExpansionMap;
+            segment = 1;
+            break;
+        }
+        case 0x6000:
+        {
+            offset = address & 0x03FF;
+            map = m_pDisassembledRamMap;
+            segment = 2;
+            break;
+        }
+        default:
+        {
+            offset = address - 0x8000;
+            map = m_pDisassembledRomMap;
+            segment = 3;
+        }
+    }
+
+    if (!IsValidPointer(map[offset]) && createIfNotFound)
+    {
+        map[offset] = new Memory::stDisassembleRecord;
+
+        map[offset]->address = address;
+        map[offset]->bank = 0;
+        map[offset]->name[0] = 0;
+        map[offset]->bytes[0] = 0;
+        map[offset]->size = 0;
+        for (int i = 0; i < 4; i++)
+            map[offset]->opcodes[i] = 0;
+        map[offset]->jump = false;
+        map[offset]->jump_address = 0;
+
+        switch (segment)
+        {
+            case 0:
+            {
+                strcpy(map[offset]->segment, "BIOS");
+                break;
+            }
+            case 1:
+            {
+                strcpy(map[offset]->segment, "EXP ");
+                break;
+            }
+            case 2:
+            {
+                strcpy(map[offset]->segment, "RAM ");
+                break;
+            }
+            case 3:
+            {
+                strcpy(map[offset]->segment, "ROM ");
+                break;
+            }
+        }
+    }
+
+    return map[offset];
+
+    #elif
+
+    return NULL;
 
     #endif
 }

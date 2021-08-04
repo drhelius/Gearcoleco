@@ -100,8 +100,8 @@ void Input::Update()
 {
     for (int c = 0; c < 2; c++)
     {
-        m_InputState[c][0] = (m_Keypad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 5) ? 0xF0 : 0xB0);
-        m_InputState[c][1] = (m_Gamepad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 4) ? 0xF0 : 0xB0);
+        m_InputState[c][0] = (m_Keypad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 5) ? 0x70 : 0x30);
+        m_InputState[c][1] = (m_Gamepad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 4) ? 0x70 : 0x30);
     }
 }
 

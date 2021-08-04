@@ -159,7 +159,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
 
 void GearcolecoCore::SaveDisassembledROM()
 {
-    Memory::stDisassembleRecord** romMap = m_pMemory->GetDisassembledROMMemoryMap();
+    Memory::stDisassembleRecord** romMap = m_pMemory->GetDisassembledRomMemoryMap();
 
     if (m_pCartridge->IsReady() && (strlen(m_pCartridge->GetFilePath()) > 0) && IsValidPointer(romMap))
     {

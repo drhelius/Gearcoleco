@@ -32,6 +32,7 @@ public:
     struct stDisassembleRecord
     {
         u16 address;
+        char segment[5];
         char name[32];
         char bytes[16];
         int size;
@@ -58,17 +59,22 @@ public:
     void Reset();
     u8 Read(u16 address);
     void Write(u16 address, u8 value);
-    stDisassembleRecord** GetDisassembledROMMemoryMap();
+    u8* GetRam();
+    u8* GetBios();
+    void LoadBios(const char* szFilePath);
+    bool IsBiosLoaded();
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
+    void ResetRomDisassembledMemory();
+    stDisassembleRecord* GetDisassembleRecord(u16 address, bool createIfNotFound);
+    stDisassembleRecord** GetDisassembledRomMemoryMap();
+    stDisassembleRecord** GetDisassembledRamMemoryMap();
+    stDisassembleRecord** GetDisassembledBiosMemoryMap();
+    stDisassembleRecord** GetDisassembledExpansionMemoryMap();
     std::vector<stDisassembleRecord*>* GetBreakpointsCPU();
     std::vector<stMemoryBreakpoint>* GetBreakpointsMem();
     stDisassembleRecord* GetRunToBreakpoint();
     void SetRunToBreakpoint(stDisassembleRecord* pBreakpoint);
-    void LoadBios(const char* szFilePath);
-    u8* GetBios();
-    bool IsBiosLoaded();
-    void ResetRomDisassembledMemory();
 
 private:
     void CheckBreakpoints(u16 address, bool write);
@@ -76,9 +82,10 @@ private:
 private:
     Processor* m_pProcessor;
     Cartridge* m_pCartridge;
-    stDisassembleRecord** m_pDisassembledROMMap;
-    stDisassembleRecord** m_pDisassembledRAMMap;
-    stDisassembleRecord** m_pDisassembledBIOSMap;
+    stDisassembleRecord** m_pDisassembledRomMap;
+    stDisassembleRecord** m_pDisassembledRamMap;
+    stDisassembleRecord** m_pDisassembledBiosMap;
+    stDisassembleRecord** m_pDisassembledExpansionMap;
     std::vector<stDisassembleRecord*> m_BreakpointsCPU;
     std::vector<stMemoryBreakpoint> m_BreakpointsMem;
     stDisassembleRecord* m_pRunToBreakpoint;
