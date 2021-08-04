@@ -118,19 +118,30 @@ enum GC_Color_Format
 
 enum GC_Keys
 {
-    Key_Up = 0,
-    Key_Down = 1,
-    Key_Left = 2,
-    Key_Right = 3,
-    Key_1 = 4,
-    Key_2 = 5,
-    Key_Start = 6,
+    Keypad_8 = 0x01,
+    Keypad_4 = 0x02,
+    Keypad_5 = 0x03,
+    Keypad_7 = 0x05,
+    Keypad_Hash = 0x06,
+    Keypad_2 = 0x07,
+    Keypad_Asterisk = 0x09,
+    Keypad_0 = 0x0A,
+    Keypad_9 = 0x0B,
+    Keypad_3 = 0x0C,
+    Keypad_1 = 0x0D,
+    Keypad_6 = 0x0E,
+    Key_Up = 0x10,
+    Key_Right = 0x11,
+    Key_Down = 0x12,
+    Key_Left = 0x13,
+    Key_Right_Button = 0x14,
+    Key_Left_Button = 0x15
 };
 
-enum GC_Joypads
+enum GC_Controllers
 {
-    Joypad_1 = 0,
-    Joypad_2 = 1
+    Controller_1 = 0,
+    Controller_2 = 1
 };
 
 enum GC_Region

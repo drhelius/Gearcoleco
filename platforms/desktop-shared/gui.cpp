@@ -177,7 +177,6 @@ void gui_load_rom(const char* path)
 {
     Cartridge::ForceConfiguration config;
 
-    // TODO
     config.region = get_region(config_emulator.region);
     //config.type = get_mapper(config_emulator.mapper);
 
@@ -450,9 +449,20 @@ static void main_menu(void)
                     keyboard_configuration_item("Right:", &config_input[0].key_right, 0);
                     keyboard_configuration_item("Up:", &config_input[0].key_up, 0);
                     keyboard_configuration_item("Down:", &config_input[0].key_down, 0);
-                    keyboard_configuration_item("1:", &config_input[0].key_1, 0);
-                    keyboard_configuration_item("2:", &config_input[0].key_2, 0);
-                    keyboard_configuration_item("Start:", &config_input[0].key_start, 0);
+                    keyboard_configuration_item("Left Button:", &config_input[0].key_left_button, 0);
+                    keyboard_configuration_item("Right Button:", &config_input[0].key_right_button, 0);
+                    keyboard_configuration_item("Keypad 0:", &config_input[0].key_0, 0);
+                    keyboard_configuration_item("Keypad 1:", &config_input[0].key_1, 0);
+                    keyboard_configuration_item("Keypad 2:", &config_input[0].key_2, 0);
+                    keyboard_configuration_item("Keypad 3:", &config_input[0].key_3, 0);
+                    keyboard_configuration_item("Keypad 4:", &config_input[0].key_4, 0);
+                    keyboard_configuration_item("Keypad 5:", &config_input[0].key_5, 0);
+                    keyboard_configuration_item("Keypad 6:", &config_input[0].key_6, 0);
+                    keyboard_configuration_item("Keypad 7:", &config_input[0].key_7, 0);
+                    keyboard_configuration_item("Keypad 8:", &config_input[0].key_8, 0);
+                    keyboard_configuration_item("Keypad 9:", &config_input[0].key_9, 0);
+                    keyboard_configuration_item("Asterisk:", &config_input[0].key_asterisk, 0);
+                    keyboard_configuration_item("Hash:", &config_input[0].key_hash, 0);
 
                     popup_modal_keyboard();
 
@@ -465,9 +475,20 @@ static void main_menu(void)
                     keyboard_configuration_item("Right:", &config_input[1].key_right, 1);
                     keyboard_configuration_item("Up:", &config_input[1].key_up, 1);
                     keyboard_configuration_item("Down:", &config_input[1].key_down, 1);
-                    keyboard_configuration_item("1:", &config_input[1].key_1, 1);
-                    keyboard_configuration_item("2:", &config_input[1].key_2, 1);
-                    keyboard_configuration_item("Start:", &config_input[1].key_start, 1);
+                    keyboard_configuration_item("Left Button:", &config_input[1].key_left_button, 1);
+                    keyboard_configuration_item("Right Button:", &config_input[1].key_right_button, 1);
+                    keyboard_configuration_item("Keypad 0:", &config_input[1].key_0, 1);
+                    keyboard_configuration_item("Keypad 1:", &config_input[1].key_1, 1);
+                    keyboard_configuration_item("Keypad 2:", &config_input[1].key_2, 1);
+                    keyboard_configuration_item("Keypad 3:", &config_input[1].key_3, 1);
+                    keyboard_configuration_item("Keypad 4:", &config_input[1].key_4, 1);
+                    keyboard_configuration_item("Keypad 5:", &config_input[1].key_5, 1);
+                    keyboard_configuration_item("Keypad 6:", &config_input[1].key_6, 1);
+                    keyboard_configuration_item("Keypad 7:", &config_input[1].key_7, 1);
+                    keyboard_configuration_item("Keypad 8:", &config_input[1].key_8, 1);
+                    keyboard_configuration_item("Keypad 9:", &config_input[1].key_9, 1);
+                    keyboard_configuration_item("Asterisk:", &config_input[1].key_asterisk, 1);
+                    keyboard_configuration_item("Hash:", &config_input[1].key_hash, 1);
 
                     popup_modal_keyboard();
 
@@ -495,9 +516,8 @@ static void main_menu(void)
 
                     if (ImGui::BeginMenu("Button Configuration"))
                     {
-                        gamepad_configuration_item("1:", &config_input[0].gamepad_1, 0);
-                        gamepad_configuration_item("2:", &config_input[0].gamepad_2, 0);
-                        gamepad_configuration_item("START:", &config_input[0].gamepad_start, 0);
+                        gamepad_configuration_item("Left Button:", &config_input[0].gamepad_left_button, 0);
+                        gamepad_configuration_item("Right Button:", &config_input[0].gamepad_right_button, 0);
 
                         popup_modal_gamepad(0);                 
 
@@ -521,9 +541,8 @@ static void main_menu(void)
 
                     if (ImGui::BeginMenu("Button Configuration"))
                     {
-                        gamepad_configuration_item("1:", &config_input[1].gamepad_1, 1);
-                        gamepad_configuration_item("2:", &config_input[1].gamepad_2, 1);
-                        gamepad_configuration_item("START:", &config_input[1].gamepad_start, 1);
+                        gamepad_configuration_item("Left Button:", &config_input[1].gamepad_left_button, 1);
+                        gamepad_configuration_item("Right Button:", &config_input[1].gamepad_right_button, 1);
 
                         popup_modal_gamepad(1);                 
 
@@ -902,7 +921,7 @@ static void file_dialog_load_symbols(void)
 static void keyboard_configuration_item(const char* text, SDL_Scancode* key, int player)
 {
     ImGui::Text("%s", text);
-    ImGui::SameLine(70);
+    ImGui::SameLine(100);
 
     char button_label[256];
     sprintf(button_label, "%s##%s%d", SDL_GetScancodeName(*key), text, player);
@@ -917,7 +936,7 @@ static void keyboard_configuration_item(const char* text, SDL_Scancode* key, int
 static void gamepad_configuration_item(const char* text, int* button, int player)
 {
     ImGui::Text("%s", text);
-    ImGui::SameLine(70);
+    ImGui::SameLine(100);
 
     static const char* gamepad_names[16] = {"A", "B", "X" ,"Y", "BACK", "GUID", "START", "L3", "R3", "L1", "R1", "UP", "DOWN", "LEFT", "RIGHT", "15"};
 
@@ -1120,7 +1139,6 @@ static void menu_reset(void)
 
     Cartridge::ForceConfiguration config;
 
-// TODO
     config.region = get_region(config_emulator.region);
 
     emu_reset(config_emulator.save_in_rom_folder, config);

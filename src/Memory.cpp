@@ -29,6 +29,8 @@ Memory::Memory(Cartridge* pCartridge)
     m_pCartridge = pCartridge;
     InitPointer(m_pProcessor);
     InitPointer(m_pDisassembledROMMap);
+    InitPointer(m_pDisassembledRAMMap);
+    InitPointer(m_pDisassembledBIOSMap);
     InitPointer(m_pRunToBreakpoint);
     InitPointer(m_pBios);
     InitPointer(m_pRam);
@@ -48,6 +50,24 @@ Memory::~Memory()
         }
         SafeDeleteArray(m_pDisassembledROMMap);
     }
+
+    if (IsValidPointer(m_pDisassembledRAMMap))
+    {
+        for (int i = 0; i < 0x400; i++)
+        {
+            SafeDelete(m_pDisassembledRAMMap[i]);
+        }
+        SafeDeleteArray(m_pDisassembledRAMMap);
+    }
+
+    if (IsValidPointer(m_pDisassembledBIOSMap))
+    {
+        for (int i = 0; i < 0x2000; i++)
+        {
+            SafeDelete(m_pDisassembledBIOSMap[i]);
+        }
+        SafeDeleteArray(m_pDisassembledBIOSMap);
+    }
 }
 
 void Memory::SetProcessor(Processor* pProcessor)
@@ -66,6 +86,18 @@ void Memory::Init()
     {
         InitPointer(m_pDisassembledROMMap[i]);
     }
+
+    m_pDisassembledRAMMap = new stDisassembleRecord*[0x400];
+    for (int i = 0; i < 0x400; i++)
+    {
+        InitPointer(m_pDisassembledRAMMap[i]);
+    }
+
+    m_pDisassembledBIOSMap = new stDisassembleRecord*[0x2000];
+    for (int i = 0; i < 0x2000; i++)
+    {
+        InitPointer(m_pDisassembledBIOSMap[i]);
+    }
 #endif
 
     m_BreakpointsCPU.clear();
@@ -78,7 +110,6 @@ void Memory::Init()
 
 void Memory::Reset()
 {
-    // TODO
     for (int i = 0; i < 0x400; i++)
     {
         m_pRam[i] = rand() % 256;
@@ -87,14 +118,12 @@ void Memory::Reset()
 
 void Memory::SaveState(std::ostream& stream)
 {
-    // TODO
-    //stream.write(reinterpret_cast<const char*> (m_pMap), 0x10000);
+    stream.write(reinterpret_cast<const char*> (m_pRam), 0x400);
 }
 
 void Memory::LoadState(std::istream& stream)
 {
-    // TODO
-    //stream.read(reinterpret_cast<char*> (m_pMap), 0x10000);
+    stream.read(reinterpret_cast<char*> (m_pRam), 0x400);
 }
 
 std::vector<Memory::stDisassembleRecord*>* Memory::GetBreakpointsCPU()

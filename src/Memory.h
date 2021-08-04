@@ -77,6 +77,8 @@ private:
     Processor* m_pProcessor;
     Cartridge* m_pCartridge;
     stDisassembleRecord** m_pDisassembledROMMap;
+    stDisassembleRecord** m_pDisassembledRAMMap;
+    stDisassembleRecord** m_pDisassembledBIOSMap;
     std::vector<stDisassembleRecord*> m_BreakpointsCPU;
     std::vector<stMemoryBreakpoint> m_BreakpointsMem;
     stDisassembleRecord* m_pRunToBreakpoint;

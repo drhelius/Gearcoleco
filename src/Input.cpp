@@ -22,9 +22,7 @@
 
 Input::Input()
 {
-    m_Joypad1 = 0;
-    m_Joypad2 = 0;
-    m_iInputCycles = 0;
+    Reset();
 }
 
 void Input::Init()
@@ -34,9 +32,13 @@ void Input::Init()
 
 void Input::Reset()
 {
-    m_Joypad1 = 0xFF;
-    m_Joypad2 = 0xFF;
     m_iInputCycles = 0;
+    m_Segment = SegmentKeypadRightButtons;
+    m_Gamepad[0] = m_Gamepad[1] = 0xFF;
+    m_Keypad[0] = m_Keypad[1] = 0x0F;
+    m_InputState[0][0] = m_InputState[0][1] = 0xFF;
+    m_InputState[1][0] = m_InputState[1][1] = 0xFF;
+    m_LatestKey = 0x0F;
 }
 
 void Input::Tick(unsigned int clockCycles)
@@ -51,39 +53,82 @@ void Input::Tick(unsigned int clockCycles)
     }
 }
 
-void Input::KeyPressed(GC_Joypads joypad, GC_Keys key)
+void Input::SetInputSegment(InputSegments segment)
 {
-    if (joypad == Joypad_1)
-    {
-        m_Joypad1 = UnsetBit(m_Joypad1, key);
-    }
-    else
-        m_Joypad2 = UnsetBit(m_Joypad2, key);
+    m_Segment = segment;
 }
 
-void Input::KeyReleased(GC_Joypads joypad, GC_Keys key)
+u8 Input::ReadInput(u8 port)
 {
-    if (joypad == Joypad_1)
-        m_Joypad1 = SetBit(m_Joypad1, key);
+    u8 controller = (port & 0x02) >> 1;
+
+    if (m_Segment == SegmentKeypadRightButtons)
+    {
+        return m_InputState[controller][0];
+    }
     else
-        m_Joypad2 = SetBit(m_Joypad2, key);
+    {
+        return m_InputState[controller][1];
+    }
+}
+
+void Input::KeyPressed(GC_Controllers controller, GC_Keys key)
+{
+    if (key > 0x0F)
+    {
+        m_Gamepad[controller] = UnsetBit(m_Gamepad[controller], key & 0x0F);
+    }
+    else if (m_LatestKey == 0x0F)
+    {
+        m_LatestKey = m_Keypad[controller] = key & 0x0F;
+    }
+}
+
+void Input::KeyReleased(GC_Controllers controller, GC_Keys key)
+{
+    if (key > 0x0F)
+    {
+        m_Gamepad[controller] = SetBit(m_Gamepad[controller], key & 0x0F);
+    }
+    else if (key == m_LatestKey)
+    {
+        m_LatestKey = m_Keypad[controller] = 0x0F;
+    }
 }
 
 void Input::Update()
 {
-    // TODO
+    for (int c = 0; c < 2; c++)
+    {
+        m_InputState[c][0] = (m_Keypad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 5) ? 0xF0 : 0xB0);
+        m_InputState[c][1] = (m_Gamepad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 4) ? 0xF0 : 0xB0);
+    }
 }
 
 void Input::SaveState(std::ostream& stream)
 {
-    stream.write(reinterpret_cast<const char*> (&m_Joypad1), sizeof(m_Joypad1));
-    stream.write(reinterpret_cast<const char*> (&m_Joypad2), sizeof(m_Joypad2));
+    m_iInputCycles = 0;
+    m_Segment = SegmentKeypadRightButtons;
+    m_Gamepad[0] = m_Gamepad[1] = 0xFF;
+    m_Keypad[0] = m_Keypad[1] = 0xFF;
+    m_InputState[0][0] = m_InputState[0][1] = 0xFF;
+    m_InputState[1][0] = m_InputState[1][1] = 0xFF;
+    m_LatestKey = 0xFF;
+
+    stream.write(reinterpret_cast<const char*> (m_Gamepad), sizeof(m_Gamepad));
+    stream.write(reinterpret_cast<const char*> (m_Keypad), sizeof(m_Keypad));
+    stream.write(reinterpret_cast<const char*> (m_InputState), sizeof(m_InputState));
+    stream.write(reinterpret_cast<const char*> (&m_LatestKey), sizeof(m_LatestKey));
+    stream.write(reinterpret_cast<const char*> (&m_Segment), sizeof(m_Segment));
     stream.write(reinterpret_cast<const char*> (&m_iInputCycles), sizeof(m_iInputCycles));
 }
 
 void Input::LoadState(std::istream& stream)
 {
-    stream.read(reinterpret_cast<char*> (&m_Joypad1), sizeof(m_Joypad1));
-    stream.read(reinterpret_cast<char*> (&m_Joypad2), sizeof(m_Joypad2));
+    stream.read(reinterpret_cast<char*> (m_Gamepad), sizeof(m_Gamepad));
+    stream.read(reinterpret_cast<char*> (m_Keypad), sizeof(m_Keypad));
+    stream.read(reinterpret_cast<char*> (m_InputState), sizeof(m_InputState));
+    stream.read(reinterpret_cast<char*> (&m_LatestKey), sizeof(m_LatestKey));
+    stream.read(reinterpret_cast<char*> (&m_Segment), sizeof(m_Segment));
     stream.read(reinterpret_cast<char*> (&m_iInputCycles), sizeof(m_iInputCycles));
 }

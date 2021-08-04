@@ -286,7 +286,7 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
         if ((size % 1024) != 0)
         {
             Log("Invalid size found. %d bytes", size);
-            return false;
+            //return false;
         }
 
         m_iROMSize = size;
@@ -306,27 +306,37 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
 bool Cartridge::GatherMetadata(u32 crc)
 {
     m_bPAL = false;
-    m_bValidROM = true;
 
-    // TODO test valid rom
-    // if (!TestValidROM(headerLocation))
-    // {
-    //     m_bValidROM = false;
-    // }
+    Log("ROM Size: %d KB", m_iROMSize / 1024);
+
+    m_iROMBankCount = (m_iROMSize / 0x2000) + (m_iROMSize % 0x2000 ? 1 : 0);
+
+    Log("ROM Bank Count: %d", m_iROMBankCount);
+
+    int headerOffset = 0;
+
+    if (m_iROMSize > 0x8000)
+    {
+        Log("Cartridge is probably Mega Cart. ROM size: %d bytes", m_iROMSize);
+        headerOffset = m_iROMSize - 0x4000;
+    }
+
+    u16 header = m_pROM[headerOffset + 1] | (m_pROM[headerOffset + 0] << 8);
+    m_bValidROM = (header == 0xAA55) || (header == 0x55AA);
 
     if (m_bValidROM)
     {
-        Log("ROM is Valid. Header found at");
+        Log("ROM is Valid. Header found: %X", header);
     }
     else
     {
-        Log("ROM is NOT Valid. No header found");
+        Log("ROM is NOT Valid. No header found.");
     }
 
-    m_iROMBankCount = std::max(Pow2Ceil(m_iROMSize / 0x4000), 1u);
-
-    Log("ROM Size: %d KB", m_iROMSize / 1024);
-    Log("ROM Bank Count: %d", m_iROMBankCount);
+    if (header == 0x6699)
+    {
+        Log("Cartridge is a Colec Adam expansion ROM. Header: %X", header);
+    }
 
     m_Type = m_bValidROM ? Cartridge::CartridgeColecoVision : Cartridge::CartridgeNotSupported;
 

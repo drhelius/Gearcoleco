@@ -27,22 +27,34 @@ class Memory;
 class Input
 {
 public:
+    enum InputSegments
+    {
+        SegmentKeypadRightButtons,
+        SegmentJoystickLeftButtons
+    };
+
+public:
     Input();
     void Init();
     void Reset();
     void Tick(unsigned int clockCycles);
-    void KeyPressed(GC_Joypads joypad, GC_Keys key);
-    void KeyReleased(GC_Joypads joypad, GC_Keys key);
+    void KeyPressed(GC_Controllers controller, GC_Keys key);
+    void KeyReleased(GC_Controllers controller, GC_Keys key);
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
+    void SetInputSegment(InputSegments segment);
+    u8 ReadInput(u8 port);
 
 private:
     void Update();
 
 private:
-    u8 m_Joypad1;
-    u8 m_Joypad2;
+    u8 m_Gamepad[2];
+    u8 m_Keypad[2];
     int m_iInputCycles;
+    InputSegments m_Segment;
+    u8 m_InputState[2][2];
+    u8 m_LatestKey;
 };
 
 #endif	/* INPUT_H */

@@ -43,9 +43,6 @@ void Audio::Init()
     m_pApu = new Sms_Apu();
     m_pBuffer = new Stereo_Buffer();
 
-    // TODO
-    // Clock rate for NTSC is 3579545
-    // Clock rate for PAL is 3546893
     m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
     m_pBuffer->set_sample_rate(m_iSampleRate);
 
@@ -60,7 +57,6 @@ void Audio::Reset(bool bPAL)
     m_bPAL = bPAL;
     m_pApu->reset();
     m_pBuffer->clear();
-    // TODO
     m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
     m_ElapsedCycles = 0;
 }

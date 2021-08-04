@@ -104,7 +104,6 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             }
 #endif
 
-            // TODO
             if (totalClocks > 702240)
                 vblank = true;
         }
@@ -235,14 +234,14 @@ Video* GearcolecoCore::GetVideo()
     return m_pVideo;
 }
 
-void GearcolecoCore::KeyPressed(GC_Joypads joypad, GC_Keys key)
+void GearcolecoCore::KeyPressed(GC_Controllers controller, GC_Keys key)
 {
-    m_pInput->KeyPressed(joypad, key);
+    m_pInput->KeyPressed(controller, key);
 }
 
-void GearcolecoCore::KeyReleased(GC_Joypads joypad, GC_Keys key)
+void GearcolecoCore::KeyReleased(GC_Controllers controller, GC_Keys key)
 {
-    m_pInput->KeyReleased(joypad, key);
+    m_pInput->KeyReleased(controller, key);
 }
 
 void GearcolecoCore::Pause(bool paused)

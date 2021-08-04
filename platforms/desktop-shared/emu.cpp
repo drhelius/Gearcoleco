@@ -133,14 +133,14 @@ void emu_update(void)
     }
 }
 
-void emu_key_pressed(GC_Joypads pad, GC_Keys key)
+void emu_key_pressed(GC_Controllers controller, GC_Keys key)
 {
-    gearcoleco->KeyPressed(pad, key);
+    gearcoleco->KeyPressed(controller, key);
 }
 
-void emu_key_released(GC_Joypads pad, GC_Keys key)
+void emu_key_released(GC_Controllers controller, GC_Keys key)
 {
-    gearcoleco->KeyReleased(pad, key);
+    gearcoleco->KeyReleased(controller, key);
 }
 
 void emu_pause(void)

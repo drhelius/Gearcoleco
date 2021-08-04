@@ -69,7 +69,7 @@ inline u8 ColecoVisionIOPorts::In(u8 port)
         }
         case 0xE0:
         {
-            return 0xFF;
+            return m_pInput->ReadInput(port);
         }
     }
 
@@ -83,6 +83,7 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
     switch(port & 0xE0) {
         case 0x80:
         {
+            m_pInput->SetInputSegment(Input::SegmentKeypadRightButtons);
             break;
         }
         case 0xA0:
@@ -99,6 +100,7 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         }
         case 0xC0:
         {
+            m_pInput->SetInputSegment(Input::SegmentJoystickLeftButtons);
             break;
         }
         case 0xE0:

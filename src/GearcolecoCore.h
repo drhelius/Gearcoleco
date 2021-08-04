@@ -42,8 +42,8 @@ public:
     bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
     void SaveDisassembledROM();
     bool GetRuntimeInfo(GC_RuntimeInfo& runtime_info);
-    void KeyPressed(GC_Joypads joypad, GC_Keys key);
-    void KeyReleased(GC_Joypads joypad, GC_Keys key);
+    void KeyPressed(GC_Controllers controller, GC_Keys key);
+    void KeyReleased(GC_Controllers controller, GC_Keys key);
     void Pause(bool paused);
     bool IsPaused();
     void ResetROM(Cartridge::ForceConfiguration* config = NULL);
