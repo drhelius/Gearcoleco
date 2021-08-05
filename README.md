@@ -54,7 +54,7 @@ make dist
 
 ### Linux
 
-- Ubuntu / Debian:
+- Ubuntu / Debian / Raspberry Pi (Raspbian):
 
 ``` shell
 sudo apt-get install build-essential libsdl2-dev libglew-dev
@@ -95,14 +95,6 @@ make
 ``` shell
 sudo dnf install @development-tools gcc-c++
 cd platforms/libretro
-make
-```
-
-### Raspberry Pi 4 - Raspbian (Desktop)
-
-``` shell
-sudo apt install build-essential libsdl2-dev libglew-dev
-cd platforms/raspberrypi4
 make
 ```
 
