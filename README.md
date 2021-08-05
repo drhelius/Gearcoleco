@@ -53,6 +53,24 @@ cd platforms/bsd
 gmake
 ```
 
+### Libretro
+
+- Ubuntu / Debian:
+
+``` shell
+sudo apt-get install build-essential
+cd platforms/libretro
+make
+```
+
+- Fedora:
+
+``` shell
+sudo dnf install @development-tools gcc-c++
+cd platforms/libretro
+make
+```
+
 ### Raspberry Pi 4 - Raspbian (Desktop)
 
 ``` shell
