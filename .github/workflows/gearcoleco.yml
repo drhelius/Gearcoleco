@@ -51,3 +51,41 @@ jobs:
       with:
         name: macOS App bundle
         path: platforms/macos/Gearcoleco.app
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+    - name: Get git version
+      id: gitversion
+      run: echo "::set-output name=gitversion::$(git describe --abbrev=7 --dirty --always --tags)"
+    - name: msbuild
+      run: msbuild Gearcoleco.sln /t:Clean,Build /p:EmulatorBuild="${{ steps.gitversion.outputs.gitversion }}" /p:Configuration=Release
+      working-directory: platforms/windows
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: Windows binary
+        path: platforms/windows/release/Gearcoleco.exe
+  bsd:
+    name: FreeBSD
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: make
+      id: test
+      uses: vmactions/freebsd-vm@v0.1.5
+      with:
+        usesh: true
+        prepare: pkg install -y git gmake pkgconf SDL2 glew lang/gcc
+        run: |
+          cd platforms/bsd
+          gmake
