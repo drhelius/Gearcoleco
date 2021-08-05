@@ -1,10 +1,8 @@
-# Gearcoleco (currently in development)
+# Gearcoleco
 
 [![Gearcoleco CI](https://github.com/drhelius/Gearcoleco/workflows/Gearcoleco%20CI/badge.svg)](https://github.com/drhelius/Gearcoleco/actions)
 
-*This is a work in progress project, not intended to be used right now.*
-
-Gearcoleco is a cross-platform ColecoVision emulator written in C++.
+Gearcoleco is a cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD, Raspberry Pi and RetroArch.
 
 This is an open source project with its ongoing development made possible thanks to the support by these awesome [backers](backers.md).
 
@@ -12,7 +10,36 @@ Please, consider [sponsoring](https://github.com/sponsors/drhelius) and followin
 
 ----------
 
+## Downloads
+
+- **Windows**: [Gearcoleco-1.0.0-Windows.zip](https://github.com/drhelius/Gearcoleco/releases/download/gearcoleco-1.0.0/Gearcoleco-1.0.0-Windows.zip)
+  - NOTE: You may need to install the [Microsoft Visual C++ Redistributable](https://go.microsoft.com/fwlink/?LinkId=746572)
+- **macOS**:
+  - `brew install --cask gearcoleco`
+  - Or install manually: [Gearcoleco-1.0.0-macOS.zip](https://github.com/drhelius/Gearcoleco/releases/download/gearcoleco-1.0.0/Gearcoleco-1.0.0-macOS.zip)
+- **Linux**: [Gearcoleco-1.0.0-Linux.tar.xz](https://github.com/drhelius/Gearcoleco/releases/download/gearcoleco-1.0.0/Gearcoleco-1.0.0-Linux.tar.xz)
+  - NOTE: You may need to install `libsdl2` and `libglew`
+
+## Features
+
+- Accurate Z80 core, including undocumented opcodes and behavior like R and [MEMPTR](https://gist.github.com/drhelius/8497817) registers.
+- Accurate TMS9918 emulation.
+- Sound emulation using SDL Audio and [Sms_Snd_Emu library](https://www.slack.net/~ant/libs/audio.html#Sms_Snd_Emu).
+- Save states.
+- Compressed rom support (ZIP).
+- Supported platforms (standalone): Windows, Linux, BSD, macOS, and Raspberry Pi.
+- Supported platforms (libretro): Windows, Linux, macOS, Raspberry Pi, Android, iOS, tvOS, PlayStation Vita, PlayStation 3, Nintendo 3DS, Nintendo GameCube, Nintendo Wii, Nintendo WiiU, Nintendo Switch, Emscripten, Classic Mini systems (NES, SNES, C64, ...), OpenDingux and QNX.
+- Full debugger with on-the-fly disassembler, cpu breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, memory editor, IO inspector and VRAM viewer including registries, tiles, sprites and backgrounds.
+- Windows and Linux *Portable Mode* by creating a file named `portable.ini` in the same directory as the application binary.
+- Support for modern game controllers through [gamecontrollerdb.txt](https://github.com/gabomdq/SDL_GameControllerDB) file located in the same directory as the application binary.
+
 ## Build Instructions
+
+### Windows
+
+- Install Microsoft Visual Studio Community 2019 or later.
+- Open the Visual Studio solution in `platforms/windows/Gearcoleco.sln` and build.
+- You may want to use the `platforms/windows/Makefile` to build the application using MinGW.
 
 ### macOS
 
