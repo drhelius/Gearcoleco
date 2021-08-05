@@ -57,7 +57,7 @@ static ImVec4 gray = ImVec4(0.5f,0.5f,0.5f,1.0f);
 static ImVec4 dark_gray = ImVec4(0.1f,0.1f,0.1f,1.0f);
 static std::vector<DebugSymbol> symbols;
 static Memory::stDisassembleRecord* selected_record = NULL;
-static char brk_address_cpu[8] = "";
+static char brk_address_cpu[5] = "";
 static char brk_address_mem[10] = "";
 static bool brk_new_mem_read = true;
 static bool brk_new_mem_write = true;
@@ -192,31 +192,8 @@ static void debug_window_memory(void)
     Cartridge* cart = core->GetCartridge();
     Video* video = core->GetVideo();
 
-    ImGui::PushFont(gui_default_font);
-
-    ImGui::TextColored(cyan, "  BANKS: ");//ImGui::SameLine();
-
-    // TODO
-    // ImGui::TextColored(magenta, "ROM0");ImGui::SameLine();
-    // ImGui::Text("$%02X", memory->GetCurrentRule()->GetBank(0)); ImGui::SameLine();
-    // ImGui::TextColored(magenta, "  ROM1");ImGui::SameLine();
-    // ImGui::Text("$%02X", memory->GetCurrentRule()->GetBank(1)); ImGui::SameLine();
-    // ImGui::TextColored(magenta, "  ROM2");ImGui::SameLine();
-    // ImGui::Text("$%02X", memory->GetCurrentRule()->GetBank(2)); 
-
-    // if (cart->GetType() == Cartridge::CartridgeSegaMapper)
-    // {
-    //     ImGui::SameLine();
-    //     ImGui::TextColored(magenta, "  RAM");ImGui::SameLine();
-    //     ImGui::Text("$%02X", memory->GetCurrentRule()->GetRamBank());
-    // }
-
-    ImGui::PopFont();
-
     if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
     {
-        //TODO
-
         if (ImGui::BeginTabItem("BIOS"))
         {
             ImGui::PushFont(gui_default_font);
@@ -352,17 +329,15 @@ static void debug_window_disassembler(void)
         ImGui::Separator();
 
         if (IsValidPointer(selected_record))
-            sprintf(brk_address_cpu, "%02X:%04X", selected_record->bank, selected_record->address);
+            sprintf(brk_address_cpu, "%04X", selected_record->address);
 
         ImGui::PushItemWidth(70);
-        if (ImGui::InputTextWithHint("##add_breakpoint_cpu", "XX:XXXX", brk_address_cpu, IM_ARRAYSIZE(brk_address_cpu), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+        if (ImGui::InputTextWithHint("##add_breakpoint_cpu", "XXXX", brk_address_cpu, IM_ARRAYSIZE(brk_address_cpu), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
             add_breakpoint_cpu();
         }
         ImGui::PopItemWidth();
 
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Use XXXX format for addresses in bank 0 or XX:XXXX for selecting bank and address");
 
         if (ImGui::Button("Add##add_cpu", ImVec2(70, 0)))
         {
@@ -397,7 +372,7 @@ static void debug_window_disassembler(void)
 
             ImGui::PushFont(gui_default_font);
             ImGui::SameLine();
-            ImGui::TextColored(red, "%02X:%04X", (*breakpoints_cpu)[b]->bank, (*breakpoints_cpu)[b]->address);
+            ImGui::TextColored(red, "%04X", (*breakpoints_cpu)[b]->address);
             ImGui::SameLine();
             ImGui::TextColored(gray, "%s", (*breakpoints_cpu)[b]->name);
             ImGui::PopFont();
@@ -610,7 +585,7 @@ static void debug_window_disassembler(void)
                 }
 
                 ImGui::SameLine();
-                ImGui::TextColored(color_addr, "%02X:%04X ", vec[item].record->bank, vec[item].record->address);
+                ImGui::TextColored(color_addr, "%04X ", vec[item].record->address);
 
                 if (show_mem)
                 {
