@@ -57,13 +57,14 @@ static void gamepad_configuration_item(const char* text, int* button, int player
 static void popup_modal_keyboard();
 static void popup_modal_gamepad(int pad);
 static void popup_modal_about(void);
+static void popup_modal_bios(void);
 static void push_recent_rom(std::string path);
 static void menu_reset(void);
 static void menu_pause(void);
 static void menu_ffwd(void);
 static void show_info(void);
 static void show_fps(void);
-static Cartridge::CartridgeTypes get_mapper(int index);
+//static Cartridge::CartridgeTypes get_mapper(int index);
 static Cartridge::CartridgeRegions get_region(int index);
 
 void gui_init(void)
@@ -211,6 +212,7 @@ static void main_menu(void)
     bool open_about = false;
     bool open_symbols = false;
     bool open_bios = false;
+    bool open_bios_warning = false;
     
     if (show_main_menu && ImGui::BeginMainMenuBar())
     {
@@ -220,7 +222,10 @@ static void main_menu(void)
 
             if (ImGui::MenuItem("Open ROM...", "Ctrl+O"))
             {
-                open_rom = true;
+                if (emu_is_bios_loaded())
+                    open_rom = true;
+                else
+                    open_bios_warning = true;
             }
 
             if (ImGui::BeginMenu("Open Recent"))
@@ -231,7 +236,10 @@ static void main_menu(void)
                     {
                         if (ImGui::MenuItem(config_emulator.recent_roms[i].c_str()))
                         {
-                            gui_load_rom(config_emulator.recent_roms[i].c_str());
+                            if (emu_is_bios_loaded())
+                                gui_load_rom(config_emulator.recent_roms[i].c_str());
+                            else
+                                open_bios_warning = true;
                         }
                     }
                 }
@@ -266,17 +274,17 @@ static void main_menu(void)
                 ImGui::EndMenu();
             }
 
-            ImGui::Separator();
+            // ImGui::Separator();
 
-            if (ImGui::MenuItem("Save RAM As...")) 
-            {
-                save_ram = true;
-            }
+            // if (ImGui::MenuItem("Save RAM As...")) 
+            // {
+            //     save_ram = true;
+            // }
 
-            if (ImGui::MenuItem("Load RAM From..."))
-            {
-                open_ram = true;
-            }
+            // if (ImGui::MenuItem("Load RAM From..."))
+            // {
+            //     open_ram = true;
+            // }
 
             ImGui::Separator();
 
@@ -728,7 +736,14 @@ static void main_menu(void)
         dialog_in_use = true;
         ImGui::OpenPopup("About " GEARCOLECO_TITLE);
     }
-    
+
+    if (open_bios_warning)
+    {
+        dialog_in_use = true;
+        ImGui::OpenPopup("BIOS");
+    }
+
+    popup_modal_bios();
     popup_modal_about();
     file_dialog_open_rom();
     file_dialog_load_ram();
@@ -840,7 +855,7 @@ static void main_window(void)
 
 static void file_dialog_open_rom(void)
 {
-    if(file_dialog.showFileDialog("Open ROM...", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2(700, 400), "*.*,.sms,.gg,.sg,.mv,.rom,.bin,.zip", &dialog_in_use))
+    if(file_dialog.showFileDialog("Open ROM...", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2(700, 400), "*.*,.col,.cv,.rom,.bin,.zip", &dialog_in_use))
     {
         push_recent_rom(file_dialog.selected_path.c_str());
         gui_load_rom(file_dialog.selected_path.c_str());
@@ -1123,6 +1138,28 @@ static void popup_modal_about(void)
     }
 }
 
+static void popup_modal_bios(void)
+{
+    if (ImGui::BeginPopupModal("BIOS", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {      
+        ImGui::Text("IMPORTANT! ColecoVision BIOS is required to run ROMs.");
+        ImGui::Text(" ");
+        ImGui::Text("Load a BIOS file using the \"Emulator -> BIOS -> Load BIOS...\" menu option.");
+        ImGui::Text(" ");
+        
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(120, 0))) 
+        {
+            ImGui::CloseCurrentPopup();
+            dialog_in_use = false;
+        }
+        ImGui::SetItemDefaultFocus();
+
+        ImGui::EndPopup();
+    }
+}
+
 static void push_recent_rom(std::string path)
 {
     for (int i = (config_max_recent_roms - 1); i > 0; i--)
@@ -1194,18 +1231,18 @@ static void show_fps(void)
     ImGui::Text("Frame Rate: %.2f FPS\nFrame Time: %.2f ms", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
 }
 
-static Cartridge::CartridgeTypes get_mapper(int index)
-{
-    switch (index)
-    {
-        case 0:
-            return Cartridge::CartridgeNotSupported;
-        case 1:
-            return Cartridge::CartridgeColecoVision;
-        default:
-            return Cartridge::CartridgeNotSupported;
-    }
-}
+// static Cartridge::CartridgeTypes get_mapper(int index)
+// {
+//     switch (index)
+//     {
+//         case 0:
+//             return Cartridge::CartridgeNotSupported;
+//         case 1:
+//             return Cartridge::CartridgeColecoVision;
+//         default:
+//             return Cartridge::CartridgeNotSupported;
+//     }
+// }
 
 static Cartridge::CartridgeRegions get_region(int index)
 {

@@ -48,6 +48,7 @@ EXTERN void emu_pause(void);
 EXTERN void emu_resume(void);
 EXTERN bool emu_is_paused(void);
 EXTERN bool emu_is_empty(void);
+EXTERN bool emu_is_bios_loaded(void);
 EXTERN void emu_reset(bool save_in_rom_dir, Cartridge::ForceConfiguration config);
 EXTERN void emu_dissasemble_rom(void);
 EXTERN void emu_audio_volume(float volume);

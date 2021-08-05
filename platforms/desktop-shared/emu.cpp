@@ -163,6 +163,11 @@ bool emu_is_empty(void)
     return !gearcoleco->GetCartridge()->IsReady();
 }
 
+bool emu_is_bios_loaded(void)
+{
+    return gearcoleco->GetMemory()->IsBiosLoaded();
+}
+
 void emu_reset(bool save_in_rom_dir, Cartridge::ForceConfiguration config)
 {
     save_files_in_rom_dir = save_in_rom_dir;
