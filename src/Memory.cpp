@@ -293,7 +293,6 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
 
     stDisassembleRecord** map = NULL;
     int offset = address;
-    int bank = 0;
     int segment = 0;
 
     switch (address & 0xE000)

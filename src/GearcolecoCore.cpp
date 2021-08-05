@@ -307,7 +307,7 @@ void GearcolecoCore::SaveRam()
     SaveRam(NULL);
 }
 
-void GearcolecoCore::SaveRam(const char* szPath, bool fullPath)
+void GearcolecoCore::SaveRam(const char*, bool)
 {
     // TODO
 }
@@ -317,7 +317,7 @@ void GearcolecoCore::LoadRam()
     LoadRam(NULL);
 }
 
-void GearcolecoCore::LoadRam(const char* szPath, bool fullPath)
+void GearcolecoCore::LoadRam(const char*, bool)
 {
     // TODO
 }
