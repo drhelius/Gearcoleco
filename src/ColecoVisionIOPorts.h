@@ -36,8 +36,6 @@ public:
     void Reset();
     u8 In(u8 port);
     void Out(u8 port, u8 value);
-    void SaveState(std::ostream& stream);
-    void LoadState(std::istream& stream);
 private:
     Audio* m_pAudio;
     Video* m_pVideo;

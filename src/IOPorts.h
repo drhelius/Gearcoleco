@@ -30,8 +30,6 @@ public:
     virtual void Reset() = 0;
     virtual u8 In(u8 port) = 0;
     virtual void Out(u8 port, u8 value) = 0;
-    virtual void SaveState(std::ostream& stream) = 0;
-    virtual void LoadState(std::istream& stream) = 0;
 };
 
 #endif	/* IOPORTS_H */

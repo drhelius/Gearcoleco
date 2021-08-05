@@ -419,7 +419,6 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size)
         m_pAudio->SaveState(stream);
         m_pVideo->SaveState(stream);
         m_pInput->SaveState(stream);
-        m_pProcessor->GetIOPOrts()->SaveState(stream);
 
         size = static_cast<size_t>(stream.tellp());
         size += (sizeof(u32) * 2);
@@ -556,7 +555,6 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             m_pAudio->LoadState(stream);
             m_pVideo->LoadState(stream);
             m_pInput->LoadState(stream);
-            m_pProcessor->GetIOPOrts()->LoadState(stream);
 
             return true;
         }

@@ -107,14 +107,6 @@ void Input::Update()
 
 void Input::SaveState(std::ostream& stream)
 {
-    m_iInputCycles = 0;
-    m_Segment = SegmentKeypadRightButtons;
-    m_Gamepad[0] = m_Gamepad[1] = 0xFF;
-    m_Keypad[0] = m_Keypad[1] = 0xFF;
-    m_InputState[0][0] = m_InputState[0][1] = 0xFF;
-    m_InputState[1][0] = m_InputState[1][1] = 0xFF;
-    m_LatestKey = 0xFF;
-
     stream.write(reinterpret_cast<const char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.write(reinterpret_cast<const char*> (m_Keypad), sizeof(m_Keypad));
     stream.write(reinterpret_cast<const char*> (m_InputState), sizeof(m_InputState));

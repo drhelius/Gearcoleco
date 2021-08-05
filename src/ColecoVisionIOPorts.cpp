@@ -36,13 +36,3 @@ void ColecoVisionIOPorts::Reset()
 {
 
 }
-
-void ColecoVisionIOPorts::SaveState(std::ostream&)
-{
-
-}
-
-void ColecoVisionIOPorts::LoadState(std::istream&)
-{
-
-}

@@ -265,10 +265,6 @@ void Video::WriteControl(u8 control)
                     m_iMode = ((m_VdpRegister[0] & 0x06) << 8) | (m_VdpRegister[1] & 0x18);
                 }
 
-                if (control > 0x07)
-                {
-                    Log("--> ** Attempting to write on VDP REG %d: %X", reg, control);
-                }
                 break;
             }
         }
@@ -533,8 +529,6 @@ void Video::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
     stream.write(reinterpret_cast<const char*> (&m_VdpStatus), sizeof(m_VdpStatus));
     stream.write(reinterpret_cast<const char*> (&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
-    bool bogus = false;
-    stream.write(reinterpret_cast<const char*> (&bogus), sizeof(bogus));
     stream.write(reinterpret_cast<const char*> (&m_LineEvents), sizeof(m_LineEvents));
     stream.write(reinterpret_cast<const char*> (&m_iRenderLine), sizeof(m_iRenderLine));
     stream.write(reinterpret_cast<const char*> (&m_bPAL), sizeof(m_bPAL));
@@ -559,8 +553,6 @@ void Video::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
     stream.read(reinterpret_cast<char*> (&m_VdpStatus), sizeof(m_VdpStatus));
     stream.read(reinterpret_cast<char*> (&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
-    bool bogus;
-    stream.read(reinterpret_cast<char*> (&bogus), sizeof(bogus));
     stream.read(reinterpret_cast<char*> (&m_LineEvents), sizeof(m_LineEvents));
     stream.read(reinterpret_cast<char*> (&m_iRenderLine), sizeof(m_iRenderLine));
     stream.read(reinterpret_cast<char*> (&m_bPAL), sizeof(m_bPAL));
