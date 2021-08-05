@@ -30,28 +30,20 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     InitPointer(m_pVdpVRAM);
     InitPointer(m_pVdpCRAM);
     m_bFirstByteInSequence = false;
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 8; i++)
         m_VdpRegister[i] = 0;
     m_VdpCode = 0;
     m_VdpBuffer = 0;
     m_VdpAddress = 0;
-    m_iVCounter = 0;
-    m_iHCounter = 0;
     m_iCycleCounter = 0;
     m_VdpStatus = 0;
-    m_iVdpRegister10Counter = 0;
-    m_ScrollX = 0;
-    m_ScrollY = 0;
     m_iLinesPerFrame = 0;
     m_bPAL = false;
-    m_LineEvents.hint = false;
-    m_LineEvents.scrollx = false;
-    m_LineEvents.vcounter = false;
     m_LineEvents.vint = false;
     m_LineEvents.vintFlag = false;
     m_iRenderLine = 0;
     m_iScreenWidth = 0;
-    m_iSG1000Mode = 0;
+    m_iMode = 0;
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
 }
@@ -80,14 +72,10 @@ void Video::Reset(bool bPAL)
     m_iLinesPerFrame = bPAL ? GC_LINES_PER_FRAME_PAL : GC_LINES_PER_FRAME_NTSC;
     m_bFirstByteInSequence = true;
     m_VdpBuffer = 0;
-    m_iVCounter = m_iLinesPerFrame - 1;
-    m_iHCounter = 0;
     m_VdpCode = 0;
     m_VdpBuffer = 0;
     m_VdpAddress = 0;
     m_VdpStatus = 0;
-    m_ScrollX = 0;
-    m_ScrollY = 0;
     for (int i = 0; i < (GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
     {
         m_pFrameBuffer[i] = 0;
@@ -106,30 +94,18 @@ void Video::Reset(bool bPAL)
     m_VdpRegister[5] = 0xFF; // Sprite Table Base
     m_VdpRegister[6] = 0xFB; // Sprite Pattern Table Base
     m_VdpRegister[7] = 0x00; // Border color #0
-    m_VdpRegister[8] = 0x00; // Scroll-X
-    m_VdpRegister[9] = 0x00; // Scroll-Y
-    m_VdpRegister[10] = 0xFF; // H-line interrupt ($FF=OFF)
 
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
 
-    for (int i = 11; i < 16; i++)
-        m_VdpRegister[i] = 0;
-
-    m_LineEvents.hint = false;
-    m_LineEvents.scrollx = false;
-    m_LineEvents.vcounter = false;
     m_LineEvents.vint = false;
     m_LineEvents.vintFlag = false;
     m_LineEvents.render = false;
 
     m_iCycleCounter = 0;
-    m_iVdpRegister10Counter = m_VdpRegister[10];
     m_iRenderLine = 0;
 
     m_iScreenWidth = GC_RESOLUTION_MAX_WIDTH;
-
-    m_iSG1000Mode = 0;
 
     m_Timing[TIMING_VINT] = 25;
     m_Timing[TIMING_XSCROLL] = 14;
@@ -168,44 +144,6 @@ bool Video::Tick(unsigned int clockCycles)
         m_bDisplayEnabled = IsSetBit(m_VdpRegister[1], 6);
     }
 
-    ///// SCROLLX /////
-    if (!m_LineEvents.scrollx && (m_iCycleCounter >= m_Timing[TIMING_XSCROLL]))
-    {
-        m_LineEvents.scrollx = true;
-        m_ScrollX = m_VdpRegister[8];   // latch scroll X
-    }
-
-    ///// HINT /////
-    if (!m_LineEvents.hint && (m_iCycleCounter >= m_Timing[TIMING_HINT]))
-    {
-        m_LineEvents.hint = true;
-        if (m_iRenderLine <= max_height)
-        {
-            if (m_iVdpRegister10Counter == 0)
-            {
-                m_iVdpRegister10Counter = m_VdpRegister[10];
-            }
-            else
-            {
-                m_iVdpRegister10Counter--;
-            }
-        }
-        else
-            m_iVdpRegister10Counter = m_VdpRegister[10];
-    }
-
-    ///// VCOUNT /////
-    if (!m_LineEvents.vcounter && (m_iCycleCounter >= m_Timing[TIMING_VCOUNT]))
-    {
-        m_LineEvents.vcounter = true;
-        m_iVCounter++;
-        if (m_iVCounter >= m_iLinesPerFrame)
-        {
-            m_ScrollY = m_VdpRegister[9];   // latch scroll Y
-            m_iVCounter = 0;
-        }
-    }
-
     ///// FLAG VINT /////
     if (!m_LineEvents.vintFlag && (m_iCycleCounter >= m_Timing[TIMING_FLAG_VINT]))
     {
@@ -233,9 +171,6 @@ bool Video::Tick(unsigned int clockCycles)
         m_iRenderLine++;
         m_iRenderLine %= m_iLinesPerFrame;
         m_iCycleCounter -= GC_CYCLES_PER_LINE;
-        m_LineEvents.hint = false;
-        m_LineEvents.scrollx = false;
-        m_LineEvents.vcounter = false;
         m_LineEvents.vint = false;
         m_LineEvents.vintFlag = false;
         m_LineEvents.render = false;
@@ -244,34 +179,6 @@ bool Video::Tick(unsigned int clockCycles)
     }
 
     return return_vblank;
-}
-
-void Video::LatchHCounter()
-{
-    m_iHCounter = kVdpHCounter[m_iCycleCounter % 228];
-}
-
-u8 Video::GetVCounter()
-{
-    if (m_bPAL)
-    {
-        if (m_iVCounter > 0xF2)
-            return m_iVCounter - 0x39;
-        else
-            return m_iVCounter;
-    }
-    else
-    {
-        if (m_iVCounter > 0xDA)
-            return m_iVCounter - 0x06;
-        else
-            return m_iVCounter;
-    }
-}
-
-u8 Video::GetHCounter()
-{
-    return m_iHCounter;
 }
 
 u8 Video::GetDataPort()
@@ -345,13 +252,20 @@ void Video::WriteControl(u8 control)
             case VDP_WRITE_REG_OPERATION:
             {
                 u8 reg = control & 0x07;
+                bool old_int = IsSetBit(m_VdpRegister[1], 5);
                 m_VdpRegister[reg] = (m_VdpAddress & 0x00FF);
+
+                if ((reg == 1) && IsSetBit(m_VdpStatus, 7) && IsSetBit(m_VdpRegister[1], 5) && !old_int)
+                {
+                    m_pProcessor->RequestNMI();
+                }
 
                 if (reg < 2)
                 {
-                    m_iSG1000Mode = ((m_VdpRegister[0] & 0x06) << 8) | (m_VdpRegister[1] & 0x18);
+                    m_iMode = ((m_VdpRegister[0] & 0x06) << 8) | (m_VdpRegister[1] & 0x18);
                 }
-                else if (reg > 10)
+
+                if (control > 0x07)
                 {
                     Log("--> ** Attempting to write on VDP REG %d: %X", reg, control);
                 }
@@ -397,7 +311,7 @@ void Video::RenderBackground(int line)
     int pattern_table_addr = 0;
     int color_table_addr = 0;
 
-    if (m_iSG1000Mode == 0x200)
+    if (m_iMode == 0x200)
     {
         pattern_table_addr = (m_VdpRegister[4] & 0x04) << 11;
         color_table_addr = (m_VdpRegister[3] & 0x80) << 6;
@@ -425,7 +339,7 @@ void Video::RenderBackground(int line)
 
         int name_tile = 0;
 
-        if (m_iSG1000Mode == 0x200)
+        if (m_iMode == 0x200)
             name_tile = m_pVdpVRAM[name_tile_addr] | (region & 0x300 & tile_number);
         else
             name_tile = m_pVdpVRAM[name_tile_addr];
@@ -434,7 +348,7 @@ void Video::RenderBackground(int line)
 
         u8 color_line = 0;
 
-        if (m_iSG1000Mode == 0x200)
+        if (m_iMode == 0x200)
             color_line = m_pVdpVRAM[color_table_addr + (name_tile << 3) + tile_y_offset];
         else
             color_line = m_pVdpVRAM[color_table_addr + (name_tile >> 3)];
@@ -554,15 +468,15 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
 
         if (bgr)
         {
-            dstFrameBuffer[j + 2] = kSG1000_palette_888[src_color];
-            dstFrameBuffer[j] = kSG1000_palette_888[src_color + 2];
+            dstFrameBuffer[j + 2] = kPalette_888[src_color];
+            dstFrameBuffer[j] = kPalette_888[src_color + 2];
         }
         else
         {
-            dstFrameBuffer[j] = kSG1000_palette_888[src_color];
-            dstFrameBuffer[j + 2] = kSG1000_palette_888[src_color + 2];
+            dstFrameBuffer[j] = kPalette_888[src_color];
+            dstFrameBuffer[j + 2] = kPalette_888[src_color + 2];
         }
-        dstFrameBuffer[j + 1] = kSG1000_palette_888[src_color + 1];
+        dstFrameBuffer[j + 1] = kPalette_888[src_color + 1];
     }
 }
 
@@ -590,9 +504,9 @@ void Video::InitPalettes()
 {
     for (int i=0,j=0; i<16; i++,j+=3)
     {
-        u8 red = kSG1000_palette_888[j];
-        u8 green = kSG1000_palette_888[j+1];
-        u8 blue = kSG1000_palette_888[j+2];
+        u8 red = kPalette_888[j];
+        u8 green = kPalette_888[j+1];
+        u8 blue = kPalette_888[j+2];
 
         u8 red_5 = red * 31 / 255;
         u8 green_5 = green * 31 / 255;
@@ -616,13 +530,8 @@ void Video::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_VdpCode), sizeof(m_VdpCode));
     stream.write(reinterpret_cast<const char*> (&m_VdpBuffer), sizeof(m_VdpBuffer));
     stream.write(reinterpret_cast<const char*> (&m_VdpAddress), sizeof(m_VdpAddress));
-    stream.write(reinterpret_cast<const char*> (&m_iVCounter), sizeof(m_iVCounter));
-    stream.write(reinterpret_cast<const char*> (&m_iHCounter), sizeof(m_iHCounter));
     stream.write(reinterpret_cast<const char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
     stream.write(reinterpret_cast<const char*> (&m_VdpStatus), sizeof(m_VdpStatus));
-    stream.write(reinterpret_cast<const char*> (&m_iVdpRegister10Counter), sizeof(m_iVdpRegister10Counter));
-    stream.write(reinterpret_cast<const char*> (&m_ScrollX), sizeof(m_ScrollX));
-    stream.write(reinterpret_cast<const char*> (&m_ScrollY), sizeof(m_ScrollY));
     stream.write(reinterpret_cast<const char*> (&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
     bool bogus = false;
     stream.write(reinterpret_cast<const char*> (&bogus), sizeof(bogus));
@@ -630,7 +539,7 @@ void Video::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_iRenderLine), sizeof(m_iRenderLine));
     stream.write(reinterpret_cast<const char*> (&m_bPAL), sizeof(m_bPAL));
     stream.write(reinterpret_cast<const char*> (&m_iScreenWidth), sizeof(m_iScreenWidth));
-    stream.write(reinterpret_cast<const char*> (&m_iSG1000Mode), sizeof(m_iSG1000Mode));
+    stream.write(reinterpret_cast<const char*> (&m_iMode), sizeof(m_iMode));
     stream.write(reinterpret_cast<const char*> (&m_Timing), sizeof(m_Timing));
     stream.write(reinterpret_cast<const char*> (&m_NextLineSprites), sizeof(m_NextLineSprites));
     stream.write(reinterpret_cast<const char*> (&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
@@ -647,13 +556,8 @@ void Video::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_VdpCode), sizeof(m_VdpCode));
     stream.read(reinterpret_cast<char*> (&m_VdpBuffer), sizeof(m_VdpBuffer));
     stream.read(reinterpret_cast<char*> (&m_VdpAddress), sizeof(m_VdpAddress));
-    stream.read(reinterpret_cast<char*> (&m_iVCounter), sizeof(m_iVCounter));
-    stream.read(reinterpret_cast<char*> (&m_iHCounter), sizeof(m_iHCounter));
     stream.read(reinterpret_cast<char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
     stream.read(reinterpret_cast<char*> (&m_VdpStatus), sizeof(m_VdpStatus));
-    stream.read(reinterpret_cast<char*> (&m_iVdpRegister10Counter), sizeof(m_iVdpRegister10Counter));
-    stream.read(reinterpret_cast<char*> (&m_ScrollX), sizeof(m_ScrollX));
-    stream.read(reinterpret_cast<char*> (&m_ScrollY), sizeof(m_ScrollY));
     stream.read(reinterpret_cast<char*> (&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
     bool bogus;
     stream.read(reinterpret_cast<char*> (&bogus), sizeof(bogus));
@@ -661,7 +565,7 @@ void Video::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_iRenderLine), sizeof(m_iRenderLine));
     stream.read(reinterpret_cast<char*> (&m_bPAL), sizeof(m_bPAL));
     stream.read(reinterpret_cast<char*> (&m_iScreenWidth), sizeof(m_iScreenWidth));
-    stream.read(reinterpret_cast<char*> (&m_iSG1000Mode), sizeof(m_iSG1000Mode));
+    stream.read(reinterpret_cast<char*> (&m_iMode), sizeof(m_iMode));
     stream.read(reinterpret_cast<char*> (&m_Timing), sizeof(m_Timing));
     stream.read(reinterpret_cast<char*> (&m_NextLineSprites), sizeof(m_NextLineSprites));
     stream.read(reinterpret_cast<char*> (&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
