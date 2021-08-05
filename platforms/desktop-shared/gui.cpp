@@ -371,7 +371,7 @@ static void main_menu(void)
 
             ImGui::MenuItem("Start Paused", "", &config_emulator.start_paused);
             
-            ImGui::MenuItem("Save Files In ROM Folder", "", &config_emulator.save_in_rom_folder);
+            //ImGui::MenuItem("Save Files In ROM Folder", "", &config_emulator.save_in_rom_folder);
 
             ImGui::Separator();
 
