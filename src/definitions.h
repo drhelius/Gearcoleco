@@ -38,7 +38,7 @@
 #endif
 
 #define GEARCOLECO_TITLE "Gearcoleco"
-#define GEARCOLECO_VERSION "0.0.1"
+#define GEARCOLECO_VERSION "1.0.0"
 
 #ifndef EMULATOR_BUILD
 #define EMULATOR_BUILD "undefined"
