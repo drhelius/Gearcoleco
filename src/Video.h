@@ -22,11 +22,6 @@
 
 #include "definitions.h"
 
-#define VDP_READ_VRAM_OPERATION 0x00
-#define VDP_WRITE_VRAM_OPERATION 0x01
-#define VDP_WRITE_REG_OPERATION 0x02
-#define VDP_WRITE_CRAM_OPERATION 0x03
-
 class Memory;
 class Processor;
 
@@ -45,15 +40,14 @@ public:
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
     u8* GetVRAM();
-    u8* GetCRAM();
     u8* GetRegisters();
-    u16 ColorFromPalette(int palette_color);
     u16* GetFrameBuffer();
-    int GetSG1000Mode();
+    int GetMode();
     void Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size);
     void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size);
 
 private:
+    void IncrementAddress();
     void ScanLine(int line);
     void RenderBackground(int line);
     void RenderSprites(int line);
@@ -65,10 +59,8 @@ private:
     u8* m_pInfoBuffer;
     u16* m_pFrameBuffer;
     u8* m_pVdpVRAM;
-    u8* m_pVdpCRAM;
     bool m_bFirstByteInSequence;
     u8 m_VdpRegister[8];
-    u8 m_VdpCode;
     u8 m_VdpBuffer;
     u16 m_VdpAddress;
     int m_iCycleCounter;
@@ -118,24 +110,14 @@ inline u8* Video::GetVRAM()
     return m_pVdpVRAM;
 }
 
-inline u8* Video::GetCRAM()
-{
-    return m_pVdpCRAM;
-}
-
 inline u8* Video::GetRegisters()
 {
     return m_VdpRegister;
 }
 
-inline int Video::GetSG1000Mode()
+inline int Video::GetMode()
 {
     return m_iMode;
-}
-
-inline u16 Video::ColorFromPalette(int palette_color)
-{
-    return m_pVdpCRAM[palette_color];
 }
 
 inline u16* Video::GetFrameBuffer()

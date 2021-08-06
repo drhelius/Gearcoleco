@@ -28,11 +28,9 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     InitPointer(m_pInfoBuffer);
     InitPointer(m_pFrameBuffer);
     InitPointer(m_pVdpVRAM);
-    InitPointer(m_pVdpCRAM);
     m_bFirstByteInSequence = false;
     for (int i = 0; i < 8; i++)
         m_VdpRegister[i] = 0;
-    m_VdpCode = 0;
     m_VdpBuffer = 0;
     m_VdpAddress = 0;
     m_iCycleCounter = 0;
@@ -53,7 +51,6 @@ Video::~Video()
     SafeDeleteArray(m_pInfoBuffer);
     SafeDeleteArray(m_pFrameBuffer);
     SafeDeleteArray(m_pVdpVRAM);
-    SafeDeleteArray(m_pVdpCRAM);
 }
 
 void Video::Init()
@@ -61,7 +58,6 @@ void Video::Init()
     m_pInfoBuffer = new u8[GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL];
     m_pFrameBuffer = new u16[GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL];
     m_pVdpVRAM = new u8[0x4000];
-    m_pVdpCRAM = new u8[0x40];
     InitPalettes();
     Reset(false);
 }
@@ -72,8 +68,6 @@ void Video::Reset(bool bPAL)
     m_iLinesPerFrame = bPAL ? GC_LINES_PER_FRAME_PAL : GC_LINES_PER_FRAME_NTSC;
     m_bFirstByteInSequence = true;
     m_VdpBuffer = 0;
-    m_VdpCode = 0;
-    m_VdpBuffer = 0;
     m_VdpAddress = 0;
     m_VdpStatus = 0;
     for (int i = 0; i < (GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
@@ -83,8 +77,6 @@ void Video::Reset(bool bPAL)
     }
     for (int i = 0; i < 0x4000; i++)
         m_pVdpVRAM[i] = 0;
-    for (int i = 0; i < 0x40; i++)
-        m_pVdpCRAM[i] = 0;
 
     m_VdpRegister[0] = 0x36; // Mode
     m_VdpRegister[1] = 0x80; // Mode
@@ -186,8 +178,7 @@ u8 Video::GetDataPort()
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpBuffer;
     m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
-    m_VdpAddress++;
-    m_VdpAddress &= 0x3FFF;
+    IncrementAddress();
     return ret;
 }
 
@@ -203,23 +194,8 @@ void Video::WriteData(u8 data)
 {
     m_bFirstByteInSequence = true;
     m_VdpBuffer = data;
-    switch (m_VdpCode)
-    {
-        case VDP_READ_VRAM_OPERATION:
-        case VDP_WRITE_VRAM_OPERATION:
-        case VDP_WRITE_REG_OPERATION:
-        {
-            m_pVdpVRAM[m_VdpAddress] = data;
-            break;
-        }
-        case VDP_WRITE_CRAM_OPERATION:
-        {
-            m_pVdpCRAM[m_VdpAddress & 0x1F] = data;
-            break;
-        }
-    }
-    m_VdpAddress++;
-    m_VdpAddress &= 0x3FFF;
+    m_pVdpVRAM[m_VdpAddress] = data;
+    IncrementAddress();
 }
 
 void Video::WriteControl(u8 control)
@@ -232,24 +208,17 @@ void Video::WriteControl(u8 control)
     else
     {
         m_bFirstByteInSequence = true;
-        m_VdpCode = (control >> 6) & 0x03;
         m_VdpAddress = (m_VdpAddress & 0x00FF) | ((control & 0x3F) << 8);
 
-        if (m_VdpCode == VDP_WRITE_CRAM_OPERATION)
+        switch (control & 0xC0)
         {
-            Log("--> ** Attempting to write on CRAM");
-        }
-
-        switch (m_VdpCode)
-        {
-            case VDP_READ_VRAM_OPERATION:
+            case 0x00:
             {
                 m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
-                m_VdpAddress++;
-                m_VdpAddress &= 0x3FFF;
+                IncrementAddress();
                 break;
             }
-            case VDP_WRITE_REG_OPERATION:
+            case 0x80:
             {
                 u8 reg = control & 0x07;
                 bool old_int = IsSetBit(m_VdpRegister[1], 5);
@@ -262,13 +231,19 @@ void Video::WriteControl(u8 control)
 
                 if (reg < 2)
                 {
-                    m_iMode = ((m_VdpRegister[0] & 0x06) << 8) | (m_VdpRegister[1] & 0x18);
+                    m_iMode = ((m_VdpRegister[1] & 0x08) >> 1) | (m_VdpRegister[0] & 0x02) | ((m_VdpRegister[1] & 0x10) >> 4);
                 }
 
                 break;
             }
         }
     }
+}
+
+void Video::IncrementAddress()
+{
+    m_VdpAddress++;
+    m_VdpAddress &= 0x3FFF;
 }
 
 void Video::ScanLine(int line)
@@ -307,7 +282,7 @@ void Video::RenderBackground(int line)
     int pattern_table_addr = 0;
     int color_table_addr = 0;
 
-    if (m_iMode == 0x200)
+    if (m_iMode == 2)
     {
         pattern_table_addr = (m_VdpRegister[4] & 0x04) << 11;
         color_table_addr = (m_VdpRegister[3] & 0x80) << 6;
@@ -335,7 +310,7 @@ void Video::RenderBackground(int line)
 
         int name_tile = 0;
 
-        if (m_iMode == 0x200)
+        if (m_iMode == 2)
             name_tile = m_pVdpVRAM[name_tile_addr] | (region & 0x300 & tile_number);
         else
             name_tile = m_pVdpVRAM[name_tile_addr];
@@ -344,7 +319,7 @@ void Video::RenderBackground(int line)
 
         u8 color_line = 0;
 
-        if (m_iMode == 0x200)
+        if (m_iMode == 2)
             color_line = m_pVdpVRAM[color_table_addr + (name_tile << 3) + tile_y_offset];
         else
             color_line = m_pVdpVRAM[color_table_addr + (name_tile >> 3)];
@@ -520,10 +495,8 @@ void Video::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (m_pInfoBuffer), GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL);
     stream.write(reinterpret_cast<const char*> (m_pVdpVRAM), 0x4000);
-    stream.write(reinterpret_cast<const char*> (m_pVdpCRAM), 0x40);
     stream.write(reinterpret_cast<const char*> (&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
     stream.write(reinterpret_cast<const char*> (m_VdpRegister), sizeof(m_VdpRegister));
-    stream.write(reinterpret_cast<const char*> (&m_VdpCode), sizeof(m_VdpCode));
     stream.write(reinterpret_cast<const char*> (&m_VdpBuffer), sizeof(m_VdpBuffer));
     stream.write(reinterpret_cast<const char*> (&m_VdpAddress), sizeof(m_VdpAddress));
     stream.write(reinterpret_cast<const char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
@@ -544,10 +517,8 @@ void Video::LoadState(std::istream& stream)
 {
     stream.read(reinterpret_cast<char*> (m_pInfoBuffer), GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL);
     stream.read(reinterpret_cast<char*> (m_pVdpVRAM), 0x4000);
-    stream.read(reinterpret_cast<char*> (m_pVdpCRAM), 0x40);
     stream.read(reinterpret_cast<char*> (&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
     stream.read(reinterpret_cast<char*> (m_VdpRegister), sizeof(m_VdpRegister));
-    stream.read(reinterpret_cast<char*> (&m_VdpCode), sizeof(m_VdpCode));
     stream.read(reinterpret_cast<char*> (&m_VdpBuffer), sizeof(m_VdpBuffer));
     stream.read(reinterpret_cast<char*> (&m_VdpAddress), sizeof(m_VdpAddress));
     stream.read(reinterpret_cast<char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
