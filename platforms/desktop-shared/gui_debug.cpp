@@ -226,14 +226,6 @@ static void debug_window_memory(void)
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("CRAM"))
-        {
-            ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(video->GetCRAM(), 0x40, 0);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
         ImGui::EndTabBar();
     }
 
@@ -784,6 +776,23 @@ static void debug_window_vram(void)
 
     ImGui::Begin("VDP Viewer", &config_debug.show_video);
 
+    ImGui::PushFont(gui_default_font);
+
+    Video* video = emu_get_core()->GetVideo();
+    u8* regs = video->GetRegisters();
+
+    ImGui::TextColored(cyan, "  VIDEO MODE:");ImGui::SameLine();
+    ImGui::Text("$%02X", video->GetMode()); ImGui::SameLine();
+
+    ImGui::TextColored(magenta, "  M1:");ImGui::SameLine();
+    ImGui::Text("%d", (regs[1] >> 4) & 0x01); ImGui::SameLine();
+    ImGui::TextColored(magenta, "  M2:");ImGui::SameLine();
+    ImGui::Text("%d", (regs[0] >> 1) & 0x01); ImGui::SameLine();
+    ImGui::TextColored(magenta, "  M3:");ImGui::SameLine();
+    ImGui::Text("%d", (regs[1] >> 3) & 0x01); 
+
+    ImGui::PopFont();
+
     if (ImGui::BeginTabBar("##vram_tabs", ImGuiTabBarFlags_None))
     {
         if (ImGui::BeginTabItem("Name Table"))
@@ -823,18 +832,16 @@ static void debug_window_vram_background(void)
     emu_get_runtime(runtime);
     u8* regs = video->GetRegisters();
     u8* vram = video->GetVRAM();
-    int SG1000mode = video->GetSG1000Mode();
+    int mode = video->GetMode();
 
     static bool show_grid = true;
-    static bool show_screen = true;
     int lines = 24;
-    float scale = 1.5f;
+    float scale = 2.0f;
     float size_h = 256.0f * scale;
     float size_v = 8.0f * lines * scale;
     float spacing = 8.0f * scale;
 
-    ImGui::Checkbox("Show Grid##grid_bg", &show_grid); ImGui::SameLine();
-    ImGui::Checkbox("Show Screen Rect", &show_screen);
+    ImGui::Checkbox("Show Grid##grid_bg", &show_grid);
 
     ImGui::PushFont(gui_default_font);
 
@@ -862,47 +869,6 @@ static void debug_window_vram_background(void)
             draw_list->AddLine(ImVec2(p.x, y), ImVec2(p.x + size_h, y), ImColor(dark_gray), 1.0f);
             y += spacing;
         }
-    }
-
-    if (show_screen)
-    {
-        int scroll_x = 256 - regs[8];
-        int scroll_y = regs[9];
-
-        scroll_x &= 0xFF;
-        scroll_y &= 0xFF;
-
-        float grid_x_max = p.x + size_h;
-        float grid_y_max = p.y + size_v;
-
-        float rect_x_min = p.x + (scroll_x * scale);
-        float rect_y_min = p.y + (scroll_y * scale);
-        float rect_x_max = p.x + ((scroll_x + runtime.screen_width) * scale);
-        float rect_y_max = p.y + ((scroll_y + runtime.screen_height) * scale);
-
-        float x_overflow = 0.0f;
-        float y_overflow = 0.0f;
-
-        if (rect_x_max > grid_x_max)
-            x_overflow = rect_x_max - grid_x_max;
-        if (rect_y_max > grid_y_max)
-            y_overflow = rect_y_max - grid_y_max;
-
-        draw_list->AddLine(ImVec2(rect_x_min, rect_y_min), ImVec2(fminf(rect_x_max, grid_x_max), rect_y_min), ImColor(green), 2.0f);
-        if (x_overflow > 0.0f)
-            draw_list->AddLine(ImVec2(p.x, rect_y_min), ImVec2(p.x + x_overflow, rect_y_min), ImColor(green), 2.0f);
-
-        draw_list->AddLine(ImVec2(rect_x_min, rect_y_min), ImVec2(rect_x_min, fminf(rect_y_max, grid_y_max)), ImColor(green), 2.0f);
-        if (y_overflow > 0.0f)
-            draw_list->AddLine(ImVec2(rect_x_min, p.y), ImVec2(rect_x_min, p.y + y_overflow), ImColor(green), 2.0f);
-
-        draw_list->AddLine(ImVec2(rect_x_min, (y_overflow > 0.0f) ? p.y + y_overflow : rect_y_max), ImVec2(fminf(rect_x_max, grid_x_max), (y_overflow > 0.0f) ? p.y + y_overflow : rect_y_max), ImColor(green), 2.0f);
-        if (x_overflow > 0.0f)
-            draw_list->AddLine(ImVec2(p.x, (y_overflow > 0.0f) ? p.y + y_overflow : rect_y_max), ImVec2(p.x + x_overflow, (y_overflow > 0.0f) ? p.y + y_overflow : rect_y_max), ImColor(green), 2.0f);
-
-        draw_list->AddLine(ImVec2((x_overflow > 0.0f) ? p.x + x_overflow : rect_x_max, rect_y_min), ImVec2((x_overflow > 0.0f) ? p.x + x_overflow : rect_x_max, fminf(rect_y_max, grid_y_max)), ImColor(green), 2.0f);
-        if (y_overflow > 0.0f)
-            draw_list->AddLine(ImVec2((x_overflow > 0.0f) ? p.x + x_overflow : rect_x_max, p.y), ImVec2((x_overflow > 0.0f) ? p.x + x_overflow : rect_x_max, p.y + y_overflow), ImColor(green), 2.0f);
     }
 
     float mouse_x = io.MousePos.x - p.x;
@@ -935,12 +901,12 @@ static void debug_window_vram_background(void)
 
         int name_tile = 0;
 
-        if (SG1000mode == 0x200)
+        if (mode == 2)
             name_tile = vram[name_tile_addr] | (region & 0x300 & tile_number);
         else
             name_tile = vram[name_tile_addr];
 
-        int pattern_table_addr = (regs[4] & (SG1000mode == 0x200 ? 0x04 : 0x07)) << 11;
+        int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
         int tile_addr = pattern_table_addr + (name_tile << 3);
 
         ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
@@ -958,11 +924,11 @@ static void debug_window_vram_tiles(void)
 {
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
-    int SG1000mode = video->GetSG1000Mode();
+    int mode = video->GetMode();
 
     static bool show_grid = true;
     int lines = 32;
-    float scale = 1.5f;
+    float scale = 2.0f;
     float width = 8.0f * 32.0f * scale;
     float height = 8.0f * lines * scale;
     float spacing = 8.0f * scale;
@@ -1021,7 +987,7 @@ static void debug_window_vram_tiles(void)
 
         int tile_addr = 0;
 
-        int pattern_table_addr = (regs[4] & (SG1000mode == 0x200 ? 0x04 : 0x07)) << 11;
+        int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
         tile_addr = pattern_table_addr + (tile << 3);
 
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
@@ -1066,7 +1032,7 @@ static void debug_window_vram_sprites(void)
 
     ImGui::BeginChild("sprites", ImVec2(0, 0.0f), true);
 
-    for (int s = 0; s < 64; s++)
+    for (int s = 0; s < 32; s++)
     {
         p[s] = ImGui::GetCursorScreenPos();
 
@@ -1107,6 +1073,7 @@ static void debug_window_vram_sprites(void)
             int tile = 0;
             int sprite_tile_addr = 0;
             int sprite_shift = 0;
+            int sprite_color = 0;
             float real_x = 0.0f;
             float real_y = 0.0f;
 
@@ -1116,6 +1083,7 @@ static void debug_window_vram_sprites(void)
             tile = vram[sprite_attribute_offset + 2];
             sprite_tile_addr = sprite_pattern_addr + (tile << 3);
             sprite_shift = (vram[sprite_attribute_offset + 3] & 0x80) ? 32 : 0;
+            sprite_color = vram[sprite_attribute_offset + 3] & 0x0F;
             x = vram[sprite_attribute_offset + 1];
             y = vram[sprite_attribute_offset];
 
@@ -1156,7 +1124,7 @@ static void debug_window_vram_sprites(void)
             ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
             ImGui::Text("$%02X", x); ImGui::SameLine();
             ImGui::TextColored(cyan, "  Y:"); ImGui::SameLine();
-            ImGui::Text("$%02X", y); ImGui::SameLine();
+            ImGui::Text("$%02X", y);
 
             ImGui::TextColored(cyan, "  Tile:"); ImGui::SameLine();
             ImGui::Text("$%02X", tile);
@@ -1164,7 +1132,10 @@ static void debug_window_vram_sprites(void)
             ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
             ImGui::Text("$%04X", sprite_tile_addr);
 
-            ImGui::TextColored(cyan, " Horizontal Sprite Shift:"); ImGui::SameLine();
+            ImGui::TextColored(cyan, " Color:"); ImGui::SameLine();
+            ImGui::Text("$%02X", sprite_color);
+
+            ImGui::TextColored(cyan, " Early Clock:"); ImGui::SameLine();
             sprite_shift > 0 ? ImGui::TextColored(green, "ON ") : ImGui::TextColored(gray, "OFF");
         }
     }
@@ -1181,12 +1152,12 @@ static void debug_window_vram_regs(void)
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
 
-    const char* reg_desc[] = {"CONTROL 1     ", "CONTROL 2     ", "NAME TABLE    ", "COLOR TABLE   ", "PATTERN TABLE ", "SPRITE ATTR   ", "SPRITE PATTERN", "BACKDROP COLOR", "H SCROLL      ", "V SCROLL      ", "V INTERRUPT   "};
+    const char* reg_desc[] = {"CONTROL 1     ", "CONTROL 2     ", "NAME TABLE    ", "COLOR TABLE   ", "PATTERN TABLE ", "SPRITE ATTR   ", "SPRITE PATTERN", "COLORS        "};
 
     ImGui::TextColored(yellow, " ");
     ImGui::TextColored(yellow, "VDP REGISTERS:");
 
-    for (int i = 0; i < 11; i++)
+    for (int i = 0; i < 8; i++)
     {
         ImGui::TextColored(cyan, " REG $%01X ", i); ImGui::SameLine();
         ImGui::TextColored(magenta, "%s ", reg_desc[i]); ImGui::SameLine();

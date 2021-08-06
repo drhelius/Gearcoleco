@@ -763,7 +763,7 @@ static void main_window(void)
     int h = (int)ImGui::GetIO().DisplaySize.y - (show_main_menu ? main_menu_height : 0);
 
     int selected_ratio = config_debug.debug ? 0 : config_video.ratio;
-    float ratio = (float)runtime.screen_width / (float)runtime.screen_height;
+    float ratio = 0;
 
     switch (selected_ratio)
     {

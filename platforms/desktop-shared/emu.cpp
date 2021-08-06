@@ -407,7 +407,7 @@ static void update_debug_background_buffer(void)
     Video* video = gearcoleco->GetVideo();
     u8* vram = video->GetVRAM();
     u8* regs = video->GetRegisters();
-    int mode = video->GetSG1000Mode();
+    int mode = video->GetMode();
 
     int pattern_table_addr = 0;
     int color_table_addr = 0;
@@ -415,7 +415,7 @@ static void update_debug_background_buffer(void)
     int region = (regs[4] & 0x03) << 8;
     int backdrop_color = regs[7] & 0x0F;
 
-    if (mode == 0x200)
+    if (mode == 2)
     {
         pattern_table_addr = (regs[4] & 0x04) << 11;
         color_table_addr = (regs[3] & 0x80) << 6;
@@ -444,7 +444,7 @@ static void update_debug_background_buffer(void)
 
             int name_tile = 0;
 
-            if (mode == 0x200)
+            if (mode == 2)
                 name_tile = vram[name_tile_addr] | (region & 0x300 & tile_number);
             else
                 name_tile = vram[name_tile_addr];
@@ -453,7 +453,7 @@ static void update_debug_background_buffer(void)
 
             u8 color_line = 0;
 
-            if (mode == 0x200)
+            if (mode == 2)
                 color_line = vram[color_table_addr + (name_tile << 3) + offset_y];
             else
                 color_line = vram[color_table_addr + (name_tile >> 3)];
@@ -472,9 +472,9 @@ static void update_debug_tile_buffer(void)
     Video* video = gearcoleco->GetVideo();
     u8* vram = video->GetVRAM();
     u8* regs = video->GetRegisters();
-    int mode = video->GetSG1000Mode();
+    int mode = video->GetMode();
 
-    int pattern_table_addr = (regs[4] & ((mode == 0x200) ? 0x04 : 0x07)) << 11;
+    int pattern_table_addr = (regs[4] & ((mode == 2) ? 0x04 : 0x07)) << 11;
     
     for (int y = 0; y < 256; y++)
     {
@@ -515,7 +515,7 @@ static void update_debug_sprite_buffers(void)
     u16 sprite_attribute_addr = (regs[5] & 0x7F) << 7;
     u16 sprite_pattern_addr = (regs[6] & 0x07) << 11;
 
-    for (int s = 0; s < 64; s++)
+    for (int s = 0; s < 32; s++)
     {
         int sprite_attribute_offset = sprite_attribute_addr + (s << 2);
         int sprite_color = vram[sprite_attribute_offset + 3] & 0x0F;

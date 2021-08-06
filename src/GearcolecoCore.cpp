@@ -96,7 +96,7 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             totalClocks += clockCycles;
 
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-            if ((step || (stopOnBreakpoints && m_pProcessor->BreakpointHit())))
+            if ((step || (stopOnBreakpoints && m_pProcessor->BreakpointHit())) && !m_pProcessor->DuringInputOpcode())
             {
                 vblank = true;
                 if (m_pProcessor->BreakpointHit())
@@ -125,10 +125,7 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
-
-#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-        m_pProcessor->Disassemble(m_pProcessor->GetState()->PC->GetValue());
-#endif
+        m_pProcessor->DisassembleNextOpcode();
 
         return true;
     }
@@ -146,10 +143,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
-
-#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-        m_pProcessor->Disassemble(m_pProcessor->GetState()->PC->GetValue());
-#endif
+        m_pProcessor->DisassembleNextOpcode();
 
         return true;
     }

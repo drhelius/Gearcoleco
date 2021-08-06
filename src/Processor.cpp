@@ -141,6 +141,7 @@ unsigned int Processor::RunFor(u8 tstates)
                 m_iTStates += 11;
                 IncreaseR();
                 WZ.SetValue(PC.GetValue());
+                DisassembleNextOpcode();
                 return m_iTStates;
             }
             else if (m_bIFF1 && m_bINTRequested && !m_bAfterEI)
@@ -153,6 +154,7 @@ unsigned int Processor::RunFor(u8 tstates)
                 m_iTStates += 13;
                 IncreaseR();
                 WZ.SetValue(PC.GetValue());
+                DisassembleNextOpcode();
                 return m_iTStates;
             }
 
@@ -160,11 +162,7 @@ unsigned int Processor::RunFor(u8 tstates)
         }
 
         ExecuteOPCode();
-
-        #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-        if (Disassemble(PC.GetValue()) || m_bRequestMemBreakpoint)
-            m_bBreakpointHit = true;
-        #endif
+        DisassembleNextOpcode();
 
         executed += m_iTStates;
     }
@@ -309,6 +307,14 @@ void Processor::UndocumentedOPCode()
     u8 opcode = m_pMemory->Read(opcode_address);
 
     Log("--> ** UNDOCUMENTED OP Code (%X) at $%.4X -- %s", opcode, opcode_address, kOPCodeNames[opcode]);
+#endif
+}
+
+void Processor::DisassembleNextOpcode()
+{
+#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
+    if (Disassemble(PC.GetValue()) || m_bRequestMemBreakpoint)
+        m_bBreakpointHit = true;
 #endif
 }
 
@@ -487,6 +493,11 @@ bool Processor::BreakpointHit()
 bool Processor::Halted()
 {
     return m_bHalt;
+}
+
+bool Processor::DuringInputOpcode()
+{
+    return m_bInputLastCycle;
 }
 
 void Processor::RequestMemoryBreakpoint()

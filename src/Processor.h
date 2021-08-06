@@ -68,9 +68,11 @@ public:
     void LoadState(std::istream& stream);
     ProcessorState* GetState();
     bool Disassemble(u16 address);
+    void DisassembleNextOpcode();
     bool BreakpointHit();
     void RequestMemoryBreakpoint();
     bool Halted();
+    bool DuringInputOpcode();
 
 private:
     typedef void (Processor::*OPCptr) (void);
