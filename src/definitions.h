@@ -106,6 +106,13 @@ typedef void (*RamChangedCallback) (void);
 
 #define GC_SAVESTATE_MAGIC 0x83190128
 
+struct GC_Color
+{
+    u8 red;
+    u8 green;
+    u8 blue;
+};
+
 enum GC_Color_Format
 {
     GC_PIXEL_RGB565,

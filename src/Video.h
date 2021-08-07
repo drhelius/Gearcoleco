@@ -45,6 +45,8 @@ public:
     int GetMode();
     void Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size);
     void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size);
+    void SetCustomPalette(GC_Color* palette);
+    void SetPredefinedPalette(int palette);
 
 private:
     void ScanLine(int line);
@@ -90,10 +92,13 @@ private:
     bool m_bDisplayEnabled;
     bool m_bSpriteOvrRequest;
 
-    u16 m_SG1000_palette_565_rgb[16];
-    u16 m_SG1000_palette_555_rgb[16];
-    u16 m_SG1000_palette_565_bgr[16];
-    u16 m_SG1000_palette_555_bgr[16];
+    u16 m_palette_565_rgb[16];
+    u16 m_palette_555_rgb[16];
+    u16 m_palette_565_bgr[16];
+    u16 m_palette_555_bgr[16];
+
+    u8 m_CustomPalette[48];
+    u8* m_pCurrentPalette;
 };
 
 inline u8* Video::GetVRAM()
@@ -116,7 +121,9 @@ inline u16* Video::GetFrameBuffer()
     return m_pFrameBuffer;
 }
 
-const u8 kPalette_888[48] = {0,0,0, 0,0,0, 33,200,66, 94,220,120, 84,85,237, 125,118,252, 212,82,77, 66,235,245, 252,85,84, 255,121,120, 212,193,84, 230,206,128, 33,176,59, 201,91,186, 204,204,204, 255,255,255};
+const u8 kPalette_888_coleco[48] = {0,0,0, 0,0,0, 33,200,66, 94,220,120, 84,85,237, 125,118,252, 212,82,77, 66,235,245, 252,85,84, 255,121,120, 212,193,84, 230,206,128, 33,176,59, 201,91,186, 204,204,204, 255,255,255};
+const u8 kPalette_888_tms9918[48] = {0,0,0, 0,8,0, 0,241,1, 50,251,65, 67,76,255, 112,110,255, 238,75,28, 9,255,255, 255,78,31, 255,112,65, 211,213,0, 228,221,52, 0,209,0, 219,79,211, 193,212,190, 244,255,241};
+
 const u8 k2bitTo8bit[4] = {0,85,170,255};
 const u8 k2bitTo5bit[4] = {0,10,21,31};
 const u8 k2bitTo6bit[4] = {0,21,42,63};

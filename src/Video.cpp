@@ -44,6 +44,9 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     m_iMode = 0;
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
+    for (int i = 0; i < 48; i++)
+        m_CustomPalette[i] = 0;
+    m_pCurrentPalette = const_cast<u8*>(kPalette_888_coleco);
 }
 
 Video::~Video()
@@ -456,15 +459,15 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
 
         if (bgr)
         {
-            dstFrameBuffer[j + 2] = kPalette_888[src_color];
-            dstFrameBuffer[j] = kPalette_888[src_color + 2];
+            dstFrameBuffer[j + 2] = m_pCurrentPalette[src_color];
+            dstFrameBuffer[j] = m_pCurrentPalette[src_color + 2];
         }
         else
         {
-            dstFrameBuffer[j] = kPalette_888[src_color];
-            dstFrameBuffer[j + 2] = kPalette_888[src_color + 2];
+            dstFrameBuffer[j] = m_pCurrentPalette[src_color];
+            dstFrameBuffer[j + 2] = m_pCurrentPalette[src_color + 2];
         }
-        dstFrameBuffer[j + 1] = kPalette_888[src_color + 1];
+        dstFrameBuffer[j + 1] = m_pCurrentPalette[src_color + 1];
     }
 }
 
@@ -476,9 +479,9 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     const u16* pal;
 
     if (bgr)
-        pal = green_6bit ? m_SG1000_palette_565_bgr : m_SG1000_palette_555_bgr;
+        pal = green_6bit ? m_palette_565_bgr : m_palette_555_bgr;
     else
-        pal = green_6bit ? m_SG1000_palette_565_rgb : m_SG1000_palette_555_rgb;
+        pal = green_6bit ? m_palette_565_rgb : m_palette_555_rgb;
 
     for (int i = 0, j = 0; i < size; i ++, j += 2)
     {
@@ -488,23 +491,60 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     }
 }
 
+void Video::SetCustomPalette(GC_Color* palette)
+{
+    for (int i = 0; i < 16; i++)
+    {
+        int p = i * 3;
+        m_CustomPalette[p] = palette[i].red;
+        m_CustomPalette[p + 1] = palette[i].green;
+        m_CustomPalette[p + 2] = palette[i].blue;
+    }
+
+    m_pCurrentPalette = m_CustomPalette;
+    InitPalettes();
+}
+
+void Video::SetPredefinedPalette(int palette)
+{
+    const u8* predefined;
+
+    switch (palette)
+    {
+        case 0:
+            predefined = kPalette_888_coleco;
+            break;
+        case 1:
+            predefined = kPalette_888_tms9918;
+            break;
+        default:
+            predefined = NULL;
+    }
+
+    if (IsValidPointer(predefined))
+    {
+        m_pCurrentPalette = const_cast<u8*>(predefined);
+        InitPalettes();
+    }
+}
+
 void Video::InitPalettes()
 {
     for (int i=0,j=0; i<16; i++,j+=3)
     {
-        u8 red = kPalette_888[j];
-        u8 green = kPalette_888[j+1];
-        u8 blue = kPalette_888[j+2];
+        u8 red = m_pCurrentPalette[j];
+        u8 green = m_pCurrentPalette[j+1];
+        u8 blue = m_pCurrentPalette[j+2];
 
         u8 red_5 = red * 31 / 255;
         u8 green_5 = green * 31 / 255;
         u8 green_6 = green * 63 / 255;
         u8 blue_5 = blue * 31 / 255;
 
-        m_SG1000_palette_565_rgb[i] = red_5 << 11 | green_6 << 5 | blue_5;
-        m_SG1000_palette_555_rgb[i] = red_5 << 10 | green_5 << 5 | blue_5;
-        m_SG1000_palette_565_bgr[i] = blue_5 << 11 | green_6 << 5 | red_5;
-        m_SG1000_palette_555_bgr[i] = blue_5 << 10 | green_5 << 5 | red_5;
+        m_palette_565_rgb[i] = red_5 << 11 | green_6 << 5 | blue_5;
+        m_palette_555_rgb[i] = red_5 << 10 | green_5 << 5 | blue_5;
+        m_palette_565_bgr[i] = blue_5 << 11 | green_6 << 5 | red_5;
+        m_palette_555_bgr[i] = blue_5 << 10 | green_5 << 5 | red_5;
     }
 }
 

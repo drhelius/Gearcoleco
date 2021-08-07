@@ -54,6 +54,8 @@ EXTERN void emu_dissasemble_rom(void);
 EXTERN void emu_audio_volume(float volume);
 EXTERN void emu_audio_reset(void);
 EXTERN bool emu_is_audio_enabled(void);
+EXTERN void emu_palette(GC_Color* palette);
+EXTERN void emu_predefined_palette(int palette);
 EXTERN void emu_save_ram(const char* file_path);
 EXTERN void emu_load_ram(const char* file_path, bool save_in_rom_dir, Cartridge::ForceConfiguration config);
 EXTERN void emu_save_state_slot(int index);

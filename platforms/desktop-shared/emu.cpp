@@ -198,6 +198,16 @@ bool emu_is_audio_enabled(void)
     return audio_enabled;
 }
 
+void emu_palette(GC_Color* palette)
+{
+    gearcoleco->GetVideo()->SetCustomPalette(palette);
+}
+
+void emu_predefined_palette(int palette)
+{
+    gearcoleco->GetVideo()->SetPredefinedPalette(palette);
+}
+
 void emu_save_ram(const char* file_path)
 {
     if (!emu_is_empty())

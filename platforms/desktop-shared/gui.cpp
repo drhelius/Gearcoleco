@@ -38,6 +38,7 @@ static int main_menu_height;
 static bool dialog_in_use = false;
 static SDL_Scancode* configured_key;
 static int* configured_button;
+static ImVec4 custom_palette[16];
 static bool shortcut_open_rom = false;
 static ImFont* default_font[4];
 static bool show_main_menu = true;
@@ -58,6 +59,9 @@ static void popup_modal_keyboard();
 static void popup_modal_gamepad(int pad);
 static void popup_modal_about(void);
 static void popup_modal_bios(void);
+static GC_Color color_float_to_int(ImVec4 color);
+static ImVec4 color_int_to_float(GC_Color color);
+static void update_palette(void);
 static void push_recent_rom(std::string path);
 static void menu_reset(void);
 static void menu_pause(void);
@@ -89,6 +93,8 @@ void gui_init(void)
     }
 
     gui_default_font = default_font[config_debug.font_size];
+
+    update_palette();
 
     emu_audio_volume(config_audio.enable ? 1.0f: 0.0f);
 
@@ -213,6 +219,9 @@ static void main_menu(void)
     bool open_symbols = false;
     bool open_bios = false;
     bool open_bios_warning = false;
+
+    for (int i = 0; i < 16; i++)
+        custom_palette[i] = color_int_to_float(config_video.color[i]);
     
     if (show_main_menu && ImGui::BeginMainMenuBar())
     {
@@ -439,6 +448,34 @@ static void main_menu(void)
             {
                 ImGui::MenuItem("Enable Scanlines", "", &config_video.scanlines);
                 ImGui::SliderFloat("##scanlines", &config_video.scanlines_intensity, 0.0f, 1.0f, "Intensity = %.2f");
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::BeginMenu("Palette"))
+            {
+                ImGui::PushItemWidth(130.0f);
+                if (ImGui::Combo("##palette", &config_video.palette, "Coleco\0TMS9918\0Custom\0\0", 11))
+                {
+                    update_palette();
+                }
+                ImGui::PopItemWidth();
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Custom Palette"))
+            {
+                for (int i = 0; i < 16; i++)
+                {
+                    char text[10] = {0};
+                    sprintf(text,"Color #%d", i + 1);
+                    if (ImGui::ColorEdit3(text, (float*)&custom_palette[i], ImGuiColorEditFlags_NoInputs))
+                    {
+                        update_palette();
+                    }
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -752,6 +789,9 @@ static void main_menu(void)
     file_dialog_save_state();
     file_dialog_load_bios();
     file_dialog_load_symbols();
+
+    for (int i = 0; i < 16; i++)
+        config_video.color[i] = color_float_to_int(custom_palette[i]);
 }
 
 static void main_window(void)
@@ -1158,6 +1198,35 @@ static void popup_modal_bios(void)
 
         ImGui::EndPopup();
     }
+}
+
+static GC_Color color_float_to_int(ImVec4 color)
+{
+    GC_Color ret;
+    ret.red = floor(color.x >= 1.0 ? 255 : color.x * 256.0);
+    ret.green = floor(color.y >= 1.0 ? 255 : color.y * 256.0);
+    ret.blue = floor(color.z >= 1.0 ? 255 : color.z * 256.0);
+    return ret;
+}
+
+static ImVec4 color_int_to_float(GC_Color color)
+{
+    ImVec4 ret;
+    ret.w = 0;
+    ret.x = (1.0f / 255.0f) * color.red;
+    ret.y = (1.0f / 255.0f) * color.green;
+    ret.z = (1.0f / 255.0f) * color.blue;
+    return ret;
+}
+
+static void update_palette(void)
+{
+    if (config_video.palette == 2)
+    {
+        emu_palette(config_video.color);
+    }
+    else
+        emu_predefined_palette(config_video.palette);
 }
 
 static void push_recent_rom(std::string path)

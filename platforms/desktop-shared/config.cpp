@@ -149,6 +149,21 @@ void config_read(void)
     config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.30f);
     config_video.scanlines = read_bool("Video", "Scanlines", true);
     config_video.scanlines_intensity = read_float("Video", "ScanlinesIntensity", 0.40f);
+    config_video.palette = read_int("Video", "Palette", 0);
+
+    for (int i = 0; i < 16; i++)
+    {
+        char pal_label_r[32];
+        char pal_label_g[32];
+        char pal_label_b[32];
+        sprintf(pal_label_r, "CustomPalette%dR", i);
+        sprintf(pal_label_g, "CustomPalette%dG", i);
+        sprintf(pal_label_b, "CustomPalette%dB", i);
+        config_video.color[i].red = read_int("Video", pal_label_r, config_video.color[i].red);
+        config_video.color[i].green = read_int("Video", pal_label_g, config_video.color[i].green);
+        config_video.color[i].blue = read_int("Video", pal_label_b, config_video.color[i].blue);
+    }
+
     config_video.sync = read_bool("Video", "Sync", true);
     
     config_audio.enable = read_bool("Audio", "Enable", true);
@@ -246,6 +261,19 @@ void config_write(void)
     write_float("Video", "MixFramesIntensity", config_video.mix_frames_intensity);
     write_bool("Video", "Scanlines", config_video.scanlines);
     write_float("Video", "ScanlinesIntensity", config_video.scanlines_intensity);
+    write_int("Video", "Palette", config_video.palette);
+    for (int i = 0; i < 16; i++)
+    {
+        char pal_label_r[32];
+        char pal_label_g[32];
+        char pal_label_b[32];
+        sprintf(pal_label_r, "CustomPalette%dR", i);
+        sprintf(pal_label_g, "CustomPalette%dG", i);
+        sprintf(pal_label_b, "CustomPalette%dB", i);
+        write_int("Video", pal_label_r, config_video.color[i].red);
+        write_int("Video", pal_label_g, config_video.color[i].green);
+        write_int("Video", pal_label_b, config_video.color[i].blue);
+    }
     write_bool("Video", "Sync", config_video.sync);
 
     write_bool("Audio", "Enable", config_audio.enable);
