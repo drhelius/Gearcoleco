@@ -121,10 +121,9 @@ bool Video::Tick(unsigned int clockCycles)
             m_LineEvents.vint = true;
 
             if (IsSetBit(m_VdpRegister[1], 5) && !IsSetBit(m_VdpStatus, 7))
-            {
-                m_VdpStatus = SetBit(m_VdpStatus, 7);
                 m_pProcessor->RequestNMI();
-            }
+
+            m_VdpStatus = SetBit(m_VdpStatus, 7);
         }
     }
 
