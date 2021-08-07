@@ -47,7 +47,6 @@ public:
     void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size);
 
 private:
-    void IncrementAddress();
     void ScanLine(int line);
     void RenderBackground(int line);
     void RenderSprites(int line);
@@ -69,15 +68,12 @@ private:
     bool m_bPAL;
     int m_iMode;
     int m_iRenderLine;
-    int m_iScreenWidth;
 
     struct LineEvents 
     {
         bool vint;
-        bool vintFlag;
         bool render;
         bool display;
-        bool spriteovr;
     };
 
     LineEvents m_LineEvents;
@@ -85,16 +81,11 @@ private:
     enum Timing
     {
         TIMING_VINT = 0,
-        TIMING_XSCROLL = 1,
-        TIMING_HINT = 2,
-        TIMING_VCOUNT = 3,
-        TIMING_FLAG_VINT = 4,
-        TIMING_RENDER = 5,
-        TIMING_DISPLAY = 6,
-        TIMING_SPRITEOVR = 7
+        TIMING_RENDER = 1,
+        TIMING_DISPLAY = 2
     };
 
-    int m_Timing[8];
+    int m_Timing[3];
     int m_NextLineSprites[8];
     bool m_bDisplayEnabled;
     bool m_bSpriteOvrRequest;

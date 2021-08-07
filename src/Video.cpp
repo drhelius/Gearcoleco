@@ -38,9 +38,9 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     m_iLinesPerFrame = 0;
     m_bPAL = false;
     m_LineEvents.vint = false;
-    m_LineEvents.vintFlag = false;
+    m_LineEvents.render = false;
+    m_LineEvents.display = false;
     m_iRenderLine = 0;
-    m_iScreenWidth = 0;
     m_iMode = 0;
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
@@ -91,22 +91,15 @@ void Video::Reset(bool bPAL)
     m_bSpriteOvrRequest = false;
 
     m_LineEvents.vint = false;
-    m_LineEvents.vintFlag = false;
+    m_LineEvents.display = false;
     m_LineEvents.render = false;
 
     m_iCycleCounter = 0;
     m_iRenderLine = 0;
 
-    m_iScreenWidth = GC_RESOLUTION_MAX_WIDTH;
-
     m_Timing[TIMING_VINT] = 25;
-    m_Timing[TIMING_XSCROLL] = 14;
-    m_Timing[TIMING_HINT] = 27;
-    m_Timing[TIMING_VCOUNT] = 25;
-    m_Timing[TIMING_FLAG_VINT] = 25;
     m_Timing[TIMING_RENDER] = 195;
     m_Timing[TIMING_DISPLAY] = 37;
-    m_Timing[TIMING_SPRITEOVR] = 25;
 
     for (int i = 0; i < 8; i++)
     {
@@ -116,17 +109,23 @@ void Video::Reset(bool bPAL)
 
 bool Video::Tick(unsigned int clockCycles)
 {
-    int max_height = GC_RESOLUTION_MAX_HEIGHT;
     bool return_vblank = false;
 
     m_iCycleCounter += clockCycles;
 
     ///// VINT /////
-    if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
+    if ((m_iRenderLine == (GC_RESOLUTION_MAX_HEIGHT + 1)))
     {
-        m_LineEvents.vint = true;
-        if ((m_iRenderLine == (max_height + 1)) && (IsSetBit(m_VdpRegister[1], 5)))
-            m_pProcessor->RequestNMI();
+        if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
+        {
+            m_LineEvents.vint = true;
+
+            if (IsSetBit(m_VdpRegister[1], 5) && !IsSetBit(m_VdpStatus, 7))
+            {
+                m_VdpStatus = SetBit(m_VdpStatus, 7);
+                m_pProcessor->RequestNMI();
+            }
+        }
     }
 
     ///// DISPLAY ON/OFF /////
@@ -134,16 +133,6 @@ bool Video::Tick(unsigned int clockCycles)
     {
         m_LineEvents.display = true;
         m_bDisplayEnabled = IsSetBit(m_VdpRegister[1], 6);
-    }
-
-    ///// FLAG VINT /////
-    if (!m_LineEvents.vintFlag && (m_iCycleCounter >= m_Timing[TIMING_FLAG_VINT]))
-    {
-        m_LineEvents.vintFlag = true;
-        if (m_iRenderLine == (max_height + 1))
-        {
-            m_VdpStatus = SetBit(m_VdpStatus, 7);
-        }
     }
 
     ///// RENDER /////
@@ -156,7 +145,7 @@ bool Video::Tick(unsigned int clockCycles)
     ///// END OF LINE /////
     if (m_iCycleCounter >= GC_CYCLES_PER_LINE)
     {
-        if (m_iRenderLine == (max_height - 1))
+        if (m_iRenderLine == (GC_RESOLUTION_MAX_HEIGHT - 1))
         {
             return_vblank = true;
         }
@@ -164,10 +153,8 @@ bool Video::Tick(unsigned int clockCycles)
         m_iRenderLine %= m_iLinesPerFrame;
         m_iCycleCounter -= GC_CYCLES_PER_LINE;
         m_LineEvents.vint = false;
-        m_LineEvents.vintFlag = false;
         m_LineEvents.render = false;
         m_LineEvents.display = false;
-        m_LineEvents.spriteovr = false;
     }
 
     return return_vblank;
@@ -178,7 +165,7 @@ u8 Video::GetDataPort()
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpBuffer;
     m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
-    IncrementAddress();
+    m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
     return ret;
 }
 
@@ -186,7 +173,7 @@ u8 Video::GetStatusFlags()
 {
     u8 ret = m_VdpStatus;
     m_bFirstByteInSequence = true;
-    m_VdpStatus &= 0x1f;
+    m_VdpStatus &= 0x5f;
     return ret;
 }
 
@@ -195,7 +182,7 @@ void Video::WriteData(u8 data)
     m_bFirstByteInSequence = true;
     m_VdpBuffer = data;
     m_pVdpVRAM[m_VdpAddress] = data;
-    IncrementAddress();
+    m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
 }
 
 void Video::WriteControl(u8 control)
@@ -208,23 +195,25 @@ void Video::WriteControl(u8 control)
     else
     {
         m_bFirstByteInSequence = true;
-        m_VdpAddress = (m_VdpAddress & 0x00FF) | ((control & 0x3F) << 8);
+        m_VdpAddress = (m_VdpAddress & 0x00FF) | ((control << 8) & 0x3FFF);
 
         switch (control & 0xC0)
         {
             case 0x00:
             {
                 m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
-                IncrementAddress();
+                m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
                 break;
             }
             case 0x80:
             {
-                u8 reg = control & 0x07;
-                bool old_int = IsSetBit(m_VdpRegister[1], 5);
-                m_VdpRegister[reg] = (m_VdpAddress & 0x00FF);
+                //bool old_int = IsSetBit(m_VdpRegister[1], 5);
 
-                if ((reg == 1) && IsSetBit(m_VdpStatus, 7) && IsSetBit(m_VdpRegister[1], 5) && !old_int)
+                u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
+                u8 reg = control & 0x07;
+                m_VdpRegister[reg] = (m_VdpAddress & 0x00FF) & masks[reg];
+
+                if ((reg == 1) && IsSetBit(m_VdpStatus, 7) && IsSetBit(m_VdpRegister[1], 5))
                 {
                     m_pProcessor->RequestNMI();
                 }
@@ -240,19 +229,11 @@ void Video::WriteControl(u8 control)
     }
 }
 
-void Video::IncrementAddress()
-{
-    m_VdpAddress++;
-    m_VdpAddress &= 0x3FFF;
-}
-
 void Video::ScanLine(int line)
 {
-    int max_height = GC_RESOLUTION_MAX_HEIGHT;
-
     if (m_bDisplayEnabled)
     {
-        if (line < max_height)
+        if (line < GC_RESOLUTION_MAX_HEIGHT)
         {
             RenderBackground(line);
             RenderSprites(line);
@@ -260,11 +241,11 @@ void Video::ScanLine(int line)
     }
     else
     {
-        if (line < max_height)
+        if (line < GC_RESOLUTION_MAX_HEIGHT)
         {
-            int line_width = line * m_iScreenWidth;
+            int line_width = line * GC_RESOLUTION_MAX_WIDTH;
 
-            for (int scx = 0; scx < m_iScreenWidth; scx++)
+            for (int scx = 0; scx < GC_RESOLUTION_MAX_WIDTH; scx++)
             {
                 int pixel = line_width + scx;
                 m_pFrameBuffer[pixel] = 0;
@@ -276,63 +257,59 @@ void Video::ScanLine(int line)
 
 void Video::RenderBackground(int line)
 {
-    int line_width = line * m_iScreenWidth;
+    int line_offset = line * GC_RESOLUTION_MAX_WIDTH;
 
-    int name_table_addr = (m_VdpRegister[2] & 0x0F) << 10;
-    int pattern_table_addr = 0;
-    int color_table_addr = 0;
-
-    if (m_iMode == 2)
-    {
-        pattern_table_addr = (m_VdpRegister[4] & 0x04) << 11;
-        color_table_addr = (m_VdpRegister[3] & 0x80) << 6;
-    }
-    else
-    {
-        pattern_table_addr = (m_VdpRegister[4] & 0x07) << 11;
-        color_table_addr = m_VdpRegister[3] << 6;
-    }
-
-    int region = (m_VdpRegister[4] & 0x03) << 8;
+    int name_table_addr = m_VdpRegister[2] << 10;
+    int color_table_addr = m_VdpRegister[3] << 6;
+    int pattern_table_addr = m_VdpRegister[4] << 11;
+    int region_mask = ((m_VdpRegister[4] & 0x03) << 8) | 0xFF;
+    int color_mask = ((m_VdpRegister[3] & 0x7F) << 3) | 0x07;
     int backdrop_color = m_VdpRegister[7] & 0x0F;
 
     int tile_y = line >> 3;
     int tile_y_offset = line & 7;
+    int region = (tile_y & 0x18) << 5;
 
-    for (int scx = 0; scx < m_iScreenWidth; scx++)
+    if (m_iMode == 2)
     {
-        int tile_x = scx >> 3;
-        int tile_x_offset = scx & 7;
+        pattern_table_addr &= 0x2000;
+        color_table_addr &= 0x2000;
+    }
 
-        int tile_number = ((tile_y << 5) + tile_x);
-
+    for (int tile_x = 0; tile_x < 32; tile_x++)
+    {
+        int tile_number = (tile_y << 5) + tile_x;
         int name_tile_addr = name_table_addr + tile_number;
-
-        int name_tile = 0;
+        int name_tile = m_pVdpVRAM[name_tile_addr];
 
         if (m_iMode == 2)
-            name_tile = m_pVdpVRAM[name_tile_addr] | (region & 0x300 & tile_number);
-        else
-            name_tile = m_pVdpVRAM[name_tile_addr];
+        {
+            name_tile += region;
+        }
 
-        u8 pattern_line = m_pVdpVRAM[pattern_table_addr + (name_tile << 3) + tile_y_offset];
+        u8 pattern_line = m_pVdpVRAM[pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
 
         u8 color_line = 0;
 
         if (m_iMode == 2)
-            color_line = m_pVdpVRAM[color_table_addr + (name_tile << 3) + tile_y_offset];
-        else
-            color_line = m_pVdpVRAM[color_table_addr + (name_tile >> 3)];
+        {
+            color_line = m_pVdpVRAM[color_table_addr + ((name_tile & color_mask) << 3) + tile_y_offset];
+        }
 
         int bg_color = color_line & 0x0F;
         int fg_color = color_line >> 4;
 
-        int pixel = line_width + scx;
+        int screen_offset = line_offset + (tile_x << 3);
 
-        int final_color = IsSetBit(pattern_line, 7 - tile_x_offset) ? fg_color : bg_color;
+        for (int tile_pixel = 0; tile_pixel < 8; tile_pixel++)
+        {
+            int pixel = screen_offset + tile_pixel;
 
-        m_pFrameBuffer[pixel] = (final_color > 0) ? final_color : backdrop_color;
-        m_pInfoBuffer[pixel] = 0x00;
+            int final_color = IsSetBit(pattern_line, 7 - tile_pixel) ? fg_color : bg_color;
+
+            m_pFrameBuffer[pixel] = (final_color > 0) ? final_color : backdrop_color;
+            m_pInfoBuffer[pixel] = 0x00;
+        }
     }
 }
 
@@ -340,7 +317,7 @@ void Video::RenderSprites(int line)
 {
     int sprite_collision = false;
     int sprite_count = 0;
-    int line_width = line * m_iScreenWidth;
+    int line_width = line * GC_RESOLUTION_MAX_WIDTH;
     int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
     bool sprite_zoom = IsSetBit(m_VdpRegister[1], 0);
     if (sprite_zoom)
@@ -396,7 +373,7 @@ void Video::RenderSprites(int line)
         for (int tile_x = 0; tile_x < sprite_size; tile_x++)
         {
             int sprite_pixel_x = sprite_x + tile_x;
-            if (sprite_pixel_x >= m_iScreenWidth)
+            if (sprite_pixel_x >= GC_RESOLUTION_MAX_WIDTH)
                 break;
             if (sprite_pixel_x < 0)
                 continue;
@@ -505,7 +482,6 @@ void Video::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_LineEvents), sizeof(m_LineEvents));
     stream.write(reinterpret_cast<const char*> (&m_iRenderLine), sizeof(m_iRenderLine));
     stream.write(reinterpret_cast<const char*> (&m_bPAL), sizeof(m_bPAL));
-    stream.write(reinterpret_cast<const char*> (&m_iScreenWidth), sizeof(m_iScreenWidth));
     stream.write(reinterpret_cast<const char*> (&m_iMode), sizeof(m_iMode));
     stream.write(reinterpret_cast<const char*> (&m_Timing), sizeof(m_Timing));
     stream.write(reinterpret_cast<const char*> (&m_NextLineSprites), sizeof(m_NextLineSprites));
@@ -527,7 +503,6 @@ void Video::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_LineEvents), sizeof(m_LineEvents));
     stream.read(reinterpret_cast<char*> (&m_iRenderLine), sizeof(m_iRenderLine));
     stream.read(reinterpret_cast<char*> (&m_bPAL), sizeof(m_bPAL));
-    stream.read(reinterpret_cast<char*> (&m_iScreenWidth), sizeof(m_iScreenWidth));
     stream.read(reinterpret_cast<char*> (&m_iMode), sizeof(m_iMode));
     stream.read(reinterpret_cast<char*> (&m_Timing), sizeof(m_Timing));
     stream.read(reinterpret_cast<char*> (&m_NextLineSprites), sizeof(m_NextLineSprites));

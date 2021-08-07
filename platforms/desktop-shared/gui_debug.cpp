@@ -789,7 +789,7 @@ static void debug_window_vram(void)
     ImGui::TextColored(magenta, "  M2:");ImGui::SameLine();
     ImGui::Text("%d", (regs[0] >> 1) & 0x01); ImGui::SameLine();
     ImGui::TextColored(magenta, "  M3:");ImGui::SameLine();
-    ImGui::Text("%d", (regs[1] >> 3) & 0x01); 
+    ImGui::Text("%d", (regs[1] >> 3) & 0x01);
 
     ImGui::PopFont();
 
@@ -1152,14 +1152,14 @@ static void debug_window_vram_regs(void)
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
 
-    const char* reg_desc[] = {"CONTROL 1     ", "CONTROL 2     ", "NAME TABLE    ", "COLOR TABLE   ", "PATTERN TABLE ", "SPRITE ATTR   ", "SPRITE PATTERN", "COLORS        "};
+    const char* reg_desc[] = {"CONTROL 0   ", "CONTROL 1   ", "PATTERN NAME", "COLOR TABLE ", "PATTERN GEN ", "SPRITE ATTR ", "SPRITE GEN  ", "COLORS      "};
 
     ImGui::TextColored(yellow, " ");
     ImGui::TextColored(yellow, "VDP REGISTERS:");
 
     for (int i = 0; i < 8; i++)
     {
-        ImGui::TextColored(cyan, " REG $%01X ", i); ImGui::SameLine();
+        ImGui::TextColored(cyan, " $%01X ", i); ImGui::SameLine();
         ImGui::TextColored(magenta, "%s ", reg_desc[i]); ImGui::SameLine();
         ImGui::Text("$%02X  (" BYTE_TO_BINARY_PATTERN_SPACED ")", regs[i], BYTE_TO_BINARY(regs[i]));
     }
