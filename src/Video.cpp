@@ -269,11 +269,24 @@ void Video::RenderBackground(int line)
     int tile_y_offset = line & 7;
     int region = 0;
 
-    if (m_iMode == 2)
+    switch (m_iMode)
     {
-        pattern_table_addr &= 0x2000;
-        color_table_addr &= 0x2000;
-        region = (tile_y & 0x18) << 5;
+        case 1:
+        {
+            return;
+        }
+        case 2:
+        {
+            pattern_table_addr &= 0x2000;
+            color_table_addr &= 0x2000;
+            region = (tile_y & 0x18) << 5;
+            break;
+        }
+        case 4:
+        {
+            pattern_table_addr &= 0x2000;
+            break;
+        }
     }
 
     for (int tile_x = 0; tile_x < 32; tile_x++)
@@ -284,37 +297,57 @@ void Video::RenderBackground(int line)
         u8 pattern_line = 0;
         u8 color_line = 0;
 
-        switch (m_iMode)
+        if (m_iMode == 4)
         {
-            case 0:
+            int offset_color = pattern_table_addr + (name_tile << 3) + ((tile_y & 0x03) << 1) + (line & 0x04 ? 1 : 0);
+            color_line = m_pVdpVRAM[offset_color];
+
+            int left_color = color_line >> 4;
+            int right_color = color_line & 0x0F;
+            left_color = (left_color > 0) ? left_color : backdrop_color;
+            right_color = (right_color > 0) ? right_color : backdrop_color;
+
+            int screen_offset = line_offset + (tile_x << 3);
+
+            for (int tile_pixel = 0; tile_pixel < 4; tile_pixel++)
             {
-                pattern_line = m_pVdpVRAM[pattern_table_addr + (name_tile << 3) + tile_y_offset];
-                color_line = m_pVdpVRAM[color_table_addr + (name_tile >> 3)];
-                break;
+                int pixel = screen_offset + tile_pixel;
+                m_pFrameBuffer[pixel] = left_color;
+                m_pInfoBuffer[pixel] = 0x00;
             }
-            case 2:
+
+            for (int tile_pixel = 4; tile_pixel < 8; tile_pixel++)
             {
-                name_tile += region;
-                pattern_line = m_pVdpVRAM[pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
-                color_line = m_pVdpVRAM[color_table_addr + ((name_tile & color_mask) << 3) + tile_y_offset];
-                break;
+                int pixel = screen_offset + tile_pixel;
+                m_pFrameBuffer[pixel] = right_color;
+                m_pInfoBuffer[pixel] = 0x00;
             }
-            default:
-                break;
+
+            continue;
+        }
+        else if (m_iMode == 0)
+        {
+            pattern_line = m_pVdpVRAM[pattern_table_addr + (name_tile << 3) + tile_y_offset];
+            color_line = m_pVdpVRAM[color_table_addr + (name_tile >> 3)];
+        }
+        else if (m_iMode == 2)
+        {
+            name_tile += region;
+            pattern_line = m_pVdpVRAM[pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
+            color_line = m_pVdpVRAM[color_table_addr + ((name_tile & color_mask) << 3) + tile_y_offset];
         }
 
-        int bg_color = color_line & 0x0F;
         int fg_color = color_line >> 4;
+        int bg_color = color_line & 0x0F;
+        fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+        bg_color = (bg_color > 0) ? bg_color : backdrop_color;
 
         int screen_offset = line_offset + (tile_x << 3);
 
         for (int tile_pixel = 0; tile_pixel < 8; tile_pixel++)
         {
             int pixel = screen_offset + tile_pixel;
-
-            int final_color = IsSetBit(pattern_line, 7 - tile_pixel) ? fg_color : bg_color;
-
-            m_pFrameBuffer[pixel] = (final_color > 0) ? final_color : backdrop_color;
+            m_pFrameBuffer[pixel] = IsSetBit(pattern_line, 7 - tile_pixel) ? fg_color : bg_color;
             m_pInfoBuffer[pixel] = 0x00;
         }
     }
