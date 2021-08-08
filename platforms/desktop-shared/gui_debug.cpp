@@ -835,11 +835,16 @@ static void debug_window_vram_background(void)
     int mode = video->GetMode();
 
     static bool show_grid = true;
-    int lines = 24;
+    int cols = (mode == 1) ? 40 : 32;
+    int rows = 24;
     float scale = 2.0f;
-    float size_h = 256.0f * scale;
-    float size_v = 8.0f * lines * scale;
-    float spacing = 8.0f * scale;
+    float tile_width = (mode == 1) ? 6.0f : 8.0f;
+    float size_h = ((mode == 1) ? (6.0f * 40.0f) : 256.0f) * scale;
+    float size_v = 8.0f * rows * scale;
+    float spacing_h = ((mode == 1) ? 6.0f : 8.0f) * scale;
+    float spacing_v = 8.0f * scale;
+    float uv_h = (mode == 1) ? 0.0234375f : 1.0f / 32.0f;
+    float uv_v = 1.0f / 32.0f;
 
     ImGui::Checkbox("Show Grid##grid_bg", &show_grid);
 
@@ -852,22 +857,22 @@ static void debug_window_vram_background(void)
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGui::Image((void*)(intptr_t)renderer_emu_debug_vram_background, ImVec2(size_h, size_v), ImVec2(0.0f, 0.0f), ImVec2(1.0f, (1.0f / 32.0f) * lines));
+    ImGui::Image((void*)(intptr_t)renderer_emu_debug_vram_background, ImVec2(size_h, size_v), ImVec2(0.0f, 0.0f), ImVec2(uv_h * cols, uv_v * rows));
 
     if (show_grid)
     {
         float x = p.x;
-        for (int n = 0; n <= 32; n++)
+        for (int n = 0; n <= cols; n++)
         {
             draw_list->AddLine(ImVec2(x, p.y), ImVec2(x, p.y + size_v), ImColor(dark_gray), 1.0f);
-            x += spacing;
+            x += spacing_h;
         }
 
         float y = p.y;  
-        for (int n = 0; n <= lines; n++)
+        for (int n = 0; n <= rows; n++)
         {
             draw_list->AddLine(ImVec2(p.x, y), ImVec2(p.x + size_h, y), ImColor(dark_gray), 1.0f);
-            y += spacing;
+            y += spacing_v;
         }
     }
 
@@ -878,35 +883,33 @@ static void debug_window_vram_background(void)
     int tile_y = -1;
     if ((mouse_x >= 0.0f) && (mouse_x < size_h) && (mouse_y >= 0.0f) && (mouse_y < size_v))
     {
-        tile_x = (int)(mouse_x / spacing);
-        tile_y = (int)(mouse_y / spacing);
+        tile_x = (int)(mouse_x / spacing_h);
+        tile_y = (int)(mouse_y / spacing_v);
 
-        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing), p.y + (tile_y * spacing)), ImVec2(p.x + ((tile_x + 1) * spacing), p.y + ((tile_y + 1) * spacing)), ImColor(cyan), 2.0f, 15, 2.0f);
+        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing_h), p.y + (tile_y * spacing_v)), ImVec2(p.x + ((tile_x + 1) * spacing_h), p.y + ((tile_y + 1) * spacing_v)), ImColor(cyan), 2.0f, 15, 2.0f);
 
         ImGui::NextColumn();
 
-        ImGui::Image((void*)(intptr_t)renderer_emu_debug_vram_background, ImVec2(128.0f, 128.0f), ImVec2((1.0f / 32.0f) * tile_x, (1.0f / 32.0f) * tile_y), ImVec2((1.0f / 32.0f) * (tile_x + 1), (1.0f / 32.0f) * (tile_y + 1)));
+        ImGui::Image((void*)(intptr_t)renderer_emu_debug_vram_background, ImVec2(tile_width * 16.0f, 128.0f), ImVec2(uv_h * tile_x, uv_v * tile_y), ImVec2(uv_h * (tile_x + 1), uv_v * (tile_y + 1)));
 
         ImGui::TextColored(yellow, "INFO:");
 
         ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
-        ImGui::Text("$%02X", tile_x); ImGui::SameLine();
-        ImGui::TextColored(cyan, "   Y:"); ImGui::SameLine();
+        ImGui::Text("$%02X", tile_x);
+        ImGui::TextColored(cyan, " Y:"); ImGui::SameLine();
         ImGui::Text("$%02X", tile_y);
 
-        int name_table_addr = (regs[2] & 0x0F) << 10;
-        int region = (regs[4] & 0x03) << 8;
-        int tile_number = (tile_y * 32) + tile_x;
+        int name_table_addr = regs[2] << 10;
+        int color_table_addr = regs[3] << 6;
+        int pattern_table_addr = regs[4] << 11;
+        int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
+        int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
+        int backdrop_color = regs[7] & 0x0F;
+
+        int tile_number = (tile_y * cols) + tile_x;
         int name_tile_addr = name_table_addr + tile_number;
+        int name_tile = vram[name_tile_addr];
 
-        int name_tile = 0;
-
-        if (mode == 2)
-            name_tile = vram[name_tile_addr] | (region & 0x300 & tile_number);
-        else
-            name_tile = vram[name_tile_addr];
-
-        int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
         int tile_addr = pattern_table_addr + (name_tile << 3);
 
         ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
