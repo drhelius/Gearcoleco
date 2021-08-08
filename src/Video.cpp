@@ -174,7 +174,6 @@ u8 Video::GetDataPort()
 u8 Video::GetStatusFlags()
 {
     u8 ret = m_VdpStatus;
-    m_bFirstByteInSequence = true;
     m_VdpStatus &= 0x5f;
     return ret;
 }
@@ -238,7 +237,9 @@ void Video::ScanLine(int line)
         if (line < GC_RESOLUTION_MAX_HEIGHT)
         {
             RenderBackground(line);
-            RenderSprites(line);
+
+            if (m_iMode != 0x01)
+                RenderSprites(line);
         }
     }
     else
