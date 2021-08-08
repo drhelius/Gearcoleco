@@ -276,6 +276,35 @@ void Video::RenderBackground(int line)
     {
         case 1:
         {
+            int fg_color = (m_VdpRegister[7] >> 4) & 0x0F;
+            int bg_color = backdrop_color;
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+
+            for (int i = 0; i < 8; i++)
+            {
+                int pixel = line_offset + i;
+                m_pFrameBuffer[pixel] = bg_color;
+                m_pFrameBuffer[pixel + 248] = bg_color;
+                m_pInfoBuffer[pixel] = 0x00;
+                m_pInfoBuffer[pixel + 248] = 0x00;
+            }
+
+            for (int tile_x = 0; tile_x < 40; tile_x++)
+            {
+                int tile_number = (tile_y * 40) + tile_x;
+                int name_tile_addr = name_table_addr + tile_number;
+                int name_tile = m_pVdpVRAM[name_tile_addr];
+                u8 pattern_line = m_pVdpVRAM[pattern_table_addr + (name_tile << 3) + tile_y_offset];
+
+                int screen_offset = line_offset + (tile_x * 6) + 8;
+
+                for (int tile_pixel = 0; tile_pixel < 6; tile_pixel++)
+                {
+                    int pixel = screen_offset + tile_pixel;
+                    m_pFrameBuffer[pixel] = IsSetBit(pattern_line, 7 - tile_pixel) ? fg_color : bg_color;
+                    m_pInfoBuffer[pixel] = 0x00;
+                }
+            }
             return;
         }
         case 2:
