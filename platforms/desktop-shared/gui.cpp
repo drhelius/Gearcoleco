@@ -713,6 +713,8 @@ static void main_menu(void)
 
             ImGui::MenuItem("Show VRAM Viewer", "", &config_debug.show_video, config_debug.debug);
 
+            ImGui::MenuItem("Show VRAM Registers", "", &config_debug.show_video_registers, config_debug.debug);
+
             ImGui::Separator();
 
             if (ImGui::MenuItem("Load Symbols...", "", (void*)0, config_debug.debug))
@@ -858,7 +860,7 @@ static void main_window(void)
     {
         flags |= ImGuiWindowFlags_AlwaysAutoResize;
 
-        ImGui::SetNextWindowPos(ImVec2(648, 30), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(568, 31), ImGuiCond_FirstUseEver);
 
         ImGui::Begin("Output###debug_output", &config_debug.show_screen, flags);
     }

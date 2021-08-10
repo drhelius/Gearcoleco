@@ -126,6 +126,7 @@ void config_read(void)
     config_debug.show_memory = read_bool("Debug", "Memory", true);
     config_debug.show_processor = read_bool("Debug", "Processor", true);
     config_debug.show_video = read_bool("Debug", "Video", false);
+    config_debug.show_video_registers = read_bool("Debug", "VideoRegisters", false);
     config_debug.font_size = read_int("Debug", "FontSize", 0);
     
     config_emulator.ffwd_speed = read_int("Emulator", "FFWD", 1);
@@ -238,6 +239,7 @@ void config_write(void)
     write_bool("Debug", "Memory", config_debug.show_memory);
     write_bool("Debug", "Processor", config_debug.show_processor);
     write_bool("Debug", "Video", config_debug.show_video);
+    write_bool("Debug", "VideoRegisters", config_debug.show_video_registers);
     write_int("Debug", "FontSize", config_debug.font_size);
 
     write_int("Emulator", "FFWD", config_emulator.ffwd_speed);

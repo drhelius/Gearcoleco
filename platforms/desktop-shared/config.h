@@ -112,6 +112,7 @@ struct config_Debug
     bool show_processor = true;
     bool show_memory = true;
     bool show_video = false;
+    bool show_video_registers = true;
     int font_size = 0;
 };
 

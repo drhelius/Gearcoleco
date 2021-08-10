@@ -70,6 +70,7 @@ static int goto_back = 0;
 static void debug_window_processor(void);
 static void debug_window_memory(void);
 static void debug_window_disassembler(void);
+static void debug_window_vram_registers(void);
 static void debug_window_vram(void);
 static void debug_window_vram_background(void);
 static void debug_window_vram_tiles(void);
@@ -92,6 +93,8 @@ void gui_debug_windows(void)
             debug_window_disassembler();
         if (config_debug.show_video)
             debug_window_vram();
+        if (config_debug.show_video_registers)
+            debug_window_vram_registers();
     }
 }
 
@@ -182,8 +185,8 @@ void gui_debug_go_back(void)
 
 static void debug_window_memory(void)
 {
-    ImGui::SetNextWindowPos(ImVec2(160, 380), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(482, 308), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(567, 249), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(324, 308), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Memory Editor", &config_debug.show_memory);
 
@@ -234,8 +237,8 @@ static void debug_window_memory(void)
 
 static void debug_window_disassembler(void)
 {
-    ImGui::SetNextWindowPos(ImVec2(160, 30), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(482, 344), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(159, 31), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(401, 641), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Disassembler", &config_debug.show_disassembler);
 
@@ -613,7 +616,7 @@ static void debug_window_disassembler(void)
 
 static void debug_window_processor(void)
 {
-    ImGui::SetNextWindowPos(ImVec2(6, 30), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(6, 31), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Z80 Status", &config_debug.show_processor, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
 
@@ -769,10 +772,22 @@ static void debug_window_processor(void)
     ImGui::End();
 }
 
+static void debug_window_vram_registers(void)
+{
+    ImGui::SetNextWindowPos(ImVec2(567, 560), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(267, 209), ImGuiCond_FirstUseEver);
+
+    ImGui::Begin("VDP Registers", &config_debug.show_video_registers);
+
+    debug_window_vram_regs();
+
+    ImGui::End();
+}
+
 static void debug_window_vram(void)
 {
-    ImGui::SetNextWindowPos(ImVec2(648, 254), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(604, 534), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(896, 31), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(668, 624), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("VDP Viewer", &config_debug.show_video);
 
@@ -810,12 +825,6 @@ static void debug_window_vram(void)
         if (ImGui::BeginTabItem("Sprites"))
         {
             debug_window_vram_sprites();
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Registers"))
-        {
-            debug_window_vram_regs();
             ImGui::EndTabItem();
         }
 
@@ -900,22 +909,29 @@ static void debug_window_vram_background(void)
         ImGui::Text("$%02X", tile_y);
 
         int name_table_addr = regs[2] << 10;
-        int color_table_addr = regs[3] << 6;
         int pattern_table_addr = regs[4] << 11;
-        int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
-        int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
-        int backdrop_color = regs[7] & 0x0F;
+        int region = (tile_y & 0x18) << 5;
 
         int tile_number = (tile_y * cols) + tile_x;
         int name_tile_addr = name_table_addr + tile_number;
         int name_tile = vram[name_tile_addr];
 
+        if (mode == 2)
+        {
+            pattern_table_addr &= 0x2000;
+            name_tile += region;
+        }
+        else if(mode == 4)
+        {
+            pattern_table_addr &= 0x2000;
+        }
+
         int tile_addr = pattern_table_addr + (name_tile << 3);
 
-        ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
-        ImGui::Text(" $%04X", tile_addr);
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
         ImGui::Text("$%03X", name_tile);
+        ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
+        ImGui::Text(" $%04X", tile_addr);
     }
 
     ImGui::Columns(1);
@@ -1125,11 +1141,11 @@ static void debug_window_vram_sprites(void)
 
             ImGui::TextColored(yellow, "DETAILS:");
             ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
-            ImGui::Text("$%02X", x); ImGui::SameLine();
-            ImGui::TextColored(cyan, "  Y:"); ImGui::SameLine();
+            ImGui::Text("$%02X", x);
+            ImGui::TextColored(cyan, " Y:"); ImGui::SameLine();
             ImGui::Text("$%02X", y);
 
-            ImGui::TextColored(cyan, "  Tile:"); ImGui::SameLine();
+            ImGui::TextColored(cyan, " Tile:"); ImGui::SameLine();
             ImGui::Text("$%02X", tile);
 
             ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
@@ -1157,7 +1173,6 @@ static void debug_window_vram_regs(void)
 
     const char* reg_desc[] = {"CONTROL 0   ", "CONTROL 1   ", "PATTERN NAME", "COLOR TABLE ", "PATTERN GEN ", "SPRITE ATTR ", "SPRITE GEN  ", "COLORS      "};
 
-    ImGui::TextColored(yellow, " ");
     ImGui::TextColored(yellow, "VDP REGISTERS:");
 
     for (int i = 0; i < 8; i++)

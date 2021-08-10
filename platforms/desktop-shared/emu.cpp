@@ -425,9 +425,6 @@ static void update_debug_background_buffer(void)
     int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
     int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
     int backdrop_color = regs[7] & 0x0F;
-
-    //int tile_y = line >> 3;
-    //int tile_y_offset = line & 7;
     int region = 0;
 
     switch (mode)
@@ -542,65 +539,6 @@ static void update_debug_background_buffer(void)
             }
         }
     }
-
-    /////////////////////////7
-
-    // int pattern_table_addr = 0;
-    // int color_table_addr = 0;
-    // int name_table_addr = (regs[2] & 0x0F) << 10;
-    // int region = (regs[4] & 0x03) << 8;
-    // int backdrop_color = regs[7] & 0x0F;
-
-    // if (mode == 2)
-    // {
-    //     pattern_table_addr = (regs[4] & 0x04) << 11;
-    //     color_table_addr = (regs[3] & 0x80) << 6;
-    // }
-    // else
-    // {
-    //     pattern_table_addr = (regs[4] & 0x07) << 11;
-    //     color_table_addr = regs[3] << 6;
-    // }
-
-    // for (int y = 0; y < 256; y++)
-    // {
-    //     int width_y = (y * 256);
-    //     int tile_y = y / 8;
-    //     int offset_y = y & 0x7;
-
-    //     for (int x = 0; x < 256; x++)
-    //     {
-    //         int tile_x = x / 8;
-    //         int offset_x = 7 - (x & 0x7);
-    //         int pixel = width_y + x;
-
-    //         int tile_number = (tile_y * 32) + tile_x;
-
-    //         int name_tile_addr = name_table_addr + tile_number;
-
-    //         int name_tile = 0;
-
-    //         if (mode == 2)
-    //             name_tile = vram[name_tile_addr] | (region & 0x300 & tile_number);
-    //         else
-    //             name_tile = vram[name_tile_addr];
-
-    //         u8 pattern_line = vram[pattern_table_addr + (name_tile << 3) + offset_y];
-
-    //         u8 color_line = 0;
-
-    //         if (mode == 2)
-    //             color_line = vram[color_table_addr + (name_tile << 3) + offset_y];
-    //         else
-    //             color_line = vram[color_table_addr + (name_tile >> 3)];
-
-    //         int bg_color = color_line & 0x0F;
-    //         int fg_color = color_line >> 4;
-    //         int final_color = IsSetBit(pattern_line, offset_x) ? fg_color : bg_color;
-
-    //         debug_background_buffer[pixel] = (final_color > 0) ? final_color : backdrop_color;
-    //     }
-    // }
 }
 
 static void update_debug_tile_buffer(void)
