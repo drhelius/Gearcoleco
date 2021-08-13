@@ -102,6 +102,18 @@ struct config_Input
     int gamepad_right_button;
     int gamepad_x_axis;
     int gamepad_y_axis;
+    int gamepad_1;
+    int gamepad_2;
+    int gamepad_3;
+    int gamepad_4;
+    int gamepad_5;
+    int gamepad_6;
+    int gamepad_7;
+    int gamepad_8;
+    int gamepad_9;
+    int gamepad_0;
+    int gamepad_asterisk;
+    int gamepad_hash;
 };
 
 struct config_Debug

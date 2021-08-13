@@ -563,6 +563,18 @@ static void main_menu(void)
                     {
                         gamepad_configuration_item("Left Button:", &config_input[0].gamepad_left_button, 0);
                         gamepad_configuration_item("Right Button:", &config_input[0].gamepad_right_button, 0);
+                        gamepad_configuration_item("Keypad 0:", &config_input[0].gamepad_0, 0);
+                        gamepad_configuration_item("Keypad 1:", &config_input[0].gamepad_1, 0);
+                        gamepad_configuration_item("Keypad 2:", &config_input[0].gamepad_2, 0);
+                        gamepad_configuration_item("Keypad 3:", &config_input[0].gamepad_3, 0);
+                        gamepad_configuration_item("Keypad 4:", &config_input[0].gamepad_4, 0);
+                        gamepad_configuration_item("Keypad 5:", &config_input[0].gamepad_5, 0);
+                        gamepad_configuration_item("Keypad 6:", &config_input[0].gamepad_6, 0);
+                        gamepad_configuration_item("Keypad 7:", &config_input[0].gamepad_7, 0);
+                        gamepad_configuration_item("Keypad 8:", &config_input[0].gamepad_8, 0);
+                        gamepad_configuration_item("Keypad 9:", &config_input[0].gamepad_9, 0);
+                        gamepad_configuration_item("Asterisk:", &config_input[0].gamepad_asterisk, 0);
+                        gamepad_configuration_item("Hash:", &config_input[0].gamepad_hash, 0);
 
                         popup_modal_gamepad(0);                 
 
@@ -588,6 +600,18 @@ static void main_menu(void)
                     {
                         gamepad_configuration_item("Left Button:", &config_input[1].gamepad_left_button, 1);
                         gamepad_configuration_item("Right Button:", &config_input[1].gamepad_right_button, 1);
+                        gamepad_configuration_item("Keypad 0:", &config_input[1].gamepad_0, 1);
+                        gamepad_configuration_item("Keypad 1:", &config_input[1].gamepad_1, 1);
+                        gamepad_configuration_item("Keypad 2:", &config_input[1].gamepad_2, 1);
+                        gamepad_configuration_item("Keypad 3:", &config_input[1].gamepad_3, 1);
+                        gamepad_configuration_item("Keypad 4:", &config_input[1].gamepad_4, 1);
+                        gamepad_configuration_item("Keypad 5:", &config_input[1].gamepad_5, 1);
+                        gamepad_configuration_item("Keypad 6:", &config_input[1].gamepad_6, 1);
+                        gamepad_configuration_item("Keypad 7:", &config_input[1].gamepad_7, 1);
+                        gamepad_configuration_item("Keypad 8:", &config_input[1].gamepad_8, 1);
+                        gamepad_configuration_item("Keypad 9:", &config_input[1].gamepad_9, 1);
+                        gamepad_configuration_item("Asterisk:", &config_input[1].gamepad_asterisk, 1);
+                        gamepad_configuration_item("Hash:", &config_input[1].gamepad_hash, 1);
 
                         popup_modal_gamepad(1);                 
 

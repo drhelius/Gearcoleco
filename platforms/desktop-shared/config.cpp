@@ -70,10 +70,22 @@ void config_init(void)
     config_input[0].gamepad = true;
     config_input[0].gamepad_invert_x_axis = false;
     config_input[0].gamepad_invert_y_axis = false;
-    config_input[0].gamepad_left_button = 1;
-    config_input[0].gamepad_right_button = 2;
+    config_input[0].gamepad_left_button = SDL_CONTROLLER_BUTTON_A;
+    config_input[0].gamepad_right_button = SDL_CONTROLLER_BUTTON_B;
     config_input[0].gamepad_x_axis = 0;
     config_input[0].gamepad_y_axis = 1;
+    config_input[0].gamepad_1 = SDL_CONTROLLER_BUTTON_X;
+    config_input[0].gamepad_2 = SDL_CONTROLLER_BUTTON_Y;
+    config_input[0].gamepad_3 = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
+    config_input[0].gamepad_4 = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+    config_input[0].gamepad_5 = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
+    config_input[0].gamepad_6 = SDL_CONTROLLER_BUTTON_LEFTSTICK;
+    config_input[0].gamepad_7 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[0].gamepad_8 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[0].gamepad_9 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[0].gamepad_0 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[0].gamepad_asterisk = SDL_CONTROLLER_BUTTON_START;
+    config_input[0].gamepad_hash = SDL_CONTROLLER_BUTTON_BACK;
 
     config_input[1].key_left = SDL_SCANCODE_J;
     config_input[1].key_right = SDL_SCANCODE_L;
@@ -96,10 +108,22 @@ void config_init(void)
     config_input[1].gamepad = true;
     config_input[1].gamepad_invert_x_axis = false;
     config_input[1].gamepad_invert_y_axis = false;
-    config_input[1].gamepad_left_button = 1;
-    config_input[1].gamepad_right_button = 2;
+    config_input[1].gamepad_left_button = SDL_CONTROLLER_BUTTON_A;
+    config_input[1].gamepad_right_button = SDL_CONTROLLER_BUTTON_B;
     config_input[1].gamepad_x_axis = 0;
     config_input[1].gamepad_y_axis = 1;
+    config_input[1].gamepad_1 = SDL_CONTROLLER_BUTTON_X;
+    config_input[1].gamepad_2 = SDL_CONTROLLER_BUTTON_Y;
+    config_input[1].gamepad_3 = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
+    config_input[1].gamepad_4 = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+    config_input[1].gamepad_5 = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
+    config_input[1].gamepad_6 = SDL_CONTROLLER_BUTTON_LEFTSTICK;
+    config_input[1].gamepad_7 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[1].gamepad_8 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[1].gamepad_9 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[1].gamepad_0 = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[1].gamepad_asterisk = SDL_CONTROLLER_BUTTON_START;
+    config_input[1].gamepad_hash = SDL_CONTROLLER_BUTTON_BACK;
 
     config_ini_file = new mINI::INIFile(config_emu_file_path);
 }
@@ -197,6 +221,18 @@ void config_read(void)
     config_input[0].gamepad_right_button = read_int("InputA", "GamepadRight", SDL_CONTROLLER_BUTTON_B);
     config_input[0].gamepad_x_axis = read_int("InputA", "GamepadX", SDL_CONTROLLER_AXIS_LEFTX);
     config_input[0].gamepad_y_axis = read_int("InputA", "GamepadY", SDL_CONTROLLER_AXIS_LEFTY);
+    config_input[0].gamepad_1 = read_int("InputA", "Gamepad1", SDL_CONTROLLER_BUTTON_X);
+    config_input[0].gamepad_2 = read_int("InputA", "Gamepad2", SDL_CONTROLLER_BUTTON_Y);
+    config_input[0].gamepad_3 = read_int("InputA", "Gamepad3", SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+    config_input[0].gamepad_4 = read_int("InputA", "Gamepad4", SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+    config_input[0].gamepad_5 = read_int("InputA", "Gamepad5", SDL_CONTROLLER_BUTTON_RIGHTSTICK);
+    config_input[0].gamepad_6 = read_int("InputA", "Gamepad6", SDL_CONTROLLER_BUTTON_LEFTSTICK);
+    config_input[0].gamepad_7 = read_int("InputA", "Gamepad7", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[0].gamepad_8 = read_int("InputA", "Gamepad8", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[0].gamepad_9 = read_int("InputA", "Gamepad9", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[0].gamepad_0 = read_int("InputA", "Gamepad0", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[0].gamepad_asterisk = read_int("InputA", "GamepadAsterisk", SDL_CONTROLLER_BUTTON_START);
+    config_input[0].gamepad_hash = read_int("InputA", "GamepadHash", SDL_CONTROLLER_BUTTON_BACK);
 
     config_input[1].key_left = (SDL_Scancode)read_int("InputB", "KeyLeft", SDL_SCANCODE_J);
     config_input[1].key_right = (SDL_Scancode)read_int("InputB", "KeyRight", SDL_SCANCODE_L);
@@ -225,6 +261,18 @@ void config_read(void)
     config_input[1].gamepad_right_button = read_int("InputB", "GamepadRight", SDL_CONTROLLER_BUTTON_B);
     config_input[1].gamepad_x_axis = read_int("InputB", "GamepadX", SDL_CONTROLLER_AXIS_LEFTX);
     config_input[1].gamepad_y_axis = read_int("InputB", "GamepadY", SDL_CONTROLLER_AXIS_LEFTY);
+    config_input[1].gamepad_1 = read_int("InputB", "Gamepad1", SDL_CONTROLLER_BUTTON_X);
+    config_input[1].gamepad_2 = read_int("InputB", "Gamepad2", SDL_CONTROLLER_BUTTON_Y);
+    config_input[1].gamepad_3 = read_int("InputB", "Gamepad3", SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+    config_input[1].gamepad_4 = read_int("InputB", "Gamepad4", SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+    config_input[1].gamepad_5 = read_int("InputB", "Gamepad5", SDL_CONTROLLER_BUTTON_RIGHTSTICK);
+    config_input[1].gamepad_6 = read_int("InputB", "Gamepad6", SDL_CONTROLLER_BUTTON_LEFTSTICK);
+    config_input[1].gamepad_7 = read_int("InputB", "Gamepad7", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[1].gamepad_8 = read_int("InputB", "Gamepad8", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[1].gamepad_9 = read_int("InputB", "Gamepad9", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[1].gamepad_0 = read_int("InputB", "Gamepad0", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[1].gamepad_asterisk = read_int("InputB", "GamepadAsterisk", SDL_CONTROLLER_BUTTON_START);
+    config_input[1].gamepad_hash = read_int("InputB", "GamepadHash", SDL_CONTROLLER_BUTTON_BACK);
 
     Log("Settings loaded");
 }
@@ -308,6 +356,18 @@ void config_write(void)
     write_int("InputA", "GamepadRight", config_input[0].gamepad_right_button);
     write_int("InputA", "GamepadX", config_input[0].gamepad_x_axis);
     write_int("InputA", "GamepadY", config_input[0].gamepad_y_axis);
+    write_int("InputA", "Gamepad1", config_input[0].gamepad_1);
+    write_int("InputA", "Gamepad2", config_input[0].gamepad_2);
+    write_int("InputA", "Gamepad3", config_input[0].gamepad_3);
+    write_int("InputA", "Gamepad4", config_input[0].gamepad_4);
+    write_int("InputA", "Gamepad5", config_input[0].gamepad_5);
+    write_int("InputA", "Gamepad6", config_input[0].gamepad_6);
+    write_int("InputA", "Gamepad7", config_input[0].gamepad_7);
+    write_int("InputA", "Gamepad8", config_input[0].gamepad_8);
+    write_int("InputA", "Gamepad9", config_input[0].gamepad_9);
+    write_int("InputA", "Gamepad0", config_input[0].gamepad_0);
+    write_int("InputA", "GamepadAsterisk", config_input[0].gamepad_asterisk);
+    write_int("InputA", "GamepadHash", config_input[0].gamepad_hash);
 
     write_int("InputB", "KeyLeft", config_input[1].key_left);
     write_int("InputB", "KeyRight", config_input[1].key_right);
@@ -336,6 +396,18 @@ void config_write(void)
     write_int("InputB", "GamepadRight", config_input[1].gamepad_right_button);
     write_int("InputB", "GamepadX", config_input[1].gamepad_x_axis);
     write_int("InputB", "GamepadY", config_input[1].gamepad_y_axis);
+    write_int("InputB", "Gamepad1", config_input[1].gamepad_1);
+    write_int("InputB", "Gamepad2", config_input[1].gamepad_2);
+    write_int("InputB", "Gamepad3", config_input[1].gamepad_3);
+    write_int("InputB", "Gamepad4", config_input[1].gamepad_4);
+    write_int("InputB", "Gamepad5", config_input[1].gamepad_5);
+    write_int("InputB", "Gamepad6", config_input[1].gamepad_6);
+    write_int("InputB", "Gamepad7", config_input[1].gamepad_7);
+    write_int("InputB", "Gamepad8", config_input[1].gamepad_8);
+    write_int("InputB", "Gamepad9", config_input[1].gamepad_9);
+    write_int("InputB", "Gamepad0", config_input[1].gamepad_0);
+    write_int("InputB", "GamepadAsterisk", config_input[1].gamepad_asterisk);
+    write_int("InputB", "GamepadHash", config_input[1].gamepad_hash);
 
     if (config_ini_file->write(config_ini_data, true))
     {

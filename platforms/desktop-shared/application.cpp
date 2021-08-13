@@ -258,6 +258,30 @@ static void sdl_events_emu(const SDL_Event* event)
                     emu_key_pressed(controller, Key_Left_Button);
                 else if (event->cbutton.button == config_input[i].gamepad_left_button)
                     emu_key_pressed(controller, Key_Right_Button);
+                else if (event->jbutton.button == config_input[i].gamepad_0)
+                    emu_key_pressed(controller, Keypad_0);
+                else if (event->jbutton.button == config_input[i].gamepad_1)
+                    emu_key_pressed(controller, Keypad_1);
+                else if (event->jbutton.button == config_input[i].gamepad_2)
+                    emu_key_pressed(controller, Keypad_2);
+                else if (event->jbutton.button == config_input[i].gamepad_3)
+                    emu_key_pressed(controller, Keypad_3);
+                else if (event->jbutton.button == config_input[i].gamepad_4)
+                    emu_key_pressed(controller, Keypad_4);
+                else if (event->jbutton.button == config_input[i].gamepad_5)
+                    emu_key_pressed(controller, Keypad_5);
+                else if (event->jbutton.button == config_input[i].gamepad_6)
+                    emu_key_pressed(controller, Keypad_6);
+                else if (event->jbutton.button == config_input[i].gamepad_7)
+                    emu_key_pressed(controller, Keypad_7);
+                else if (event->jbutton.button == config_input[i].gamepad_8)
+                    emu_key_pressed(controller, Keypad_8);
+                else if (event->jbutton.button == config_input[i].gamepad_9)
+                    emu_key_pressed(controller, Keypad_9);
+                else if (event->jbutton.button == config_input[i].gamepad_asterisk)
+                    emu_key_pressed(controller, Keypad_Asterisk);
+                else if (event->jbutton.button == config_input[i].gamepad_hash)
+                    emu_key_pressed(controller, Keypad_Hash);
 
                 if (config_input[i].gamepad_directional == 1)
                     continue;
@@ -291,6 +315,30 @@ static void sdl_events_emu(const SDL_Event* event)
                     emu_key_released(controller, Key_Left_Button);
                 else if (event->jbutton.button == config_input[i].gamepad_right_button)
                     emu_key_released(controller, Key_Right_Button);
+                else if (event->jbutton.button == config_input[i].gamepad_0)
+                    emu_key_released(controller, Keypad_0);
+                else if (event->jbutton.button == config_input[i].gamepad_1)
+                    emu_key_released(controller, Keypad_1);
+                else if (event->jbutton.button == config_input[i].gamepad_2)
+                    emu_key_released(controller, Keypad_2);
+                else if (event->jbutton.button == config_input[i].gamepad_3)
+                    emu_key_released(controller, Keypad_3);
+                else if (event->jbutton.button == config_input[i].gamepad_4)
+                    emu_key_released(controller, Keypad_4);
+                else if (event->jbutton.button == config_input[i].gamepad_5)
+                    emu_key_released(controller, Keypad_5);
+                else if (event->jbutton.button == config_input[i].gamepad_6)
+                    emu_key_released(controller, Keypad_6);
+                else if (event->jbutton.button == config_input[i].gamepad_7)
+                    emu_key_released(controller, Keypad_7);
+                else if (event->jbutton.button == config_input[i].gamepad_8)
+                    emu_key_released(controller, Keypad_8);
+                else if (event->jbutton.button == config_input[i].gamepad_9)
+                    emu_key_released(controller, Keypad_9);
+                else if (event->jbutton.button == config_input[i].gamepad_asterisk)
+                    emu_key_released(controller, Keypad_Asterisk);
+                else if (event->jbutton.button == config_input[i].gamepad_hash)
+                    emu_key_released(controller, Keypad_Hash);
 
                 if (config_input[i].gamepad_directional == 1)
                     continue;
