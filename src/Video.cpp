@@ -117,7 +117,7 @@ bool Video::Tick(unsigned int clockCycles)
     m_iCycleCounter += clockCycles;
 
     ///// VINT /////
-    if ((m_iRenderLine == (GC_RESOLUTION_MAX_HEIGHT + 1)))
+    if (m_iRenderLine == (GC_RESOLUTION_MAX_HEIGHT + 1))
     {
         if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
         {
