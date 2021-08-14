@@ -2,7 +2,7 @@
 
 [![Gearcoleco CI](https://github.com/drhelius/Gearcoleco/workflows/Gearcoleco%20CI/badge.svg)](https://github.com/drhelius/Gearcoleco/actions)
 
-Gearcoleco is a cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD, Raspberry Pi and RetroArch.
+Gearcoleco is a very accurate cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD, Raspberry Pi and RetroArch.
 
 This is an open source project with its ongoing development made possible thanks to the support by these awesome [backers](backers.md).
 
@@ -31,7 +31,7 @@ If you find a bug or want new features, you can help me [openning an issue](http
 - Compressed rom support (ZIP).
 - Supported platforms (standalone): Windows, Linux, BSD, macOS, and Raspberry Pi.
 - Supported platforms (libretro): Windows, Linux, macOS, Raspberry Pi, Android, iOS, tvOS, PlayStation Vita, PlayStation 3, Nintendo 3DS, Nintendo GameCube, Nintendo Wii, Nintendo WiiU, Nintendo Switch, Emscripten, Classic Mini systems (NES, SNES, C64, ...), OpenDingux and QNX.
-- Full debugger with on-the-fly disassembler, cpu breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, memory editor, IO inspector and VRAM viewer including registries, tiles, sprites and backgrounds.
+- Full debugger with just-in-time disassembler, cpu breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, memory editor, IO inspector and VRAM viewer including registries, tiles, sprites and backgrounds.
 - Windows and Linux *Portable Mode* by creating a file named `portable.ini` in the same directory as the application binary.
 - Support for modern game controllers through [gamecontrollerdb.txt](https://github.com/gabomdq/SDL_GameControllerDB) file located in the same directory as the application binary.
 
