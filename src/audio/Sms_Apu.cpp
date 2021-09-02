@@ -125,7 +125,7 @@ void Sms_Noise::run( blip_time_t time, blip_time_t end_time )
 	{
 		Blip_Buffer* const output_ = this->output;
 		unsigned shifter_ = this->shifter;
-		int delta = (shifter_ & 1) ? (-volume * 2) : (volume * 2);
+		int delta = (shifter_ & 1) ? -volume : volume;
 		int period_ = *this->period * 2;
 		if ( !period_ )
 			period_ = 16;
@@ -136,7 +136,7 @@ void Sms_Noise::run( blip_time_t time, blip_time_t end_time )
 			shifter_ = (feedback & -(shifter_ & 1)) ^ (shifter_ >> 1);
 			if ( changed & 2 ) // true if bits 0 and 1 differ
 			{
-				amp = (shifter_ & 1) ? 0 : volume * 2;
+				amp = (shifter_ & 1) ? 0 : volume;
 				delta = -delta;
 				synth.offset_inline( time, delta, output_ );
 				last_amp = amp;
@@ -146,7 +146,7 @@ void Sms_Noise::run( blip_time_t time, blip_time_t end_time )
 		while ( time < end_time );
 		
 		this->shifter = shifter_;
-		this->last_amp = (shifter_ & 1) ? 0 : volume * 2; //delta >> 1;
+		this->last_amp = (shifter_ & 1) ? 0 : volume; //delta >> 1;
 	}
 	delay = time - end_time;
 }
