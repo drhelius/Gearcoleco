@@ -19,13 +19,14 @@
 
 #include "ColecoVisionIOPorts.h"
 
-ColecoVisionIOPorts::ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory)
+ColecoVisionIOPorts::ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory, Processor* pProcessor)
 {
     m_pAudio = pAudio;
     m_pVideo = pVideo;
     m_pInput = pInput;
     m_pCartridge = pCartridge;
     m_pMemory = pMemory;
+    m_pProcessor = pProcessor;
 }
 
 ColecoVisionIOPorts::~ColecoVisionIOPorts()

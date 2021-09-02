@@ -27,11 +27,12 @@ class Video;
 class Input;
 class Cartridge;
 class Memory;
+class Processor;
 
 class ColecoVisionIOPorts : public IOPorts
 {
 public:
-    ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory);
+    ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory, Processor* pProcessor);
     ~ColecoVisionIOPorts();
     void Reset();
     u8 In(u8 port);
@@ -42,6 +43,7 @@ private:
     Input* m_pInput;
     Cartridge* m_pCartridge;
     Memory* m_pMemory;
+    Processor* m_pProcessor;
 };
 
 #include "Video.h"
@@ -49,6 +51,7 @@ private:
 #include "Input.h"
 #include "Cartridge.h"
 #include "Memory.h"
+#include "Processor.h"
 
 inline u8 ColecoVisionIOPorts::In(u8 port)
 {
@@ -104,6 +107,7 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         case 0xE0:
         {
             m_pAudio->WriteAudioRegister(value);
+            m_pProcessor->InjectTStates(32);
             break;
         }
         default:

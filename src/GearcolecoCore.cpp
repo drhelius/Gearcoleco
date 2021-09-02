@@ -62,7 +62,7 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pAudio = new Audio();
     m_pVideo = new Video(m_pMemory, m_pProcessor);
     m_pInput = new Input();
-    m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory);
+    m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
 
     m_pMemory->Init();
     m_pProcessor->Init();

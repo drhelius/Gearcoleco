@@ -35,6 +35,7 @@ Processor::Processor(Memory* pMemory)
     m_bHalt = false;
     m_bBranchTaken = false;
     m_iTStates = 0;
+    m_iInjectedTStates = 0;
     m_bAfterEI = false;
     m_iInterruptMode = 0;
     m_bINTRequested = false;
@@ -83,6 +84,7 @@ void Processor::Reset()
     m_bHalt = false;
     m_bBranchTaken = false;
     m_iTStates = 0;
+    m_iInjectedTStates = 0;
     m_bAfterEI = false;
     m_iInterruptMode = 1;
     PC.SetValue(0x0000);
@@ -119,9 +121,9 @@ IOPorts* Processor::GetIOPOrts()
     return m_pIOPorts;
 }
 
-unsigned int Processor::RunFor(u8 tstates)
+unsigned int Processor::RunFor(unsigned int tstates)
 {
-    u8 executed = 0;
+    unsigned int executed = 0;
 
     while (executed < tstates)
     {
@@ -165,9 +167,20 @@ unsigned int Processor::RunFor(u8 tstates)
         DisassembleNextOpcode();
 
         executed += m_iTStates;
+
+        if (m_iInjectedTStates > 0)
+        {
+            executed += m_iInjectedTStates;
+            m_iInjectedTStates = 0;
+        }
     }
 
     return executed;
+}
+
+void Processor::InjectTStates(unsigned int tstates)
+{
+    m_iInjectedTStates += tstates;
 }
 
 void Processor::RequestINT(bool assert)
@@ -546,6 +559,7 @@ void Processor::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_bHalt), sizeof(m_bHalt));
     stream.write(reinterpret_cast<const char*> (&m_bBranchTaken), sizeof(m_bBranchTaken));
     stream.write(reinterpret_cast<const char*> (&m_iTStates), sizeof(m_iTStates));
+    stream.write(reinterpret_cast<const char*> (&m_iInjectedTStates), sizeof(m_iInjectedTStates));
     stream.write(reinterpret_cast<const char*> (&m_bAfterEI), sizeof(m_bAfterEI));
     stream.write(reinterpret_cast<const char*> (&m_iInterruptMode), sizeof(m_iInterruptMode));
     stream.write(reinterpret_cast<const char*> (&m_CurrentPrefix), sizeof(m_CurrentPrefix));
@@ -600,6 +614,7 @@ void Processor::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_bHalt), sizeof(m_bHalt));
     stream.read(reinterpret_cast<char*> (&m_bBranchTaken), sizeof(m_bBranchTaken));
     stream.read(reinterpret_cast<char*> (&m_iTStates), sizeof(m_iTStates));
+    stream.read(reinterpret_cast<char*> (&m_iInjectedTStates), sizeof(m_iInjectedTStates));
     stream.read(reinterpret_cast<char*> (&m_bAfterEI), sizeof(m_bAfterEI));
     stream.read(reinterpret_cast<char*> (&m_iInterruptMode), sizeof(m_iInterruptMode));
     stream.read(reinterpret_cast<char*> (&m_CurrentPrefix), sizeof(m_CurrentPrefix));

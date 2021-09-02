@@ -106,7 +106,7 @@ inline void Sms_Noise::reset()
 
 void Sms_Noise::run( blip_time_t time, blip_time_t end_time )
 {
-	int amp = (shifter & 1) ? 0 : volume * 2;
+	int amp = (shifter & 1) ? 0 : volume;
 
 	{
 		int delta = amp - last_amp;
@@ -208,8 +208,8 @@ void Sms_Apu::reset( unsigned feedback, int noise_width )
 	
 	if ( !feedback || !noise_width )
 	{
-		feedback = 0x0009;
-		noise_width = 16;
+		feedback = 0x0003;
+		noise_width = 15;
 	}
 	// convert to "Galios configuration"
 	looped_feedback = 1 << (noise_width - 1);
