@@ -273,8 +273,8 @@ void Video::RenderBackground(int line)
         case 1:
         {
             int fg_color = (m_VdpRegister[7] >> 4) & 0x0F;
-            int bg_color = backdrop_color;            
-            fg_color = (fg_color > 0) ? fg_color : backdrop_color;            
+            int bg_color = backdrop_color;
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
 
             for (int i = 0; i < 8; i++)
             {
@@ -383,7 +383,6 @@ void Video::RenderBackground(int line)
 
 void Video::RenderSprites(int line)
 {
-    int sprite_collision = false;
     int sprite_count = 0;
     int line_width = line * GC_RESOLUTION_MAX_WIDTH;
     int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
@@ -459,22 +458,23 @@ void Video::RenderSprites(int line)
 
             if (sprite_pixel && (sprite_count < 5))
             {
-                if (m_pInfoBuffer[pixel] == 1)
+                if (!IsSetBit(m_pInfoBuffer[pixel], 0) && (sprite_color > 0))
                 {
-                    sprite_collision = true;
+                    m_pFrameBuffer[pixel] = sprite_color;
+                    m_pInfoBuffer[pixel] = SetBit(m_pInfoBuffer[pixel], 0);
+                }
+
+                if (IsSetBit(m_pInfoBuffer[pixel], 1))
+                {
+                     m_VdpStatus = SetBit(m_VdpStatus, 5);
                 }
                 else
                 {
-                    if (sprite_color > 0)
-                        m_pFrameBuffer[pixel] = sprite_color;
-                    m_pInfoBuffer[pixel] = 1;
+                    m_pInfoBuffer[pixel] = SetBit(m_pInfoBuffer[pixel], 1);
                 }
             }
         }
     }
-
-    if (sprite_collision)
-        m_VdpStatus = SetBit(m_VdpStatus, 5);
 }
 
 void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size)
