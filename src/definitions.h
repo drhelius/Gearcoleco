@@ -141,8 +141,8 @@ enum GC_Keys
     Key_Right = 0x11,
     Key_Down = 0x12,
     Key_Left = 0x13,
-    Key_Right_Button = 0x14,
-    Key_Left_Button = 0x15
+    Key_Left_Button = 0x14,
+    Key_Right_Button = 0x15
 };
 
 enum GC_Controllers
