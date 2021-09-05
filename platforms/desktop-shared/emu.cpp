@@ -425,6 +425,7 @@ static void update_debug_background_buffer(void)
     int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
     int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
     int backdrop_color = regs[7] & 0x0F;
+    backdrop_color = (backdrop_color > 0) ? backdrop_color : 1;
     int region = 0;
 
     switch (mode)
