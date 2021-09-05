@@ -279,9 +279,7 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
 
         Reset();
 
-#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-        m_pProcessor->Disassemble(m_pProcessor->GetState()->PC->GetValue());
-#endif
+        m_pProcessor->DisassembleNextOpcode();
     }
 }
 

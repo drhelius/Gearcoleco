@@ -565,7 +565,7 @@ static void update_debug_tile_buffer(void)
 
             int tile_number = (tile_y * 32) + tile_x;
 
-            int tile_data_addr = pattern_table_addr + (tile_number * 8) + (1 * offset_y);
+            int tile_data_addr = (pattern_table_addr + (tile_number * 8) + (1 * offset_y)) & 0x3FFF;
             bool color = IsSetBit(vram[tile_data_addr], offset_x);
 
             u16 black = 0;

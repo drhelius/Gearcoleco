@@ -80,15 +80,8 @@ void Video::Reset(bool bPAL)
     }
     for (int i = 0; i < 0x4000; i++)
         m_pVdpVRAM[i] = 0;
-
-    m_VdpRegister[0] = 0x36; // Mode
-    m_VdpRegister[1] = 0x80; // Mode
-    m_VdpRegister[2] = 0xFF; // Screen Map Table Base
-    m_VdpRegister[3] = 0xFF; // Always $FF
-    m_VdpRegister[4] = 0xFF; // Always $FF
-    m_VdpRegister[5] = 0xFF; // Sprite Table Base
-    m_VdpRegister[6] = 0xFB; // Sprite Pattern Table Base
-    m_VdpRegister[7] = 0x00; // Border color #0
+    for (int i = 0; i < 8; i++)
+        m_VdpRegister[i] = 0;
 
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;

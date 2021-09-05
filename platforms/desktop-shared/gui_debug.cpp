@@ -913,7 +913,7 @@ static void debug_window_vram_background(void)
         int region = (tile_y & 0x18) << 5;
 
         int tile_number = (tile_y * cols) + tile_x;
-        int name_tile_addr = name_table_addr + tile_number;
+        int name_tile_addr = (name_table_addr + tile_number) & 0x3FFF;
         int name_tile = vram[name_tile_addr];
 
         if (mode == 2)
@@ -926,7 +926,7 @@ static void debug_window_vram_background(void)
             pattern_table_addr &= 0x2000;
         }
 
-        int tile_addr = pattern_table_addr + (name_tile << 3);
+        int tile_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
 
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
         ImGui::Text("$%03X", name_tile);
@@ -1007,7 +1007,7 @@ static void debug_window_vram_tiles(void)
         int tile_addr = 0;
 
         int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
-        tile_addr = pattern_table_addr + (tile << 3);
+        tile_addr = (pattern_table_addr + (tile << 3)) & 0x3FFF;
 
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
         ImGui::Text("$%03X", tile); 
@@ -1082,6 +1082,9 @@ static void debug_window_vram_sprites(void)
 
     for (int s = 0; s < 64; s++)
     {
+        if ((p[s].x == 0) && (p[s].y == 0))
+            continue;
+
         float mouse_x = io.MousePos.x - p[s].x;
         float mouse_y = io.MousePos.y - p[s].y;
 
