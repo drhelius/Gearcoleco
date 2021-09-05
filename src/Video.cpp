@@ -197,11 +197,12 @@ void Video::WriteControl(u8 control)
             }
             case 0x80:
             {
+                bool old_nmi = IsSetBit(m_VdpRegister[1], 5);
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
                 u8 reg = control & 0x07;
                 m_VdpRegister[reg] = (m_VdpAddress & 0x00FF) & masks[reg];
 
-                if ((reg == 1) && IsSetBit(m_VdpStatus, 7) && IsSetBit(m_VdpRegister[1], 5))
+                if ((reg == 1) && IsSetBit(m_VdpRegister[1], 5) && (!old_nmi) && IsSetBit(m_VdpStatus, 7))
                 {
                     m_pProcessor->RequestNMI();
                 }
