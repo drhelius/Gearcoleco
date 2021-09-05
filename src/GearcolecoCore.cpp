@@ -17,6 +17,7 @@
  *
  */
 
+#include <iomanip>
 #include "GearcolecoCore.h"
 #include "Memory.h"
 #include "Processor.h"
@@ -153,6 +154,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
 
 void GearcolecoCore::SaveDisassembledROM()
 {
+    Memory::stDisassembleRecord** biosMap = m_pMemory->GetDisassembledBiosMemoryMap();
     Memory::stDisassembleRecord** romMap = m_pMemory->GetDisassembledRomMemoryMap();
 
     if (m_pCartridge->IsReady() && (strlen(m_pCartridge->GetFilePath()) > 0) && IsValidPointer(romMap))
@@ -170,12 +172,22 @@ void GearcolecoCore::SaveDisassembledROM()
 
         if (myfile.is_open())
         {
+            #define PAD_ADDR(digits) std::uppercase << std::hex << std::setw(digits) << std::setfill('0')
+            #define PAD_MEM(chars) std::setw(chars) << std::setfill(' ')
+
+            for (int i = 0; i < 0x2000; i++)
+            {
+                if (IsValidPointer(biosMap[i]) && (biosMap[i]->name[0] != 0))
+                {
+                    myfile << "BIOS $" << PAD_ADDR(4) << i << "   " << PAD_MEM(12) << biosMap[i]->bytes << "  " << biosMap[i]->name << "\n";
+                }
+            }
+
             for (int i = 0; i < MAX_ROM_SIZE; i++)
             {
                 if (IsValidPointer(romMap[i]) && (romMap[i]->name[0] != 0))
                 {
-                    myfile << "0x" << hex << i << "\t " << romMap[i]->name << "\n";
-                    i += (romMap[i]->size - 1);
+                    myfile << "ROM  $" << PAD_ADDR(4) << i + 0x8000 << "   " << PAD_MEM(12) << romMap[i]->bytes << "  " << romMap[i]->name << "\n";
                 }
             }
 
