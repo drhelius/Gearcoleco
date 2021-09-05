@@ -368,7 +368,7 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
 
     return map[offset];
 
-    #elif
+    #else
 
     return NULL;
 
