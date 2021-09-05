@@ -28,7 +28,7 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     InitPointer(m_pInfoBuffer);
     InitPointer(m_pFrameBuffer);
     InitPointer(m_pVdpVRAM);
-    m_bFirstByteInSequence = false;
+    m_bFirstByteInSequence = true;
     for (int i = 0; i < 8; i++)
         m_VdpRegister[i] = 0;
     m_VdpBuffer = 0;
@@ -75,7 +75,7 @@ void Video::Reset(bool bPAL)
     m_VdpStatus = 0;
     for (int i = 0; i < (GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
     {
-        m_pFrameBuffer[i] = 0;
+        m_pFrameBuffer[i] = 1;
         m_pInfoBuffer[i] = 0;
     }
     for (int i = 0; i < 0x4000; i++)
@@ -103,11 +103,6 @@ void Video::Reset(bool bPAL)
     m_Timing[TIMING_VINT] = 25;
     m_Timing[TIMING_RENDER] = 195;
     m_Timing[TIMING_DISPLAY] = 37;
-
-    for (int i = 0; i < 8; i++)
-    {
-        m_NextLineSprites[i] = -1;
-    }
 }
 
 bool Video::Tick(unsigned int clockCycles)
@@ -173,8 +168,9 @@ u8 Video::GetDataPort()
 
 u8 Video::GetStatusFlags()
 {
+    m_bFirstByteInSequence = true;
     u8 ret = m_VdpStatus;
-    m_VdpStatus &= 0x5f;
+    m_VdpStatus &= 0x1f;
     return ret;
 }
 
@@ -208,8 +204,6 @@ void Video::WriteControl(u8 control)
             }
             case 0x80:
             {
-                //bool old_int = IsSetBit(m_VdpRegister[1], 5);
-
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
                 u8 reg = control & 0x07;
                 m_VdpRegister[reg] = (m_VdpAddress & 0x00FF) & masks[reg];
@@ -251,7 +245,7 @@ void Video::ScanLine(int line)
             for (int scx = 0; scx < GC_RESOLUTION_MAX_WIDTH; scx++)
             {
                 int pixel = line_width + scx;
-                m_pFrameBuffer[pixel] = 0;
+                m_pFrameBuffer[pixel] = 1;
                 m_pInfoBuffer[pixel] = 0;
             }
         }
@@ -268,6 +262,7 @@ void Video::RenderBackground(int line)
     int region_mask = ((m_VdpRegister[4] & 0x03) << 8) | 0xFF;
     int color_mask = ((m_VdpRegister[3] & 0x7F) << 3) | 0x07;
     int backdrop_color = m_VdpRegister[7] & 0x0F;
+    backdrop_color = (backdrop_color > 0) ? backdrop_color : 1;
 
     int tile_y = line >> 3;
     int tile_y_offset = line & 7;
@@ -278,8 +273,8 @@ void Video::RenderBackground(int line)
         case 1:
         {
             int fg_color = (m_VdpRegister[7] >> 4) & 0x0F;
-            int bg_color = backdrop_color;
-            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+            int bg_color = backdrop_color;            
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;            
 
             for (int i = 0; i < 8; i++)
             {
@@ -421,7 +416,7 @@ void Video::RenderSprites(int line)
             continue;
 
         sprite_count++;
-        if (!SetBit(m_VdpStatus, 6) && (sprite_count > 4))
+        if (!IsSetBit(m_VdpStatus, 6) && (sprite_count > 4))
         {
             m_VdpStatus = SetBit(m_VdpStatus, 6);
             m_VdpStatus = (m_VdpStatus & 0xE0) | sprite;
@@ -462,16 +457,19 @@ void Video::RenderSprites(int line)
             else
                 sprite_pixel = IsSetBit(m_pVdpVRAM[sprite_line_addr + 16], 15 - tile_x_adjusted);
 
-            if (sprite_pixel && (sprite_count < 5) && ((m_pInfoBuffer[pixel] & 0x08) == 0))
+            if (sprite_pixel && (sprite_count < 5))
             {
-                m_pFrameBuffer[pixel] = sprite_color;
-                m_pInfoBuffer[pixel] |= 0x08;
+                if (m_pInfoBuffer[pixel] == 1)
+                {
+                    sprite_collision = true;
+                }
+                else
+                {
+                    if (sprite_color > 0)
+                        m_pFrameBuffer[pixel] = sprite_color;
+                    m_pInfoBuffer[pixel] = 1;
+                }
             }
-
-            if ((m_pInfoBuffer[pixel] & 0x04) != 0)
-                sprite_collision = true;
-            else
-                m_pInfoBuffer[pixel] |= 0x04;
         }
     }
 
@@ -594,7 +592,6 @@ void Video::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_bPAL), sizeof(m_bPAL));
     stream.write(reinterpret_cast<const char*> (&m_iMode), sizeof(m_iMode));
     stream.write(reinterpret_cast<const char*> (&m_Timing), sizeof(m_Timing));
-    stream.write(reinterpret_cast<const char*> (&m_NextLineSprites), sizeof(m_NextLineSprites));
     stream.write(reinterpret_cast<const char*> (&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
     stream.write(reinterpret_cast<const char*> (&m_bSpriteOvrRequest), sizeof(m_bSpriteOvrRequest));
 }
@@ -615,7 +612,6 @@ void Video::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_bPAL), sizeof(m_bPAL));
     stream.read(reinterpret_cast<char*> (&m_iMode), sizeof(m_iMode));
     stream.read(reinterpret_cast<char*> (&m_Timing), sizeof(m_Timing));
-    stream.read(reinterpret_cast<char*> (&m_NextLineSprites), sizeof(m_NextLineSprites));
     stream.read(reinterpret_cast<char*> (&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
     stream.read(reinterpret_cast<char*> (&m_bSpriteOvrRequest), sizeof(m_bSpriteOvrRequest));
 }
