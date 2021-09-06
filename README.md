@@ -16,9 +16,7 @@ If you find a bug or want new features, you can help me [openning an issue](http
 
 - **Windows**: [Gearcoleco-1.0.0-Windows.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-Windows.zip)
   - NOTE: You may need to install the [Microsoft Visual C++ Redistributable](https://go.microsoft.com/fwlink/?LinkId=746572)
-- **macOS**:
-  - `brew install --cask gearcoleco`
-  - Or install manually: [Gearcoleco-1.0.0-macOS.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-macOS.zip)
+- **macOS**: [Gearcoleco-1.0.0-macOS.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-macOS.zip)
 - **Linux**: [Gearcoleco-1.0.0-Linux.tar.xz](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-Linux.tar.xz)
   - NOTE: You may need to install `libsdl2` and `libglew`
 
