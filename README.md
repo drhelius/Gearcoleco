@@ -19,6 +19,7 @@ If you find a bug or want new features, you can help me [openning an issue](http
 - **macOS**: [Gearcoleco-1.0.0-macOS.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-macOS.zip)
 - **Linux**: [Gearcoleco-1.0.0-Linux.tar.xz](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-Linux.tar.xz)
   - NOTE: You may need to install `libsdl2` and `libglew`
+- **RetroArch**: [Libretro core documentation](https://docs.libretro.com/library/gearcoleco/).
 
 ## Features
 
