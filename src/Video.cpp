@@ -163,7 +163,7 @@ u8 Video::GetStatusFlags()
 {
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpStatus;
-    m_VdpStatus &= 0x1f;
+    m_VdpStatus &= 0x1F;
     return ret;
 }
 
@@ -180,12 +180,13 @@ void Video::WriteControl(u8 control)
     if (m_bFirstByteInSequence)
     {
         m_bFirstByteInSequence = false;
-        m_VdpAddress = (m_VdpAddress & 0xFF00) | control;
+        m_VdpAddress = (m_VdpAddress & 0x3F00) | control;
+        m_VdpBuffer = control;
     }
     else
     {
         m_bFirstByteInSequence = true;
-        m_VdpAddress = (m_VdpAddress & 0x00FF) | ((control << 8) & 0x3FFF);
+        m_VdpAddress = ((control & 0x3F) << 8) | m_VdpBuffer;
 
         switch (control & 0xC0)
         {
@@ -200,7 +201,7 @@ void Video::WriteControl(u8 control)
                 bool old_nmi = IsSetBit(m_VdpRegister[1], 5);
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
                 u8 reg = control & 0x07;
-                m_VdpRegister[reg] = (m_VdpAddress & 0x00FF) & masks[reg];
+                m_VdpRegister[reg] = m_VdpBuffer & masks[reg];
 
                 if ((reg == 1) && IsSetBit(m_VdpRegister[1], 5) && (!old_nmi) && IsSetBit(m_VdpStatus, 7))
                 {
