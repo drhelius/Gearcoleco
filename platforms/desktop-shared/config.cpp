@@ -156,9 +156,21 @@ void config_read(void)
     config_emulator.ffwd_speed = read_int("Emulator", "FFWD", 1);
     config_emulator.save_slot = read_int("Emulator", "SaveSlot", 0);
     config_emulator.start_paused = read_bool("Emulator", "StartPaused", false);
-    config_emulator.save_in_rom_folder = read_bool("Emulator", "SaveInROMFolder", false);
     config_emulator.region = read_int("Emulator", "Region", 0);
     config_emulator.bios_path = read_string("Emulator", "BiosPath");
+    config_emulator.savefiles_dir_option = read_int("Emulator", "SaveFilesDirOption", 0);
+    config_emulator.savefiles_path = read_string("Emulator", "SaveFilesPath");
+    config_emulator.savestates_dir_option = read_int("Emulator", "SaveStatesDirOption", 0);
+    config_emulator.savestates_path = read_string("Emulator", "SaveStatesPath");
+
+    if (config_emulator.savefiles_path.empty())
+    {
+        config_emulator.savefiles_path = config_root_path;
+    }
+    if (config_emulator.savestates_path.empty())
+    {
+        config_emulator.savestates_path = config_root_path;
+    }
 
     for (int i = 0; i < config_max_recent_roms; i++)
     {
@@ -293,9 +305,12 @@ void config_write(void)
     write_int("Emulator", "FFWD", config_emulator.ffwd_speed);
     write_int("Emulator", "SaveSlot", config_emulator.save_slot);
     write_bool("Emulator", "StartPaused", config_emulator.start_paused);
-    write_bool("Emulator", "SaveInROMFolder", config_emulator.save_in_rom_folder);
     write_int("Emulator", "Region", config_emulator.region);
     write_string("Emulator", "BiosPath", config_emulator.bios_path);
+    write_int("Emulator", "SaveFilesDirOption", config_emulator.savefiles_dir_option);
+    write_string("Emulator", "SaveFilesPath", config_emulator.savefiles_path);
+    write_int("Emulator", "SaveStatesDirOption", config_emulator.savestates_dir_option);
+    write_string("Emulator", "SaveStatesPath", config_emulator.savestates_path);
 
     for (int i = 0; i < config_max_recent_roms; i++)
     {

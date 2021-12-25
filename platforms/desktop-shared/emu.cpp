@@ -25,9 +25,7 @@
 
 static GearcolecoCore* gearcoleco;
 static Sound_Queue* sound_queue;
-static bool save_files_in_rom_dir = false;
 static s16* audio_buffer;
-static char base_save_path[260];
 static bool audio_enabled;
 static bool debugging = false;
 static bool debug_step = false;
@@ -48,10 +46,8 @@ static void update_debug_background_buffer(void);
 static void update_debug_tile_buffer(void);
 static void update_debug_sprite_buffers(void);
 
-void emu_init(const char* save_path)
+void emu_init(void)
 {
-    strcpy(base_save_path, save_path);
-
     int screen_size = GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT;
 
     emu_frame_buffer = new u8[screen_size * 3];
@@ -83,6 +79,10 @@ void emu_init(const char* save_path)
     emu_debug_disable_breakpoints_cpu = false;
     emu_debug_disable_breakpoints_mem = false;
     emu_debug_tile_palette = 0;
+    emu_savefiles_dir_option = 0;
+    emu_savestates_dir_option = 0;
+    emu_savefiles_path[0] = 0;
+    emu_savestates_path[0] = 0;
 }
 
 void emu_destroy(void)
@@ -96,9 +96,8 @@ void emu_destroy(void)
     destroy_debug();
 }
 
-void emu_load_rom(const char* file_path, bool save_in_rom_dir, Cartridge::ForceConfiguration config)
+void emu_load_rom(const char* file_path, Cartridge::ForceConfiguration config)
 {
-    save_files_in_rom_dir = save_in_rom_dir;
     save_ram();
     gearcoleco->LoadROM(file_path, &config);
     load_ram();
@@ -168,9 +167,8 @@ bool emu_is_bios_loaded(void)
     return gearcoleco->GetMemory()->IsBiosLoaded();
 }
 
-void emu_reset(bool save_in_rom_dir, Cartridge::ForceConfiguration config)
+void emu_reset(Cartridge::ForceConfiguration config)
 {
-    save_files_in_rom_dir = save_in_rom_dir;
     save_ram();
     gearcoleco->ResetROM(&config);
     load_ram();
@@ -214,11 +212,10 @@ void emu_save_ram(const char* file_path)
         gearcoleco->SaveRam(file_path, true);
 }
 
-void emu_load_ram(const char* file_path, bool save_in_rom_dir, Cartridge::ForceConfiguration config)
+void emu_load_ram(const char* file_path, Cartridge::ForceConfiguration config)
 {
     if (!emu_is_empty())
     {
-        save_files_in_rom_dir = save_in_rom_dir;
         save_ram();
         gearcoleco->ResetROM(&config);
         gearcoleco->LoadRam(file_path, true);
@@ -228,13 +225,23 @@ void emu_load_ram(const char* file_path, bool save_in_rom_dir, Cartridge::ForceC
 void emu_save_state_slot(int index)
 {
     if (!emu_is_empty())
-        gearcoleco->SaveState(index);
+    {
+        if ((emu_savestates_dir_option == 0) && (strcmp(emu_savestates_path, "")))
+            gearcoleco->SaveState(emu_savestates_path, index);
+        else
+            gearcoleco->SaveState(index);
+    }
 }
 
 void emu_load_state_slot(int index)
 {
     if (!emu_is_empty())
-        gearcoleco->LoadState(index);
+    {
+        if ((emu_savestates_dir_option == 0) && (strcmp(emu_savestates_path, "")))
+            gearcoleco->LoadState(emu_savestates_path, index);
+        else
+            gearcoleco->LoadState(index);
+    }
 }
 
 void emu_save_state_file(const char* file_path)
@@ -312,18 +319,18 @@ static void save_ram(void)
     emu_dissasemble_rom();
 #endif
 
-    if (save_files_in_rom_dir)
-        gearcoleco->SaveRam();
+    if ((emu_savefiles_dir_option == 0) && (strcmp(emu_savefiles_path, "")))
+        gearcoleco->SaveRam(emu_savefiles_path);
     else
-        gearcoleco->SaveRam(base_save_path);
+        gearcoleco->SaveRam();
 }
 
 static void load_ram(void)
 {
-    if (save_files_in_rom_dir)
-        gearcoleco->LoadRam();
+    if ((emu_savefiles_dir_option == 0) && (strcmp(emu_savefiles_path, "")))
+        gearcoleco->LoadRam(emu_savefiles_path);
     else
-        gearcoleco->LoadRam(base_save_path);
+        gearcoleco->LoadRam();
 }
 
 static const char* get_mapper(Cartridge::CartridgeTypes type)

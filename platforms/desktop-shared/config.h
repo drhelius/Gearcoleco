@@ -39,13 +39,16 @@ struct config_Emulator
     bool paused = false;
     int save_slot = 0;
     bool start_paused = false;
-    bool save_in_rom_folder = false;
     bool ffwd = false;
     int ffwd_speed = 1;
     int region = 0;
     bool show_info = false;
     std::string recent_roms[config_max_recent_roms];
     std::string bios_path;
+    int savefiles_dir_option = 0;
+    std::string savefiles_path;
+    int savestates_dir_option = 0;
+    std::string savestates_path;
 };
 
 struct config_Video
