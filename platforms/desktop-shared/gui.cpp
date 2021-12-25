@@ -254,7 +254,11 @@ static void main_menu(void)
                         if (ImGui::MenuItem(config_emulator.recent_roms[i].c_str()))
                         {
                             if (emu_is_bios_loaded())
-                                gui_load_rom(config_emulator.recent_roms[i].c_str());
+                            {
+                                char rom_path[4096];
+                                strcpy(rom_path, config_emulator.recent_roms[i].c_str());
+                                gui_load_rom(rom_path);
+                            }
                             else
                                 open_bios_warning = true;
                         }
