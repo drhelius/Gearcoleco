@@ -26,6 +26,7 @@
 #include "Input.h"
 #include "Cartridge.h"
 #include "ColecoVisionIOPorts.h"
+#include "no_bios.h"
 
 GearcolecoCore::GearcolecoCore()
 {
@@ -589,6 +590,7 @@ void GearcolecoCore::Reset()
 void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
     int size = GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT;
+    u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)
     {
@@ -597,13 +599,13 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
         case GC_PIXEL_RGB565:
         case GC_PIXEL_BGR565:
         {
-            m_pVideo->Render16bit(m_pVideo->GetFrameBuffer(), finalFrameBuffer, m_pixelFormat, size);
+            m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size);
             break;
         }
         case GC_PIXEL_RGB888:
         case GC_PIXEL_BGR888:
         {
-            m_pVideo->Render24bit(m_pVideo->GetFrameBuffer(), finalFrameBuffer, m_pixelFormat, size);
+            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size);
             break;
         }
     }
