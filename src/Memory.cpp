@@ -130,6 +130,11 @@ void Memory::Reset()
     {
         m_pRam[i] = rand() % 256;
     }
+
+    if (m_pCartridge->IsPAL())
+        m_pBios[0x69] = 0x32;
+    else
+        m_pBios[0x69] = 0x3C;
 }
 
 void Memory::SaveState(std::ostream& stream)
