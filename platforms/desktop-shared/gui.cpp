@@ -1321,9 +1321,9 @@ static void popup_modal_bios(void)
 static GC_Color color_float_to_int(ImVec4 color)
 {
     GC_Color ret;
-    ret.red = floor(color.x >= 1.0 ? 255 : color.x * 256.0);
-    ret.green = floor(color.y >= 1.0 ? 255 : color.y * 256.0);
-    ret.blue = floor(color.z >= 1.0 ? 255 : color.z * 256.0);
+    ret.red = (u8)floor(color.x >= 1.0 ? 255.0 : color.x * 256.0);
+    ret.green = (u8)floor(color.y >= 1.0 ? 255.0 : color.y * 256.0);
+    ret.blue = (u8)floor(color.z >= 1.0 ? 255.0 : color.z * 256.0);
     return ret;
 }
 
