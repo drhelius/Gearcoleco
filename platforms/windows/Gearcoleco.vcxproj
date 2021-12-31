@@ -98,6 +98,9 @@
     <ClInclude Include="..\desktop-shared\mINI\ini.h" />
     <ClInclude Include="..\desktop-shared\renderer.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="Gearcoleco.manifest" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B12702AD-ABFB-343A-A199-8E24837244A3}</ProjectGuid>
     <RootNamespace>Gearcoleco</RootNamespace>
