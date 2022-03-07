@@ -147,9 +147,9 @@ else ifneq (,$(filter $(platform), ngc wii wiiu))
 # PS3
 else ifneq (,$(filter $(platform), ps3 psl1ght))
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
-   CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
-   CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
-   AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
+   CC = $(PS3DEV)/ppu/bin/ppu-$(COMMONLV)gcc$(EXE_EXT)
+   CXX = $(PS3DEV)/ppu/bin/ppu-$(COMMONLV)g++$(EXE_EXT)
+   AR = $(PS3DEV)/ppu/bin/ppu-$(COMMONLV)ar$(EXE_EXT)
    CXXFLAGS += -DMINIZ_NO_TIME -DMINIZ_NO_STDIO -Wall -D__ppc__ -DMSB_FIRST
    STATIC_LINKING = 1
 # OSX
@@ -244,7 +244,9 @@ else ifeq ($(platform), retrofw)
    fpic := -fPIC
    SHARED := -shared -Wl,-version-script=$(CORE_DIR)/link.T
    PLATFORM_DEFINES := -DCC_RESAMPLER -DCC_RESAMPLER_NO_HIGHPASS
-   CFLAGS += -fomit-frame-pointer -ffast-math -march=mips32 -mtune=mips32
+   LDFLAGS += -flto -mplt
+   CFLAGS += -fomit-frame-pointer -ffast-math -march=mips32 -mtune=mips32 -mhard-float
+   CFLAGS += -flto -DPERFORMANCE
    CXXFLAGS += $(CFLAGS)
 # MIYOO
 else ifeq ($(platform), miyoo)
