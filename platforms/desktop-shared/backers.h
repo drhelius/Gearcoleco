@@ -5,6 +5,7 @@ static const char * BACKERS_STR =
 " · Michael Mellor (dinglyburrow)"
 "\n · Francisco Javier Trujillo (fjtrujy)"
 "\n · Rupert Carmichael (carmiker)"
+"\n · Orange Kryptonite (OrangeKryptonite)"
 "\n · KPreston2900050";
 
 #endif	/* BACKERS_H */
