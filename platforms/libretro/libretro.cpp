@@ -35,6 +35,9 @@ static const char slash = '\\';
 static const char slash = '/';
 #endif
 
+#define MAX_PADS 2
+#define JOYPAD_BUTTONS 16
+
 static struct retro_log_callback logging;
 static retro_log_printf_t log_cb;
 static char retro_system_directory[4096];
@@ -50,6 +53,28 @@ static bool libretro_supports_bitmasks;
 static GearcolecoCore* core;
 static u8* frame_buffer;
 static Cartridge::ForceConfiguration config;
+
+static int joypad[MAX_PADS][JOYPAD_BUTTONS];
+static int joypre[MAX_PADS][JOYPAD_BUTTONS];
+
+static GC_Keys keymap[] = {
+    Key_Up,
+    Key_Down,
+    Key_Left,
+    Key_Right,
+    Key_Left_Button,
+    Key_Right_Button,
+    Keypad_1,
+    Keypad_2,
+    Keypad_Hash,
+    Keypad_Asterisk,
+    Keypad_4,
+    Keypad_3,
+    Keypad_6,
+    Keypad_5,
+    Keypad_8,
+    Keypad_7
+};
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
@@ -255,102 +280,79 @@ static void load_bootroms(void)
 
 static void update_input(void)
 {
+    int16_t joypad_bits[MAX_PADS];
+
     input_poll_cb();
 
-    for (int player=0; player<2; player++)
+    if (libretro_supports_bitmasks)
     {
-        int16_t ib;
-        if (libretro_supports_bitmasks)
-            ib = input_state_cb(player, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
-        else
+        for (int j = 0; j < MAX_PADS; j++)
+            joypad_bits[j] = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
+    }
+    else
+    {
+        for (int j = 0; j < MAX_PADS; j++)
         {
-            unsigned int i;
-            ib = 0;
-            for (i = 0; i <= RETRO_DEVICE_ID_JOYPAD_R3; i++)
-                ib |= input_state_cb(player, RETRO_DEVICE_JOYPAD, 0, i) ? (1 << i) : 0;
+            joypad_bits[j] = 0;
+            for (int i = 0; i < (RETRO_DEVICE_ID_JOYPAD_R3+1); i++)
+                joypad_bits[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) ? (1 << i) : 0;
         }
-
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Up);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Up);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Down);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Down);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Left);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Left);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Right);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Right);
-
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_B))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Key_Right_Button);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Right_Button);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_A))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Key_Left_Button);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Left_Button);
-
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_Y))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_2);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_2);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_X))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_1);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_1);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_START))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_Hash);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_Hash);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_SELECT))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_Asterisk);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_Asterisk);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_L))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_4);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_4);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_R))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_3);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_3);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_L2))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_6);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_6);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_R2))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_5);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_5);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_L3))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_8);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_8);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_R3))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_7);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_7);
     }
 
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_1) )
+    // Copy previous state
+    for (int j = 0; j < MAX_PADS; j++)
+    {
+        for (int i = 0; i < JOYPAD_BUTTONS; i++)
+            joypre[j][i] = joypad[j][i];
+    }
+
+    // Get current state
+    for (int j = 0; j < MAX_PADS; j++)
+    {
+        if (allow_up_down)
+        {
+            joypad[j][0] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)     ? 1 : 0;
+            joypad[j][1] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)   ? 1 : 0;
+            joypad[j][2] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)   ? 1 : 0;
+            joypad[j][3] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)  ? 1 : 0;
+        }
+        else
+        {
+            joypad[j][0] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) && ((joypre[j][0] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))    ? 1 : 0;
+            joypad[j][1] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) && ((joypre[j][1] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))    ? 1 : 0;
+            joypad[j][2] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) && ((joypre[j][2] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))) ? 1 : 0;
+            joypad[j][3] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) && ((joypre[j][3] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))) ? 1 : 0;
+        }
+        joypad[j][4] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_A)      ? 1 : 0;
+        joypad[j][5] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_B)      ? 1 : 0;
+        joypad[j][6] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_X)      ? 1 : 0;
+        joypad[j][7] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_Y)      ? 1 : 0;
+        joypad[j][8] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_START)  ? 1 : 0;
+        joypad[j][9] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_SELECT) ? 1 : 0;
+        joypad[j][10] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_L)     ? 1 : 0;
+        joypad[j][11] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_R)     ? 1 : 0;
+        joypad[j][12] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_L2)    ? 1 : 0;
+        joypad[j][13] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_R2)    ? 1 : 0;
+        joypad[j][14] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_L3)    ? 1 : 0;
+        joypad[j][15] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_R3)    ? 1 : 0;
+    }
+
+    // Only push changes to the core
+    for (int j = 0; j < MAX_PADS; j++)
+    {
+        for (int i = 0; i < JOYPAD_BUTTONS; i++)
+        {
+            if (joypad[j][i] != joypre[j][i])
+            {
+                if (joypad[j][i] == 1)
+                    core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i]);
+                else
+                    core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i]);
+            }
+        }
+    }
+
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_1))
         core->KeyPressed(static_cast<GC_Controllers>(Controller_1), Keypad_0);
     else
         core->KeyReleased(static_cast<GC_Controllers>(Controller_1), Keypad_0);
@@ -359,11 +361,11 @@ static void update_input(void)
     else
         core->KeyReleased(static_cast<GC_Controllers>(Controller_1), Keypad_9);
 
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_3) )
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_3))
         core->KeyPressed(static_cast<GC_Controllers>(Controller_2), Keypad_0);
     else
         core->KeyReleased(static_cast<GC_Controllers>(Controller_2), Keypad_0);
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_4) )
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_4))
         core->KeyPressed(static_cast<GC_Controllers>(Controller_2), Keypad_9);
     else
         core->KeyReleased(static_cast<GC_Controllers>(Controller_2), Keypad_9);
