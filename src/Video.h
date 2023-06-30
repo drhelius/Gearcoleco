@@ -47,6 +47,7 @@ public:
     void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size);
     void SetCustomPalette(GC_Color* palette);
     void SetPredefinedPalette(int palette);
+    void SetNoSpriteLimit(bool noSpriteLimit);
 
 private:
     void ScanLine(int line);
@@ -90,6 +91,7 @@ private:
     int m_Timing[3];
     bool m_bDisplayEnabled;
     bool m_bSpriteOvrRequest;
+    bool m_bNoSpriteLimit;
 
     u16 m_palette_565_rgb[16];
     u16 m_palette_555_rgb[16];

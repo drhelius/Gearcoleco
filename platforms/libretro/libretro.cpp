@@ -88,6 +88,7 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
+    { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
     { NULL }
 };
 
@@ -399,6 +400,17 @@ static void check_variables(void)
             config.region = Cartridge::CartridgePAL;
         else
             config.region = Cartridge::CartridgeUnknownRegion;
+    }
+
+    var.key = "gearcoleco_no_sprite_limit";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Enabled") == 0)
+            core->GetVideo()->SetNoSpriteLimit(true);
+        else
+            core->GetVideo()->SetNoSpriteLimit(false);
     }
 }
 
