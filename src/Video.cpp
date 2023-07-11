@@ -44,6 +44,8 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     m_iMode = 0;
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
+    m_bNoSpriteLimit = false;
+
     for (int i = 0; i < 48; i++)
         m_CustomPalette[i] = 0;
     m_pCurrentPalette = const_cast<u8*>(kPalette_888_coleco);
@@ -96,6 +98,11 @@ void Video::Reset(bool bPAL)
     m_Timing[TIMING_VINT] = 25;
     m_Timing[TIMING_RENDER] = 195;
     m_Timing[TIMING_DISPLAY] = 37;
+}
+
+void Video::SetNoSpriteLimit(bool noSpriteLimit)
+{
+    m_bNoSpriteLimit = noSpriteLimit;
 }
 
 bool Video::Tick(unsigned int clockCycles)
@@ -451,7 +458,7 @@ void Video::RenderSprites(int line)
             else
                 sprite_pixel = IsSetBit(m_pVdpVRAM[sprite_line_addr + 16], 15 - tile_x_adjusted);
 
-            if (sprite_pixel && (sprite_count < 5))
+            if (sprite_pixel && ((sprite_count < 5) || m_bNoSpriteLimit))
             {
                 if (!IsSetBit(m_pInfoBuffer[pixel], 0) && (sprite_color > 0))
                 {
