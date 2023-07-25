@@ -1,6 +1,6 @@
 # Gearcoleco
 
-[![Build](https://github.com/drhelius/Gearcoleco/workflows/Gearcoleco%20CI/badge.svg)](https://github.com/drhelius/Gearcoleco/actions)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/drhelius/Gearcoleco/gearcoleco.yml)
 ![GitHub tag (with filter)](https://img.shields.io/github/v/tag/drhelius/Gearcoleco?label=version)
 ![commits)](https://img.shields.io/github/commit-activity/t/drhelius/Gearcoleco)
 ![GitHub contributors](https://img.shields.io/github/contributors/drhelius/Gearcoleco)
