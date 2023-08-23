@@ -1,12 +1,12 @@
 # Gearcoleco
 
-![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/drhelius/Gearcoleco/gearcoleco.yml)
-![GitHub tag (with filter)](https://img.shields.io/github/v/tag/drhelius/Gearcoleco?label=version)
-![commits)](https://img.shields.io/github/commit-activity/t/drhelius/Gearcoleco)
-![GitHub contributors](https://img.shields.io/github/contributors/drhelius/Gearcoleco)
-![GitHub Sponsors](https://img.shields.io/github/sponsors/drhelius)
-![GitHub](https://img.shields.io/github/license/drhelius/Gearcoleco)
-![Twitter Follow](https://img.shields.io/twitter/follow/drhelius)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/drhelius/Gearcoleco/gearcoleco.yml)](https://github.com/drhelius/Gearcoleco/actions/workflows/gearcoleco.yml)
+[![GitHub tag (with filter)](https://img.shields.io/github/v/tag/drhelius/Gearcoleco?label=version)](https://github.com/drhelius/Gearcoleco/releases)
+[![commits)](https://img.shields.io/github/commit-activity/t/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/graphs/contributors)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/drhelius)](https://github.com/sponsors/drhelius)
+[![GitHub](https://img.shields.io/github/license/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/blob/main/LICENSE)
+[![Twitter Follow](https://img.shields.io/twitter/follow/drhelius)](https://twitter.com/drhelius)
 
 Gearcoleco is a very accurate cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD, Raspberry Pi and RetroArch.
 
