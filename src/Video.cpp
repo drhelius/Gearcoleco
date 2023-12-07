@@ -93,7 +93,7 @@ void Video::Reset(bool bPAL)
     m_iCycleCounter = 0;
     m_iRenderLine = 0;
 
-    m_Timing[TIMING_VINT] = 25;
+    m_Timing[TIMING_VINT] = 220;
     m_Timing[TIMING_RENDER] = 195;
     m_Timing[TIMING_DISPLAY] = 37;
 }
@@ -105,7 +105,7 @@ bool Video::Tick(unsigned int clockCycles)
     m_iCycleCounter += clockCycles;
 
     ///// VINT /////
-    if (m_iRenderLine == (GC_RESOLUTION_MAX_HEIGHT + 1))
+    if (m_iRenderLine == GC_RESOLUTION_MAX_HEIGHT)
     {
         if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
         {
@@ -135,7 +135,7 @@ bool Video::Tick(unsigned int clockCycles)
     ///// END OF LINE /////
     if (m_iCycleCounter >= GC_CYCLES_PER_LINE)
     {
-        if (m_iRenderLine == (GC_RESOLUTION_MAX_HEIGHT - 1))
+        if (m_iRenderLine == GC_RESOLUTION_MAX_HEIGHT)
         {
             return_vblank = true;
         }
@@ -164,6 +164,12 @@ u8 Video::GetStatusFlags()
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpStatus;
     m_VdpStatus &= 0x1F;
+
+    if (IsSetBit(m_VdpRegister[1], 5) && IsSetBit(m_VdpStatus, 7))
+    {
+        m_pProcessor->RequestNMI();
+    }
+
     return ret;
 }
 
