@@ -208,7 +208,7 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetRam(), 0x400, 0x6000);
+            mem_edit.DrawContents(memory->GetRam(), 0x400, 0x7000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
