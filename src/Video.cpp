@@ -232,6 +232,41 @@ void Video::WriteControl(u8 control)
     }
 }
 
+bool Video::IsPAL()
+{
+    return m_bPAL;
+}
+
+u8 Video::GetBufferReg()
+{
+    return m_VdpBuffer;
+}
+
+u16 Video::GetAddressReg()
+{
+    return m_VdpAddress;
+}
+
+u8 Video::GetStatusReg()
+{
+    return m_VdpStatus;
+}
+
+int Video::GetRenderLine()
+{
+    return m_iRenderLine;
+}
+
+int Video::GetCycleCounter()
+{
+    return m_iCycleCounter;
+}
+
+bool Video::GetLatch()
+{
+    return m_bFirstByteInSequence;
+}
+
 void Video::ScanLine(int line)
 {
     if (m_bDisplayEnabled)

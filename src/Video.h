@@ -48,6 +48,13 @@ public:
     void SetCustomPalette(GC_Color* palette);
     void SetPredefinedPalette(int palette);
     void SetNoSpriteLimit(bool noSpriteLimit);
+    bool IsPAL();
+    u8 GetBufferReg();
+    u16 GetAddressReg();
+    u8 GetStatusReg();
+    int GetRenderLine();
+    int GetCycleCounter();
+    bool GetLatch();
 
 private:
     void ScanLine(int line);

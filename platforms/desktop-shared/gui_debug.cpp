@@ -775,7 +775,7 @@ static void debug_window_processor(void)
 static void debug_window_vram_registers(void)
 {
     ImGui::SetNextWindowPos(ImVec2(567, 560), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(267, 209), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(260, 329), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("VDP Registers", &config_debug.show_video_registers);
 
@@ -1174,15 +1174,32 @@ static void debug_window_vram_regs(void)
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
 
-    const char* reg_desc[] = {"CONTROL 0   ", "CONTROL 1   ", "PATTERN NAME", "COLOR TABLE ", "PATTERN GEN ", "SPRITE ATTR ", "SPRITE GEN  ", "COLORS      "};
+    ImGui::TextColored(yellow, "VDP STATE:");
+
+    ImGui::TextColored(cyan, " PAL (50Hz)       "); ImGui::SameLine();
+    video->IsPAL() ? ImGui::TextColored(green, "YES ") : ImGui::TextColored(gray, "NO  ");
+    ImGui::TextColored(cyan, " LATCH FIRST BYTE "); ImGui::SameLine();
+    video->GetLatch() ? ImGui::TextColored(green, "YES ") : ImGui::TextColored(gray, "NO  ");
+    ImGui::TextColored(cyan, " INTERNAL BUFFER  "); ImGui::SameLine();
+    ImGui::Text("$%02X (" BYTE_TO_BINARY_PATTERN_SPACED ")", video->GetBufferReg(), BYTE_TO_BINARY(video->GetBufferReg()));
+    ImGui::TextColored(cyan, " INTERNAL STATUS  "); ImGui::SameLine();
+    ImGui::Text("$%02X (" BYTE_TO_BINARY_PATTERN_SPACED ")", video->GetStatusReg(), BYTE_TO_BINARY(video->GetStatusReg()));
+    ImGui::TextColored(cyan, " INTERNAL ADDRESS "); ImGui::SameLine();
+    ImGui::Text("$%04X", video->GetAddressReg());
+    ImGui::TextColored(cyan, " RENDER LINE      "); ImGui::SameLine();
+    ImGui::Text("%d", video->GetRenderLine());
+    ImGui::TextColored(cyan, " CYCLE COUNTER    "); ImGui::SameLine();
+    ImGui::Text("%d", video->GetCycleCounter());
 
     ImGui::TextColored(yellow, "VDP REGISTERS:");
+
+    const char* reg_desc[] = {"CONTROL 0   ", "CONTROL 1   ", "PATTERN NAME", "COLOR TABLE ", "PATTERN GEN ", "SPRITE ATTR ", "SPRITE GEN  ", "COLORS      "};
 
     for (int i = 0; i < 8; i++)
     {
         ImGui::TextColored(cyan, " $%01X ", i); ImGui::SameLine();
         ImGui::TextColored(magenta, "%s ", reg_desc[i]); ImGui::SameLine();
-        ImGui::Text("$%02X  (" BYTE_TO_BINARY_PATTERN_SPACED ")", regs[i], BYTE_TO_BINARY(regs[i]));
+        ImGui::Text("$%02X (" BYTE_TO_BINARY_PATTERN_SPACED ")", regs[i], BYTE_TO_BINARY(regs[i]));
     }
 
     ImGui::PopFont();
