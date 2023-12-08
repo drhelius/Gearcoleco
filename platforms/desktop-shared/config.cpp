@@ -182,6 +182,7 @@ void config_read(void)
     config_video.ratio = read_int("Video", "AspectRatio", 0);
     config_video.fps = read_bool("Video", "FPS", false);
     config_video.bilinear = read_bool("Video", "Bilinear", false);
+    config_video.sprite_limit = read_bool("Video", "SpriteLimit", false);
     config_video.mix_frames = read_bool("Video", "MixFrames", true);
     config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.30f);
     config_video.scanlines = read_bool("Video", "Scanlines", true);
@@ -322,6 +323,7 @@ void config_write(void)
     write_int("Video", "AspectRatio", config_video.ratio);
     write_bool("Video", "FPS", config_video.fps);
     write_bool("Video", "Bilinear", config_video.bilinear);
+    write_bool("Video", "SpriteLimit", config_video.sprite_limit);
     write_bool("Video", "MixFrames", config_video.mix_frames);
     write_float("Video", "MixFramesIntensity", config_video.mix_frames_intensity);
     write_bool("Video", "Scanlines", config_video.scanlines);

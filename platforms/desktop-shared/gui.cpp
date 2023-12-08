@@ -53,7 +53,6 @@ static void file_dialog_load_ram(void);
 static void file_dialog_save_ram(void);
 static void file_dialog_load_state(void);
 static void file_dialog_save_state(void);
-// static void file_dialog_choose_save_file_path(void);
 static void file_dialog_choose_savestate_path(void);
 static void file_dialog_load_bios(void);
 static void file_dialog_load_symbols(void);
@@ -72,7 +71,6 @@ static void menu_pause(void);
 static void menu_ffwd(void);
 static void show_info(void);
 static void show_fps(void);
-//static Cartridge::CartridgeTypes get_mapper(int index);
 static Cartridge::CartridgeRegions get_region(int index);
 
 void gui_init(void)
@@ -295,18 +293,6 @@ static void main_menu(void)
                 ImGui::EndMenu();
             }
 
-            // ImGui::Separator();
-
-            // if (ImGui::MenuItem("Save RAM As...")) 
-            // {
-            //     save_ram = true;
-            // }
-
-            // if (ImGui::MenuItem("Load RAM From..."))
-            // {
-            //     open_ram = true;
-            // }
-
             ImGui::Separator();
 
             if (ImGui::MenuItem("Save State As...")) 
@@ -394,33 +380,6 @@ static void main_menu(void)
             
             ImGui::Separator();
 
-            // if (ImGui::BeginMenu("Save File Location"))
-            // {
-            //     ImGui::PushItemWidth(220.0f);
-            //     if (ImGui::Combo("##savefile_option", &config_emulator.savefiles_dir_option, "Save Files In Custom Folder\0Save Files In ROM Folder\0\0"))
-            //     {
-            //         emu_savefiles_dir_option = config_emulator.savefiles_dir_option;
-            //     }
-
-            //     if (config_emulator.savefiles_dir_option == 0)
-            //     {
-            //         if (ImGui::MenuItem("Choose Save File Folder..."))
-            //         {
-            //             choose_save_file_path = true;
-            //         }
-
-            //         ImGui::PushItemWidth(350);
-            //         if (ImGui::InputText("##savefile_path", savefiles_path, IM_ARRAYSIZE(savefiles_path), ImGuiInputTextFlags_AutoSelectAll))
-            //         {
-            //             config_emulator.savefiles_path.assign(savefiles_path);
-            //             strcpy(emu_savefiles_path, savefiles_path);
-            //         }
-            //         ImGui::PopItemWidth();
-            //     }
-
-            //     ImGui::EndMenu();
-            // }
-
             if (ImGui::BeginMenu("Save State Location"))
             {
                 ImGui::PushItemWidth(220.0f);
@@ -502,6 +461,10 @@ static void main_menu(void)
             ImGui::Separator();
 
             ImGui::MenuItem("Bilinear Filtering", "", &config_video.bilinear);
+            if (ImGui::MenuItem("Disable Sprite Limit", "", &config_video.sprite_limit))
+            {
+                emu_video_no_sprite_limit(config_video.sprite_limit);
+            }
 
             if (ImGui::BeginMenu("Screen Ghosting"))
             {

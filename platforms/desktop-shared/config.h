@@ -57,6 +57,7 @@ struct config_Video
     int ratio = 0;
     bool fps = false;
     bool bilinear = false;
+    bool sprite_limit = false;
     bool mix_frames = true;
     float mix_frames_intensity = 0.30f;
     bool scanlines = true;

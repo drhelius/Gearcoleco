@@ -313,6 +313,11 @@ void emu_load_bios(const char* file_path)
     gearcoleco->GetMemory()->LoadBios(file_path);
 }
 
+void emu_video_no_sprite_limit(bool enabled)
+{
+    gearcoleco->GetVideo()->SetNoSpriteLimit(enabled);
+}
+
 static void save_ram(void)
 {
 #ifdef DEBUG_GEARCOLECO
