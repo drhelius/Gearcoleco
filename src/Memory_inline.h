@@ -92,9 +92,21 @@ inline void Memory::Write(u16 address, u8 value)
         case 0x8000:
         case 0xA000:
         case 0xC000:
-        case 0xE000:
         {
             Log("--> ** Attempting to write on ROM: %X %X", address, value);
+            break;
+        }
+        case 0xE000:
+        {
+            if (m_pCartridge->HasSRAM() && (address >= 0xE000) && (address < 0xE800))
+            {
+                u8* pRom = m_pCartridge->GetROM();
+                pRom[(address + 0x800) & 0x7FFF] = value;
+            }
+            else
+            {
+                Log("--> ** Attempting to write on ROM: %X %X", address, value);
+            }
             break;
         }
     }

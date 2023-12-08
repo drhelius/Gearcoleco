@@ -35,6 +35,7 @@ Cartridge::Cartridge()
     m_szFileName[0] = 0;
     m_iROMBankCount = 0;
     m_bPAL = false;
+    m_bSRAM = false;
     m_iCRC = 0;
 }
 
@@ -59,6 +60,7 @@ void Cartridge::Reset()
     m_szFileName[0] = 0;
     m_iROMBankCount = 0;
     m_bPAL = false;
+    m_bSRAM = false;
     m_iCRC = 0;
 }
 
@@ -70,6 +72,11 @@ u32 Cartridge::GetCRC() const
 bool Cartridge::IsPAL() const
 {
     return m_bPAL;
+}
+
+bool Cartridge::HasSRAM() const
+{
+    return m_bSRAM;
 }
 
 bool Cartridge::IsValidROM() const
@@ -306,6 +313,7 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
 bool Cartridge::GatherMetadata(u32 crc)
 {
     m_bPAL = false;
+    m_bSRAM = false;
 
     Log("ROM Size: %d KB", m_iROMSize / 1024);
 
@@ -372,6 +380,12 @@ void Cartridge::GetInfoFromDB(u32 crc)
             found = true;
 
             Log("ROM found in database: %s. CRC: %X", kGameDatabase[i].title, crc);
+
+            if (kGameDatabase[i].mode & GC_GameDBMode_SRAM)
+            {
+                Log("Cartridge with SRAM");
+                m_bSRAM = true;
+            }
         }
         else
             i++;
