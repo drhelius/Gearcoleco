@@ -800,8 +800,9 @@ namespace imgui_addons
                 current_path = current_directory;
 
                 //Create a vector of each directory in the file path for the filepath bar. Not Necessary for linux as starting directory is "/"
-                parsePathTabs(current_path);
+                
             }
+            parsePathTabs(current_path);
             #endif // OSWIN
 
             // store all the files and directories within directory and clear previous entries
