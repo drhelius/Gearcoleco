@@ -665,8 +665,11 @@ static void frame_throttle(void)
 
 static void save_window_size(void)
 {
-    int width, height;
-    SDL_GetWindowSize(sdl_window, &width, &height);
-    config_emulator.window_width = width;
-    config_emulator.window_height = height;
+    if (!config_emulator.fullscreen)
+    {
+        int width, height;
+        SDL_GetWindowSize(sdl_window, &width, &height);
+        config_emulator.window_width = width;
+        config_emulator.window_height = height;
+    }
 }
