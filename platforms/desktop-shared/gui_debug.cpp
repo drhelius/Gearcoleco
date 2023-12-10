@@ -213,7 +213,7 @@ static void debug_window_memory(void)
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("ROM"))
+        if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM"))
         {
             ImGui::PushFont(gui_default_font);
             mem_edit.DrawContents(cart->GetROM(), 0x8000, 0x8000);
