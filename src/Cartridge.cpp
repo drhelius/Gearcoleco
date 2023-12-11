@@ -346,7 +346,8 @@ bool Cartridge::GatherMetadata(u32 crc)
         Log("Cartridge is a Colec Adam expansion ROM. Header: %X", header);
     }
 
-    m_Type = m_bValidROM ? Cartridge::CartridgeColecoVision : Cartridge::CartridgeNotSupported;
+    //m_Type = m_bValidROM ? Cartridge::CartridgeColecoVision : Cartridge::CartridgeNotSupported;
+    m_Type = Cartridge::CartridgeColecoVision;
 
     GetInfoFromDB(crc);
 
