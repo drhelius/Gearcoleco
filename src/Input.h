@@ -54,7 +54,6 @@ private:
     int m_iInputCycles;
     InputSegments m_Segment;
     u8 m_InputState[2][2];
-    u8 m_LatestKey;
 };
 
 #endif	/* INPUT_H */
