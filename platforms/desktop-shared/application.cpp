@@ -468,6 +468,10 @@ static void sdl_events_emu(const SDL_Event* event)
                     emu_key_pressed(controller, Key_Left_Button);
                 else if (key == config_input[i].key_right_button)
                     emu_key_pressed(controller, Key_Right_Button);
+                else if (key == config_input[i].key_blue)
+                    emu_key_pressed(controller, Key_Blue);
+                else if (key == config_input[i].key_purple)
+                    emu_key_pressed(controller, Key_Purple);
                 else if (key == config_input[i].key_0)
                     emu_key_pressed(controller, Keypad_0);
                 else if (key == config_input[i].key_1)
@@ -516,6 +520,10 @@ static void sdl_events_emu(const SDL_Event* event)
                     emu_key_released(controller, Key_Left_Button);
                 else if (key == config_input[i].key_right_button)
                     emu_key_released(controller, Key_Right_Button);
+                else if (key == config_input[i].key_blue)
+                    emu_key_released(controller, Key_Blue);
+                else if (key == config_input[i].key_purple)
+                    emu_key_released(controller, Key_Purple);
                 else if (key == config_input[i].key_0)
                     emu_key_released(controller, Keypad_0);
                 else if (key == config_input[i].key_1)

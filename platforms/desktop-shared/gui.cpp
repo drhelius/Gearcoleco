@@ -523,8 +523,10 @@ static void main_menu(void)
                     keyboard_configuration_item("Right:", &config_input[0].key_right, 0);
                     keyboard_configuration_item("Up:", &config_input[0].key_up, 0);
                     keyboard_configuration_item("Down:", &config_input[0].key_down, 0);
-                    keyboard_configuration_item("Left Button:", &config_input[0].key_left_button, 0);
-                    keyboard_configuration_item("Right Button:", &config_input[0].key_right_button, 0);
+                    keyboard_configuration_item("Yellow (Left):", &config_input[0].key_left_button, 0);
+                    keyboard_configuration_item("Red (Right):", &config_input[0].key_right_button, 0);
+                    keyboard_configuration_item("Purple:", &config_input[0].key_purple, 0);
+                    keyboard_configuration_item("Blue:", &config_input[0].key_blue, 0);
                     keyboard_configuration_item("Keypad 0:", &config_input[0].key_0, 0);
                     keyboard_configuration_item("Keypad 1:", &config_input[0].key_1, 0);
                     keyboard_configuration_item("Keypad 2:", &config_input[0].key_2, 0);
@@ -535,8 +537,8 @@ static void main_menu(void)
                     keyboard_configuration_item("Keypad 7:", &config_input[0].key_7, 0);
                     keyboard_configuration_item("Keypad 8:", &config_input[0].key_8, 0);
                     keyboard_configuration_item("Keypad 9:", &config_input[0].key_9, 0);
-                    keyboard_configuration_item("Asterisk:", &config_input[0].key_asterisk, 0);
-                    keyboard_configuration_item("Hash:", &config_input[0].key_hash, 0);
+                    keyboard_configuration_item("Keypad *:", &config_input[0].key_asterisk, 0);
+                    keyboard_configuration_item("Keypad #:", &config_input[0].key_hash, 0);
 
                     popup_modal_keyboard();
 
@@ -549,8 +551,10 @@ static void main_menu(void)
                     keyboard_configuration_item("Right:", &config_input[1].key_right, 1);
                     keyboard_configuration_item("Up:", &config_input[1].key_up, 1);
                     keyboard_configuration_item("Down:", &config_input[1].key_down, 1);
-                    keyboard_configuration_item("Left Button:", &config_input[1].key_left_button, 1);
-                    keyboard_configuration_item("Right Button:", &config_input[1].key_right_button, 1);
+                    keyboard_configuration_item("Yellow (Left):", &config_input[1].key_left_button, 1);
+                    keyboard_configuration_item("Red (Right):", &config_input[1].key_right_button, 1);
+                    keyboard_configuration_item("Purple:", &config_input[1].key_purple, 1);
+                    keyboard_configuration_item("Blue:", &config_input[1].key_blue, 1);
                     keyboard_configuration_item("Keypad 0:", &config_input[1].key_0, 1);
                     keyboard_configuration_item("Keypad 1:", &config_input[1].key_1, 1);
                     keyboard_configuration_item("Keypad 2:", &config_input[1].key_2, 1);
@@ -561,8 +565,8 @@ static void main_menu(void)
                     keyboard_configuration_item("Keypad 7:", &config_input[1].key_7, 1);
                     keyboard_configuration_item("Keypad 8:", &config_input[1].key_8, 1);
                     keyboard_configuration_item("Keypad 9:", &config_input[1].key_9, 1);
-                    keyboard_configuration_item("Asterisk:", &config_input[1].key_asterisk, 1);
-                    keyboard_configuration_item("Hash:", &config_input[1].key_hash, 1);
+                    keyboard_configuration_item("Keypad *:", &config_input[1].key_asterisk, 1);
+                    keyboard_configuration_item("Keypad #", &config_input[1].key_hash, 1);
 
                     popup_modal_keyboard();
 
@@ -590,8 +594,10 @@ static void main_menu(void)
 
                     if (ImGui::BeginMenu("Button Configuration"))
                     {
-                        gamepad_configuration_item("Left Button:", &config_input[0].gamepad_left_button, 0);
-                        gamepad_configuration_item("Right Button:", &config_input[0].gamepad_right_button, 0);
+                        gamepad_configuration_item("Yellow (Left):", &config_input[0].gamepad_left_button, 0);
+                        gamepad_configuration_item("Red (Right):", &config_input[0].gamepad_right_button, 0);
+                        gamepad_configuration_item("Purple:", &config_input[0].gamepad_purple, 0);
+                        gamepad_configuration_item("Blue:", &config_input[0].gamepad_blue, 0);
                         gamepad_configuration_item("Keypad 0:", &config_input[0].gamepad_0, 0);
                         gamepad_configuration_item("Keypad 1:", &config_input[0].gamepad_1, 0);
                         gamepad_configuration_item("Keypad 2:", &config_input[0].gamepad_2, 0);
@@ -627,8 +633,10 @@ static void main_menu(void)
 
                     if (ImGui::BeginMenu("Button Configuration"))
                     {
-                        gamepad_configuration_item("Left Button:", &config_input[1].gamepad_left_button, 1);
-                        gamepad_configuration_item("Right Button:", &config_input[1].gamepad_right_button, 1);
+                        gamepad_configuration_item("Yellow (Left):", &config_input[1].gamepad_left_button, 1);
+                        gamepad_configuration_item("Red (Right):", &config_input[1].gamepad_right_button, 1);
+                        gamepad_configuration_item("Purple:", &config_input[1].gamepad_purple, 1);
+                        gamepad_configuration_item("Blue:", &config_input[1].gamepad_blue, 1);
                         gamepad_configuration_item("Keypad 0:", &config_input[1].gamepad_0, 1);
                         gamepad_configuration_item("Keypad 1:", &config_input[1].gamepad_1, 1);
                         gamepad_configuration_item("Keypad 2:", &config_input[1].gamepad_2, 1);

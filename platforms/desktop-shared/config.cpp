@@ -55,6 +55,8 @@ void config_init(void)
     config_input[0].key_down = SDL_SCANCODE_DOWN;
     config_input[0].key_left_button = SDL_SCANCODE_A;
     config_input[0].key_right_button = SDL_SCANCODE_S;
+    config_input[0].key_blue = SDL_SCANCODE_D;
+    config_input[0].key_purple = SDL_SCANCODE_F;
     config_input[0].key_0 = SDL_SCANCODE_KP_0;
     config_input[0].key_1 = SDL_SCANCODE_KP_1;
     config_input[0].key_2 = SDL_SCANCODE_KP_2;
@@ -72,6 +74,8 @@ void config_init(void)
     config_input[0].gamepad_invert_y_axis = false;
     config_input[0].gamepad_left_button = SDL_CONTROLLER_BUTTON_A;
     config_input[0].gamepad_right_button = SDL_CONTROLLER_BUTTON_B;
+    config_input[0].gamepad_blue = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[0].gamepad_purple = SDL_CONTROLLER_BUTTON_GUIDE;
     config_input[0].gamepad_x_axis = 0;
     config_input[0].gamepad_y_axis = 1;
     config_input[0].gamepad_1 = SDL_CONTROLLER_BUTTON_X;
@@ -93,6 +97,8 @@ void config_init(void)
     config_input[1].key_down = SDL_SCANCODE_K;
     config_input[1].key_left_button = SDL_SCANCODE_G;
     config_input[1].key_right_button = SDL_SCANCODE_H;
+    config_input[1].key_blue = SDL_SCANCODE_J;
+    config_input[1].key_purple = SDL_SCANCODE_K;
     config_input[1].key_0 = SDL_SCANCODE_NONUSBACKSLASH;
     config_input[1].key_1 = SDL_SCANCODE_Z;
     config_input[1].key_2 = SDL_SCANCODE_X;
@@ -110,6 +116,8 @@ void config_init(void)
     config_input[1].gamepad_invert_y_axis = false;
     config_input[1].gamepad_left_button = SDL_CONTROLLER_BUTTON_A;
     config_input[1].gamepad_right_button = SDL_CONTROLLER_BUTTON_B;
+    config_input[1].gamepad_blue = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[1].gamepad_purple = SDL_CONTROLLER_BUTTON_GUIDE;
     config_input[1].gamepad_x_axis = 0;
     config_input[1].gamepad_y_axis = 1;
     config_input[1].gamepad_1 = SDL_CONTROLLER_BUTTON_X;
@@ -218,6 +226,8 @@ void config_read(void)
     config_input[0].key_down = (SDL_Scancode)read_int("InputA", "KeyDown", SDL_SCANCODE_DOWN);
     config_input[0].key_left_button = (SDL_Scancode)read_int("InputA", "KeyLeftButton", SDL_SCANCODE_A);
     config_input[0].key_right_button = (SDL_Scancode)read_int("InputA", "KeyRightButton", SDL_SCANCODE_S);
+    config_input[0].key_blue = (SDL_Scancode)read_int("InputA", "KeyBlue", SDL_SCANCODE_D);
+    config_input[0].key_purple = (SDL_Scancode)read_int("InputA", "KeyPurple", SDL_SCANCODE_F);
     config_input[0].key_0 = (SDL_Scancode)read_int("InputA", "Key0", SDL_SCANCODE_KP_0);
     config_input[0].key_1 = (SDL_Scancode)read_int("InputA", "Key1", SDL_SCANCODE_KP_1);
     config_input[0].key_2 = (SDL_Scancode)read_int("InputA", "Key2", SDL_SCANCODE_KP_2);
@@ -237,6 +247,8 @@ void config_read(void)
     config_input[0].gamepad_invert_y_axis = read_bool("InputA", "GamepadInvertY", false);
     config_input[0].gamepad_left_button = read_int("InputA", "GamepadLeft", SDL_CONTROLLER_BUTTON_A);
     config_input[0].gamepad_right_button = read_int("InputA", "GamepadRight", SDL_CONTROLLER_BUTTON_B);
+    config_input[0].gamepad_blue = (SDL_Scancode)read_int("InputA", "GamepadBlue", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[0].gamepad_purple = (SDL_Scancode)read_int("InputA", "GamepadPurple", SDL_CONTROLLER_BUTTON_GUIDE);
     config_input[0].gamepad_x_axis = read_int("InputA", "GamepadX", SDL_CONTROLLER_AXIS_LEFTX);
     config_input[0].gamepad_y_axis = read_int("InputA", "GamepadY", SDL_CONTROLLER_AXIS_LEFTY);
     config_input[0].gamepad_1 = read_int("InputA", "Gamepad1", SDL_CONTROLLER_BUTTON_X);
@@ -258,6 +270,8 @@ void config_read(void)
     config_input[1].key_down = (SDL_Scancode)read_int("InputB", "KeyDown", SDL_SCANCODE_K);
     config_input[1].key_left_button = (SDL_Scancode)read_int("InputB", "KeyLeftButton", SDL_SCANCODE_G);
     config_input[1].key_right_button = (SDL_Scancode)read_int("InputB", "KeyRightButton", SDL_SCANCODE_H);
+    config_input[1].key_blue = (SDL_Scancode)read_int("InputB", "KeyBlue", SDL_SCANCODE_J);
+    config_input[1].key_purple = (SDL_Scancode)read_int("InputB", "KeyPurple", SDL_SCANCODE_K);
     config_input[1].key_0 = (SDL_Scancode)read_int("InputB", "Key0", SDL_SCANCODE_NONUSBACKSLASH);
     config_input[1].key_1 = (SDL_Scancode)read_int("InputB", "Key1", SDL_SCANCODE_Z);
     config_input[1].key_2 = (SDL_Scancode)read_int("InputB", "Key2", SDL_SCANCODE_X);
@@ -277,6 +291,8 @@ void config_read(void)
     config_input[1].gamepad_invert_y_axis = read_bool("InputB", "GamepadInvertY", false);
     config_input[1].gamepad_left_button = read_int("InputB", "GamepadLeft", SDL_CONTROLLER_BUTTON_A);
     config_input[1].gamepad_right_button = read_int("InputB", "GamepadRight", SDL_CONTROLLER_BUTTON_B);
+    config_input[1].gamepad_blue = (SDL_Scancode)read_int("InputB", "GamepadBlue", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[1].gamepad_purple = (SDL_Scancode)read_int("InputB", "GamepadPurple", SDL_CONTROLLER_BUTTON_GUIDE);
     config_input[1].gamepad_x_axis = read_int("InputB", "GamepadX", SDL_CONTROLLER_AXIS_LEFTX);
     config_input[1].gamepad_y_axis = read_int("InputB", "GamepadY", SDL_CONTROLLER_AXIS_LEFTY);
     config_input[1].gamepad_1 = read_int("InputB", "Gamepad1", SDL_CONTROLLER_BUTTON_X);
@@ -362,6 +378,8 @@ void config_write(void)
     write_int("InputA", "KeyDown", config_input[0].key_down);
     write_int("InputA", "KeyLeftButton", config_input[0].key_left_button);
     write_int("InputA", "KeyRightButton", config_input[0].key_right_button);
+    write_int("InputA", "KeyBlue", config_input[0].key_blue);
+    write_int("InputA", "KeyPurple", config_input[0].key_purple);
     write_int("InputA", "Key0", config_input[0].key_0);
     write_int("InputA", "Key1", config_input[0].key_1);
     write_int("InputA", "Key2", config_input[0].key_2);
@@ -381,6 +399,8 @@ void config_write(void)
     write_bool("InputA", "GamepadInvertY", config_input[0].gamepad_invert_y_axis);
     write_int("InputA", "GamepadLeft", config_input[0].gamepad_left_button);
     write_int("InputA", "GamepadRight", config_input[0].gamepad_right_button);
+    write_int("InputA", "GamepadBlue", config_input[0].gamepad_blue);
+    write_int("InputA", "GamepadPurple", config_input[0].gamepad_purple);
     write_int("InputA", "GamepadX", config_input[0].gamepad_x_axis);
     write_int("InputA", "GamepadY", config_input[0].gamepad_y_axis);
     write_int("InputA", "Gamepad1", config_input[0].gamepad_1);
@@ -402,6 +422,8 @@ void config_write(void)
     write_int("InputB", "KeyDown", config_input[1].key_down);
     write_int("InputB", "KeyLeftButton", config_input[1].key_left_button);
     write_int("InputB", "KeyRightButton", config_input[1].key_right_button);
+    write_int("InputB", "KeyBlue", config_input[1].key_blue);
+    write_int("InputB", "KeyPurple", config_input[1].key_purple);
     write_int("InputB", "Key0", config_input[1].key_0);
     write_int("InputB", "Key1", config_input[1].key_1);
     write_int("InputB", "Key2", config_input[1].key_2);
@@ -421,6 +443,8 @@ void config_write(void)
     write_bool("InputB", "GamepadInvertY", config_input[1].gamepad_invert_y_axis);
     write_int("InputB", "GamepadLeft", config_input[1].gamepad_left_button);
     write_int("InputB", "GamepadRight", config_input[1].gamepad_right_button);
+    write_int("InputB", "GamepadBlue", config_input[1].gamepad_blue);
+    write_int("InputB", "GamepadPurple", config_input[1].gamepad_purple);
     write_int("InputB", "GamepadX", config_input[1].gamepad_x_axis);
     write_int("InputB", "GamepadY", config_input[1].gamepad_y_axis);
     write_int("InputB", "Gamepad1", config_input[1].gamepad_1);
