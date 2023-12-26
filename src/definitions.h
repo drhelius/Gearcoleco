@@ -104,7 +104,7 @@ typedef void (*RamChangedCallback) (void);
 
 #define GC_AUDIO_BUFFER_SIZE 8192
 
-#define GC_SAVESTATE_MAGIC 0x83190128
+#define GC_SAVESTATE_MAGIC 0x09200902
 
 struct GC_Color
 {

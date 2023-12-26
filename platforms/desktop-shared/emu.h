@@ -48,6 +48,8 @@ EXTERN void emu_update(void);
 EXTERN void emu_load_rom(const char* file_path, Cartridge::ForceConfiguration config);
 EXTERN void emu_key_pressed(GC_Controllers controller, GC_Keys key);
 EXTERN void emu_key_released(GC_Controllers controller, GC_Keys key);
+EXTERN void emu_spinner1(int movement);
+EXTERN void emu_spinner2(int movement);
 EXTERN void emu_pause(void);
 EXTERN void emu_resume(void);
 EXTERN bool emu_is_paused(void);

@@ -44,6 +44,8 @@ public:
     bool GetRuntimeInfo(GC_RuntimeInfo& runtime_info);
     void KeyPressed(GC_Controllers controller, GC_Keys key);
     void KeyReleased(GC_Controllers controller, GC_Keys key);
+    void Spinner1(int movement);
+    void Spinner2(int movement);
     void Pause(bool paused);
     bool IsPaused();
     void ResetROM(Cartridge::ForceConfiguration* config = NULL);

@@ -515,7 +515,7 @@ static void main_menu(void)
         {
             gui_in_use = true;
 
-            if (ImGui::BeginMenu("Keyboard Configuration"))
+            if (ImGui::BeginMenu("Keyboard"))
             {
                 if (ImGui::BeginMenu("Player 1"))
                 {
@@ -575,8 +575,6 @@ static void main_menu(void)
 
                 ImGui::EndMenu();
             }
-
-            ImGui::Separator();
 
             if (ImGui::BeginMenu("Gamepads"))
             {
@@ -657,6 +655,18 @@ static void main_menu(void)
 
                     ImGui::EndMenu();
                 }
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Spinners"))
+            {
+                ImGui::Combo("##spinner", &config_emulator.spinner, "Disabled\0Super Action Controller\0Steering Wheel\0Roller Controller\0\0", 4);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                {
+                    ImGui::SetTooltip("SAC Spinner for P1 is controlled with mouse movement.\nSAC Spinner for P2 is controlled with mouse wheel.\nSteering Wheel is controlled with mouse movement.\nRoller Controller is controlled with mouse movement.");
+                }
+                ImGui::SliderInt("##spinner_sensitivity", &config_emulator.spinner_sensitivity, 1, 10, "Sensitivity = %d");
 
                 ImGui::EndMenu();
             }

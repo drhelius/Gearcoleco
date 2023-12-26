@@ -237,6 +237,63 @@ static void sdl_events_emu(const SDL_Event* event)
 {
     switch(event->type)
     {
+        case (SDL_MOUSEMOTION):
+        {
+            if (config_emulator.spinner > 0)
+            {
+                int sen = config_emulator.spinner_sensitivity - 1;
+                if (sen < 0)
+                    sen = 0;
+                float senf = (float)(sen / 2.0f) + 1.0f;
+                float relx = (float)(event->motion.xrel) * senf;
+
+                // roller controller
+                switch (config_emulator.spinner)
+                {
+                    // SAC
+                    case (1):
+                    {
+                        emu_spinner1(relx);
+                        break;
+                    }
+                    // Wheel
+                    case (2):
+                    {
+                        emu_spinner1(relx);
+                        break;
+                    }
+                    // Roller
+                    case (3):
+                    {
+                        float rely = (float)(event->motion.yrel) * senf;
+                        emu_spinner1(relx);
+                        emu_spinner2(rely);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+
+            break;
+        }
+        case (SDL_MOUSEWHEEL):
+        {
+            // SAC
+            if (config_emulator.spinner == 1)
+            {
+                int sen = (config_emulator.spinner_sensitivity - 1) * 20;
+                if (sen < 0)
+                    sen = 0;
+
+                float senf = (float)(sen / 2.0f) + 1.0f;
+                float rely = (float)(event->wheel.y) * senf;
+
+                emu_spinner2(rely);
+            }
+
+            break;
+        }
         case (SDL_DROPFILE):
         {
             char* dropped_filedir = event->drop.file;

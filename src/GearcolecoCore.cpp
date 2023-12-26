@@ -63,7 +63,7 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pProcessor = new Processor(m_pMemory);
     m_pAudio = new Audio();
     m_pVideo = new Video(m_pMemory, m_pProcessor);
-    m_pInput = new Input();
+    m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
 
     m_pMemory->Init();
@@ -93,7 +93,6 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
 #endif
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
-            m_pInput->Tick(clockCycles);
 
             totalClocks += clockCycles;
 
@@ -249,6 +248,16 @@ void GearcolecoCore::KeyPressed(GC_Controllers controller, GC_Keys key)
 void GearcolecoCore::KeyReleased(GC_Controllers controller, GC_Keys key)
 {
     m_pInput->KeyReleased(controller, key);
+}
+
+void GearcolecoCore::Spinner1(int movement)
+{
+    m_pInput->Spinner1(movement);
+}
+
+void GearcolecoCore::Spinner2(int movement)
+{
+    m_pInput->Spinner2(movement);
 }
 
 void GearcolecoCore::Pause(bool paused)

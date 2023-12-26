@@ -22,7 +22,7 @@
 
 #include "definitions.h"
 
-class Memory;
+class Processor;
 
 class Input
 {
@@ -34,26 +34,24 @@ public:
     };
 
 public:
-    Input();
+    Input(Processor* pProcessor);
     void Init();
     void Reset();
-    void Tick(unsigned int clockCycles);
     void KeyPressed(GC_Controllers controller, GC_Keys key);
     void KeyReleased(GC_Controllers controller, GC_Keys key);
+    void Spinner1(int movement);
+    void Spinner2(int movement);
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
     void SetInputSegment(InputSegments segment);
     u8 ReadInput(u8 port);
 
 private:
-    void Update();
-
-private:
+    Processor* m_pProcessor;
     u8 m_Gamepad[2];
     u8 m_Keypad[2];
-    int m_iInputCycles;
     InputSegments m_Segment;
-    u8 m_InputState[2][2];
+    int m_iSpinnerRel[2];
 };
 
 #endif	/* INPUT_H */

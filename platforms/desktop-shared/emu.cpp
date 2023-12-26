@@ -142,6 +142,16 @@ void emu_key_released(GC_Controllers controller, GC_Keys key)
     gearcoleco->KeyReleased(controller, key);
 }
 
+void emu_spinner1(int movement)
+{
+    gearcoleco->Spinner1(movement);
+}
+
+void emu_spinner2(int movement)
+{
+    gearcoleco->Spinner2(movement);
+}
+
 void emu_pause(void)
 {
     gearcoleco->Pause(true);
