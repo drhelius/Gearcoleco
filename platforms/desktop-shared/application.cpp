@@ -253,7 +253,7 @@ static void sdl_events_emu(const SDL_Event* event)
                     // SAC
                     case (1):
                     {
-                        emu_spinner1(relx);
+                        emu_spinner1(-relx);
                         break;
                     }
                     // Wheel
