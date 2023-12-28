@@ -67,6 +67,21 @@ inline u8 Memory::Read(u16 address)
                     return pRom[(address & 0x3FFF) + m_RomBankAddress];
                 }
             }
+            else if (m_pCartridge->GetType() == Cartridge::CartridgeActivisionCart)
+            {
+                if (address < 0xC000)
+                {
+                    return pRom[address & 0x3FFF];
+                }
+                else
+                {
+                    if (address >= 0xFF80)
+                    {
+                        Log("--> ** EEPROM read: %X %X", address);
+                    }
+                    return pRom[(address & 0x3FFF) + m_RomBankAddress];
+                }
+            }
             else
             {
                 if (address >= (romSize + 0x8000))
@@ -130,6 +145,23 @@ inline void Memory::Write(u16 address, u8 value)
             {
                 m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
                 m_RomBankAddress = m_RomBank << 14;
+            }
+            else if ((m_pCartridge->GetType() == Cartridge::CartridgeActivisionCart) && (address >= 0xFF90))
+            {
+                if ((address == 0xFF90) || (address == 0xFFA0) || (address == 0xFFB0))
+                {
+                    m_RomBank = (address >> 4) & (m_pCartridge->GetROMBankCount() - 1);
+                    m_RomBankAddress = m_RomBank << 14;
+                }
+
+                if (address == 0xFFC0)
+                    Log("--> ** EEPROM write SCL=0: %X %X", address, value);
+                if (address == 0xFFD0)
+                    Log("--> ** EEPROM write SCL=1: %X %X", address, value);
+                if (address == 0xFFE0)
+                    Log("--> ** EEPROM write SDA=0: %X %X", address, value);
+                if (address == 0xFFF0)
+                    Log("--> ** EEPROM write SDA=1: %X %X", address, value);
             }
             else
             {
