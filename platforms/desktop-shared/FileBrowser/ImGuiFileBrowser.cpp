@@ -146,6 +146,7 @@ namespace imgui_addons
                     current_path = start_path;
                     if (current_path.back() != '/')
                         current_path += '/';
+                    parsePathTabs(current_path);
                 }
 
                 /* If current path is empty (can happen on Windows if user closes dialog while inside MyComputer.
@@ -1104,6 +1105,8 @@ namespace imgui_addons
     {
         std::string path_element = "";
         std::string root = "";
+
+        current_dirlist.clear();
 
         #ifdef OSWIN
         current_dirlist.push_back("Computer");
