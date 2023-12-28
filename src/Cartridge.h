@@ -29,6 +29,8 @@ public:
     enum CartridgeTypes
     {
         CartridgeColecoVision,
+        CartridgeMegaCart,
+        CartridgeActivisionCart,
         CartridgeNotSupported
     };
 

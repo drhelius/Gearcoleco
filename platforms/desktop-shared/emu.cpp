@@ -355,6 +355,9 @@ static const char* get_mapper(Cartridge::CartridgeTypes type)
     case Cartridge::CartridgeColecoVision:
         return "ColecoVision";
         break;
+    case Cartridge::CartridgeMegaCart:
+        return "MegaCart";
+        break;
     case Cartridge::CartridgeNotSupported:
         return "Not Supported";
         break;

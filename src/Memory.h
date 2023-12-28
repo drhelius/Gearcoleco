@@ -60,7 +60,10 @@ public:
     u8 Read(u16 address);
     void Write(u16 address, u8 value);
     u8* GetRam();
+    u8* GetSGMRam();
     u8* GetBios();
+    u8 GetRomBank();
+    u32 GetRomBankAddress();
     void LoadBios(const char* szFilePath);
     bool IsBiosLoaded();
     void SaveState(std::ostream& stream);
@@ -70,11 +73,13 @@ public:
     stDisassembleRecord** GetDisassembledRomMemoryMap();
     stDisassembleRecord** GetDisassembledRamMemoryMap();
     stDisassembleRecord** GetDisassembledBiosMemoryMap();
-    stDisassembleRecord** GetDisassembledExpansionMemoryMap();
+    stDisassembleRecord** GetDisassembledSGMRamMemoryMap();
     std::vector<stDisassembleRecord*>* GetBreakpointsCPU();
     std::vector<stMemoryBreakpoint>* GetBreakpointsMem();
     stDisassembleRecord* GetRunToBreakpoint();
     void SetRunToBreakpoint(stDisassembleRecord* pBreakpoint);
+    void EnableSGMUpper(bool enable);
+    void EnableSGMLower(bool enable);
 
 private:
     void CheckBreakpoints(u16 address, bool write);
@@ -85,13 +90,18 @@ private:
     stDisassembleRecord** m_pDisassembledRomMap;
     stDisassembleRecord** m_pDisassembledRamMap;
     stDisassembleRecord** m_pDisassembledBiosMap;
-    stDisassembleRecord** m_pDisassembledExpansionMap;
+    stDisassembleRecord** m_pDisassembledSGMRamMap;
     std::vector<stDisassembleRecord*> m_BreakpointsCPU;
     std::vector<stMemoryBreakpoint> m_BreakpointsMem;
     stDisassembleRecord* m_pRunToBreakpoint;
     bool m_bBiosLoaded;
+    bool m_bSGMUpper;
+    bool m_bSGMLower;
     u8* m_pBios;
     u8* m_pRam;
+    u8* m_pSGMRam;
+    u32 m_RomBankAddress;
+    u8 m_RomBank;
 };
 
 #include "Memory_inline.h"

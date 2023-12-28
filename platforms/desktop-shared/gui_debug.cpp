@@ -195,6 +195,17 @@ static void debug_window_memory(void)
     Cartridge* cart = core->GetCartridge();
     Video* video = core->GetVideo();
 
+    ImGui::PushFont(gui_default_font);
+
+    ImGui::TextColored(cyan, "  ROM: ");ImGui::SameLine();
+
+    ImGui::TextColored(magenta, "BANK");ImGui::SameLine();
+    ImGui::Text("$%02X", memory->GetRomBank()); ImGui::SameLine();
+    ImGui::TextColored(magenta, "  ADDRESS");ImGui::SameLine();
+    ImGui::Text("$%05X", memory->GetRomBankAddress());
+
+    ImGui::PopFont();
+
     if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
     {
         if (ImGui::BeginTabItem("BIOS"))
@@ -213,10 +224,18 @@ static void debug_window_memory(void)
             ImGui::EndTabItem();
         }
 
+        if (ImGui::BeginTabItem("SGM RAM"))
+        {
+            ImGui::PushFont(gui_default_font);
+            mem_edit.DrawContents(memory->GetSGMRam(), 0x8000, 0x0000);
+            ImGui::PopFont();
+            ImGui::EndTabItem();
+        }
+
         if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(cart->GetROM(), 0x8000, 0x8000);
+            mem_edit.DrawContents(cart->GetROM(), cart->GetROMSize(), 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -576,11 +595,15 @@ static void debug_window_disassembler(void)
                 if (show_segment)
                 {
                     ImGui::SameLine();
-                    ImGui::TextColored(color_segment, "%s ", vec[item].record->segment);
+                    ImGui::TextColored(color_segment, "%s", vec[item].record->segment);
                 }
 
                 ImGui::SameLine();
-                ImGui::TextColored(color_addr, "%04X ", vec[item].record->address);
+                if (strcmp(vec[item].record->segment, "ROM") == 0)
+                    ImGui::TextColored(color_addr, "%02X:%04X ", vec[item].record->bank, vec[item].record->address);
+                else
+                    ImGui::TextColored(color_addr, "  %04X ", vec[item].record->address);
+
 
                 if (show_mem)
                 {

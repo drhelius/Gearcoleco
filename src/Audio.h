@@ -34,6 +34,9 @@ public:
     void SetSampleRate(int rate);
     void SetVolume(float volume);
     void WriteAudioRegister(u8 value);
+    void SGMWrite(u8 value);
+    u8 SGMRead();
+    void SGMRegister(u8 reg);
     void Tick(unsigned int clockCycles);
     void EndFrame(s16* pSampleBuffer, int* pSampleCount);
     void SaveState(std::ostream& stream);
@@ -46,6 +49,8 @@ private:
     int m_iSampleRate;
     blip_sample_t* m_pSampleBuffer;
     bool m_bPAL;
+    u8 m_SGMRegister;
+    u8 m_SGMRegisters[16];
 };
 
 inline void Audio::Tick(unsigned int clockCycles)
@@ -56,6 +61,26 @@ inline void Audio::Tick(unsigned int clockCycles)
 inline void Audio::WriteAudioRegister(u8 value)
 {
     m_pApu->write_data(m_ElapsedCycles, value);
+}
+
+inline void Audio::SGMWrite(u8 value)
+{
+    uint8_t mask[16] = {
+        0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0x1F, 0xFF,
+        0x1F, 0x1F, 0x1F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF,
+    };
+
+    m_SGMRegisters[m_SGMRegister] = value & mask[m_SGMRegister];
+}
+
+inline u8 Audio::SGMRead()
+{
+    return m_SGMRegisters[m_SGMRegister];
+}
+
+inline void Audio::SGMRegister(u8 reg)
+{
+    m_SGMRegister = reg & 0x0F;
 }
 
 #endif	/* AUDIO_H */

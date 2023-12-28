@@ -32,17 +32,16 @@ inline u8 Memory::Read(u16 address)
     {
         case 0x0000:
         {
-            return m_pBios[address];
+            return m_bSGMLower ? m_pSGMRam[address] : m_pBios[address];
         }
         case 0x2000:
         case 0x4000:
         {
-            Log("--> ** Attempting to read from expansion: %X", address);
-            return 0xFF;
+            return m_bSGMUpper ? m_pSGMRam[address] : 0xFF;
         }
         case 0x6000:
         {
-            return m_pRam[address & 0x03FF];
+            return m_bSGMUpper ? m_pSGMRam[address] : m_pRam[address & 0x03FF];
         }
         case 0x8000:
         case 0xA000:
@@ -52,13 +51,32 @@ inline u8 Memory::Read(u16 address)
             u8* pRom = m_pCartridge->GetROM();
             int romSize = m_pCartridge->GetROMSize();
 
-            if (address >= (romSize + 0x8000))
+            if (m_pCartridge->GetType() == Cartridge::CartridgeMegaCart)
             {
-                Log("--> ** Attempting to read from outer ROM: %X. ROM Size: %X", address, romSize);
-                return 0xFF;
+                if (address < 0xC000)
+                {
+                    return pRom[(address & 0x3FFF) + (romSize - 0x4000)];
+                }
+                else
+                {
+                    if (address >= 0xFFC0)
+                    {
+                        m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
+                        m_RomBankAddress = m_RomBank << 14;
+                    }
+                    return pRom[(address & 0x3FFF) + m_RomBankAddress];
+                }
             }
+            else
+            {
+                if (address >= (romSize + 0x8000))
+                {
+                    Log("--> ** Attempting to read from outer ROM: %X. ROM Size: %X", address, romSize);
+                    return 0xFF;
+                }
 
-            return pRom[address & 0x7FFF];
+                return pRom[address & 0x7FFF];
+            }
         }
         default:
             return 0xFF;
@@ -75,18 +93,23 @@ inline void Memory::Write(u16 address, u8 value)
     {
         case 0x0000:
         {
-            Log("--> ** Attempting to write on BIOS: %X %X", address, value);
+            if (m_bSGMLower)
+                m_pSGMRam[address] = value;
             break;
         }
         case 0x2000:
         case 0x4000:
         {
-            Log("--> ** Attempting to write on expansion: %X %X", address, value);
+            if (m_bSGMUpper)
+                m_pSGMRam[address] = value;
             break;
         }
         case 0x6000:
         {
-            m_pRam[address & 0x03FF] = value;
+            if (m_bSGMUpper)
+                m_pSGMRam[address] = value;
+            else
+                m_pRam[address & 0x03FF] = value;
             break;
         }
         case 0x8000:
@@ -102,6 +125,11 @@ inline void Memory::Write(u16 address, u8 value)
             {
                 u8* pRom = m_pCartridge->GetROM();
                 pRom[(address + 0x800) & 0x7FFF] = value;
+            }
+            else if ((m_pCartridge->GetType() == Cartridge::CartridgeMegaCart) && (address >= 0xFFC0))
+            {
+                m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
+                m_RomBankAddress = m_RomBank << 14;
             }
             else
             {
@@ -127,9 +155,9 @@ inline Memory::stDisassembleRecord** Memory::GetDisassembledBiosMemoryMap()
     return m_pDisassembledBiosMap;
 }
 
-inline Memory::stDisassembleRecord** Memory::GetDisassembledExpansionMemoryMap()
+inline Memory::stDisassembleRecord** Memory::GetDisassembledSGMRamMemoryMap()
 {
-    return m_pDisassembledExpansionMap;
+    return m_pDisassembledSGMRamMap;
 }
 
 #endif	/* MEMORY_INLINE_H */

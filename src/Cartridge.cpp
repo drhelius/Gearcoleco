@@ -116,6 +116,14 @@ void Cartridge::ForceConfig(Cartridge::ForceConfiguration config)
             m_Type = config.type;
             Log("Forcing Mapper: Colecovision");
             break;
+        case Cartridge::CartridgeMegaCart:
+            m_Type = config.type;
+            Log("Forcing Mapper: MegaCart");
+            break;
+        case Cartridge::CartridgeActivisionCart:
+            m_Type = config.type;
+            Log("Forcing Mapper: Activision");
+            break;
         default:
             break;
     }
@@ -304,7 +312,9 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
 
         m_iCRC = CalculateCRC32(0, m_pROM, m_iROMSize);
 
-        return GatherMetadata(m_iCRC);
+        GatherMetadata(m_iCRC);
+
+        return true;
     }
     else
         return false;
@@ -317,37 +327,48 @@ bool Cartridge::GatherMetadata(u32 crc)
 
     Log("ROM Size: %d KB", m_iROMSize / 1024);
 
-    m_iROMBankCount = (m_iROMSize / 0x2000) + (m_iROMSize % 0x2000 ? 1 : 0);
+    m_iROMBankCount = (m_iROMSize / 0x4000) + (m_iROMSize % 0x4000 ? 1 : 0);
 
     Log("ROM Bank Count: %d", m_iROMBankCount);
 
+    m_Type = Cartridge::CartridgeNotSupported;
+
     int headerOffset = 0;
-
-    if (m_iROMSize > 0x8000)
-    {
-        Log("Cartridge is probably Mega Cart. ROM size: %d bytes", m_iROMSize);
-        headerOffset = m_iROMSize - 0x4000;
-    }
-
     u16 header = m_pROM[headerOffset + 1] | (m_pROM[headerOffset + 0] << 8);
     m_bValidROM = (header == 0xAA55) || (header == 0x55AA);
-
-    if (m_bValidROM)
-    {
-        Log("ROM is Valid. Header found: %X", header);
-    }
-    else
-    {
-        Log("ROM is NOT Valid. No header found.");
-    }
 
     if (header == 0x6699)
     {
         Log("Cartridge is a Colec Adam expansion ROM. Header: %X", header);
     }
 
-    //m_Type = m_bValidROM ? Cartridge::CartridgeColecoVision : Cartridge::CartridgeNotSupported;
-    m_Type = Cartridge::CartridgeColecoVision;
+    if (m_bValidROM && (m_iROMSize <= 0x8000))
+    {
+        m_Type = Cartridge::CartridgeColecoVision;
+        Log("Cartridge is Colecovision. ROM size: %d bytes.", m_iROMSize);
+    }
+    else if (m_bValidROM && (m_iROMSize > 0x8000))
+    {
+        m_Type = Cartridge::CartridgeActivisionCart;
+        Log("Cartridge is Mega Cart. ROM size: %d bytes. Banks %d.", m_iROMSize, m_iROMBankCount);
+    }
+    else if (!m_bValidROM && (m_iROMSize > 0x8000))
+    {
+        headerOffset = m_iROMSize - 0x4000;
+        header = m_pROM[headerOffset + 1] | (m_pROM[headerOffset + 0] << 8);
+        m_bValidROM = (header == 0xAA55) || (header == 0x55AA);
+
+        if (m_bValidROM)
+        {
+            m_Type = Cartridge::CartridgeMegaCart;
+            Log("Cartridge is Mega Cart. ROM size: %d bytes. Banks %d.", m_iROMSize, m_iROMBankCount);
+        }
+    }
+    else
+    {
+        m_Type = Cartridge::CartridgeNotSupported;
+        Log("ROM is NOT Valid. No header found.");
+    }
 
     GetInfoFromDB(crc);
 
@@ -355,6 +376,12 @@ bool Cartridge::GatherMetadata(u32 crc)
     {
         case Cartridge::CartridgeColecoVision:
             Log("ColecoVision mapper found");
+            break;
+        case Cartridge::CartridgeMegaCart:
+            Log("MegaCart mapper found");
+            break;
+        case Cartridge::CartridgeActivisionCart:
+            Log("Activision mapper found");
             break;
         case Cartridge::CartridgeNotSupported:
             Log("Cartridge not supported!!");

@@ -72,6 +72,7 @@ static void menu_ffwd(void);
 static void show_info(void);
 static void show_fps(void);
 static Cartridge::CartridgeRegions get_region(int index);
+//static Cartridge::CartridgeTypes get_mapper(int index);
 
 void gui_init(void)
 {
@@ -1418,6 +1419,10 @@ static void show_fps(void)
 //             return Cartridge::CartridgeNotSupported;
 //         case 1:
 //             return Cartridge::CartridgeColecoVision;
+//         case 2:
+//             return Cartridge::CartridgeMegaCart;
+//         case 3:
+//             return Cartridge::CartridgeActivisionCart;
 //         default:
 //             return Cartridge::CartridgeNotSupported;
 //     }
