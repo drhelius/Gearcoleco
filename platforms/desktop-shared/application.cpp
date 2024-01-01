@@ -40,6 +40,7 @@ static void sdl_destroy(void);
 static void sdl_events(void);
 static void sdl_events_emu(const SDL_Event* event);
 static void sdl_shortcuts_gui(const SDL_Event* event);
+static void handle_mouse_cursor(void);
 static void run_emulator(void);
 static void render(void);
 static void frame_throttle(void);
@@ -101,6 +102,7 @@ void application_mainloop(void)
     {
         frame_time_start = SDL_GetPerformanceCounter();
         sdl_events();
+        handle_mouse_cursor();
         run_emulator();
         render();
         frame_time_end = SDL_GetPerformanceCounter();
@@ -211,6 +213,18 @@ static void sdl_destroy(void)
     SDL_Quit();
 }
 
+static void handle_mouse_cursor(void)
+{
+    bool hide_cursor = gui_main_window_hovered && !config_debug.debug;
+
+    if (hide_cursor)
+        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+    else
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+    SDL_SetRelativeMouseMode(config_emulator.capture_mouse ? SDL_TRUE : SDL_FALSE);
+}
+
 static void sdl_events(void)
 {
     SDL_Event event;
@@ -231,13 +245,6 @@ static void sdl_events(void)
             sdl_shortcuts_gui(&event);
         }
     }
-
-    bool hide_cursor = gui_main_window_hovered && !config_debug.debug;
-
-    if (hide_cursor)
-        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-    else
-        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 }
 
 static void sdl_events_emu(const SDL_Event* event)
@@ -540,6 +547,12 @@ static void sdl_events_emu(const SDL_Event* event)
             {
                 config_emulator.fullscreen = !config_emulator.fullscreen;
                 application_trigger_fullscreen(config_emulator.fullscreen);
+                break;
+            }
+
+            if (key == SDL_SCANCODE_F12)
+            {
+                config_emulator.capture_mouse = !config_emulator.capture_mouse;
                 break;
             }
 

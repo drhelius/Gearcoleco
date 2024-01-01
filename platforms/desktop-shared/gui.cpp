@@ -668,6 +668,12 @@ static void main_menu(void)
 
             if (ImGui::BeginMenu("Spinners"))
             {
+                ImGui::MenuItem("Capture Mouse", "F12", &config_emulator.capture_mouse);
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("When enabled, the mouse will be captured inside\nthe emulator window to use spinners freely.\nPress F12 to release the mouse.");
+                }
+
                 ImGui::Combo("##spinner", &config_emulator.spinner, "Disabled\0Super Action Controller\0Steering Wheel\0Roller Controller\0\0", 4);
                 if (ImGui::IsItemHovered())
                 {

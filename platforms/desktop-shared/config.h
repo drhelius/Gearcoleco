@@ -56,6 +56,7 @@ struct config_Emulator
     int window_height = 600;
     int spinner = 0;
     int spinner_sensitivity = 0;
+    bool capture_mouse = false;
 };
 
 struct config_Video
