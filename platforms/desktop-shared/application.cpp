@@ -232,15 +232,12 @@ static void sdl_events(void)
         }
     }
 
-    // ImGui::GetIO().MouseDrawCursor = (gui_main_window_hovered && !config_debug.debug);
+    bool hide_cursor = gui_main_window_hovered && !config_debug.debug;
 
-    // if (gui_main_window_hovered && !config_debug.debug)
-    // {
-    //     SDL_CaptureMouse(SDL_TRUE);
-    //     Log("Mouse is over the main window");
-    // }
-    // else
-    //     SDL_CaptureMouse(SDL_FALSE);
+    if (hide_cursor)
+        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+    else
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 }
 
 static void sdl_events_emu(const SDL_Event* event)

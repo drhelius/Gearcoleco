@@ -122,6 +122,8 @@ void gui_render(void)
     
     main_menu();
 
+    gui_main_window_hovered = false;
+
     if((!config_debug.debug && !emu_is_empty()) || (config_debug.debug && config_debug.show_screen))
         main_window();
 
@@ -947,6 +949,7 @@ static void main_window(void)
         ImGui::SetNextWindowPos(ImVec2(568, 31), ImGuiCond_FirstUseEver);
 
         ImGui::Begin("Output###debug_output", &config_debug.show_screen, flags);
+        gui_main_window_hovered = ImGui::IsWindowHovered();
     }
     else
     {
@@ -957,11 +960,10 @@ static void main_window(void)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNav;
 
         ImGui::Begin(GEARCOLECO_TITLE, 0, flags);
+        gui_main_window_hovered = ImGui::IsWindowHovered();
     }
 
     ImGui::Image((void*)(intptr_t)renderer_emu_texture, ImVec2((float)main_window_width, (float)main_window_height));
-
-    gui_main_window_hovered = ImGui::IsItemHovered();
 
     if (config_video.fps)
         show_fps();
