@@ -229,9 +229,13 @@ static void main_menu(void)
 
     for (int i = 0; i < 16; i++)
         custom_palette[i] = color_int_to_float(config_video.color[i]);
-    
+
+    gui_main_menu_hovered = false;
+
     if (config_emulator.show_menu && ImGui::BeginMainMenuBar())
     {
+        gui_main_menu_hovered = ImGui::IsWindowHovered();
+
         if (ImGui::BeginMenu(GEARCOLECO_TITLE))
         {
             gui_in_use = true;
@@ -663,9 +667,9 @@ static void main_menu(void)
             if (ImGui::BeginMenu("Spinners"))
             {
                 ImGui::Combo("##spinner", &config_emulator.spinner, "Disabled\0Super Action Controller\0Steering Wheel\0Roller Controller\0\0", 4);
-                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                if (ImGui::IsItemHovered())
                 {
-                    ImGui::SetTooltip("SAC Spinner for P1 is controlled with mouse movement.\nSAC Spinner for P2 is controlled with mouse wheel.\nSteering Wheel is controlled with mouse movement.\nRoller Controller is controlled with mouse movement.");
+                    ImGui::SetTooltip("· SAC Spinner for P1 is controlled with mouse movement.\n· SAC Spinner for P2 is controlled with mouse wheel.\n· Steering Wheel is controlled with mouse movement.\n· Roller Controller is controlled with mouse movement and mouse buttons.");
                 }
                 ImGui::SliderInt("##spinner_sensitivity", &config_emulator.spinner_sensitivity, 1, 10, "Sensitivity = %d");
 
@@ -956,6 +960,8 @@ static void main_window(void)
     }
 
     ImGui::Image((void*)(intptr_t)renderer_emu_texture, ImVec2((float)main_window_width, (float)main_window_height));
+
+    gui_main_window_hovered = ImGui::IsItemHovered();
 
     if (config_video.fps)
         show_fps();

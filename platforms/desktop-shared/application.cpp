@@ -231,6 +231,16 @@ static void sdl_events(void)
             sdl_shortcuts_gui(&event);
         }
     }
+
+    // ImGui::GetIO().MouseDrawCursor = (gui_main_window_hovered && !config_debug.debug);
+
+    // if (gui_main_window_hovered && !config_debug.debug)
+    // {
+    //     SDL_CaptureMouse(SDL_TRUE);
+    //     Log("Mouse is over the main window");
+    // }
+    // else
+    //     SDL_CaptureMouse(SDL_FALSE);
 }
 
 static void sdl_events_emu(const SDL_Event* event)
@@ -274,9 +284,9 @@ static void sdl_events_emu(const SDL_Event* event)
                         break;
                 }
             }
-
-            break;
         }
+        break;
+
         case (SDL_MOUSEWHEEL):
         {
             // SAC
@@ -291,16 +301,43 @@ static void sdl_events_emu(const SDL_Event* event)
 
                 emu_spinner2(rely);
             }
-
-            break;
         }
+        break;
+
+        case (SDL_MOUSEBUTTONDOWN):
+        {
+            // Roller
+            if ((config_emulator.spinner == 3) && !config_debug.debug && !gui_main_menu_hovered)
+            {
+                if (event->button.button == SDL_BUTTON_LEFT)
+                    emu_key_pressed(Controller_1, Key_Left_Button);
+                else if (event->button.button == SDL_BUTTON_RIGHT)
+                    emu_key_pressed(Controller_1, Key_Right_Button);
+            }
+        }
+        break;
+
+        case (SDL_MOUSEBUTTONUP):
+        {
+            // Roller
+            if ((config_emulator.spinner == 3) && !config_debug.debug)
+            {
+                if (event->button.button == SDL_BUTTON_LEFT)
+                    emu_key_released(Controller_1, Key_Left_Button);
+                else if (event->button.button == SDL_BUTTON_RIGHT)
+                    emu_key_released(Controller_1, Key_Right_Button);
+            }
+        }
+        break;
+
         case (SDL_DROPFILE):
         {
             char* dropped_filedir = event->drop.file;
             gui_load_rom(dropped_filedir);
             SDL_free(dropped_filedir);    // Free dropped_filedir memory
-            break;
         }
+        break;
+
         case SDL_WINDOWEVENT:
         {
             switch (event->window.event)
