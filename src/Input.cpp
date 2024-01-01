@@ -113,7 +113,7 @@ void Input::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.write(reinterpret_cast<const char*> (m_Keypad), sizeof(m_Keypad));
     stream.write(reinterpret_cast<const char*> (&m_Segment), sizeof(m_Segment));
-    stream.write(reinterpret_cast<const char*> (&m_iSpinnerRel), sizeof(m_iSpinnerRel));
+    stream.write(reinterpret_cast<const char*> (m_iSpinnerRel), sizeof(m_iSpinnerRel));
 }
 
 void Input::LoadState(std::istream& stream)
@@ -121,5 +121,5 @@ void Input::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.read(reinterpret_cast<char*> (m_Keypad), sizeof(m_Keypad));
     stream.read(reinterpret_cast<char*> (&m_Segment), sizeof(m_Segment));
-    stream.read(reinterpret_cast<char*> (&m_iSpinnerRel), sizeof(m_iSpinnerRel));
+    stream.read(reinterpret_cast<char*> (m_iSpinnerRel), sizeof(m_iSpinnerRel));
 }

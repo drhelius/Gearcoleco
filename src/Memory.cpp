@@ -158,20 +158,20 @@ void Memory::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (m_pRam), 0x400);
     stream.write(reinterpret_cast<const char*> (m_pSGMRam), 0x8000);
-    stream.write(reinterpret_cast<const char*> (m_bSGMUpper), sizeof(m_bSGMUpper));
-    stream.write(reinterpret_cast<const char*> (m_bSGMLower), sizeof(m_bSGMLower));
-    stream.write(reinterpret_cast<const char*> (m_RomBankAddress), sizeof(m_RomBankAddress));
-    stream.write(reinterpret_cast<const char*> (m_RomBank), sizeof(m_RomBank));
+    stream.write(reinterpret_cast<const char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
+    stream.write(reinterpret_cast<const char*> (&m_bSGMLower), sizeof(m_bSGMLower));
+    stream.write(reinterpret_cast<const char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
+    stream.write(reinterpret_cast<const char*> (&m_RomBank), sizeof(m_RomBank));
 }
 
 void Memory::LoadState(std::istream& stream)
 {
     stream.read(reinterpret_cast<char*> (m_pRam), 0x400);
     stream.read(reinterpret_cast<char*> (m_pSGMRam), 0x8000);
-    stream.read(reinterpret_cast<char*> (m_bSGMUpper), sizeof(m_bSGMUpper));
-    stream.read(reinterpret_cast<char*> (m_bSGMLower), sizeof(m_bSGMLower));
-    stream.read(reinterpret_cast<char*> (m_RomBankAddress), sizeof(m_RomBankAddress));
-    stream.read(reinterpret_cast<char*> (m_RomBank), sizeof(m_RomBank));
+    stream.read(reinterpret_cast<char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
+    stream.read(reinterpret_cast<char*> (&m_bSGMLower), sizeof(m_bSGMLower));
+    stream.read(reinterpret_cast<char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
+    stream.read(reinterpret_cast<char*> (&m_RomBank), sizeof(m_RomBank));
 }
 
 std::vector<Memory::stDisassembleRecord*>* Memory::GetBreakpointsCPU()
