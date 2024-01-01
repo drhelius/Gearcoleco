@@ -124,6 +124,7 @@ void retro_init(void)
     audio_sample_count = 0;
 
     config.region = Cartridge::CartridgeUnknownRegion;
+    config.type = Cartridge::CartridgeNotSupported;
 
     libretro_supports_bitmasks = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 }
