@@ -49,6 +49,8 @@ static int current_screen_width = 0;
 static int current_screen_height = 0;
 static bool allow_up_down = false;
 static bool libretro_supports_bitmasks;
+static int spinner_support = 0;
+static int spinner_sensitivity = 1;
 
 static GearcolecoCore* core;
 static u8* frame_buffer;
@@ -58,6 +60,8 @@ static int joypad[MAX_PADS][JOYPAD_BUTTONS];
 static int joypre[MAX_PADS][JOYPAD_BUTTONS];
 static int joypad_ext[MAX_PADS][4];
 static int joypre_ext[MAX_PADS][4];
+static bool mouse[2];
+static bool mousepre[2];
 
 static GC_Keys keymap[] = {
     Key_Up,
@@ -95,6 +99,8 @@ static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
     { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
+    { "gearcoleco_spinners", "Spinner support; Disabled|Super Action Controller|Wheel Controller|Roller Controller" },
+    { "gearcoleco_spinner_sensitivity", "Spinner Sensitivity; 1|2|3|4|5|6|7|8|9|10" },
     { NULL }
 };
 
@@ -390,6 +396,67 @@ static void update_input(void)
             }
         }
     }
+
+    if (spinner_support > 0)
+    {
+        for (int i=0; i<2; i++)
+        {
+            mousepre[i] = mouse[i];
+        }
+
+        mouse[0] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+        mouse[1] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+
+        int mouse_x = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+        int mouse_y = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+
+        int sen = spinner_sensitivity - 1;
+        if (sen < 0)
+            sen = 0;
+        float senf = (float)(sen / 2.0f) + 1.0f;
+        float relx = (float)(mouse_x) * senf;
+
+        switch (spinner_support)
+        {
+            // SAC
+            case (1):
+            {
+                core->Spinner1(-relx);
+                break;
+            }
+            // Wheel
+            case (2):
+            {
+                core->Spinner1(relx);
+                break;
+            }
+            // Roller
+            case (3):
+            {
+                float rely = (float)(mouse_y) * senf;
+                core->Spinner1(relx);
+                core->Spinner2(rely);
+                break;
+            }
+            default:
+                break;
+        }
+
+        if (mouse[0] != mousepre[0])
+        {
+            if (mouse[0])
+                core->KeyPressed(GC_Controllers::Controller_1, GC_Keys::Key_Left_Button);
+            else
+                core->KeyReleased(GC_Controllers::Controller_1, GC_Keys::Key_Left_Button);
+        }
+        if (mouse[1] != mousepre[1])
+        {
+            if (mouse[1])
+                core->KeyPressed(GC_Controllers::Controller_1, GC_Keys::Key_Right_Button);
+            else
+                core->KeyReleased(GC_Controllers::Controller_1, GC_Keys::Key_Right_Button);
+        }
+    }
 }
 
 static void check_variables(void)
@@ -431,6 +498,31 @@ static void check_variables(void)
             core->GetVideo()->SetNoSpriteLimit(true);
         else
             core->GetVideo()->SetNoSpriteLimit(false);
+    }
+
+    var.key = "gearcoleco_spinners";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Disabled") == 0)
+            spinner_support = 0;
+        else if (strcmp(var.value, "Super Action Controller") == 0)
+            spinner_support = 1;
+        else if (strcmp(var.value, "Wheel Controller") == 0)
+            spinner_support = 2;
+        else if (strcmp(var.value, "Roller Controller") == 0)
+            spinner_support = 3;
+        else
+            spinner_support = 0;
+    }
+
+    var.key = "gearcoleco_spinner_sensitivity";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        spinner_sensitivity = atoi(var.value);
     }
 }
 
