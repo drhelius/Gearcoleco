@@ -192,6 +192,7 @@ void gui_load_rom(const char* path)
     Cartridge::ForceConfiguration config;
 
     config.region = get_region(config_emulator.region);
+    config.type = Cartridge::CartridgeNotSupported;
 
     push_recent_rom(path);
     emu_resume();
@@ -1005,6 +1006,7 @@ static void file_dialog_load_ram(void)
     {
         Cartridge::ForceConfiguration config;
         config.region = get_region(config_emulator.region);
+        config.type = Cartridge::CartridgeNotSupported;
 
         emu_load_ram(file_dialog.selected_path.c_str(), config);
     }
@@ -1371,6 +1373,7 @@ static void menu_reset(void)
     Cartridge::ForceConfiguration config;
 
     config.region = get_region(config_emulator.region);
+    config.type = Cartridge::CartridgeNotSupported;
 
     emu_reset(config);
 
