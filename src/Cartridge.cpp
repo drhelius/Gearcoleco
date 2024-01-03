@@ -350,7 +350,7 @@ bool Cartridge::GatherMetadata(u32 crc)
     else if (m_bValidROM && (m_iROMSize > 0x8000))
     {
         m_Type = Cartridge::CartridgeActivisionCart;
-        Log("Cartridge is Mega Cart. ROM size: %d bytes. Banks %d.", m_iROMSize, m_iROMBankCount);
+        Log("Cartridge is Activision Cart. ROM size: %d bytes. Banks %d.", m_iROMSize, m_iROMBankCount);
     }
     else if (!m_bValidROM && (m_iROMSize > 0x8000))
     {
