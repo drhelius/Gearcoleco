@@ -267,21 +267,21 @@ static void sdl_events_emu(const SDL_Event* event)
                     // SAC
                     case (1):
                     {
-                        emu_spinner1(-relx);
+                        emu_spinner1((int)-relx);
                         break;
                     }
                     // Wheel
                     case (2):
                     {
-                        emu_spinner1(relx);
+                        emu_spinner1((int)relx);
                         break;
                     }
                     // Roller
                     case (3):
                     {
                         float rely = (float)(event->motion.yrel) * senf;
-                        emu_spinner1(relx);
-                        emu_spinner2(rely);
+                        emu_spinner1((int)relx);
+                        emu_spinner2((int)rely);
                         break;
                     }
                     default:
@@ -303,7 +303,7 @@ static void sdl_events_emu(const SDL_Event* event)
                 float senf = (float)(sen / 2.0f) + 1.0f;
                 float rely = (float)(event->wheel.y) * senf;
 
-                emu_spinner2(rely);
+                emu_spinner2((int)rely);
             }
         }
         break;

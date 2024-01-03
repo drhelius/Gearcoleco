@@ -421,21 +421,21 @@ static void update_input(void)
             // SAC
             case (1):
             {
-                core->Spinner1(-relx);
+                core->Spinner1((int)-relx);
                 break;
             }
             // Wheel
             case (2):
             {
-                core->Spinner1(relx);
+                core->Spinner1((int)relx);
                 break;
             }
             // Roller
             case (3):
             {
                 float rely = (float)(mouse_y) * senf;
-                core->Spinner1(relx);
-                core->Spinner2(rely);
+                core->Spinner1((int)relx);
+                core->Spinner2((int)rely);
                 break;
             }
             default:

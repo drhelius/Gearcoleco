@@ -153,7 +153,7 @@ inline void Memory::Write(u16 address, u8 value)
                     m_RomBank = (address >> 4) & (m_pCartridge->GetROMBankCount() - 1);
                     m_RomBankAddress = m_RomBank << 14;
                 }
-
+#ifdef DEBUG_GEARCOLECO
                 if (address == 0xFFC0)
                     Log("--> ** EEPROM write SCL=0: %X %X", address, value);
                 if (address == 0xFFD0)
@@ -162,6 +162,7 @@ inline void Memory::Write(u16 address, u8 value)
                     Log("--> ** EEPROM write SDA=0: %X %X", address, value);
                 if (address == 0xFFF0)
                     Log("--> ** EEPROM write SDA=1: %X %X", address, value);
+#endif
             }
             else
             {
