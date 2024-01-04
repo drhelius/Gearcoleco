@@ -23,6 +23,7 @@
 #include "definitions.h"
 #include "audio/Multi_Buffer.h"
 #include "audio/Sms_Apu.h"
+#include "AY8910.h"
 
 class Audio
 {
@@ -45,17 +46,20 @@ public:
 private:
     Sms_Apu* m_pApu;
     Stereo_Buffer* m_pBuffer;
-    int m_ElapsedCycles;
+    AY8910* m_pAY8910;
+    u64 m_ElapsedCycles;
     int m_iSampleRate;
     blip_sample_t* m_pSampleBuffer;
     bool m_bPAL;
     u8 m_SGMRegister;
     u8 m_SGMRegisters[16];
+    s16* m_pSGMBuffer;
 };
 
 inline void Audio::Tick(unsigned int clockCycles)
 {
     m_ElapsedCycles += clockCycles;
+    m_pAY8910->Tick(clockCycles);
 }
 
 inline void Audio::WriteAudioRegister(u8 value)
@@ -65,22 +69,17 @@ inline void Audio::WriteAudioRegister(u8 value)
 
 inline void Audio::SGMWrite(u8 value)
 {
-    uint8_t mask[16] = {
-        0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0x1F, 0xFF,
-        0x1F, 0x1F, 0x1F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF,
-    };
-
-    m_SGMRegisters[m_SGMRegister] = value & mask[m_SGMRegister];
+    m_pAY8910->WriteRegister(value);
 }
 
 inline u8 Audio::SGMRead()
 {
-    return m_SGMRegisters[m_SGMRegister];
+    return m_pAY8910->ReadRegister();
 }
 
 inline void Audio::SGMRegister(u8 reg)
 {
-    m_SGMRegister = reg & 0x0F;
+    m_pAY8910->SelectRegister(reg);
 }
 
 #endif	/* AUDIO_H */

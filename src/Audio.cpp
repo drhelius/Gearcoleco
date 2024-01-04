@@ -22,11 +22,13 @@
 Audio::Audio()
 {
     m_ElapsedCycles = 0;
-    m_iSampleRate = 44100;
+    m_iSampleRate = GC_AUDIO_SAMPLE_RATE;
     InitPointer(m_pApu);
     InitPointer(m_pBuffer);
     InitPointer(m_pSampleBuffer);
     m_bPAL = false;
+    InitPointer(m_pAY8910);
+    InitPointer(m_pSGMBuffer);
 }
 
 Audio::~Audio()
@@ -34,6 +36,8 @@ Audio::~Audio()
     SafeDelete(m_pApu);
     SafeDelete(m_pBuffer);
     SafeDeleteArray(m_pSampleBuffer);
+    SafeDelete(m_pAY8910);
+    SafeDeleteArray(m_pSGMBuffer);
 }
 
 void Audio::Init()
@@ -50,6 +54,11 @@ void Audio::Init()
     //m_pBuffer->bass_freq(100);
 
     m_pApu->output(m_pBuffer->center(), m_pBuffer->left(), m_pBuffer->right());
+
+    m_pSGMBuffer = new s16[GC_AUDIO_BUFFER_SIZE];
+
+    m_pAY8910 = new AY8910();
+    m_pAY8910->Init(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
 }
 
 void Audio::Reset(bool bPAL)
@@ -59,6 +68,7 @@ void Audio::Reset(bool bPAL)
     m_pBuffer->clear();
     m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
     m_ElapsedCycles = 0;
+    m_pAY8910->Reset(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
 }
 
 void Audio::SetSampleRate(int rate)
@@ -82,13 +92,15 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
 
     int count = static_cast<int>(m_pBuffer->read_samples(m_pSampleBuffer, GC_AUDIO_BUFFER_SIZE));
 
+    m_pAY8910->EndFrame(m_pSGMBuffer);
+
     if (IsValidPointer(pSampleBuffer) && IsValidPointer(pSampleCount))
     {
         *pSampleCount = count;
 
         for (int i=0; i<count; i++)
         {
-            pSampleBuffer[i] = m_pSampleBuffer[i];
+            pSampleBuffer[i] = m_pSampleBuffer[i] + m_pSGMBuffer[i];
         }
     }
 
@@ -99,13 +111,14 @@ void Audio::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (&m_ElapsedCycles), sizeof(m_ElapsedCycles));
     stream.write(reinterpret_cast<const char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
-
+    m_pAY8910->SaveState(stream);
 }
 
 void Audio::LoadState(std::istream& stream)
 {
     stream.read(reinterpret_cast<char*> (&m_ElapsedCycles), sizeof(m_ElapsedCycles));
     stream.read(reinterpret_cast<char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
+    m_pAY8910->LoadState(stream);
 
     m_pApu->reset();
     m_pBuffer->clear();

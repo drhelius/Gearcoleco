@@ -67,7 +67,7 @@ void emu_init(void)
     gearcoleco->Init();
 
     sound_queue = new Sound_Queue();
-    sound_queue->start(44100, 2);
+    sound_queue->start(GC_AUDIO_SAMPLE_RATE, 2);
 
     audio_buffer = new s16[GC_AUDIO_BUFFER_SIZE];
 
@@ -198,7 +198,7 @@ void emu_audio_volume(float volume)
 void emu_audio_reset(void)
 {
     sound_queue->stop();
-    sound_queue->start(44100, 2);
+    sound_queue->start(GC_AUDIO_SAMPLE_RATE, 2);
 }
 
 bool emu_is_audio_enabled(void)
