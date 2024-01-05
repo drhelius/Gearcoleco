@@ -445,16 +445,16 @@ static void update_input(void)
         if (mouse[0] != mousepre[0])
         {
             if (mouse[0])
-                core->KeyPressed(GC_Controllers::Controller_1, GC_Keys::Key_Left_Button);
+                core->KeyPressed(Controller_1, Key_Left_Button);
             else
-                core->KeyReleased(GC_Controllers::Controller_1, GC_Keys::Key_Left_Button);
+                core->KeyReleased(Controller_1, Key_Left_Button);
         }
         if (mouse[1] != mousepre[1])
         {
             if (mouse[1])
-                core->KeyPressed(GC_Controllers::Controller_1, GC_Keys::Key_Right_Button);
+                core->KeyPressed(Controller_1, Key_Right_Button);
             else
-                core->KeyReleased(GC_Controllers::Controller_1, GC_Keys::Key_Right_Button);
+                core->KeyReleased(Controller_1, Key_Right_Button);
         }
     }
 }
