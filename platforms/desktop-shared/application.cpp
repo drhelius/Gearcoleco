@@ -215,7 +215,13 @@ static void sdl_destroy(void)
 
 static void handle_mouse_cursor(void)
 {
-    bool hide_cursor = gui_main_window_hovered && !config_debug.debug;
+    bool hide_cursor = false;
+
+    if (gui_main_window_hovered && !config_debug.debug)
+        hide_cursor = true;
+
+    if (!config_emulator.show_menu && !config_debug.debug)
+        hide_cursor = true;
 
     if (hide_cursor)
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
