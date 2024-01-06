@@ -43,6 +43,14 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 
 <img width="810" alt="Screen Shot 2021-08-14 at 21 15 02" src="https://user-images.githubusercontent.com/863613/129458358-58e280ce-8c4f-4685-8b8f-c3dbb0c72f13.png">
 
+## Tips
+
+- *Portable Mode*: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
+- *Debug Symbols*: The emulator always tries to load a symbol file at the same time a rom is being loaded. For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. It is also possible to load a symbol file using the GUI or using the CLI.
+- *Command Line Usage*: ```gearcoleco [rom_file] [symbol_file]```
+- *Mouse Cursor*: Automatically hides when hovering main output window or when Main Menu is disabled. 
+- *BIOS*: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 ```2c66f5911e5b42b8ebe113403548eee7``` is recommended.
+- *Spinners*: When using any kind of spinners it useful to capture the mouse by pressing ```F12```. It is also recommended to disable spinners for software that don't use them. 
 
 ## Build Instructions
 
