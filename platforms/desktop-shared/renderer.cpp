@@ -39,7 +39,11 @@ static uint32_t scanlines_texture;
 static uint32_t frame_buffer_object;
 static GC_RuntimeInfo current_runtime;
 static bool first_frame;
-static u32 scanlines[16] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF};
+static u32 scanlines[16] = {
+    0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF,
+    0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF};
 static const int FRAME_BUFFER_SCALE = 4;
 
 static void init_ogl_gui(void);
@@ -222,7 +226,7 @@ static void render_emu_mix(void)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer_object);
 
-    float alpha = 0.15f + (0.20f * (1.0f - config_video.mix_frames_intensity));
+    float alpha = 0.15f + (0.50f * (1.0f - config_video.mix_frames_intensity));
 
     if (first_frame)
     {
@@ -335,7 +339,7 @@ static void render_scanlines(void)
     glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer_object);
     glEnable(GL_BLEND);
 
-    glColor4f(1.0f, 1.0f, 1.0f, config_video.scanlines_intensity / 4.0f);
+    glColor4f(1.0f, 1.0f, 1.0f, config_video.scanlines_intensity);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindTexture(GL_TEXTURE_2D, scanlines_texture);
@@ -351,14 +355,16 @@ static void render_scanlines(void)
     glMatrixMode(GL_MODELVIEW);
     glViewport(0, 0, viewportWidth, viewportHeight);
 
+    float tex_v = (float)current_runtime.screen_height;
+
     glBegin(GL_QUADS);
     glTexCoord2d(0.0, 0.0);
     glVertex2d(0.0, 0.0);
-    glTexCoord2d(current_runtime.screen_width, 0.0);
+    glTexCoord2d(1.0, 0.0);
     glVertex2d(viewportWidth, 0.0);
-    glTexCoord2d(current_runtime.screen_width, current_runtime.screen_height);
+    glTexCoord2d(1.0, tex_v);
     glVertex2d(viewportWidth, viewportHeight);
-    glTexCoord2d(0.0, current_runtime.screen_height);
+    glTexCoord2d(0.0, tex_v);
     glVertex2d(0.0, viewportHeight);
     glEnd();
 

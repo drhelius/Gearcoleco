@@ -67,9 +67,9 @@ struct config_Video
     bool bilinear = false;
     bool sprite_limit = false;
     bool mix_frames = true;
-    float mix_frames_intensity = 0.30f;
+    float mix_frames_intensity = 0.60f;
     bool scanlines = true;
-    float scanlines_intensity = 0.40f;
+    float scanlines_intensity = 0.10f;
     bool sync = true;
     int palette = 0;
     GC_Color color[16] = {
