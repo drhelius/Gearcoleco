@@ -202,17 +202,19 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
     runtime_info.screen_width = GC_RESOLUTION_MAX_WIDTH;
     runtime_info.screen_height = GC_RESOLUTION_MAX_HEIGHT;
+    runtime_info.region = Region_NTSC;
 
     if (m_pCartridge->IsReady())
     {
+        if (m_pVideo->GetOverscan() == Video::OverscanFull)
+            runtime_info.screen_width = GC_RESOLUTION_MAX_WIDTH + (2 * GC_RESOLUTION_OVERSCAN_H);
+        if (m_pVideo->GetOverscan() != Video::OverscanDisabled)
+            runtime_info.screen_height = GC_RESOLUTION_MAX_HEIGHT + (2 * (m_pCartridge->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
         runtime_info.region = m_pCartridge->IsPAL() ? Region_PAL : Region_NTSC;
         return true;
     }
-    else
-    {
-        runtime_info.region = Region_NTSC;
-        return false;
-    }
+
+    return false;
 }
 
 Memory* GearcolecoCore::GetMemory()
@@ -598,7 +600,7 @@ void GearcolecoCore::Reset()
 
 void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
-    int size = GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT;
+    int size = GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN;
     u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)
@@ -608,13 +610,13 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
         case GC_PIXEL_RGB565:
         case GC_PIXEL_BGR565:
         {
-            m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size);
+            m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
         case GC_PIXEL_RGB888:
         case GC_PIXEL_BGR888:
         {
-            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size);
+            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
     }

@@ -62,7 +62,8 @@ struct config_Emulator
 struct config_Video
 {
     int scale = 0;
-    int ratio = 0;
+    int ratio = 1;
+    int overscan = 1;
     bool fps = false;
     bool bilinear = false;
     bool sprite_limit = false;
@@ -73,7 +74,7 @@ struct config_Video
     bool sync = true;
     int palette = 0;
     GC_Color color[16] = {
-        {24, 24, 24}, {0, 0, 0}, {33, 200, 66}, {94, 20, 120},
+        {0, 0, 0}, {0, 0, 0}, {33, 200, 66}, {94, 20, 120},
         {84, 85, 237}, {112, 118, 252}, {212, 82, 77}, {66, 235, 245},
         {252, 85, 84}, {255, 121, 120}, {212, 193, 84}, {230, 206, 128},
         {33, 176, 59}, {201, 91, 186}, {204, 204, 204}, {255, 255, 255}

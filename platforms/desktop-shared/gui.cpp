@@ -109,6 +109,8 @@ void gui_init(void)
 
     if (strlen(bios_path) > 0)
         emu_load_bios(bios_path);
+
+    emu_set_overscan(config_debug.debug ? false : config_video.overscan);
 }
 
 void gui_destroy(void)
@@ -211,7 +213,7 @@ void gui_load_rom(const char* path)
     {
         emu_pause();
         
-        for (int i=0; i < (GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT); i++)
+        for (int i=0; i < (GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN); i++)
         {
             emu_frame_buffer[i] = 0;
         }
@@ -457,6 +459,17 @@ static void main_menu(void)
             {
                 ImGui::PushItemWidth(160.0f);
                 ImGui::Combo("##ratio", &config_video.ratio, "Square Pixels (1:1 PAR)\0Standard (4:3 PAR)\0Wide (16:9 PAR)\0\0");
+                ImGui::PopItemWidth();
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Overscan"))
+            {
+                ImGui::PushItemWidth(120.0f);
+                if (ImGui::Combo("##overscan", &config_video.overscan, "Disabled\0Top+Bottom\0Full\0\0"))
+                {
+                    emu_set_overscan(config_debug.debug ? false : config_video.overscan);
+                }
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
             }
@@ -727,6 +740,8 @@ static void main_menu(void)
 
             if (ImGui::MenuItem("Enable", "", &config_debug.debug))
             {
+                emu_set_overscan(config_debug.debug ? false : config_video.overscan);
+
                 if (config_debug.debug)
                     emu_debug_step();
                 else
@@ -996,7 +1011,10 @@ static void main_window(void)
         gui_main_window_hovered = ImGui::IsWindowHovered();
     }
 
-    ImGui::Image((void*)(intptr_t)renderer_emu_texture, ImVec2((float)main_window_width, (float)main_window_height));
+    float tex_h = (float)runtime.screen_width / (float)(GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN);
+    float tex_v = (float)runtime.screen_height / (float)(GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN);
+
+    ImGui::Image((void*)(intptr_t)renderer_emu_texture, ImVec2((float)main_window_width, (float)main_window_height), ImVec2(0, 0), ImVec2(tex_h, tex_v));
 
     if (config_video.fps)
         show_fps();
@@ -1407,7 +1425,7 @@ static void menu_reset(void)
     {
         emu_pause();
         
-        for (int i=0; i < (GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT); i++)
+        for (int i=0; i < (GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN); i++)
         {
             emu_frame_buffer[i] = 0;
         }
