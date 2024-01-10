@@ -29,7 +29,8 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 
 - Accurate Z80 core, including undocumented opcodes and behavior like R and [MEMPTR](https://gist.github.com/drhelius/8497817) registers.
 - Accurate TMS9918 emulation.
-- Sound emulation using SDL Audio and [Sms_Snd_Emu library](https://www.slack.net/~ant/libs/audio.html#Sms_Snd_Emu).
+- Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
+- Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states.
 - Compressed rom support (ZIP).
 - Supported platforms (standalone): Windows, Linux, BSD and macOS.
@@ -38,8 +39,6 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 - Windows and Linux *Portable Mode*.
 - Rom loading from the command line by adding the rom path as an argument.
 - Support for modern game controllers through [gamecontrollerdb.txt](https://github.com/gabomdq/SDL_GameControllerDB) file located in the same directory as the application binary.
-- Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
-- Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 
 <img width="810" alt="Screen Shot 2021-08-14 at 21 15 02" src="https://user-images.githubusercontent.com/863613/129458358-58e280ce-8c4f-4685-8b8f-c3dbb0c72f13.png">
 
@@ -57,7 +56,7 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 
 ### Windows
 
-- Install Microsoft Visual Studio Community 2019 or later.
+- Install Microsoft Visual Studio Community 2022 or later.
 - Open the Visual Studio solution in `platforms/windows/Gearcoleco.sln` and build.
 - You may want to use the `platforms/windows/Makefile` to build the application using MinGW.
 
