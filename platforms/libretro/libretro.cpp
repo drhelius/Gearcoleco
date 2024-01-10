@@ -51,6 +51,7 @@ static bool allow_up_down = false;
 static bool libretro_supports_bitmasks;
 static int spinner_support = 0;
 static int spinner_sensitivity = 1;
+static float aspect_ratio = 0.0f;
 
 static GearcolecoCore* core;
 static u8* frame_buffer;
@@ -97,6 +98,8 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 
 static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
+    { "gearcoleco_aspect_ratio", "Aspect Ratio (restart); 1:1 PAR|4:3 PAR|16:9 PAR" },
+    { "gearcoleco_overscan", "Overscan; Disabled|Top+Bottom|Full" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
     { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
     { "gearcoleco_spinners", "Spinner support; Disabled|Super Action Controller|Wheel Controller|Roller Controller" },
@@ -125,7 +128,7 @@ void retro_init(void)
     core->Init(GC_PIXEL_RGB565);
 #endif
 
-    frame_buffer = new u8[GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT * 2];
+    frame_buffer = new u8[GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN * 2];
 
     audio_sample_count = 0;
 
@@ -232,9 +235,9 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
     info->geometry.base_width   = runtime_info.screen_width;
     info->geometry.base_height  = runtime_info.screen_height;
-    info->geometry.max_width    = runtime_info.screen_width;
-    info->geometry.max_height   = runtime_info.screen_height;
-    info->geometry.aspect_ratio = 0.0f;
+    info->geometry.max_width    = GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN;
+    info->geometry.max_height   = GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN;
+    info->geometry.aspect_ratio = aspect_ratio;
     info->timing.fps            = runtime_info.region == Region_NTSC ? 60.0 : 50.0;
     info->timing.sample_rate    = 44100.0;
 }
@@ -487,6 +490,36 @@ static void check_variables(void)
             config.region = Cartridge::CartridgePAL;
         else
             config.region = Cartridge::CartridgeUnknownRegion;
+    }
+
+    var.key = "gearcoleco_aspect_ratio";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "1:1 PAR") == 0)
+            aspect_ratio = 0.0f;
+        else if (strcmp(var.value, "4:3 PAR") == 0)
+            aspect_ratio = 4.0f / 3.0f;
+        else if (strcmp(var.value, "16:9 PAR") == 0)
+            aspect_ratio = 16.0f / 9.0f;
+        else
+            aspect_ratio = 0.0f;
+    }
+
+    var.key = "gearcoleco_overscan";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Disabled") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanDisabled);
+        else if (strcmp(var.value, "Top+Bottom") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanTopBottom);
+        else if (strcmp(var.value, "Full") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanFull);
+        else
+            core->GetVideo()->SetOverscan(Video::OverscanDisabled);
     }
 
     var.key = "gearcoleco_no_sprite_limit";
