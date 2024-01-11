@@ -26,7 +26,7 @@ AY8910::AY8910()
 
 AY8910::~AY8910()
 {
-    SafeDelete(m_pBuffer);
+    SafeDeleteArray(m_pBuffer);
 }
 
 void AY8910::Init(int clockRate)
