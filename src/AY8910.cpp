@@ -74,6 +74,7 @@ void AY8910::Reset(int clockRate)
     }
 
     m_ElapsedCycles = 0;
+    m_CurrentSample = 0;
 }
 
 void AY8910::WriteRegister(u8 value)
@@ -303,18 +304,18 @@ void AY8910::Sync()
         if (m_iSampleCounter >= cyclesPerSample)
         {
             m_iSampleCounter -= cyclesPerSample;
-            s16 sample = 0;
+            m_CurrentSample = 0;
 
             for (int i = 0; i < 3; i++)
             {
                 if ((m_ToneDisable[i] || m_Sign[i]) && (m_NoiseDisable[i] || ((m_NoiseShift & 0x01) == 0x01)))
                 {
-                    sample += m_EnvelopeMode[i] ? kAY8910VolumeTable[m_EnvelopeVolume] : kAY8910VolumeTable[m_Amplitude[i]];
+                    m_CurrentSample += m_EnvelopeMode[i] ? kAY8910VolumeTable[m_EnvelopeVolume] : kAY8910VolumeTable[m_Amplitude[i]];
                 }
             }
 
-            m_pBuffer[m_iBufferIndex] = sample;
-            m_pBuffer[m_iBufferIndex + 1] = sample;
+            m_pBuffer[m_iBufferIndex] = m_CurrentSample;
+            m_pBuffer[m_iBufferIndex + 1] = m_CurrentSample;
             m_iBufferIndex += 2;
 
             if (m_iBufferIndex >= GC_AUDIO_BUFFER_SIZE)
@@ -372,6 +373,9 @@ void AY8910::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*>(&m_iSampleCounter), sizeof(m_iSampleCounter));
     stream.write(reinterpret_cast<const char*>(m_pBuffer), GC_AUDIO_BUFFER_SIZE * sizeof(s16));
     stream.write(reinterpret_cast<const char*>(&m_iBufferIndex), sizeof(m_iBufferIndex));
+    stream.write(reinterpret_cast<const char*>(&m_ElapsedCycles), sizeof(m_ElapsedCycles));
+    stream.write(reinterpret_cast<const char*>(&m_iClockRate), sizeof(m_iClockRate));
+    stream.write(reinterpret_cast<const char*>(&m_CurrentSample), sizeof(m_CurrentSample));
 }
 
 void AY8910::LoadState(std::istream& stream)
@@ -397,4 +401,7 @@ void AY8910::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*>(&m_iSampleCounter), sizeof(m_iSampleCounter));
     stream.read(reinterpret_cast<char*>(m_pBuffer), GC_AUDIO_BUFFER_SIZE * sizeof(s16));
     stream.read(reinterpret_cast<char*>(&m_iBufferIndex), sizeof(m_iBufferIndex));
+    stream.read(reinterpret_cast<char*>(&m_ElapsedCycles), sizeof(m_ElapsedCycles));
+    stream.read(reinterpret_cast<char*>(&m_iClockRate), sizeof(m_iClockRate));
+    stream.read(reinterpret_cast<char*>(&m_CurrentSample), sizeof(m_CurrentSample));
 }
