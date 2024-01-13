@@ -101,7 +101,7 @@ void gui_init(void)
 
     update_palette();
 
-    emu_audio_volume(config_audio.enable ? 1.0f: 0.0f);
+    emu_audio_mute(!config_audio.enable);
 
     strcpy(bios_path, config_emulator.bios_path.c_str());
     strcpy(savefiles_path, config_emulator.savefiles_path.c_str());
@@ -717,7 +717,7 @@ static void main_menu(void)
 
             if (ImGui::MenuItem("Enable Audio", "", &config_audio.enable))
             {
-                emu_audio_volume(config_audio.enable ? 1.0f: 0.0f);
+                emu_audio_mute(!config_audio.enable);
             }
 
             if (ImGui::MenuItem("Sync With Emulator", "", &config_audio.sync))

@@ -29,6 +29,7 @@ Audio::Audio()
     m_bPAL = false;
     InitPointer(m_pAY8910);
     InitPointer(m_pSGMBuffer);
+    m_bMute = false;
 }
 
 Audio::~Audio()
@@ -54,6 +55,7 @@ void Audio::Init()
     //m_pBuffer->bass_freq(100);
 
     m_pApu->output(m_pBuffer->center(), m_pBuffer->left(), m_pBuffer->right());
+    m_pApu->volume(0.6);
 
     m_pSGMBuffer = new s16[GC_AUDIO_BUFFER_SIZE];
 
@@ -65,24 +67,16 @@ void Audio::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
     m_pApu->reset();
+    m_pApu->volume(0.6);
     m_pBuffer->clear();
     m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
     m_ElapsedCycles = 0;
     m_pAY8910->Reset(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
 }
 
-void Audio::SetSampleRate(int rate)
+void Audio::Mute(bool mute)
 {
-    if (rate != m_iSampleRate)
-    {
-        m_iSampleRate = rate;
-        m_pBuffer->set_sample_rate(m_iSampleRate);
-    }
-}
-
-void Audio::SetVolume(float volume)
-{
-    m_pApu->volume(volume);
+    m_bMute = mute;
 }
 
 void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
@@ -100,7 +94,10 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
 
         for (int i=0; i<count; i++)
         {
-            pSampleBuffer[i] = m_pSampleBuffer[i] + m_pSGMBuffer[i];
+            if (m_bMute)
+                pSampleBuffer[i] = 0;
+            else
+                pSampleBuffer[i] = m_pSampleBuffer[i] + m_pSGMBuffer[i];
         }
     }
 
@@ -123,5 +120,6 @@ void Audio::LoadState(std::istream& stream)
     m_pAY8910->LoadState(stream);
 
     m_pApu->reset();
+    m_pApu->volume(0.6);
     m_pBuffer->clear();
 }

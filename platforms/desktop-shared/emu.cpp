@@ -185,10 +185,10 @@ void emu_dissasemble_rom(void)
     gearcoleco->SaveDisassembledROM();
 }
 
-void emu_audio_volume(float volume)
+void emu_audio_mute(bool mute)
 {
-    audio_enabled = (volume > 0.0f);
-    gearcoleco->SetSoundVolume(volume);
+    audio_enabled = !mute;
+    gearcoleco->GetAudio()->Mute(mute);
 }
 
 void emu_audio_reset(void)

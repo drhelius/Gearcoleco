@@ -307,17 +307,6 @@ void GearcolecoCore::ResetSound()
     m_pAudio->Reset(m_pCartridge->IsPAL());
 }
 
-void GearcolecoCore::SetSoundSampleRate(int rate)
-{
-    Log("Gearcoleco sound sample rate: %d", rate);
-    m_pAudio->SetSampleRate(rate);
-}
-
-void GearcolecoCore::SetSoundVolume(float volume)
-{
-    m_pAudio->SetVolume(volume);
-}
-
 void GearcolecoCore::SaveRam()
 {
     SaveRam(NULL);

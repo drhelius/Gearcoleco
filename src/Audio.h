@@ -32,8 +32,7 @@ public:
     ~Audio();
     void Init();
     void Reset(bool bPAL);
-    void SetSampleRate(int rate);
-    void SetVolume(float volume);
+    void Mute(bool mute);
     void WriteAudioRegister(u8 value);
     void SGMWrite(u8 value);
     u8 SGMRead();
@@ -54,6 +53,7 @@ private:
     u8 m_SGMRegister;
     u8 m_SGMRegisters[16];
     s16* m_pSGMBuffer;
+    bool m_bMute;
 };
 
 inline void Audio::Tick(unsigned int clockCycles)
