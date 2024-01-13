@@ -99,7 +99,7 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
     { "gearcoleco_aspect_ratio", "Aspect Ratio (restart); 1:1 PAR|4:3 PAR|16:9 PAR" },
-    { "gearcoleco_overscan", "Overscan; Disabled|Top+Bottom|Full" },
+    { "gearsystem_overscan", "Overscan; Disabled|Top+Bottom|Full (284 width)|Full (320 width)" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
     { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
     { "gearcoleco_spinners", "Spinner support; Disabled|Super Action Controller|Wheel Controller|Roller Controller" },
@@ -128,7 +128,7 @@ void retro_init(void)
     core->Init(GC_PIXEL_RGB565);
 #endif
 
-    frame_buffer = new u8[GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN * 2];
+    frame_buffer = new u8[GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN * 2];
 
     audio_sample_count = 0;
 
@@ -235,8 +235,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
     info->geometry.base_width   = runtime_info.screen_width;
     info->geometry.base_height  = runtime_info.screen_height;
-    info->geometry.max_width    = GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN;
-    info->geometry.max_height   = GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN;
+    info->geometry.max_width    = GC_RESOLUTION_WIDTH_WITH_OVERSCAN;
+    info->geometry.max_height   = GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
     info->geometry.aspect_ratio = aspect_ratio;
     info->timing.fps            = runtime_info.region == Region_NTSC ? 60.0 : 50.0;
     info->timing.sample_rate    = 44100.0;
@@ -516,8 +516,10 @@ static void check_variables(void)
             core->GetVideo()->SetOverscan(Video::OverscanDisabled);
         else if (strcmp(var.value, "Top+Bottom") == 0)
             core->GetVideo()->SetOverscan(Video::OverscanTopBottom);
-        else if (strcmp(var.value, "Full") == 0)
-            core->GetVideo()->SetOverscan(Video::OverscanFull);
+        else if (strcmp(var.value, "Full (284 width)") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanFull284);
+        else if (strcmp(var.value, "Full (320 width)") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanFull320);
         else
             core->GetVideo()->SetOverscan(Video::OverscanDisabled);
     }

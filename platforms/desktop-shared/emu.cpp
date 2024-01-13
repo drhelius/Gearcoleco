@@ -47,7 +47,7 @@ static void update_debug_sprite_buffers(void);
 
 void emu_init(void)
 {
-    int screen_size = GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN;
+    int screen_size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
 
     emu_frame_buffer = new u8[screen_size * 3];
 
@@ -335,7 +335,10 @@ void emu_set_overscan(int overscan)
             gearcoleco->GetVideo()->SetOverscan(Video::OverscanTopBottom);
             break;
         case 2:
-            gearcoleco->GetVideo()->SetOverscan(Video::OverscanFull);
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanFull284);
+            break;
+        case 3:
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanFull320);
             break;
         default:
             gearcoleco->GetVideo()->SetOverscan(Video::OverscanDisabled);
@@ -480,7 +483,7 @@ static void update_debug_background_buffer(void)
 
             for (int line = 0; line < 192; line++)
             {
-                int line_offset = line * GC_RESOLUTION_MAX_WIDTH;
+                int line_offset = line * GC_RESOLUTION_WIDTH;
                 int tile_y = line >> 3;
                 int tile_y_offset = line & 7;
 
@@ -517,7 +520,7 @@ static void update_debug_background_buffer(void)
 
     for (int line = 0; line < 192; line++)
     {
-        int line_offset = line * GC_RESOLUTION_MAX_WIDTH;
+        int line_offset = line * GC_RESOLUTION_WIDTH;
         int tile_y = line >> 3;
         int tile_y_offset = line & 7;
         region = (tile_y & 0x18) << 5;

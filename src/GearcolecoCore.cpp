@@ -200,16 +200,18 @@ void GearcolecoCore::SaveDisassembledROM()
 
 bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
-    runtime_info.screen_width = GC_RESOLUTION_MAX_WIDTH;
-    runtime_info.screen_height = GC_RESOLUTION_MAX_HEIGHT;
+    runtime_info.screen_width = GC_RESOLUTION_WIDTH;
+    runtime_info.screen_height = GC_RESOLUTION_HEIGHT;
     runtime_info.region = Region_NTSC;
 
     if (m_pCartridge->IsReady())
     {
-        if (m_pVideo->GetOverscan() == Video::OverscanFull)
-            runtime_info.screen_width = GC_RESOLUTION_MAX_WIDTH + (2 * GC_RESOLUTION_OVERSCAN_H);
+        if (m_pVideo->GetOverscan() == Video::OverscanFull284)
+            runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
+        if (m_pVideo->GetOverscan() == Video::OverscanFull320)
+            runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_320_L + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
         if (m_pVideo->GetOverscan() != Video::OverscanDisabled)
-            runtime_info.screen_height = GC_RESOLUTION_MAX_HEIGHT + (2 * (m_pCartridge->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
+            runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (m_pCartridge->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
         runtime_info.region = m_pCartridge->IsPAL() ? Region_PAL : Region_NTSC;
         return true;
     }
@@ -589,7 +591,7 @@ void GearcolecoCore::Reset()
 
 void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
-    int size = GC_RESOLUTION_MAX_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_MAX_HEIGHT_WITH_OVERSCAN;
+    int size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
     u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)

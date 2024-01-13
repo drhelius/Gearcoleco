@@ -60,8 +60,8 @@ Video::~Video()
 
 void Video::Init()
 {
-    m_pInfoBuffer = new u8[GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL];
-    m_pFrameBuffer = new u16[GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL];
+    m_pInfoBuffer = new u8[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
+    m_pFrameBuffer = new u16[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
     m_pVdpVRAM = new u8[0x4000];
     InitPalettes();
     Reset(false);
@@ -75,7 +75,7 @@ void Video::Reset(bool bPAL)
     m_VdpBuffer = 0;
     m_VdpAddress = 0;
     m_VdpStatus = 0;
-    for (int i = 0; i < (GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
+    for (int i = 0; i < (GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
     {
         m_pFrameBuffer[i] = 1;
         m_pInfoBuffer[i] = 0;
@@ -112,7 +112,7 @@ bool Video::Tick(unsigned int clockCycles)
     m_iCycleCounter += clockCycles;
 
     ///// VINT /////
-    if (m_iRenderLine == GC_RESOLUTION_MAX_HEIGHT)
+    if (m_iRenderLine == GC_RESOLUTION_HEIGHT)
     {
         if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
         {
@@ -142,7 +142,7 @@ bool Video::Tick(unsigned int clockCycles)
     ///// END OF LINE /////
     if (m_iCycleCounter >= GC_CYCLES_PER_LINE)
     {
-        if (m_iRenderLine == GC_RESOLUTION_MAX_HEIGHT)
+        if (m_iRenderLine == GC_RESOLUTION_HEIGHT)
         {
             return_vblank = true;
         }
@@ -271,7 +271,7 @@ void Video::ScanLine(int line)
 {
     if (m_bDisplayEnabled)
     {
-        if (line < GC_RESOLUTION_MAX_HEIGHT)
+        if (line < GC_RESOLUTION_HEIGHT)
         {
             RenderBackground(line);
 
@@ -281,12 +281,12 @@ void Video::ScanLine(int line)
     }
     else
     {
-        if (line < GC_RESOLUTION_MAX_HEIGHT)
+        if (line < GC_RESOLUTION_HEIGHT)
         {
             u16 color = m_VdpRegister[7] & 0x0F;
-            int line_width = line * GC_RESOLUTION_MAX_WIDTH;
+            int line_width = line * GC_RESOLUTION_WIDTH;
 
-            for (int scx = 0; scx < GC_RESOLUTION_MAX_WIDTH; scx++)
+            for (int scx = 0; scx < GC_RESOLUTION_WIDTH; scx++)
             {
                 int pixel = line_width + scx;
                 m_pFrameBuffer[pixel] = color;
@@ -298,7 +298,7 @@ void Video::ScanLine(int line)
 
 void Video::RenderBackground(int line)
 {
-    int line_offset = line * GC_RESOLUTION_MAX_WIDTH;
+    int line_offset = line * GC_RESOLUTION_WIDTH;
 
     int name_table_addr = m_VdpRegister[2] << 10;
     int color_table_addr = m_VdpRegister[3] << 6;
@@ -428,7 +428,7 @@ void Video::RenderBackground(int line)
 void Video::RenderSprites(int line)
 {
     int sprite_count = 0;
-    int line_width = line * GC_RESOLUTION_MAX_WIDTH;
+    int line_width = line * GC_RESOLUTION_WIDTH;
     int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
     bool sprite_zoom = IsSetBit(m_VdpRegister[1], 0);
     if (sprite_zoom)
@@ -473,7 +473,7 @@ void Video::RenderSprites(int line)
         int sprite_shift = (m_pVdpVRAM[sprite_attribute_offset + 3] & 0x80) ? 32 : 0;
         int sprite_x = m_pVdpVRAM[sprite_attribute_offset + 1] - sprite_shift;
 
-        if (sprite_x >= GC_RESOLUTION_MAX_WIDTH)
+        if (sprite_x >= GC_RESOLUTION_WIDTH)
             continue;
 
         int sprite_tile = m_pVdpVRAM[sprite_attribute_offset + 2];
@@ -484,7 +484,7 @@ void Video::RenderSprites(int line)
         for (int tile_x = 0; tile_x < sprite_size; tile_x++)
         {
             int sprite_pixel_x = sprite_x + tile_x;
-            if (sprite_pixel_x >= GC_RESOLUTION_MAX_WIDTH)
+            if (sprite_pixel_x >= GC_RESOLUTION_WIDTH)
                 break;
             if (sprite_pixel_x < 0)
                 continue;
@@ -525,11 +525,11 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
 {
     int x = 0;
     int y = 0;
-    int overscan_h = 0;
+    int overscan_h_l = 0;
     int overscan_v = 0;
     int overscan_content_v = 0;
     int overscan_content_h = 0;
-    int overscan_total_width = GC_RESOLUTION_MAX_WIDTH;
+    int overscan_total_width = GC_RESOLUTION_WIDTH;
     int overscan_total_height = 0;
     bool overscan_enabled = false;
     int overscan_color = (m_VdpRegister[7] & 0x0F) * 3;
@@ -539,16 +539,23 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     if (overscan && (m_Overscan != OverscanDisabled))
     {
         overscan_enabled = true;
-        overscan_content_v = GC_RESOLUTION_MAX_HEIGHT;
+        overscan_content_v = GC_RESOLUTION_HEIGHT;
         overscan_v = m_bPAL ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V;
         overscan_total_height = overscan_content_v + (overscan_v * 2);
     }
 
-    if (overscan && (m_Overscan == OverscanFull))
+    if (overscan && (m_Overscan == OverscanFull320))
     {
-        overscan_content_h = GC_RESOLUTION_MAX_WIDTH;
-        overscan_h = GC_RESOLUTION_OVERSCAN_H;
-        overscan_total_width = overscan_content_h + (overscan_h * 2);
+        overscan_content_h = GC_RESOLUTION_WIDTH;
+        overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_320_L;
+        overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
+    }
+
+    if (overscan && (m_Overscan == OverscanFull284))
+    {
+        overscan_content_h = GC_RESOLUTION_WIDTH;
+        overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_284_L;
+        overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
     }
 
     for (int i = 0, j = 0; j < buffer_size; j += 3)
@@ -556,7 +563,7 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         u16 src_color = 0;
         if (overscan_enabled)
         {
-            bool is_h_overscan = (overscan_h > 0) && (x < overscan_h || x >= (overscan_h + overscan_content_h));
+            bool is_h_overscan = (overscan_h_l > 0) && (x < overscan_h_l || x >= (overscan_h_l + overscan_content_h));
             bool is_v_overscan = (overscan_v > 0) && (y < overscan_v || y >= (overscan_v + overscan_content_v));
 
             if (is_h_overscan || is_v_overscan)
@@ -586,11 +593,11 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
 {
     int x = 0;
     int y = 0;
-    int overscan_h = 0;
+    int overscan_h_l = 0;
     int overscan_v = 0;
     int overscan_content_v = 0;
     int overscan_content_h = 0;
-    int overscan_total_width = GC_RESOLUTION_MAX_WIDTH;
+    int overscan_total_width = GC_RESOLUTION_WIDTH;
     int overscan_total_height = 0;
     bool overscan_enabled = false;
     int overscan_color = m_VdpRegister[7] & 0x0F;
@@ -607,16 +614,23 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     if (overscan && (m_Overscan != OverscanDisabled))
     {
         overscan_enabled = true;
-        overscan_content_v = GC_RESOLUTION_MAX_HEIGHT;
+        overscan_content_v = GC_RESOLUTION_HEIGHT;
         overscan_v = m_bPAL ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V;
         overscan_total_height = overscan_content_v + (overscan_v * 2);
     }
 
-    if (overscan && (m_Overscan == OverscanFull))
+    if (overscan && (m_Overscan == OverscanFull320))
     {
-        overscan_content_h = GC_RESOLUTION_MAX_WIDTH;
-        overscan_h = GC_RESOLUTION_OVERSCAN_H;
-        overscan_total_width = overscan_content_h + (overscan_h * 2);
+        overscan_content_h = GC_RESOLUTION_WIDTH;
+        overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_320_L;
+        overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
+    }
+
+    if (overscan && (m_Overscan == OverscanFull284))
+    {
+        overscan_content_h = GC_RESOLUTION_WIDTH;
+        overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_284_L;
+        overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
     }
 
     for (int i = 0, j = 0; j < buffer_size; j += 2)
@@ -624,7 +638,7 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         u16 src_color = 0;
         if (overscan_enabled)
         {
-            bool is_h_overscan = (overscan_h > 0) && (x < overscan_h || x >= (overscan_h + overscan_content_h));
+            bool is_h_overscan = (overscan_h_l > 0) && (x < overscan_h_l || x >= (overscan_h_l + overscan_content_h));
             bool is_v_overscan = (overscan_v > 0) && (y < overscan_v || y >= (overscan_v + overscan_content_v));
 
             if (is_h_overscan || is_v_overscan)
@@ -717,7 +731,7 @@ Video::Overscan Video::GetOverscan()
 
 void Video::SaveState(std::ostream& stream)
 {
-    stream.write(reinterpret_cast<const char*> (m_pInfoBuffer), GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL);
+    stream.write(reinterpret_cast<const char*> (m_pInfoBuffer), GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL);
     stream.write(reinterpret_cast<const char*> (m_pVdpVRAM), 0x4000);
     stream.write(reinterpret_cast<const char*> (&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
     stream.write(reinterpret_cast<const char*> (m_VdpRegister), sizeof(m_VdpRegister));
@@ -737,7 +751,7 @@ void Video::SaveState(std::ostream& stream)
 
 void Video::LoadState(std::istream& stream)
 {
-    stream.read(reinterpret_cast<char*> (m_pInfoBuffer), GC_RESOLUTION_MAX_WIDTH * GC_LINES_PER_FRAME_PAL);
+    stream.read(reinterpret_cast<char*> (m_pInfoBuffer), GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL);
     stream.read(reinterpret_cast<char*> (m_pVdpVRAM), 0x4000);
     stream.read(reinterpret_cast<char*> (&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
     stream.read(reinterpret_cast<char*> (m_VdpRegister), sizeof(m_VdpRegister));
