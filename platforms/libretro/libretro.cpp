@@ -98,7 +98,7 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 
 static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
-    { "gearcoleco_aspect_ratio", "Aspect Ratio (restart); 1:1 PAR|4:3 PAR|16:9 PAR" },
+    { "gearcoleco_aspect_ratio", "Aspect Ratio (restart); 1:1 PAR|4:3 DAR|16:9 DAR" },
     { "gearsystem_overscan", "Overscan; Disabled|Top+Bottom|Full (284 width)|Full (320 width)" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
     { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
@@ -499,9 +499,9 @@ static void check_variables(void)
     {
         if (strcmp(var.value, "1:1 PAR") == 0)
             aspect_ratio = 0.0f;
-        else if (strcmp(var.value, "4:3 PAR") == 0)
+        else if (strcmp(var.value, "4:3 DAR") == 0)
             aspect_ratio = 4.0f / 3.0f;
-        else if (strcmp(var.value, "16:9 PAR") == 0)
+        else if (strcmp(var.value, "16:9 DAR") == 0)
             aspect_ratio = 16.0f / 9.0f;
         else
             aspect_ratio = 0.0f;
