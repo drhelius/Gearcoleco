@@ -61,6 +61,7 @@ private:
     bool m_Sign[3];
     int m_iCycleCounter;
     int m_iSampleCounter;
+    int m_iCyclesPerSample;
     s16* m_pBuffer;
     int m_iBufferIndex;
     int m_ElapsedCycles;
