@@ -46,7 +46,7 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 
 - *BIOS*: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 ```2c66f5911e5b42b8ebe113403548eee7``` is recommended.
 - *Spinners*: When using any kind of spinner it is useful to capture the mouse by pressing ```F12```. It is also recommended to disable spinners for software that don't use them.
-- *Overscan*: For a precise representation of the original image using Overscan Top+Bottom and 4:3 Pixel Aspect Ratio is recommended.
+- *Overscan*: For a precise representation of the original image using Overscan Top+Bottom and 4:3 Display Aspect Ratio is recommended.
 - *Mouse Cursor*: Automatically hides when hovering main output window or when Main Menu is disabled. 
 - *Portable Mode*: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
 - *Debug Symbols*: The emulator always tries to load a symbol file at the same time a rom is being loaded. For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. It is also possible to load a symbol file using the GUI or using the CLI.
