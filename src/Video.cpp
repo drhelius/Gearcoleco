@@ -60,8 +60,8 @@ Video::~Video()
 
 void Video::Init()
 {
-    m_pInfoBuffer = new u8[GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN];
-    m_pFrameBuffer = new u16[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
+    m_pFrameBuffer = new u16[GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN];
+    m_pInfoBuffer = new u8[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
     m_pVdpVRAM = new u8[0x4000];
     InitPalettes();
     Reset(false);
