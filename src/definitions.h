@@ -177,14 +177,13 @@ struct GC_RuntimeInfo
 };
 
 #ifdef DEBUG_GEARCOLECO
+
 #ifdef __ANDROID__
-        #include <android/log.h>
-        #define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "GEARCOLECO", __VA_ARGS__);
-    #endif
-#define Log(msg, ...) (Log_func(msg, ##__VA_ARGS__))
-#else
-#define Log(msg, ...)
+#include <android/log.h>
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "GEARCOLECO", __VA_ARGS__);
 #endif
+
+#define Log(msg, ...) (Log_func(msg, ##__VA_ARGS__))
 
 inline void Log_func(const char* const msg, ...)
 {
@@ -201,6 +200,10 @@ inline void Log_func(const char* const msg, ...)
 
     count++;
 }
+
+#else
+#define Log(msg, ...)
+#endif
 
 inline u8 SetBit(const u8 value, const u8 bit)
 {

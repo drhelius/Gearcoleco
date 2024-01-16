@@ -111,6 +111,11 @@ static retro_environment_t environ_cb;
 
 void retro_init(void)
 {
+    if (cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+        log_cb = logging.log;
+    else
+        log_cb = fallback_log;
+
     const char *dir = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir) {
@@ -119,6 +124,8 @@ void retro_init(void)
     else {
         snprintf(retro_system_directory, sizeof(retro_system_directory), "%s", ".");
     }
+
+    log_cb(RETRO_LOG_INFO, "%s (%s) libretro\n", GEARCOLECO_TITLE, EMULATOR_BUILD);
 
     core = new GearcolecoCore();
 
@@ -151,7 +158,7 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
-    log_cb(RETRO_LOG_INFO, "Plugging device %u into port %u.\n", device, port);
+    log_cb(RETRO_LOG_DEBUG, "Plugging device %u into port %u.\n", device, port);
 
     struct retro_input_descriptor joypad[] = {
 
@@ -246,11 +253,6 @@ void retro_set_environment(retro_environment_t cb)
 {
     environ_cb = cb;
 
-    if (cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
-        log_cb = logging.log;
-    else
-        log_cb = fallback_log;
-
     static const struct retro_controller_description port_1[] = {
         { "ColecoVision", RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) },
     };
@@ -265,7 +267,7 @@ void retro_set_environment(retro_environment_t cb)
         { NULL, 0 },
     };
 
-    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+    environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
     environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
 }
@@ -620,7 +622,7 @@ bool retro_load_game(const struct retro_game_info *info)
     enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
     if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
     {
-        log_cb(RETRO_LOG_INFO, "RGB565 is not supported.\n");
+        log_cb(RETRO_LOG_ERROR, "RGB565 is not supported.\n");
         return false;
     }
 

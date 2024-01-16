@@ -60,7 +60,7 @@ Video::~Video()
 
 void Video::Init()
 {
-    m_pInfoBuffer = new u8[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
+    m_pInfoBuffer = new u8[GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN];
     m_pFrameBuffer = new u16[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
     m_pVdpVRAM = new u8[0x4000];
     InitPalettes();
@@ -75,11 +75,11 @@ void Video::Reset(bool bPAL)
     m_VdpBuffer = 0;
     m_VdpAddress = 0;
     m_VdpStatus = 0;
-    for (int i = 0; i < (GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
-    {
+
+    for (int i = 0; i < (GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN); i++)
         m_pFrameBuffer[i] = 1;
+    for (int i = 0; i < (GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
         m_pInfoBuffer[i] = 0;
-    }
     for (int i = 0; i < 0x4000; i++)
         m_pVdpVRAM[i] = 0;
     for (int i = 0; i < 8; i++)
