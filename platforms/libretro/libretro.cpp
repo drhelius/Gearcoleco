@@ -111,7 +111,7 @@ static retro_environment_t environ_cb;
 
 void retro_init(void)
 {
-    if (cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
         log_cb = logging.log;
     else
         log_cb = fallback_log;
