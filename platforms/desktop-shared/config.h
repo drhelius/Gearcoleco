@@ -57,6 +57,7 @@ struct config_Emulator
     int spinner = 0;
     int spinner_sensitivity = 0;
     bool capture_mouse = false;
+    bool status_messages = false;
 };
 
 struct config_Video

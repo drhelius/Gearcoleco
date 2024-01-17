@@ -177,6 +177,7 @@ void config_read(void)
     config_emulator.window_height = read_int("Emulator", "WindowHeight", 600);
     config_emulator.spinner = read_int("Emulator", "Spinner", 0);
     config_emulator.spinner_sensitivity = read_int("Emulator", "SpinnerSensitivity", 4);
+    config_emulator.status_messages = read_bool("Emulator", "StatusMessages", false);
 
     if (config_emulator.savefiles_path.empty())
     {
@@ -343,7 +344,8 @@ void config_write(void)
     write_int("Emulator", "WindowHeight", config_emulator.window_height);
     write_int("Emulator", "Spinner", config_emulator.spinner);
     write_int("Emulator", "SpinnerSensitivity", config_emulator.spinner_sensitivity);
-    
+    write_bool("Emulator", "StatusMessages", config_emulator.status_messages);
+
     for (int i = 0; i < config_max_recent_roms; i++)
     {
         std::string item = "RecentROM" + std::to_string(i);
