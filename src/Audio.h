@@ -50,8 +50,6 @@ private:
     int m_iSampleRate;
     blip_sample_t* m_pSampleBuffer;
     bool m_bPAL;
-    u8 m_SGMRegister;
-    u8 m_SGMRegisters[16];
     s16* m_pSGMBuffer;
     bool m_bMute;
 };
