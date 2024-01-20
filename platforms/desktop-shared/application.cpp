@@ -19,7 +19,7 @@
 
 #include <SDL.h>
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_sdl2.h"
 #include "emu.h"
 #include "gui.h"
 #include "gui_debug.h"
@@ -94,6 +94,7 @@ void application_destroy(void)
     config_write();
     config_destroy();
     renderer_destroy();
+    ImGui_ImplSDL2_Shutdown();
     gui_destroy();
     emu_destroy();
     sdl_destroy();
@@ -215,7 +216,6 @@ static void sdl_destroy(void)
 {
     SDL_GameControllerClose(application_gamepad[0]);
     SDL_GameControllerClose(application_gamepad[1]);
-    ImGui_ImplSDL2_Shutdown();
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(sdl_window);
     SDL_Quit();
@@ -750,7 +750,7 @@ static void run_emulator(void)
 static void render(void)
 {
     renderer_begin_render();
-    ImGui_ImplSDL2_NewFrame(sdl_window);  
+    ImGui_ImplSDL2_NewFrame();
     gui_render();
     renderer_render();
     renderer_end_render();

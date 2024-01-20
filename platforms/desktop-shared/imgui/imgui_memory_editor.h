@@ -317,7 +317,7 @@ struct MemoryEditor
                     if (DataEditingTakeFocus)
                     {
                         ImGui::SetKeyboardFocusHere();
-                        ImGui::CaptureKeyboardFromApp(true);
+                        //ImGui::CaptureKeyboardFromApp(true);
                     }
                     struct UserData
                     {

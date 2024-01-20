@@ -291,7 +291,7 @@ void emu_get_info(char* info)
     }
     else
     {
-        sprintf(info, "No data!");
+        sprintf(info, "There is no ROM loaded!");
     }
 }
 

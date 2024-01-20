@@ -1281,12 +1281,12 @@ static void popup_modal_keyboard()
 {
     if (ImGui::BeginPopupModal("Keyboard Configuration", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::Text("Press any key...\n\n");
+        ImGui::Text("Press any key to assign...\n\n");
         ImGui::Separator();
 
-        for (int i = 0; i < IM_ARRAYSIZE(ImGui::GetIO().KeysDown); i++)
+        for ( int i = 0; i < ImGuiKey_NamedKey_END; ++i )
         {
-            if (ImGui::IsKeyPressed(i))
+            if (ImGui::IsKeyDown((ImGuiKey)i))
             {
                 SDL_Scancode key = (SDL_Scancode)i;
 
@@ -1579,6 +1579,7 @@ static void menu_ffwd(void)
 
 static void show_info(void)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::Begin("ROM Info", &config_emulator.show_info, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
 
     static char info[512];
@@ -1592,6 +1593,7 @@ static void show_info(void)
     ImGui::PopFont();
 
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static void show_fps(void)

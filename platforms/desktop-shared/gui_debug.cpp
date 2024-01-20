@@ -205,6 +205,7 @@ void gui_debug_go_back(void)
 
 static void debug_window_memory(void)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(567, 249), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(324, 308), ImGuiCond_FirstUseEver);
 
@@ -272,10 +273,12 @@ static void debug_window_memory(void)
     }
 
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static void debug_window_disassembler(void)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(159, 31), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(401, 641), ImGuiCond_FirstUseEver);
 
@@ -502,7 +505,7 @@ static void debug_window_disassembler(void)
 
     ImGui::PushFont(gui_default_font);
 
-    bool window_visible = ImGui::BeginChild("##dis", ImVec2(ImGui::GetWindowContentRegionWidth(), 0), true, 0);
+    bool window_visible = ImGui::BeginChild("##dis", ImVec2(ImGui::GetContentRegionAvail().x, 0), true, 0);
     
     if (window_visible)
     {
@@ -572,7 +575,8 @@ static void debug_window_disassembler(void)
             ImGui::SetScrollY((float)goto_back);
         }
 
-        ImGuiListClipper clipper(dis_size, ImGui::GetTextLineHeightWithSpacing());
+        ImGuiListClipper clipper;
+        clipper.Begin(dis_size, ImGui::GetTextLineHeightWithSpacing());
 
         while (clipper.Step())
         {
@@ -664,10 +668,13 @@ static void debug_window_disassembler(void)
     ImGui::PopFont();
 
     ImGui::End();
+
+    ImGui::PopStyleVar();
 }
 
 static void debug_window_processor(void)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(6, 31), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Z80 Status", &config_debug.show_processor, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
@@ -822,10 +829,12 @@ static void debug_window_processor(void)
     ImGui::PopFont();
 
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static void debug_window_vram_registers(void)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(567, 560), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(260, 329), ImGuiCond_FirstUseEver);
 
@@ -834,10 +843,12 @@ static void debug_window_vram_registers(void)
     debug_window_vram_regs();
 
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static void debug_window_vram(void)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(896, 31), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(668, 624), ImGuiCond_FirstUseEver);
 
@@ -884,6 +895,7 @@ static void debug_window_vram(void)
     }
 
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static void debug_window_vram_background(void)
@@ -947,7 +959,7 @@ static void debug_window_vram_background(void)
         tile_x = (int)(mouse_x / spacing_h);
         tile_y = (int)(mouse_y / spacing_v);
 
-        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing_h), p.y + (tile_y * spacing_v)), ImVec2(p.x + ((tile_x + 1) * spacing_h), p.y + ((tile_y + 1) * spacing_v)), ImColor(cyan), 2.0f, 15, 2.0f);
+        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing_h), p.y + (tile_y * spacing_v)), ImVec2(p.x + ((tile_x + 1) * spacing_h), p.y + ((tile_y + 1) * spacing_v)), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
 
         ImGui::NextColumn();
 
@@ -1044,7 +1056,7 @@ static void debug_window_vram_tiles(void)
         tile_x = (int)(mouse_x / spacing);
         tile_y = (int)(mouse_y / spacing);
 
-        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing), p.y + (tile_y * spacing)), ImVec2(p.x + ((tile_x + 1) * spacing), p.y + ((tile_y + 1) * spacing)), ImColor(cyan), 2.0f, 15, 2.0f);
+        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing), p.y + (tile_y * spacing)), ImVec2(p.x + ((tile_x + 1) * spacing), p.y + ((tile_y + 1) * spacing)), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
 
         ImGui::NextColumn();
 
@@ -1115,7 +1127,7 @@ static void debug_window_vram_sprites(void)
         if ((mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            draw_list->AddRect(ImVec2(p[s].x, p[s].y), ImVec2(p[s].x + width, p[s].y + height), ImColor(cyan), 2.0f, 15, 3.0f);
+            draw_list->AddRect(ImVec2(p[s].x, p[s].y), ImVec2(p[s].x + width, p[s].y + height), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 3.0f);
         }
 
         if (s % 4 < 3)
@@ -1194,7 +1206,7 @@ static void debug_window_vram_sprites(void)
             recty_max = fminf(fmaxf(recty_max, p_screen.y), p_screen.y + (runtime.screen_height * screen_scale));
             
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            draw_list->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(cyan), 2.0f, 15, 2.0f);
+            draw_list->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
 
             ImGui::TextColored(yellow, "DETAILS:");
             ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
