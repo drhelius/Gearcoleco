@@ -432,8 +432,6 @@ static void main_menu(void)
 
             if (ImGui::BeginMenu("BIOS"))
             {
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("When the BIOS is enabled it will execute as in original hardware,\ncausing invalid roms to lock or preventing some other to boot.\n\nSet 'Media Slot' to 'None' in order to boot the games included in BIOS.");
                 if (ImGui::MenuItem("Load BIOS..."))
                 {
                     open_bios = true;
