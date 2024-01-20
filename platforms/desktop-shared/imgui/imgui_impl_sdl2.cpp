@@ -278,8 +278,6 @@ static ImGuiKey ImGui_ImplSDL2_KeycodeToImGuiKey(int keycode)
         case SDLK_F24: return ImGuiKey_F24;
         case SDLK_AC_BACK: return ImGuiKey_AppBack;
         case SDLK_AC_FORWARD: return ImGuiKey_AppForward;
-        default:
-            printf("[ImGui] SDL2: unsupported keycode: 0x%08X\n", keycode);
     }
     return ImGuiKey_None;
 }
