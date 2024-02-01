@@ -28,7 +28,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: Linux (Ubuntu ${{ matrix.os }}) binary
+        name: Linux (${{ matrix.os }}) binary
         path: platforms/linux/gearcoleco
   libretro:
     name: Libretro (Ubuntu)
@@ -59,13 +59,17 @@ jobs:
         fetch-depth: 0
     - name: Install dependencies
       run: brew install sdl2
+    - name: trace
+      run: |
+        ls -lsa /usr/local/opt/sdl2/lib
+        file /usr/local/opt/sdl2/lib/*.dylib
     - name: make
       run: make dist
       working-directory: platforms/macos
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: macOS ${{ matrix.os }} App bundle
+        name: ${{ matrix.os }} App bundle
         path: platforms/macos/Gearcoleco.app
   windows:
     name: Windows
@@ -76,7 +80,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.3.1
+      uses: microsoft/setup-msbuild@v2
     - name: Get git version
       id: gitversion
       shell: bash
