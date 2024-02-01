@@ -59,11 +59,6 @@ jobs:
         fetch-depth: 0
     - name: Install dependencies
       run: brew install sdl2
-    - name: trace
-      run: |
-        pkg-config --libs sdl2
-        ls -lsa /opt/homebrew/lib
-        file /opt/homebrew/lib/libSDL2*.dylib
     - name: make
       run: make dist
       working-directory: platforms/macos
