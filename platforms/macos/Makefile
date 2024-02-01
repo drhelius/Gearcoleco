@@ -6,7 +6,12 @@ LDFLAGS += -framework AppKit -framework UniformTypeIdentifiers
 
 include ../desktop-shared/Makefile.common
 
-DYLIB_PATH=/usr/local/opt/sdl2/lib
+if [[ $(uname -m) == 'arm64' ]]; then
+  DYLIB_PATH=/opt/homebrew/lib
+else
+  DYLIB_PATH=/usr/local/opt/sdl2/lib
+fi
+
 SDL_DYLIB=libSDL2-2.0.0.dylib
 APP_NAME=Gearcoleco
 
