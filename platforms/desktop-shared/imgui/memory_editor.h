@@ -30,6 +30,9 @@ public:
     ~GearMemoryEditor();
     
     void Draw(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
+
+private:
+    int m_selected_address;
 };
 
 #endif	/* GEAR_MEMORY_EDITOR_H */

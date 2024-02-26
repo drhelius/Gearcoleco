@@ -1,0 +1,137 @@
+2f810cc Remove invalid pop up for BIOS
+ed031f9 Remove minor debug trace
+7ee1f30 Fix Windows build
+0d2c0bb Update ImGui to 1.90.1
+d12096e Merge branch 'main' of https://github.com/drhelius/Gearcoleco
+ed61094 Remove unused variables
+97ec107 Update gearcoleco.yml
+f482cc6 Update README.md
+85b881d Save screenshots
+69f07e3 Fix crash
+5dadae7 [libretro] Fix build
+9295304 [libretro] Fix crash in Android
+c7b3eb7 Merge branch 'main' of https://github.com/drhelius/Gearcoleco
+f2984f6 [libretro] fix bad name in overscan option. Fix #51
+167096b Update gearcoleco.yml
+6785af9 Add native file dialogs
+0d7461a Update README.md
+26cdadb Update gearcoleco.yml
+89aceaa Center image in 284 horizontal overscan mode
+5db83d9 Update README.md
+043b066 Debugger improvements
+1afc7dd Minor AY8910 performance improvement
+4c0d58d Minor naming fix for aspect ratio
+c917c95 Add horizontal overscan options for 284 and 320 pixels
+13c4cb7 Fix AY8910 volume
+8ef188f Improve makefiles
+6aeb837 Fix AY8910 save state and sample genartion
+5d1fc76 Add AY8910 buffer to save state
+ab661f0 Fix memory leak in AY8910
+57e8bc8 Update README.md
+0bfda08 Update README.md
+8471e19 Add overscan options
+3af976e Add overscan and aspect ratio
+80a7112 Add scale to window height video mode
+d4ae66c Adjust scanlines and ghosting values.
+fadbbb3 Update gearcoleco.yml
+191028c Update gearcoleco.yml
+685e7d9 Update gearcoleco.yml
+f0a71c8 Update gearcoleco.yml
+512990a Update README.md
+68e5531 Add option to resize window to fit content
+8b3473f Accept [labels] section from WLA symbol files
+2129699 Update README.md
+d2f88a7 Update README.md
+f3d1c55 Load symbol files from command line
+5a4f5da Hide mouse cursor when main menu is disabled
+c9a683c [libretro] Fix build for dingux-mips32
+065e37f Add support for SGM AY8910 sound chip. Fix #11
+1af681f Merge branch 'main' of https://github.com/drhelius/Gearcoleco
+4397c05 Update gamecontrollerdb.txt
+2675772 Update backers.md
+428898f Fix MegaCart detection
+6a7fa06 Fix minor log trace
+e1de875 Fix minor warnings
+49b71d2 Update README.md
+a1aa7ec Update README.md
+987d100 Update README.md
+9e3b01a Bump version to 1.1.0
+99b1bfd [libretro] Map mouse to spinners. Fix #42
+fce4b83 [libretro] Fix SGM games not loading
+f8283c3 Fix save states
+ff7bc41 Option to capture mouse exclusively for spinners. Fix #43
+4e1e05c Hide cursor when hovering output window. Fix #41
+c672483 Use mouse buttons as input for Roller Controller. Fix #44
+ef00ff5 Fix navigation path in File Dialog
+ae32838 Activision Cart support. Fixes #45
+12ea4ac [libretro] Add SF2000 platform
+7ad976c MegaCart support. Partial SGM support(except sound). #11 #45
+48eaab5 Reverse direction for SAC Spinners
+a7c272e Add support for SAC Spinners, Wheel Controller and Roller Controller. Fixes #38
+f64edcf [libretro] Map '0', '9', 'Purple' and 'Blue' buttons to analog sticks. Fixes #25
+32a42f1 Add support for Super Action Controller Buttons. Fixes #24
+09f8d89 Improve input keypad accuracy
+abdd735 [libretro] Update libretro header file
+73c8d37 Let non-valid roms load
+b062a26 [desktop] Fix crash in memory debugger when no rom is loaded. Fixes #37
+a9f4185 [desktop] Avoid saving window size when fullscreen is enabled
+e587735 [desktop windows] Fix open file dialog not showing current location
+5d9b83c [desktop windows] Fix high DPI rendering
+ab34277 [desktop windows] Update SDL to 2.28.5
+9fceba4 [desktop] Remember window size. Fixes #6
+a4f0511 [desktop] Persist 'Full Screen' and 'Hide Menu' options
+22f7070 [desktop] Remember directory from last laoded rom. Fixes #36
+59f7401 [desktop] Add option to disable sprite limit. Fixes #32
+932cafd Add VDP internal state variables to debugger
+0b5784b Add support for Lord of the Dungeon (cartridge with SRAM)
+d71744d Fix minor typos in BIOS symbols
+675cd49 Merge branch 'main' of https://github.com/drhelius/Gearcoleco
+6e6f1df Additional BIOS symbols for debugging
+eeffc58 Improved vblank timing. Fixes #34.
+8c1f8d1 Memory debugger starts at 0x7000 instead of mirrored 0x6000
+49d968c Avoid using ALSA when running on WSL
+6c67da0 Comment BSD build
+cc7c19c Update README.md
+c6810cc Update README.md
+5c1a990 Update README.md
+daf8e25 Fix minor warning with latest GCC versions
+b8da617 Merge pull request #30 from msheehan79/no-sprite-limit
+63b0efd libretro: Add no sprite limit core option
+c89561a Merge pull request #28 from msheehan79/main
+406f880 libretro: Refactor the input handling method to keep track of current input state, and only send actual changes to the Core class rather than sending every button state for both controlles on every frame.
+ab65f20 Update backers.h
+d57d5b3 Update backers.md
+c93b80b Update backers.h
+738e9ab Update backers.md
+1a5e8f3 Update gearcoleco.yml
+b1dac72 Update backers.h
+a95746d Update backers.md
+443207e [libretro] Fix emscripten compiler crash
+b096a2b [libretro] Fix cross-compiling with mingw
+fa48d71 [libretro] Exit immediately if ROM is invalid or corrupt
+19187df PS3/PSL1GHT Makefile update
+642c748 Merge branch 'develop'
+cc59d78 Update backers list
+6b2578e Update backers.md
+95c534c Merge pull request #17 from salvacam/miyoo
+56eeb31 add Miyoo target
+e5da754 Fix minor warnings
+d06e15e Pixel perfect rendering even with non integer HDPI values on Windows
+7e7596f Patch bios with correct refesh rate for PAL
+06de40c Fix bilinear filtering bleeding artifacts. Resolves #8
+9b4fb36 Fix recently accessed files bug
+a65b8b3 Better handling of TMS9918 buffer register
+b79bff2 Custom folders for savestates
+3023ba5 Add NO BIOS splash screen
+6b31599 Push version to 1.0.1
+a318788 Remember pause state when focus is lost
+dbd1d6e Ignore case in file filtering. Fixes #9
+2f5798d Improve recently cccessed files list
+b19d657 Drag and drop rom files
+2a2f66c Update gearcoleco.yml
+1cc1b8e Update README.md
+1046724 Merge pull request #12 from Poligraf/retrofw
+3642d46 add retrofw target
+223b96c Update README.md
+a6c99e6 Update README.md
+2100a3c Add macOS icon

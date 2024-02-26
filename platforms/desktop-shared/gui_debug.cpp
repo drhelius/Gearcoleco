@@ -20,6 +20,7 @@
 #include <math.h>
 #include "imgui/imgui.h"
 #include "imgui/imgui_memory_editor.h"
+#include "imgui/memory_editor.h"
 #include "config.h"
 #include "emu.h"
 #include "renderer.h"
@@ -46,6 +47,7 @@ struct DisassmeblerLine
 };
 
 static MemoryEditor mem_edit;
+static GearMemoryEditor gear_mem_edit;
 static ImVec4 cyan = ImVec4(0.1f,0.9f,0.9f,1.0f);
 static ImVec4 magenta = ImVec4(1.0f,0.502f,0.957f,1.0f);
 static ImVec4 yellow = ImVec4(1.0f,0.90f,0.05f,1.0f);
@@ -232,7 +234,8 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("BIOS"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetBios(), 0x2000, 0);
+            //mem_edit.DrawContents(memory->GetBios(), 0x2000, 0);
+            gear_mem_edit.Draw(memory->GetBios(), 0x2000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -648,7 +651,6 @@ static void debug_window_disassembler(void)
 
                 ImGui::SameLine();
                 ImGui::TextColored(color_name, "%s", vec[item].record->name);
-
 
                 bool is_ret = is_return_instruction(vec[item].record->opcodes[0], vec[item].record->opcodes[1]);
                 if (is_ret)
