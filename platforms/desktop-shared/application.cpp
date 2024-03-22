@@ -392,7 +392,7 @@ static void sdl_events_emu(const SDL_Event* event)
                 
                 if (event->cbutton.button == config_input[i].gamepad_left_button)
                     emu_key_pressed(controller, Key_Left_Button);
-                else if (event->cbutton.button == config_input[i].gamepad_left_button)
+                else if (event->cbutton.button == config_input[i].gamepad_right_button)
                     emu_key_pressed(controller, Key_Right_Button);
                 else if (event->jbutton.button == config_input[i].gamepad_0)
                     emu_key_pressed(controller, Keypad_0);
