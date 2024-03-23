@@ -235,7 +235,8 @@ static void debug_window_memory(void)
         {
             ImGui::PushFont(gui_default_font);
             //mem_edit.DrawContents(memory->GetBios(), 0x2000, 0);
-            gear_mem_edit.Draw(memory->GetBios(), 0x2000, 0);
+            //gear_mem_edit.Draw(memory->GetBios(), 0x2000, 0);
+            gear_mem_edit.DrawAdvanced(memory->GetBios(), 0x2000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -243,7 +244,8 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetRam(), 0x400, 0x7000);
+            //mem_edit.DrawContents(memory->GetRam(), 0x400, 0x7000);
+            gear_mem_edit.Draw(memory->GetBios(), 0x2000, 0x2000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }

@@ -28,8 +28,12 @@ class GearMemoryEditor
 public:
     GearMemoryEditor();
     ~GearMemoryEditor();
-    
+
     void Draw(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
+    void DrawAdvanced(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
+
+private:
+    bool IsColumnSeparator(int current_column, int column_count);
 
 private:
     int m_selected_address;
