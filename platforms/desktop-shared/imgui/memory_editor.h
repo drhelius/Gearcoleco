@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include "imgui.h"
 
 class GearMemoryEditor
 {
@@ -30,13 +31,20 @@ public:
     ~GearMemoryEditor();
 
     void Draw(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
-    void DrawAdvanced(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
 
 private:
     bool IsColumnSeparator(int current_column, int column_count);
+    void DrawSelectionFrame(int x, int y, int address, const ImVec2 &cellPos, const ImVec2 &cellSize);
+    void HandleSelection(int address);
 
 private:
-    int m_selected_address;
+    int m_bytes_per_row;
+    float m_separator_column_width;
+    bool m_uppercase_hex;
+    int m_editing_address;
+    bool m_set_keyboard_here;
+    int m_selection_start;
+    int m_selection_end;
 };
 
 #endif	/* GEAR_MEMORY_EDITOR_H */

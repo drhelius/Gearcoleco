@@ -18,11 +18,16 @@
  */
 
 #include "memory_editor.h"
-#include "imgui.h"
 
 GearMemoryEditor::GearMemoryEditor()
 {
-    m_selected_address = -1;
+    m_editing_address = -1;
+    m_set_keyboard_here = false;
+    m_selection_start = 1;
+    m_selection_end = 256;
+    m_bytes_per_row = 16;
+    m_separator_column_width = 8.0f;;
+    m_uppercase_hex = true;
 }
 
 GearMemoryEditor::~GearMemoryEditor()
@@ -30,28 +35,22 @@ GearMemoryEditor::~GearMemoryEditor()
 
 }
 
-void GearMemoryEditor::DrawAdvanced(uint8_t* mem_data, int mem_size, int base_display_addr)
+void GearMemoryEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
 {
-    int m_bytesPerRow = 16;
-    int bytesPerCell = 1;
-    int columnCount = m_bytesPerRow / bytesPerCell;
-    int separatorCount = (columnCount - 1) / 4;
-    int byteColumnCount = 2 + columnCount + separatorCount + 2;
-    float SeparatorColumWidth = 8.0f;
-    bool m_upperCaseHex = true;
-    ImVec2 CharacterSize = ImGui::CalcTextSize("0");
-    int m_byteCellPadding = 0;
-    int m_characterCellPadding = 0;
-    int total_rows = (mem_size + (columnCount - 1)) / columnCount;
-    int maxCharsPerCell = 2;
-
+    int total_rows = (mem_size + (m_bytes_per_row - 1)) / m_bytes_per_row;
+    int separator_count = (m_bytes_per_row - 1) / 4;
+    int byte_column_count = 2 + m_bytes_per_row + separator_count + 2;
+    int byte_cell_padding = 0;
+    int character_cell_padding = 0;
+    int max_chars_per_cell = 2;
+    ImVec2 character_size = ImGui::CalcTextSize("0");
     char buf[16];
 
     if (ImGui::BeginChild("##mem", ImVec2(ImGui::GetContentRegionAvail().x, 0), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav))
     {
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.5, 0));
 
-        if (ImGui::BeginTable("##hex", byteColumnCount, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoKeepColumnsVisible | ImGuiTableFlags_RowBg | /*ImGuiTableFlags_Borders |*/ ImGuiTableFlags_ScrollY))
+        if (ImGui::BeginTable("##hex", byte_column_count, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoKeepColumnsVisible | ImGuiTableFlags_RowBg | /*ImGuiTableFlags_Borders |*/ ImGuiTableFlags_ScrollY))
         {
 
             ImGui::TableSetupScrollFreeze(0, 1);
@@ -61,24 +60,24 @@ void GearMemoryEditor::DrawAdvanced(uint8_t* mem_data, int mem_size, int base_di
             ImGui::TableSetupColumn("");
 
             // Byte columns
-            for (int i = 0; i < columnCount; i++) {
-                if (IsColumnSeparator(i, columnCount))
-                    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, SeparatorColumWidth);
+            for (int i = 0; i < m_bytes_per_row; i++) {
+                if (IsColumnSeparator(i, m_bytes_per_row))
+                    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, m_separator_column_width);
 
-                sprintf(buf, "%02X", i * bytesPerCell);
+                sprintf(buf, "%02X", i);
 
-                ImGui::TableSetupColumn(buf, ImGuiTableColumnFlags_WidthFixed, CharacterSize.x * maxCharsPerCell + (6 + m_byteCellPadding) * 1);
+                ImGui::TableSetupColumn(buf, ImGuiTableColumnFlags_WidthFixed, character_size.x * max_chars_per_cell + (6 + byte_cell_padding) * 1);
             }
 
             // ASCII column
             ImGui::TableSetupColumn("  ");
-            ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_WidthFixed, (CharacterSize.x + m_characterCellPadding * 1) * m_bytesPerRow);
+            ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_WidthFixed, (character_size.x + character_cell_padding * 1) * m_bytes_per_row);
 
             ImGui::TableNextRow();
             for (int i = 0; i < ImGui::TableGetColumnCount(); i++) {
                 ImGui::TableNextColumn();
                 ImGui::TextUnformatted(ImGui::TableGetColumnName(i));
-                ImGui::Dummy(ImVec2(0, CharacterSize.y / 2));
+                ImGui::Dummy(ImVec2(0, character_size.y / 2));
             }
 
             ImGuiListClipper clipper;
@@ -89,7 +88,7 @@ void GearMemoryEditor::DrawAdvanced(uint8_t* mem_data, int mem_size, int base_di
                 for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
                 {
                     ImGui::TableNextRow();
-                    int address = (row * columnCount) + base_display_addr;
+                    int address = (row * m_bytes_per_row) + base_display_addr;
 
                     // Draw address column
                     ImGui::TableNextColumn();
@@ -98,17 +97,57 @@ void GearMemoryEditor::DrawAdvanced(uint8_t* mem_data, int mem_size, int base_di
 
                     // Draw byte columns
                     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(2.75f, 0.0f));
-                    for (int x = 0; x < columnCount; x++)
+                    for (int x = 0; x < m_bytes_per_row; x++)
                     {
-                        int byte_address = address + (x * bytesPerCell);
+                        int byte_address = address + x;
 
                         ImGui::TableNextColumn();
-                        if (IsColumnSeparator(x, columnCount))
+                        if (IsColumnSeparator(x, m_bytes_per_row))
                             ImGui::TableNextColumn();
 
+                        ImVec2 cell_start_pos = ImGui::GetCursorScreenPos() - ImGui::GetStyle().CellPadding;
+                        ImVec2 cell_size = (character_size * ImVec2(max_chars_per_cell, 1)) + (ImVec2(2, 2) * ImGui::GetStyle().CellPadding) + ImVec2(1 + byte_cell_padding, 0);
+                        bool cell_hovered = ImGui::IsMouseHoveringRect(cell_start_pos, cell_start_pos + cell_size, false) && ImGui::IsWindowHovered();
+
+                        if (IsColumnSeparator(x + 1, m_bytes_per_row) && (byte_address != m_selection_end))
+                            cell_size.x += m_separator_column_width + 1;
+
+
+                        DrawSelectionFrame(x, row, byte_address, cell_start_pos, cell_size);
+
+                        // handle selection
+                        if (cell_hovered)
+                        {
+                            HandleSelection(byte_address);
+                        }
+
                         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                        ImGui::PushItemWidth((CharacterSize).x);
-                        ImGui::Text("%02X", mem_data[byte_address]);
+                        
+                        if (m_editing_address == byte_address)
+                        {
+                            ImGui::PushItemWidth((character_size).x *2);
+                            sprintf(buf, "%02X", mem_data[byte_address]);
+
+                            if (m_set_keyboard_here)
+                            {
+                                ImGui::SetKeyboardFocusHere();
+                                m_set_keyboard_here = false;
+                            }
+
+                            ImGui::InputText("##editing_input", buf, 3, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AlwaysOverwrite);
+                        }
+                        else
+                        {
+                            ImGui::PushItemWidth((character_size).x);
+                            ImGui::Text("%02X", mem_data[byte_address]);
+
+                            if (cell_hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                            {
+                                m_editing_address = byte_address;
+                                m_set_keyboard_here = true;
+                            }
+                        }
+
                         ImGui::PopItemWidth();
                         ImGui::PopStyleVar();
 
@@ -127,28 +166,28 @@ void GearMemoryEditor::DrawAdvanced(uint8_t* mem_data, int mem_size, int base_di
                     //     ImGui::SameLine(0.0f, 0.0f);
                     //     ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
                     // }
-                    if (ImGui::BeginTable("##ascii_column", m_bytesPerRow))
+                    if (ImGui::BeginTable("##ascii_column", m_bytes_per_row))
                     {
-                        for (int x = 0; x < m_bytesPerRow; x++)
+                        for (int x = 0; x < m_bytes_per_row; x++)
                         {
                             sprintf(buf, "##ascii_cell%d", x);
-                            ImGui::TableSetupColumn(buf, ImGuiTableColumnFlags_WidthFixed, CharacterSize.x + m_characterCellPadding * 1);
+                            ImGui::TableSetupColumn(buf, ImGuiTableColumnFlags_WidthFixed, character_size.x + character_cell_padding * 1);
                         }
 
                         ImGui::TableNextRow();
 
-                        for (int x = 0; x < m_bytesPerRow; x++)
+                        for (int x = 0; x < m_bytes_per_row; x++)
                         {
                             ImGui::TableNextColumn();
 
                             //int byteAddress = (row * m_bytesPerRow) + x + base_display_addr;
 
 
-                            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (m_characterCellPadding * 1) / 2);
+                            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (character_cell_padding * 1) / 2);
                             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                            ImGui::PushItemWidth(CharacterSize.x);
+                            ImGui::PushItemWidth(character_size.x);
 
-                            int byte_address = address + (x * bytesPerCell);
+                            int byte_address = address + x;
                             unsigned char c = mem_data[byte_address];
 
                             ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
@@ -173,94 +212,49 @@ void GearMemoryEditor::DrawAdvanced(uint8_t* mem_data, int mem_size, int base_di
     ImGui::EndChild();
 }
 
-void GearMemoryEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
-{
-
-    int columns = 8;
-
-    ImGui::BeginChild("##mem", ImVec2(ImGui::GetContentRegionAvail().x, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav);
-
-    int total_rows = (mem_size + (columns - 1)) / columns;
-    int total_columns = columns + 2;
-    static ImGuiTableFlags flags = ImGuiTableFlags_NoKeepColumnsVisible | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_SizingFixedFit;
-    static ImVec2 cell_padding(0.0f, 0.0f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
-
-    if (ImGui::BeginTable("mem", total_columns, flags))
-    {
-        char buf[3];
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
-        ImGuiListClipper clipper;
-        clipper.Begin(total_rows);
-
-        bool next = false;
-
-        while (clipper.Step())
-        {
-            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
-            {
-                int addr = row * columns;
-
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-
-                ImGui::Text("%04X:  ", addr + base_display_addr);
-
-                for (int n = 0; n < columns && addr < mem_size; n++, addr++)
-                {
-                    ImGui::TableNextColumn();
-                    
-                    sprintf(buf, "%02X", mem_data[addr]);
-
-                    ImGui::PushID(addr);
-                    ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AlwaysOverwrite;
-                    ImGui::SetNextItemWidth(20);
-                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-
-                    if (next)
-                    {
-                        ImGui::SetKeyboardFocusHere();
-                        next = false;
-                    }
-
-                    if (ImGui::InputText("##cell", buf, IM_ARRAYSIZE(buf), flags))
-                    {
-                        unsigned int data_input_value = 0;
-                        if (sscanf(buf, "%X", &data_input_value) == 1)
-                        {
-                            mem_data[addr] = (uint8_t)data_input_value;
-                        }
-                        next = true;
-                    }
-                    ImGui::PopStyleVar();
-                    ImGui::PopID();
-                }
-
-                ImGui::TableNextColumn();
-                addr = row * columns;
-                for (int n = 0; n < columns && addr < mem_size; n++, addr++)
-                {
-                    unsigned char c = mem_data[addr];
-                    if (n == 0)
-                        ImGui::Text("   ");
-
-                    ImGui::SameLine(0.0f, 0.0f);
-                    ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
-                }
-            }
-        }
-
-        ImGui::PopStyleColor();
-        ImGui::EndTable();
-    }
-
-    ImGui::PopStyleVar();
-
-    ImGui::EndChild();
-}
-
 bool GearMemoryEditor::IsColumnSeparator(int current_column, int column_count)
 {
     return (current_column > 0) && (current_column < column_count) && ((current_column % 4) == 0);
+}
+
+void GearMemoryEditor::DrawSelectionFrame(int x, int y, int address, const ImVec2 &cellPos, const ImVec2 &cellSize)
+{
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec4 frame_color = ImVec4(0.1f,0.9f,0.9f,1.0f);
+    ImVec4 background_color = ImVec4(0.0f,0.3f,0.3f,1.0f);
+
+    if (address < m_selection_start || address > m_selection_end)
+        return;
+
+    drawList->AddRectFilled(cellPos, cellPos + cellSize, ImColor(background_color));
+
+    // Draw vertical line at the left of first byte and the start of the line
+    if (x == 0 || address == m_selection_start)
+        drawList->AddLine(cellPos - ImVec2(0, 1), cellPos + ImVec2(0, cellSize.y), ImColor(frame_color), 1);
+
+    // Draw vertical line at the right of the last byte and the end of the line
+    if (x == (m_bytes_per_row - 1) || (address) == m_selection_end)
+        drawList->AddLine(cellPos + ImVec2(cellSize.x, -1), cellPos + cellSize - ImVec2(0, 1), ImColor(frame_color), 1);
+
+    // Draw horizontal line at the top of the bytes
+    if (y == 0 || (address - m_bytes_per_row) < m_selection_start)
+        drawList->AddLine(cellPos - ImVec2(1, 0), cellPos + ImVec2(cellSize.x + 1, 0), ImColor(frame_color), 1);
+
+    // Draw horizontal line at the bottom of the bytes
+    if ((address + m_bytes_per_row) > m_selection_end)
+        drawList->AddLine(cellPos + ImVec2(0, cellSize.y), cellPos + cellSize + ImVec2(1, 0), ImColor(frame_color), 1);
+}
+
+void GearMemoryEditor::HandleSelection(int address)
+{
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+    {
+        m_selection_end = address;
+
+    }
+    else if (ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsMouseDown(ImGuiMouseButton_Right))
+    {
+        m_selection_start = address;
+        m_selection_end = address;
+    }
 }
