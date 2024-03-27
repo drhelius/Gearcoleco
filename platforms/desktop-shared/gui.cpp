@@ -149,8 +149,6 @@ void gui_render(void)
 
     show_status_message();
 
-    ImGui::ShowDemoWindow();
-
     ImGui::Render();
 }
 

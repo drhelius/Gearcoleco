@@ -34,8 +34,8 @@ public:
 
 private:
     bool IsColumnSeparator(int current_column, int column_count);
-    void DrawSelectionFrame(int x, int y, int address, const ImVec2 &cellPos, const ImVec2 &cellSize);
-    void HandleSelection(int address);
+    void DrawSelectionFrame(int x, int y, int address, ImVec2 cellPos, ImVec2 cellSize);
+    void HandleSelection(int address, int row);
 
 private:
     int m_bytes_per_row;
@@ -45,6 +45,8 @@ private:
     bool m_set_keyboard_here;
     int m_selection_start;
     int m_selection_end;
+    int m_row_scroll_top;
+    int m_row_scroll_bottom;
 };
 
 #endif	/* GEAR_MEMORY_EDITOR_H */
