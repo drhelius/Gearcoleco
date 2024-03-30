@@ -17,18 +17,18 @@
  *
  */
 
-#ifndef GEAR_MEMORY_EDITOR_H
-#define	GEAR_MEMORY_EDITOR_H
+#ifndef MEM_EDITOR_H
+#define	MEM_EDITOR_H
 
 #include <stdint.h>
 #include <stdio.h>
 #include "imgui.h"
 
-class GearMemoryEditor
+class MemEditor
 {
 public:
-    GearMemoryEditor();
-    ~GearMemoryEditor();
+    MemEditor();
+    ~MemEditor();
 
     void Draw(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
 
@@ -36,17 +36,23 @@ private:
     bool IsColumnSeparator(int current_column, int column_count);
     void DrawSelectionFrame(int x, int y, int address, ImVec2 cellPos, ImVec2 cellSize);
     void HandleSelection(int address, int row);
+    void JumpToAddress(int address);
+    void DrawOptions(int mem_size, int base_display_addr);
+    void DrawDataPreview(int address, uint8_t* mem_data, int mem_size);
 
 private:
-    int m_bytes_per_row;
     float m_separator_column_width;
-    bool m_uppercase_hex;
-    int m_editing_address;
-    bool m_set_keyboard_here;
     int m_selection_start;
     int m_selection_end;
+    int m_bytes_per_row;
     int m_row_scroll_top;
     int m_row_scroll_bottom;
+    int m_editing_address;
+    bool m_set_keyboard_here;
+    bool m_uppercase_hex;
+    bool m_gray_out_zeros;
+    int m_preview_data_type;
+    int m_preview_endianess;
 };
 
-#endif	/* GEAR_MEMORY_EDITOR_H */
+#endif	/* MEM_EDITOR_H */
