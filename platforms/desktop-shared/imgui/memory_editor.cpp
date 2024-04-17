@@ -97,7 +97,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
             ImGui::EndTable();
         }
 
-        if (ImGui::BeginTable("##hex", byte_column_count, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoKeepColumnsVisible /*| ImGuiTableFlags_RowBg*/ | ImGuiTableFlags_ScrollY))
+        if (ImGui::BeginTable("##hex", byte_column_count, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoKeepColumnsVisible | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY))
         {
             m_row_scroll_top = ImGui::GetScrollY() / character_size.y;
             m_row_scroll_bottom = m_row_scroll_top + (ImGui::GetWindowHeight() / character_size.y);

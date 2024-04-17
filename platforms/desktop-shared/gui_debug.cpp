@@ -47,7 +47,7 @@ struct DisassmeblerLine
 };
 
 static MemoryEditor mem_edit;
-static GearMemoryEditor gear_mem_edit;
+static MemEditor gear_mem_edit;
 static ImVec4 cyan = ImVec4(0.1f,0.9f,0.9f,1.0f);
 static ImVec4 magenta = ImVec4(1.0f,0.502f,0.957f,1.0f);
 static ImVec4 yellow = ImVec4(1.0f,0.90f,0.05f,1.0f);
