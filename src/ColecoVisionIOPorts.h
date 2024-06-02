@@ -72,6 +72,15 @@ inline u8 ColecoVisionIOPorts::In(u8 port)
         {
             return m_pInput->ReadInput(port);
         }
+        default:
+        {
+            if (port == 0x52)
+            {
+                return m_pAudio->SGMRead();
+                return 0xAA;
+            }
+            return 0xFF;
+        }
     }
 
     Log("--> ** Attempting to read from port $%X", port);
@@ -112,7 +121,28 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         }
         default:
         {
-            Log("--> ** Output to port $%X: %X", port, value);
+            if (port == 0x50)
+            {
+                m_pAudio->SGMRegister(value);
+                break;
+            }
+            else if (port == 0x51)
+            {
+                m_pAudio->SGMWrite(value);
+                break;
+            }
+            else if (port == 0x53)
+            {
+                m_pMemory->EnableSGMUpper(value & 0x01);
+            }
+            else if (port == 0x7F)
+            {
+                m_pMemory->EnableSGMLower(~value & 0x02);
+            }
+            else
+            {
+                Log("--> ** Output to port $%X: %X", port, value);
+            }
         }
     }
 }

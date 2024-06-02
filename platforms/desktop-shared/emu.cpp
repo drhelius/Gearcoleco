@@ -23,6 +23,12 @@
 #define EMU_IMPORT
 #include "emu.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#ifdef _WIN32
+#define STBIW_WINDOWS_UTF8
+#endif
+#include "stb/stb_image_write.h"
+
 static GearcolecoCore* gearcoleco;
 static Sound_Queue* sound_queue;
 static s16* audio_buffer;
@@ -31,7 +37,6 @@ static bool debugging = false;
 static bool debug_step = false;
 static bool debug_next_frame = false;
 
-u16* frame_buffer;
 u16* debug_background_buffer;
 u16* debug_tile_buffer;
 u16* debug_sprite_buffers[64];
@@ -48,14 +53,12 @@ static void update_debug_sprite_buffers(void);
 
 void emu_init(void)
 {
-    int screen_size = GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT;
+    int screen_size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
 
     emu_frame_buffer = new u8[screen_size * 3];
-    frame_buffer = new u16[screen_size];
-    
+
     for (int i=0, j=0; i < screen_size; i++, j+=3)
     {
-        frame_buffer[i] = 0;
         emu_frame_buffer[j] = 0;
         emu_frame_buffer[j+1] = 0;
         emu_frame_buffer[j+2] = 0;
@@ -67,7 +70,7 @@ void emu_init(void)
     gearcoleco->Init();
 
     sound_queue = new Sound_Queue();
-    sound_queue->start(44100, 2);
+    sound_queue->start(GC_AUDIO_SAMPLE_RATE, 2);
 
     audio_buffer = new s16[GC_AUDIO_BUFFER_SIZE];
 
@@ -92,7 +95,6 @@ void emu_destroy(void)
     SafeDelete(sound_queue);
     SafeDelete(gearcoleco);
     SafeDeleteArray(emu_frame_buffer);
-    SafeDeleteArray(frame_buffer);
     destroy_debug();
 }
 
@@ -142,6 +144,16 @@ void emu_key_released(GC_Controllers controller, GC_Keys key)
     gearcoleco->KeyReleased(controller, key);
 }
 
+void emu_spinner1(int movement)
+{
+    gearcoleco->Spinner1(movement);
+}
+
+void emu_spinner2(int movement)
+{
+    gearcoleco->Spinner2(movement);
+}
+
 void emu_pause(void)
 {
     gearcoleco->Pause(true);
@@ -179,16 +191,16 @@ void emu_dissasemble_rom(void)
     gearcoleco->SaveDisassembledROM();
 }
 
-void emu_audio_volume(float volume)
+void emu_audio_mute(bool mute)
 {
-    audio_enabled = (volume > 0.0f);
-    gearcoleco->SetSoundVolume(volume);
+    audio_enabled = !mute;
+    gearcoleco->GetAudio()->Mute(mute);
 }
 
 void emu_audio_reset(void)
 {
     sound_queue->stop();
-    sound_queue->start(44100, 2);
+    sound_queue->start(GC_AUDIO_SAMPLE_RATE, 2);
 }
 
 bool emu_is_audio_enabled(void)
@@ -313,6 +325,47 @@ void emu_load_bios(const char* file_path)
     gearcoleco->GetMemory()->LoadBios(file_path);
 }
 
+void emu_video_no_sprite_limit(bool enabled)
+{
+    gearcoleco->GetVideo()->SetNoSpriteLimit(enabled);
+}
+
+void emu_set_overscan(int overscan)
+{
+    switch (overscan)
+    {
+        case 0:
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanDisabled);
+            break;
+        case 1:
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanTopBottom);
+            break;
+        case 2:
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanFull284);
+            break;
+        case 3:
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanFull320);
+            break;
+        default:
+            gearcoleco->GetVideo()->SetOverscan(Video::OverscanDisabled);
+    }
+}
+
+void emu_save_screenshot(const char* file_path)
+{
+    if (!gearcoleco->GetCartridge()->IsReady())
+        return;
+
+    GC_RuntimeInfo runtime;
+    emu_get_runtime(runtime);
+
+    Log("Saving screenshot to %s", file_path);
+
+    stbi_write_png(file_path, runtime.screen_width, runtime.screen_height, 3, emu_frame_buffer, runtime.screen_width * 3);
+
+    Log("Screenshot saved!");
+}
+
 static void save_ram(void)
 {
 #ifdef DEBUG_GEARCOLECO
@@ -339,6 +392,12 @@ static const char* get_mapper(Cartridge::CartridgeTypes type)
     {
     case Cartridge::CartridgeColecoVision:
         return "ColecoVision";
+        break;
+    case Cartridge::CartridgeMegaCart:
+        return "MegaCart";
+        break;
+    case Cartridge::CartridgeActivisionCart:
+        return "Activision";
         break;
     case Cartridge::CartridgeNotSupported:
         return "Not Supported";
@@ -445,7 +504,7 @@ static void update_debug_background_buffer(void)
 
             for (int line = 0; line < 192; line++)
             {
-                int line_offset = line * GC_RESOLUTION_MAX_WIDTH;
+                int line_offset = line * GC_RESOLUTION_WIDTH;
                 int tile_y = line >> 3;
                 int tile_y_offset = line & 7;
 
@@ -482,7 +541,7 @@ static void update_debug_background_buffer(void)
 
     for (int line = 0; line < 192; line++)
     {
-        int line_offset = line * GC_RESOLUTION_MAX_WIDTH;
+        int line_offset = line * GC_RESOLUTION_WIDTH;
         int tile_y = line >> 3;
         int tile_y_offset = line & 7;
         region = (tile_y & 0x18) << 5;

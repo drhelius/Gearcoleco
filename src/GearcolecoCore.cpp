@@ -63,7 +63,7 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pProcessor = new Processor(m_pMemory);
     m_pAudio = new Audio();
     m_pVideo = new Video(m_pMemory, m_pProcessor);
-    m_pInput = new Input();
+    m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
 
     m_pMemory->Init();
@@ -93,7 +93,6 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
 #endif
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
-            m_pInput->Tick(clockCycles);
 
             totalClocks += clockCycles;
 
@@ -201,19 +200,23 @@ void GearcolecoCore::SaveDisassembledROM()
 
 bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
-    runtime_info.screen_width = GC_RESOLUTION_MAX_WIDTH;
-    runtime_info.screen_height = GC_RESOLUTION_MAX_HEIGHT;
+    runtime_info.screen_width = GC_RESOLUTION_WIDTH;
+    runtime_info.screen_height = GC_RESOLUTION_HEIGHT;
+    runtime_info.region = Region_NTSC;
 
     if (m_pCartridge->IsReady())
     {
+        if (m_pVideo->GetOverscan() == Video::OverscanFull284)
+            runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
+        if (m_pVideo->GetOverscan() == Video::OverscanFull320)
+            runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_320_L + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
+        if (m_pVideo->GetOverscan() != Video::OverscanDisabled)
+            runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (m_pCartridge->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
         runtime_info.region = m_pCartridge->IsPAL() ? Region_PAL : Region_NTSC;
         return true;
     }
-    else
-    {
-        runtime_info.region = Region_NTSC;
-        return false;
-    }
+
+    return false;
 }
 
 Memory* GearcolecoCore::GetMemory()
@@ -249,6 +252,16 @@ void GearcolecoCore::KeyPressed(GC_Controllers controller, GC_Keys key)
 void GearcolecoCore::KeyReleased(GC_Controllers controller, GC_Keys key)
 {
     m_pInput->KeyReleased(controller, key);
+}
+
+void GearcolecoCore::Spinner1(int movement)
+{
+    m_pInput->Spinner1(movement);
+}
+
+void GearcolecoCore::Spinner2(int movement)
+{
+    m_pInput->Spinner2(movement);
 }
 
 void GearcolecoCore::Pause(bool paused)
@@ -294,17 +307,6 @@ void GearcolecoCore::ResetROMPreservingRAM(Cartridge::ForceConfiguration* config
 void GearcolecoCore::ResetSound()
 {
     m_pAudio->Reset(m_pCartridge->IsPAL());
-}
-
-void GearcolecoCore::SetSoundSampleRate(int rate)
-{
-    Log("Gearcoleco sound sample rate: %d", rate);
-    m_pAudio->SetSampleRate(rate);
-}
-
-void GearcolecoCore::SetSoundVolume(float volume)
-{
-    m_pAudio->SetVolume(volume);
 }
 
 void GearcolecoCore::SaveRam()
@@ -589,7 +591,7 @@ void GearcolecoCore::Reset()
 
 void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
-    int size = GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT;
+    int size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
     u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)
@@ -599,13 +601,13 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
         case GC_PIXEL_RGB565:
         case GC_PIXEL_BGR565:
         {
-            m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size);
+            m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
         case GC_PIXEL_RGB888:
         case GC_PIXEL_BGR888:
         {
-            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size);
+            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
     }

@@ -36,6 +36,8 @@ static const int config_max_recent_roms = 10;
 
 struct config_Emulator
 {
+    bool fullscreen = false;
+    bool show_menu = true;
     bool paused = false;
     int save_slot = 0;
     bool start_paused = false;
@@ -49,22 +51,31 @@ struct config_Emulator
     std::string savefiles_path;
     int savestates_dir_option = 0;
     std::string savestates_path;
+    std::string last_open_path;
+    int window_width = 770;
+    int window_height = 600;
+    int spinner = 0;
+    int spinner_sensitivity = 0;
+    bool capture_mouse = false;
+    bool status_messages = false;
 };
 
 struct config_Video
 {
     int scale = 0;
-    int ratio = 0;
+    int ratio = 1;
+    int overscan = 1;
     bool fps = false;
     bool bilinear = false;
+    bool sprite_limit = false;
     bool mix_frames = true;
-    float mix_frames_intensity = 0.30f;
+    float mix_frames_intensity = 0.60f;
     bool scanlines = true;
-    float scanlines_intensity = 0.40f;
+    float scanlines_intensity = 0.10f;
     bool sync = true;
     int palette = 0;
     GC_Color color[16] = {
-        {24, 24, 24}, {0, 0, 0}, {33, 200, 66}, {94, 20, 120},
+        {0, 0, 0}, {0, 0, 0}, {33, 200, 66}, {94, 20, 120},
         {84, 85, 237}, {112, 118, 252}, {212, 82, 77}, {66, 235, 245},
         {252, 85, 84}, {255, 121, 120}, {212, 193, 84}, {230, 206, 128},
         {33, 176, 59}, {201, 91, 186}, {204, 204, 204}, {255, 255, 255}
@@ -85,6 +96,8 @@ struct config_Input
     SDL_Scancode key_down;
     SDL_Scancode key_left_button;
     SDL_Scancode key_right_button;
+    SDL_Scancode key_blue;
+    SDL_Scancode key_purple;
     SDL_Scancode key_0;
     SDL_Scancode key_1;
     SDL_Scancode key_2;
@@ -103,6 +116,8 @@ struct config_Input
     bool gamepad_invert_y_axis;
     int gamepad_left_button;
     int gamepad_right_button;
+    int gamepad_blue;
+    int gamepad_purple;
     int gamepad_x_axis;
     int gamepad_y_axis;
     int gamepad_1;

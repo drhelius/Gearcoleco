@@ -55,6 +55,8 @@ void config_init(void)
     config_input[0].key_down = SDL_SCANCODE_DOWN;
     config_input[0].key_left_button = SDL_SCANCODE_A;
     config_input[0].key_right_button = SDL_SCANCODE_S;
+    config_input[0].key_blue = SDL_SCANCODE_D;
+    config_input[0].key_purple = SDL_SCANCODE_F;
     config_input[0].key_0 = SDL_SCANCODE_KP_0;
     config_input[0].key_1 = SDL_SCANCODE_KP_1;
     config_input[0].key_2 = SDL_SCANCODE_KP_2;
@@ -72,6 +74,8 @@ void config_init(void)
     config_input[0].gamepad_invert_y_axis = false;
     config_input[0].gamepad_left_button = SDL_CONTROLLER_BUTTON_A;
     config_input[0].gamepad_right_button = SDL_CONTROLLER_BUTTON_B;
+    config_input[0].gamepad_blue = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[0].gamepad_purple = SDL_CONTROLLER_BUTTON_GUIDE;
     config_input[0].gamepad_x_axis = 0;
     config_input[0].gamepad_y_axis = 1;
     config_input[0].gamepad_1 = SDL_CONTROLLER_BUTTON_X;
@@ -93,6 +97,8 @@ void config_init(void)
     config_input[1].key_down = SDL_SCANCODE_K;
     config_input[1].key_left_button = SDL_SCANCODE_G;
     config_input[1].key_right_button = SDL_SCANCODE_H;
+    config_input[1].key_blue = SDL_SCANCODE_J;
+    config_input[1].key_purple = SDL_SCANCODE_K;
     config_input[1].key_0 = SDL_SCANCODE_NONUSBACKSLASH;
     config_input[1].key_1 = SDL_SCANCODE_Z;
     config_input[1].key_2 = SDL_SCANCODE_X;
@@ -110,6 +116,8 @@ void config_init(void)
     config_input[1].gamepad_invert_y_axis = false;
     config_input[1].gamepad_left_button = SDL_CONTROLLER_BUTTON_A;
     config_input[1].gamepad_right_button = SDL_CONTROLLER_BUTTON_B;
+    config_input[1].gamepad_blue = SDL_CONTROLLER_BUTTON_GUIDE;
+    config_input[1].gamepad_purple = SDL_CONTROLLER_BUTTON_GUIDE;
     config_input[1].gamepad_x_axis = 0;
     config_input[1].gamepad_y_axis = 1;
     config_input[1].gamepad_1 = SDL_CONTROLLER_BUTTON_X;
@@ -152,7 +160,9 @@ void config_read(void)
     config_debug.show_video = read_bool("Debug", "Video", false);
     config_debug.show_video_registers = read_bool("Debug", "VideoRegisters", false);
     config_debug.font_size = read_int("Debug", "FontSize", 0);
-    
+
+    config_emulator.fullscreen = read_bool("Emulator", "FullScreen", false);
+    config_emulator.show_menu = read_bool("Emulator", "ShowMenu", true);
     config_emulator.ffwd_speed = read_int("Emulator", "FFWD", 1);
     config_emulator.save_slot = read_int("Emulator", "SaveSlot", 0);
     config_emulator.start_paused = read_bool("Emulator", "StartPaused", false);
@@ -162,6 +172,12 @@ void config_read(void)
     config_emulator.savefiles_path = read_string("Emulator", "SaveFilesPath");
     config_emulator.savestates_dir_option = read_int("Emulator", "SaveStatesDirOption", 0);
     config_emulator.savestates_path = read_string("Emulator", "SaveStatesPath");
+    config_emulator.last_open_path = read_string("Emulator", "LastOpenPath");
+    config_emulator.window_width = read_int("Emulator", "WindowWidth", 770);
+    config_emulator.window_height = read_int("Emulator", "WindowHeight", 600);
+    config_emulator.spinner = read_int("Emulator", "Spinner", 0);
+    config_emulator.spinner_sensitivity = read_int("Emulator", "SpinnerSensitivity", 4);
+    config_emulator.status_messages = read_bool("Emulator", "StatusMessages", false);
 
     if (config_emulator.savefiles_path.empty())
     {
@@ -179,13 +195,15 @@ void config_read(void)
     }
 
     config_video.scale = read_int("Video", "Scale", 0);
-    config_video.ratio = read_int("Video", "AspectRatio", 0);
+    config_video.ratio = read_int("Video", "AspectRatio", 1);
+    config_video.overscan = read_int("Video", "Overscan", 1);
     config_video.fps = read_bool("Video", "FPS", false);
     config_video.bilinear = read_bool("Video", "Bilinear", false);
+    config_video.sprite_limit = read_bool("Video", "SpriteLimit", false);
     config_video.mix_frames = read_bool("Video", "MixFrames", true);
-    config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.30f);
+    config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.60f);
     config_video.scanlines = read_bool("Video", "Scanlines", true);
-    config_video.scanlines_intensity = read_float("Video", "ScanlinesIntensity", 0.40f);
+    config_video.scanlines_intensity = read_float("Video", "ScanlinesIntensity", 0.10f);
     config_video.palette = read_int("Video", "Palette", 0);
 
     for (int i = 0; i < 16; i++)
@@ -212,6 +230,8 @@ void config_read(void)
     config_input[0].key_down = (SDL_Scancode)read_int("InputA", "KeyDown", SDL_SCANCODE_DOWN);
     config_input[0].key_left_button = (SDL_Scancode)read_int("InputA", "KeyLeftButton", SDL_SCANCODE_A);
     config_input[0].key_right_button = (SDL_Scancode)read_int("InputA", "KeyRightButton", SDL_SCANCODE_S);
+    config_input[0].key_blue = (SDL_Scancode)read_int("InputA", "KeyBlue", SDL_SCANCODE_D);
+    config_input[0].key_purple = (SDL_Scancode)read_int("InputA", "KeyPurple", SDL_SCANCODE_F);
     config_input[0].key_0 = (SDL_Scancode)read_int("InputA", "Key0", SDL_SCANCODE_KP_0);
     config_input[0].key_1 = (SDL_Scancode)read_int("InputA", "Key1", SDL_SCANCODE_KP_1);
     config_input[0].key_2 = (SDL_Scancode)read_int("InputA", "Key2", SDL_SCANCODE_KP_2);
@@ -231,6 +251,8 @@ void config_read(void)
     config_input[0].gamepad_invert_y_axis = read_bool("InputA", "GamepadInvertY", false);
     config_input[0].gamepad_left_button = read_int("InputA", "GamepadLeft", SDL_CONTROLLER_BUTTON_A);
     config_input[0].gamepad_right_button = read_int("InputA", "GamepadRight", SDL_CONTROLLER_BUTTON_B);
+    config_input[0].gamepad_blue = (SDL_Scancode)read_int("InputA", "GamepadBlue", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[0].gamepad_purple = (SDL_Scancode)read_int("InputA", "GamepadPurple", SDL_CONTROLLER_BUTTON_GUIDE);
     config_input[0].gamepad_x_axis = read_int("InputA", "GamepadX", SDL_CONTROLLER_AXIS_LEFTX);
     config_input[0].gamepad_y_axis = read_int("InputA", "GamepadY", SDL_CONTROLLER_AXIS_LEFTY);
     config_input[0].gamepad_1 = read_int("InputA", "Gamepad1", SDL_CONTROLLER_BUTTON_X);
@@ -252,6 +274,8 @@ void config_read(void)
     config_input[1].key_down = (SDL_Scancode)read_int("InputB", "KeyDown", SDL_SCANCODE_K);
     config_input[1].key_left_button = (SDL_Scancode)read_int("InputB", "KeyLeftButton", SDL_SCANCODE_G);
     config_input[1].key_right_button = (SDL_Scancode)read_int("InputB", "KeyRightButton", SDL_SCANCODE_H);
+    config_input[1].key_blue = (SDL_Scancode)read_int("InputB", "KeyBlue", SDL_SCANCODE_J);
+    config_input[1].key_purple = (SDL_Scancode)read_int("InputB", "KeyPurple", SDL_SCANCODE_K);
     config_input[1].key_0 = (SDL_Scancode)read_int("InputB", "Key0", SDL_SCANCODE_NONUSBACKSLASH);
     config_input[1].key_1 = (SDL_Scancode)read_int("InputB", "Key1", SDL_SCANCODE_Z);
     config_input[1].key_2 = (SDL_Scancode)read_int("InputB", "Key2", SDL_SCANCODE_X);
@@ -271,6 +295,8 @@ void config_read(void)
     config_input[1].gamepad_invert_y_axis = read_bool("InputB", "GamepadInvertY", false);
     config_input[1].gamepad_left_button = read_int("InputB", "GamepadLeft", SDL_CONTROLLER_BUTTON_A);
     config_input[1].gamepad_right_button = read_int("InputB", "GamepadRight", SDL_CONTROLLER_BUTTON_B);
+    config_input[1].gamepad_blue = (SDL_Scancode)read_int("InputB", "GamepadBlue", SDL_CONTROLLER_BUTTON_GUIDE);
+    config_input[1].gamepad_purple = (SDL_Scancode)read_int("InputB", "GamepadPurple", SDL_CONTROLLER_BUTTON_GUIDE);
     config_input[1].gamepad_x_axis = read_int("InputB", "GamepadX", SDL_CONTROLLER_AXIS_LEFTX);
     config_input[1].gamepad_y_axis = read_int("InputB", "GamepadY", SDL_CONTROLLER_AXIS_LEFTY);
     config_input[1].gamepad_1 = read_int("InputB", "Gamepad1", SDL_CONTROLLER_BUTTON_X);
@@ -302,6 +328,8 @@ void config_write(void)
     write_bool("Debug", "VideoRegisters", config_debug.show_video_registers);
     write_int("Debug", "FontSize", config_debug.font_size);
 
+    write_bool("Emulator", "FullScreen", config_emulator.fullscreen);
+    write_bool("Emulator", "ShowMenu", config_emulator.show_menu);
     write_int("Emulator", "FFWD", config_emulator.ffwd_speed);
     write_int("Emulator", "SaveSlot", config_emulator.save_slot);
     write_bool("Emulator", "StartPaused", config_emulator.start_paused);
@@ -311,6 +339,12 @@ void config_write(void)
     write_string("Emulator", "SaveFilesPath", config_emulator.savefiles_path);
     write_int("Emulator", "SaveStatesDirOption", config_emulator.savestates_dir_option);
     write_string("Emulator", "SaveStatesPath", config_emulator.savestates_path);
+    write_string("Emulator", "LastOpenPath", config_emulator.last_open_path);
+    write_int("Emulator", "WindowWidth", config_emulator.window_width);
+    write_int("Emulator", "WindowHeight", config_emulator.window_height);
+    write_int("Emulator", "Spinner", config_emulator.spinner);
+    write_int("Emulator", "SpinnerSensitivity", config_emulator.spinner_sensitivity);
+    write_bool("Emulator", "StatusMessages", config_emulator.status_messages);
 
     for (int i = 0; i < config_max_recent_roms; i++)
     {
@@ -320,8 +354,10 @@ void config_write(void)
 
     write_int("Video", "Scale", config_video.scale);
     write_int("Video", "AspectRatio", config_video.ratio);
+    write_int("Video", "Overscan", config_video.overscan);
     write_bool("Video", "FPS", config_video.fps);
     write_bool("Video", "Bilinear", config_video.bilinear);
+    write_bool("Video", "SpriteLimit", config_video.sprite_limit);
     write_bool("Video", "MixFrames", config_video.mix_frames);
     write_float("Video", "MixFramesIntensity", config_video.mix_frames_intensity);
     write_bool("Video", "Scanlines", config_video.scanlines);
@@ -350,6 +386,8 @@ void config_write(void)
     write_int("InputA", "KeyDown", config_input[0].key_down);
     write_int("InputA", "KeyLeftButton", config_input[0].key_left_button);
     write_int("InputA", "KeyRightButton", config_input[0].key_right_button);
+    write_int("InputA", "KeyBlue", config_input[0].key_blue);
+    write_int("InputA", "KeyPurple", config_input[0].key_purple);
     write_int("InputA", "Key0", config_input[0].key_0);
     write_int("InputA", "Key1", config_input[0].key_1);
     write_int("InputA", "Key2", config_input[0].key_2);
@@ -369,6 +407,8 @@ void config_write(void)
     write_bool("InputA", "GamepadInvertY", config_input[0].gamepad_invert_y_axis);
     write_int("InputA", "GamepadLeft", config_input[0].gamepad_left_button);
     write_int("InputA", "GamepadRight", config_input[0].gamepad_right_button);
+    write_int("InputA", "GamepadBlue", config_input[0].gamepad_blue);
+    write_int("InputA", "GamepadPurple", config_input[0].gamepad_purple);
     write_int("InputA", "GamepadX", config_input[0].gamepad_x_axis);
     write_int("InputA", "GamepadY", config_input[0].gamepad_y_axis);
     write_int("InputA", "Gamepad1", config_input[0].gamepad_1);
@@ -390,6 +430,8 @@ void config_write(void)
     write_int("InputB", "KeyDown", config_input[1].key_down);
     write_int("InputB", "KeyLeftButton", config_input[1].key_left_button);
     write_int("InputB", "KeyRightButton", config_input[1].key_right_button);
+    write_int("InputB", "KeyBlue", config_input[1].key_blue);
+    write_int("InputB", "KeyPurple", config_input[1].key_purple);
     write_int("InputB", "Key0", config_input[1].key_0);
     write_int("InputB", "Key1", config_input[1].key_1);
     write_int("InputB", "Key2", config_input[1].key_2);
@@ -409,6 +451,8 @@ void config_write(void)
     write_bool("InputB", "GamepadInvertY", config_input[1].gamepad_invert_y_axis);
     write_int("InputB", "GamepadLeft", config_input[1].gamepad_left_button);
     write_int("InputB", "GamepadRight", config_input[1].gamepad_right_button);
+    write_int("InputB", "GamepadBlue", config_input[1].gamepad_blue);
+    write_int("InputB", "GamepadPurple", config_input[1].gamepad_purple);
     write_int("InputB", "GamepadX", config_input[1].gamepad_x_axis);
     write_int("InputB", "GamepadY", config_input[1].gamepad_y_axis);
     write_int("InputB", "Gamepad1", config_input[1].gamepad_1);

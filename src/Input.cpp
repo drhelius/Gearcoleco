@@ -18,11 +18,11 @@
  */
 
 #include "Input.h"
-#include "Memory.h"
+#include "Processor.h"
 
-Input::Input()
+Input::Input(Processor* pProcessor)
 {
-    Reset();
+    m_pProcessor = pProcessor;
 }
 
 void Input::Init()
@@ -32,25 +32,10 @@ void Input::Init()
 
 void Input::Reset()
 {
-    m_iInputCycles = 0;
     m_Segment = SegmentKeypadRightButtons;
     m_Gamepad[0] = m_Gamepad[1] = 0xFF;
-    m_Keypad[0] = m_Keypad[1] = 0x0F;
-    m_InputState[0][0] = m_InputState[0][1] = 0xFF;
-    m_InputState[1][0] = m_InputState[1][1] = 0xFF;
-    m_LatestKey = 0x0F;
-}
-
-void Input::Tick(unsigned int clockCycles)
-{
-    m_iInputCycles += clockCycles;
-
-    // Joypad Poll Speed
-    if (m_iInputCycles >= 10000)
-    {
-        m_iInputCycles -= 10000;
-        Update();
-    }
+    m_Keypad[0] = m_Keypad[1] = 0xFF;
+    m_iSpinnerRel[0] = m_iSpinnerRel[1] = 0;
 }
 
 void Input::SetInputSegment(InputSegments segment)
@@ -60,16 +45,33 @@ void Input::SetInputSegment(InputSegments segment)
 
 u8 Input::ReadInput(u8 port)
 {
-    u8 controller = (port & 0x02) >> 1;
+    u8 c = (port & 0x02) >> 1;
+    u8 ret = 0xFF;
+
+    int rel = m_iSpinnerRel[c] / 4;
+    m_iSpinnerRel[c] -= rel;
 
     if (m_Segment == SegmentKeypadRightButtons)
     {
-        return m_InputState[controller][0];
+        ret = (m_Keypad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 5) ? 0x70 : 0x30);
     }
     else
     {
-        return m_InputState[controller][1];
+        ret = (m_Gamepad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 4) ? 0x70 : 0x30);
+
+        if (rel > 0)
+        {
+            ret &= c ? 0xEF : 0xCF;
+            m_pProcessor->RequestINT(true);
+        }
+        else if (rel < 0)
+        {
+            ret &= c ? 0xCF : 0xEF;
+            m_pProcessor->RequestINT(true);
+        }
     }
+
+    return ret;
 }
 
 void Input::KeyPressed(GC_Controllers controller, GC_Keys key)
@@ -78,9 +80,9 @@ void Input::KeyPressed(GC_Controllers controller, GC_Keys key)
     {
         m_Gamepad[controller] = UnsetBit(m_Gamepad[controller], key & 0x0F);
     }
-    else if (m_LatestKey == 0x0F)
+    else
     {
-        m_LatestKey = m_Keypad[controller] = key & 0x0F;
+        m_Keypad[controller] &= (key & 0x0F);
     }
 }
 
@@ -90,37 +92,34 @@ void Input::KeyReleased(GC_Controllers controller, GC_Keys key)
     {
         m_Gamepad[controller] = SetBit(m_Gamepad[controller], key & 0x0F);
     }
-    else if (key == m_LatestKey)
+    else
     {
-        m_LatestKey = m_Keypad[controller] = 0x0F;
+        m_Keypad[controller] |= ~(key & 0x0F);
     }
 }
 
-void Input::Update()
+void Input::Spinner1(int movement)
 {
-    for (int c = 0; c < 2; c++)
-    {
-        m_InputState[c][0] = (m_Keypad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 5) ? 0x70 : 0x30);
-        m_InputState[c][1] = (m_Gamepad[c] & 0x0F) | (IsSetBit(m_Gamepad[c], 4) ? 0x70 : 0x30);
-    }
+    m_iSpinnerRel[0] = movement;
+}
+
+void Input::Spinner2(int movement)
+{
+    m_iSpinnerRel[1] = movement;
 }
 
 void Input::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.write(reinterpret_cast<const char*> (m_Keypad), sizeof(m_Keypad));
-    stream.write(reinterpret_cast<const char*> (m_InputState), sizeof(m_InputState));
-    stream.write(reinterpret_cast<const char*> (&m_LatestKey), sizeof(m_LatestKey));
     stream.write(reinterpret_cast<const char*> (&m_Segment), sizeof(m_Segment));
-    stream.write(reinterpret_cast<const char*> (&m_iInputCycles), sizeof(m_iInputCycles));
+    stream.write(reinterpret_cast<const char*> (m_iSpinnerRel), sizeof(m_iSpinnerRel));
 }
 
 void Input::LoadState(std::istream& stream)
 {
     stream.read(reinterpret_cast<char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.read(reinterpret_cast<char*> (m_Keypad), sizeof(m_Keypad));
-    stream.read(reinterpret_cast<char*> (m_InputState), sizeof(m_InputState));
-    stream.read(reinterpret_cast<char*> (&m_LatestKey), sizeof(m_LatestKey));
     stream.read(reinterpret_cast<char*> (&m_Segment), sizeof(m_Segment));
-    stream.read(reinterpret_cast<char*> (&m_iInputCycles), sizeof(m_iInputCycles));
+    stream.read(reinterpret_cast<char*> (m_iSpinnerRel), sizeof(m_iSpinnerRel));
 }

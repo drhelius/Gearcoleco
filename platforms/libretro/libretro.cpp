@@ -35,6 +35,9 @@ static const char slash = '\\';
 static const char slash = '/';
 #endif
 
+#define MAX_PADS 2
+#define JOYPAD_BUTTONS 16
+
 static struct retro_log_callback logging;
 static retro_log_printf_t log_cb;
 static char retro_system_directory[4096];
@@ -46,10 +49,43 @@ static int current_screen_width = 0;
 static int current_screen_height = 0;
 static bool allow_up_down = false;
 static bool libretro_supports_bitmasks;
+static int spinner_support = 0;
+static int spinner_sensitivity = 1;
+static float aspect_ratio = 0.0f;
 
 static GearcolecoCore* core;
 static u8* frame_buffer;
 static Cartridge::ForceConfiguration config;
+
+static int joypad[MAX_PADS][JOYPAD_BUTTONS];
+static int joypre[MAX_PADS][JOYPAD_BUTTONS];
+static int joypad_ext[MAX_PADS][4];
+static int joypre_ext[MAX_PADS][4];
+static bool mouse[2];
+static bool mousepre[2];
+
+static GC_Keys keymap[] = {
+    Key_Up,
+    Key_Down,
+    Key_Left,
+    Key_Right,
+    Key_Right_Button,
+    Key_Left_Button,
+    Keypad_2,
+    Keypad_1,
+    Keypad_Asterisk,
+    Keypad_Hash,
+    Keypad_3,
+    Keypad_4,
+    Keypad_5,
+    Keypad_6,
+    Keypad_7,
+    Keypad_8,
+    Keypad_0,
+    Keypad_9,
+    Key_Blue,
+    Key_Purple
+};
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
@@ -62,7 +98,12 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 
 static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
+    { "gearcoleco_aspect_ratio", "Aspect Ratio (restart); 1:1 PAR|4:3 DAR|16:9 DAR" },
+    { "gearcoleco_overscan", "Overscan; Disabled|Top+Bottom|Full (284 width)|Full (320 width)" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
+    { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
+    { "gearcoleco_spinners", "Spinner support; Disabled|Super Action Controller|Wheel Controller|Roller Controller" },
+    { "gearcoleco_spinner_sensitivity", "Spinner Sensitivity; 1|2|3|4|5|6|7|8|9|10" },
     { NULL }
 };
 
@@ -70,6 +111,11 @@ static retro_environment_t environ_cb;
 
 void retro_init(void)
 {
+    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+        log_cb = logging.log;
+    else
+        log_cb = fallback_log;
+
     const char *dir = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir) {
@@ -79,6 +125,8 @@ void retro_init(void)
         snprintf(retro_system_directory, sizeof(retro_system_directory), "%s", ".");
     }
 
+    log_cb(RETRO_LOG_INFO, "%s (%s) libretro\n", GEARCOLECO_TITLE, EMULATOR_BUILD);
+
     core = new GearcolecoCore();
 
 #ifdef PS2
@@ -87,11 +135,12 @@ void retro_init(void)
     core->Init(GC_PIXEL_RGB565);
 #endif
 
-    frame_buffer = new u8[GC_RESOLUTION_MAX_WIDTH * GC_RESOLUTION_MAX_HEIGHT * 2];
+    frame_buffer = new u8[GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN * 2];
 
     audio_sample_count = 0;
 
     config.region = Cartridge::CartridgeUnknownRegion;
+    config.type = Cartridge::CartridgeNotSupported;
 
     libretro_supports_bitmasks = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 }
@@ -109,42 +158,51 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
-    log_cb(RETRO_LOG_INFO, "Plugging device %u into port %u.\n", device, port);
+    log_cb(RETRO_LOG_DEBUG, "Plugging device %u into port %u.\n", device, port);
 
     struct retro_input_descriptor joypad[] = {
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Left" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Up" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Down" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "Left Button" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Right Button" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "2" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "1" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "#" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,"*" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,     "4" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,     "3" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "6" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,    "5" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,    "8" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,    "7" },
 
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Left" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Up" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Down" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "Left Button" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Right Button" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "2" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "1" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "#" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,"*" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,     "4" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,     "3" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "6" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,    "5" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,    "8" },
-        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,    "7" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,                              "Joystick Up" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,                            "Joystick Down" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,                            "Joystick Left" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,                           "Joystick Right" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,                               "Yellow (Left)" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,                               "Red (Right)" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,                               "Keypad 1" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,                               "Keypad 2" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,                               "Keypad 3" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,                               "Keypad 4" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,                              "Keypad 5" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,                              "Keypad 6" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,                              "Keypad 7" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,                              "Keypad 8" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,                           "Keypad *" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,                          "Keypad #" },
+        { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y,  "Keypad 9" },
+        { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X,  "Keypad 0" },
+        { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Purple" },
+        { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Blue" },
+
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,                              "Joystick Up" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,                            "Joystick Down" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,                            "Joystick Left" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,                           "Joystick Right" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,                               "Yellow (Left)" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,                               "Red (Right)" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,                               "Keypad 1" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,                               "Keypad 2" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,                               "Keypad 3" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,                               "Keypad 4" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,                              "Keypad 5" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,                              "Keypad 6" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,                              "Keypad 7" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,                              "Keypad 8" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,                           "Keypad *" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,                          "Keypad #" },
+        { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y,  "Keypad 9" },
+        { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X,  "Keypad 0" },
+        { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Purple" },
+        { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Blue" },
 
         { 0, 0, 0, 0, NULL }
     };
@@ -184,9 +242,9 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
     info->geometry.base_width   = runtime_info.screen_width;
     info->geometry.base_height  = runtime_info.screen_height;
-    info->geometry.max_width    = runtime_info.screen_width;
-    info->geometry.max_height   = runtime_info.screen_height;
-    info->geometry.aspect_ratio = 0.0f;
+    info->geometry.max_width    = GC_RESOLUTION_WIDTH_WITH_OVERSCAN;
+    info->geometry.max_height   = GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
+    info->geometry.aspect_ratio = aspect_ratio;
     info->timing.fps            = runtime_info.region == Region_NTSC ? 60.0 : 50.0;
     info->timing.sample_rate    = 44100.0;
 }
@@ -194,11 +252,6 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 void retro_set_environment(retro_environment_t cb)
 {
     environ_cb = cb;
-
-    if (cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
-        log_cb = logging.log;
-    else
-        log_cb = fallback_log;
 
     static const struct retro_controller_description port_1[] = {
         { "ColecoVision", RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) },
@@ -214,7 +267,7 @@ void retro_set_environment(retro_environment_t cb)
         { NULL, 0 },
     };
 
-    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+    environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
     environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
 }
@@ -255,118 +308,160 @@ static void load_bootroms(void)
 
 static void update_input(void)
 {
+    int16_t joypad_bits[MAX_PADS];
+
     input_poll_cb();
 
-    for (int player=0; player<2; player++)
+    if (libretro_supports_bitmasks)
     {
-        int16_t ib;
-        if (libretro_supports_bitmasks)
-            ib = input_state_cb(player, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
-        else
+        for (int j = 0; j < MAX_PADS; j++)
+            joypad_bits[j] = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
+    }
+    else
+    {
+        for (int j = 0; j < MAX_PADS; j++)
         {
-            unsigned int i;
-            ib = 0;
-            for (i = 0; i <= RETRO_DEVICE_ID_JOYPAD_R3; i++)
-                ib |= input_state_cb(player, RETRO_DEVICE_JOYPAD, 0, i) ? (1 << i) : 0;
+            joypad_bits[j] = 0;
+            for (int i = 0; i < (RETRO_DEVICE_ID_JOYPAD_R3+1); i++)
+                joypad_bits[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) ? (1 << i) : 0;
         }
-
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Up);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Up);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Down);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Down);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Left);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Left);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
-        {
-            if (allow_up_down || !(ib & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)))
-                core->KeyPressed(static_cast<GC_Controllers>(player), Key_Right);
-        }
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Right);
-
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_B))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Key_Right_Button);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Right_Button);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_A))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Key_Left_Button);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Key_Left_Button);
-
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_Y))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_2);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_2);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_X))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_1);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_1);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_START))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_Hash);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_Hash);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_SELECT))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_Asterisk);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_Asterisk);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_L))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_4);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_4);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_R))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_3);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_3);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_L2))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_6);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_6);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_R2))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_5);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_5);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_L3))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_8);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_8);
-        if (ib & (1 << RETRO_DEVICE_ID_JOYPAD_R3))
-            core->KeyPressed(static_cast<GC_Controllers>(player), Keypad_7);
-        else
-            core->KeyReleased(static_cast<GC_Controllers>(player), Keypad_7);
     }
 
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_1) )
-        core->KeyPressed(static_cast<GC_Controllers>(Controller_1), Keypad_0);
-    else
-        core->KeyReleased(static_cast<GC_Controllers>(Controller_1), Keypad_0);
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_2) )
-        core->KeyPressed(static_cast<GC_Controllers>(Controller_1), Keypad_9);
-    else
-        core->KeyReleased(static_cast<GC_Controllers>(Controller_1), Keypad_9);
+    // Copy previous state
+    for (int j = 0; j < MAX_PADS; j++)
+    {
+        for (int i = 0; i < JOYPAD_BUTTONS; i++)
+            joypre[j][i] = joypad[j][i];
+        for (int i = 0; i < 4; i++)
+            joypre_ext[j][i] = joypad_ext[j][i];
+    }
 
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_3) )
-        core->KeyPressed(static_cast<GC_Controllers>(Controller_2), Keypad_0);
-    else
-        core->KeyReleased(static_cast<GC_Controllers>(Controller_2), Keypad_0);
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_4) )
-        core->KeyPressed(static_cast<GC_Controllers>(Controller_2), Keypad_9);
-    else
-        core->KeyReleased(static_cast<GC_Controllers>(Controller_2), Keypad_9);
+    // Get current state
+    for (int j = 0; j < MAX_PADS; j++)
+    {
+        if (allow_up_down)
+        {
+            joypad[j][0] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)     ? 1 : 0;
+            joypad[j][1] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)   ? 1 : 0;
+            joypad[j][2] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)   ? 1 : 0;
+            joypad[j][3] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)  ? 1 : 0;
+        }
+        else
+        {
+            joypad[j][0] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) && ((joypre[j][0] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))    ? 1 : 0;
+            joypad[j][1] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) && ((joypre[j][1] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))    ? 1 : 0;
+            joypad[j][2] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) && ((joypre[j][2] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))) ? 1 : 0;
+            joypad[j][3] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) && ((joypre[j][3] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))) ? 1 : 0;
+        }
+        joypad[j][4] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_A)      ? 1 : 0;
+        joypad[j][5] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_B)      ? 1 : 0;
+        joypad[j][6] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_X)      ? 1 : 0;
+        joypad[j][7] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_Y)      ? 1 : 0;
+        joypad[j][8] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_START)  ? 1 : 0;
+        joypad[j][9] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_SELECT) ? 1 : 0;
+        joypad[j][10] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_L)     ? 1 : 0;
+        joypad[j][11] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_R)     ? 1 : 0;
+        joypad[j][12] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_L2)    ? 1 : 0;
+        joypad[j][13] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_R2)    ? 1 : 0;
+        joypad[j][14] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_L3)    ? 1 : 0;
+        joypad[j][15] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_R3)    ? 1 : 0;
+
+        int analog_left_x = input_state_cb( j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+        int analog_left_y = input_state_cb( j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
+        int analog_right_x = input_state_cb( j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+        int analog_right_y = input_state_cb( j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
+
+        joypad_ext[j][0] = analog_left_x != 0 ? 1 : 0;
+        joypad_ext[j][1] = analog_left_y != 0 ? 1 : 0;
+        joypad_ext[j][2] = analog_right_x != 0 ? 1 : 0;
+        joypad_ext[j][3] = analog_right_y != 0 ? 1 : 0;
+    }
+
+    for (int j = 0; j < MAX_PADS; j++)
+    {
+        for (int i = 0; i < JOYPAD_BUTTONS; i++)
+        {
+            if (joypad[j][i] != joypre[j][i])
+            {
+                if (joypad[j][i] == 1)
+                    core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i]);
+                else
+                    core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i]);
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (joypad_ext[j][i] != joypre_ext[j][i])
+            {
+                if (joypad_ext[j][i] == 1)
+                    core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i + JOYPAD_BUTTONS]);
+                else
+                    core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i + JOYPAD_BUTTONS]);
+            }
+        }
+    }
+
+    if (spinner_support > 0)
+    {
+        for (int i=0; i<2; i++)
+        {
+            mousepre[i] = mouse[i];
+        }
+
+        mouse[0] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+        mouse[1] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+
+        int mouse_x = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+        int mouse_y = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+
+        int sen = spinner_sensitivity - 1;
+        if (sen < 0)
+            sen = 0;
+        float senf = (float)(sen / 2.0f) + 1.0f;
+        float relx = (float)(mouse_x) * senf;
+
+        switch (spinner_support)
+        {
+            // SAC
+            case (1):
+            {
+                core->Spinner1((int)-relx);
+                break;
+            }
+            // Wheel
+            case (2):
+            {
+                core->Spinner1((int)relx);
+                break;
+            }
+            // Roller
+            case (3):
+            {
+                float rely = (float)(mouse_y) * senf;
+                core->Spinner1((int)relx);
+                core->Spinner2((int)rely);
+                break;
+            }
+            default:
+                break;
+        }
+
+        if (mouse[0] != mousepre[0])
+        {
+            if (mouse[0])
+                core->KeyPressed(Controller_1, Key_Left_Button);
+            else
+                core->KeyReleased(Controller_1, Key_Left_Button);
+        }
+        if (mouse[1] != mousepre[1])
+        {
+            if (mouse[1])
+                core->KeyPressed(Controller_1, Key_Right_Button);
+            else
+                core->KeyReleased(Controller_1, Key_Right_Button);
+        }
+    }
 }
 
 static void check_variables(void)
@@ -397,6 +492,74 @@ static void check_variables(void)
             config.region = Cartridge::CartridgePAL;
         else
             config.region = Cartridge::CartridgeUnknownRegion;
+    }
+
+    var.key = "gearcoleco_aspect_ratio";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "1:1 PAR") == 0)
+            aspect_ratio = 0.0f;
+        else if (strcmp(var.value, "4:3 DAR") == 0)
+            aspect_ratio = 4.0f / 3.0f;
+        else if (strcmp(var.value, "16:9 DAR") == 0)
+            aspect_ratio = 16.0f / 9.0f;
+        else
+            aspect_ratio = 0.0f;
+    }
+
+    var.key = "gearcoleco_overscan";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Disabled") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanDisabled);
+        else if (strcmp(var.value, "Top+Bottom") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanTopBottom);
+        else if (strcmp(var.value, "Full (284 width)") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanFull284);
+        else if (strcmp(var.value, "Full (320 width)") == 0)
+            core->GetVideo()->SetOverscan(Video::OverscanFull320);
+        else
+            core->GetVideo()->SetOverscan(Video::OverscanDisabled);
+    }
+
+    var.key = "gearcoleco_no_sprite_limit";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Enabled") == 0)
+            core->GetVideo()->SetNoSpriteLimit(true);
+        else
+            core->GetVideo()->SetNoSpriteLimit(false);
+    }
+
+    var.key = "gearcoleco_spinners";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Disabled") == 0)
+            spinner_support = 0;
+        else if (strcmp(var.value, "Super Action Controller") == 0)
+            spinner_support = 1;
+        else if (strcmp(var.value, "Wheel Controller") == 0)
+            spinner_support = 2;
+        else if (strcmp(var.value, "Roller Controller") == 0)
+            spinner_support = 3;
+        else
+            spinner_support = 0;
+    }
+
+    var.key = "gearcoleco_spinner_sensitivity";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        spinner_sensitivity = atoi(var.value);
     }
 }
 
@@ -459,7 +622,7 @@ bool retro_load_game(const struct retro_game_info *info)
     enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
     if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
     {
-        log_cb(RETRO_LOG_INFO, "RGB565 is not supported.\n");
+        log_cb(RETRO_LOG_ERROR, "RGB565 is not supported.\n");
         return false;
     }
 

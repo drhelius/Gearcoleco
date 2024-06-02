@@ -20,7 +20,6 @@
 #include <math.h>
 #include "imgui/imgui.h"
 #include "imgui/imgui_memory_editor.h"
-#include "FileBrowser/ImGuiFileBrowser.h"
 #include "config.h"
 #include "emu.h"
 #include "renderer.h"
@@ -47,11 +46,14 @@ struct DisassmeblerLine
 };
 
 static MemoryEditor mem_edit;
-static ImVec4 cyan = ImVec4(0.0f,1.0f,1.0f,1.0f);
+static ImVec4 cyan = ImVec4(0.1f,0.9f,0.9f,1.0f);
 static ImVec4 magenta = ImVec4(1.0f,0.502f,0.957f,1.0f);
-static ImVec4 yellow = ImVec4(1.0f,1.0f,0.0f,1.0f);
-static ImVec4 red = ImVec4(1.0f,0.149f,0.447f,1.0f);
-static ImVec4 green = ImVec4(0.0f,1.0f,0.0f,1.0f);
+static ImVec4 yellow = ImVec4(1.0f,0.90f,0.05f,1.0f);
+static ImVec4 orange = ImVec4(0.992f,0.592f,0.122f,1.0f);
+static ImVec4 red = ImVec4(0.976f,0.149f,0.447f,1.0f);
+static ImVec4 green = ImVec4(0.1f,0.9f,0.1f,1.0f);
+static ImVec4 violet = ImVec4(0.682f,0.506f,1.0f,1.0f);
+static ImVec4 blue = ImVec4(0.2f,0.4f,1.0f,1.0f);
 static ImVec4 white = ImVec4(1.0f,1.0f,1.0f,1.0f);
 static ImVec4 gray = ImVec4(0.5f,0.5f,0.5f,1.0f);
 static ImVec4 dark_gray = ImVec4(0.1f,0.1f,0.1f,1.0f);
@@ -80,6 +82,7 @@ static void add_symbol(const char* line);
 static void add_breakpoint_cpu(void);
 static void add_breakpoint_mem(void);
 static void request_goto_address(u16 addr);
+static bool is_return_instruction(u8 opcode1, u8 opcode2);
 
 void gui_debug_windows(void)
 {
@@ -123,10 +126,27 @@ void gui_debug_load_symbols_file(const char* path)
     if (file.is_open())
     {
         std::string line;
+        bool valid_section = true;
 
         while (std::getline(file, line))
         {
-            add_symbol(line.c_str());
+            size_t comment = line.find_first_of(';');
+            if (comment != std::string::npos)
+                line = line.substr(0, comment);
+            line = line.erase(0, line.find_first_not_of(" \t\r\n"));
+            line = line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
+            if (line.empty())
+                continue;
+
+            if (line.find("[") != std::string::npos)
+            {
+                valid_section = (line.find("[labels]") != std::string::npos);
+                continue;
+            }
+
+            if (valid_section)
+                add_symbol(line.c_str());
         }
 
         file.close();
@@ -195,6 +215,17 @@ static void debug_window_memory(void)
     Cartridge* cart = core->GetCartridge();
     Video* video = core->GetVideo();
 
+    ImGui::PushFont(gui_default_font);
+
+    ImGui::TextColored(cyan, "  ROM: ");ImGui::SameLine();
+
+    ImGui::TextColored(magenta, "BANK");ImGui::SameLine();
+    ImGui::Text("$%02X", memory->GetRomBank()); ImGui::SameLine();
+    ImGui::TextColored(magenta, "  ADDRESS");ImGui::SameLine();
+    ImGui::Text("$%05X", memory->GetRomBankAddress());
+
+    ImGui::PopFont();
+
     if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
     {
         if (ImGui::BeginTabItem("BIOS"))
@@ -208,15 +239,23 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetRam(), 0x400, 0x6000);
+            mem_edit.DrawContents(memory->GetRam(), 0x400, 0x7000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("ROM"))
+        if (ImGui::BeginTabItem("SGM RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(cart->GetROM(), 0x8000, 0x8000);
+            mem_edit.DrawContents(memory->GetSGMRam(), 0x8000, 0x0000);
+            ImGui::PopFont();
+            ImGui::EndTabItem();
+        }
+
+        if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM"))
+        {
+            ImGui::PushFont(gui_default_font);
+            mem_edit.DrawContents(cart->GetROM(), cart->GetROMSize(), 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -576,11 +615,15 @@ static void debug_window_disassembler(void)
                 if (show_segment)
                 {
                     ImGui::SameLine();
-                    ImGui::TextColored(color_segment, "%s ", vec[item].record->segment);
+                    ImGui::TextColored(color_segment, "%s", vec[item].record->segment);
                 }
 
                 ImGui::SameLine();
-                ImGui::TextColored(color_addr, "%04X ", vec[item].record->address);
+                if (strcmp(vec[item].record->segment, "ROM") == 0)
+                    ImGui::TextColored(color_addr, "%02X:%04X ", vec[item].record->bank, vec[item].record->address);
+                else
+                    ImGui::TextColored(color_addr, "  %04X ", vec[item].record->address);
+
 
                 if (show_mem)
                 {
@@ -601,6 +644,15 @@ static void debug_window_disassembler(void)
 
                 ImGui::SameLine();
                 ImGui::TextColored(color_name, "%s", vec[item].record->name);
+
+
+                bool is_ret = is_return_instruction(vec[item].record->opcodes[0], vec[item].record->opcodes[1]);
+                if (is_ret)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Separator, (vec[item].record->opcodes[0] == 0xC9) ? gray : dark_gray);
+                    ImGui::Separator();
+                    ImGui::PopStyleColor();
+                }
 
                 ImGui::PopID();
             }
@@ -628,7 +680,7 @@ static void debug_window_processor(void)
 
     ImGui::Separator();
 
-    ImGui::TextColored(magenta, "  S Z Y H X P N C");
+    ImGui::TextColored(orange, "  S Z Y H X P N C");
     ImGui::Text("  " BYTE_TO_BINARY_PATTERN_ALL_SPACED, BYTE_TO_BINARY(proc_state->AF->GetLow()));
 
     ImGui::Columns(2, "registers");
@@ -775,7 +827,7 @@ static void debug_window_processor(void)
 static void debug_window_vram_registers(void)
 {
     ImGui::SetNextWindowPos(ImVec2(567, 560), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(267, 209), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(260, 329), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("VDP Registers", &config_debug.show_video_registers);
 
@@ -1077,8 +1129,10 @@ static void debug_window_vram_sprites(void)
     ImVec2 p_screen = ImGui::GetCursorScreenPos();
 
     float screen_scale = 1.0f;
+    float tex_h = (float)runtime.screen_width / (float)(GC_RESOLUTION_WIDTH_WITH_OVERSCAN);
+    float tex_v = (float)runtime.screen_height / (float)(GC_RESOLUTION_HEIGHT_WITH_OVERSCAN);
 
-    ImGui::Image((void*)(intptr_t)renderer_emu_texture, ImVec2(runtime.screen_width * screen_scale, runtime.screen_height * screen_scale));
+    ImGui::Image((void*)(intptr_t)renderer_emu_texture, ImVec2(runtime.screen_width * screen_scale, runtime.screen_height * screen_scale), ImVec2(0, 0), ImVec2(tex_h, tex_v));
 
     for (int s = 0; s < 64; s++)
     {
@@ -1174,15 +1228,32 @@ static void debug_window_vram_regs(void)
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
 
-    const char* reg_desc[] = {"CONTROL 0   ", "CONTROL 1   ", "PATTERN NAME", "COLOR TABLE ", "PATTERN GEN ", "SPRITE ATTR ", "SPRITE GEN  ", "COLORS      "};
+    ImGui::TextColored(yellow, "VDP STATE:");
+
+    ImGui::TextColored(cyan, " PAL (50Hz)       "); ImGui::SameLine();
+    video->IsPAL() ? ImGui::TextColored(green, "YES ") : ImGui::TextColored(gray, "NO  ");
+    ImGui::TextColored(cyan, " LATCH FIRST BYTE "); ImGui::SameLine();
+    video->GetLatch() ? ImGui::TextColored(green, "YES ") : ImGui::TextColored(gray, "NO  ");
+    ImGui::TextColored(cyan, " INTERNAL BUFFER  "); ImGui::SameLine();
+    ImGui::Text("$%02X (" BYTE_TO_BINARY_PATTERN_SPACED ")", video->GetBufferReg(), BYTE_TO_BINARY(video->GetBufferReg()));
+    ImGui::TextColored(cyan, " INTERNAL STATUS  "); ImGui::SameLine();
+    ImGui::Text("$%02X (" BYTE_TO_BINARY_PATTERN_SPACED ")", video->GetStatusReg(), BYTE_TO_BINARY(video->GetStatusReg()));
+    ImGui::TextColored(cyan, " INTERNAL ADDRESS "); ImGui::SameLine();
+    ImGui::Text("$%04X", video->GetAddressReg());
+    ImGui::TextColored(cyan, " RENDER LINE      "); ImGui::SameLine();
+    ImGui::Text("%d", video->GetRenderLine());
+    ImGui::TextColored(cyan, " CYCLE COUNTER    "); ImGui::SameLine();
+    ImGui::Text("%d", video->GetCycleCounter());
 
     ImGui::TextColored(yellow, "VDP REGISTERS:");
+
+    const char* reg_desc[] = {"CONTROL 0   ", "CONTROL 1   ", "PATTERN NAME", "COLOR TABLE ", "PATTERN GEN ", "SPRITE ATTR ", "SPRITE GEN  ", "COLORS      "};
 
     for (int i = 0; i < 8; i++)
     {
         ImGui::TextColored(cyan, " $%01X ", i); ImGui::SameLine();
         ImGui::TextColored(magenta, "%s ", reg_desc[i]); ImGui::SameLine();
-        ImGui::Text("$%02X  (" BYTE_TO_BINARY_PATTERN_SPACED ")", regs[i], BYTE_TO_BINARY(regs[i]));
+        ImGui::Text("$%02X (" BYTE_TO_BINARY_PATTERN_SPACED ")", regs[i], BYTE_TO_BINARY(regs[i]));
     }
 
     ImGui::PopFont();
@@ -1374,4 +1445,28 @@ static void request_goto_address(u16 address)
 {
     goto_address_requested = true;
     goto_address_target = address;
+}
+
+static bool is_return_instruction(u8 opcode1, u8 opcode2)
+{
+    switch (opcode1)
+    {
+        case 0xC9: // RET
+        case 0xC0: // RET NZ
+        case 0xC8: // RET Z
+        case 0xD0: // RET NC
+        case 0xD8: // RET C
+        case 0xE0: // RET PO
+        case 0xE8: // RET PE
+        case 0xF0: // RET P
+        case 0xF8: // RET M
+            return true;
+        case 0xED: // Extended instructions
+            if (opcode2 == 0x45 || opcode2 == 0x4D) // RETN, RETI
+                return true;
+            else
+                return false;
+        default:
+            return false;
+    }
 }

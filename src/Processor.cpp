@@ -149,6 +149,7 @@ unsigned int Processor::RunFor(unsigned int tstates)
             else if (m_bIFF1 && m_bINTRequested && !m_bAfterEI)
             {
                 LeaveHalt();
+                m_bINTRequested = false;
                 m_bIFF1 = false;
                 m_bIFF2 = false;
                 StackPush(&PC);

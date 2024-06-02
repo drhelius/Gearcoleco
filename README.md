@@ -1,23 +1,32 @@
 # Gearcoleco
 
-[![Gearcoleco CI](https://github.com/drhelius/Gearcoleco/workflows/Gearcoleco%20CI/badge.svg)](https://github.com/drhelius/Gearcoleco/actions)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/drhelius/Gearcoleco/gearcoleco.yml)](https://github.com/drhelius/Gearcoleco/actions/workflows/gearcoleco.yml)
+[![GitHub tag (with filter)](https://img.shields.io/github/v/tag/drhelius/Gearcoleco?label=version)](https://github.com/drhelius/Gearcoleco/releases)
+[![commits)](https://img.shields.io/github/commit-activity/t/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/graphs/contributors)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/drhelius)](https://github.com/sponsors/drhelius)
+[![License](https://img.shields.io/github/license/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/blob/main/LICENSE)
+[![Twitter Follow](https://img.shields.io/twitter/follow/drhelius)](https://twitter.com/drhelius)
 
-Gearcoleco is a very accurate cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD, Raspberry Pi and RetroArch.
+Gearcoleco is a very accurate cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD and RetroArch.
 
-This is an open source project with its ongoing development made possible thanks to the support by these awesome [backers](backers.md).
+This is an open source project with its ongoing development made possible thanks to the support by these awesome [backers](backers.md). If you find it useful, please, consider [sponsoring](https://github.com/sponsors/drhelius).
 
-Please, consider [sponsoring](https://github.com/sponsors/drhelius) and following me on [Twitter](https://twitter.com/drhelius) for updates.
-
-If you find a bug or want new features, you can help me [openning an issue](https://github.com/drhelius/Gearcoleco/issues).
+Don't hesitate to report bugs or ask for new features by [openning an issue](https://github.com/drhelius/Gearboy/issues). 
 
 ----------
 
 ## Downloads
 
-- **Windows**: [Gearcoleco-1.0.0-Windows.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-Windows.zip)
+- **Windows**:
+  - [Gearcoleco-1.1.0-windows.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-windows.zip)
   - NOTE: You may need to install the [Microsoft Visual C++ Redistributable](https://go.microsoft.com/fwlink/?LinkId=746572)
-- **macOS**: [Gearcoleco-1.0.0-macOS.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-macOS.zip)
-- **Linux**: [Gearcoleco-1.0.0-Linux.tar.xz](https://github.com/drhelius/Gearcoleco/releases/download/1.0.0/Gearcoleco-1.0.0-Linux.tar.xz)
+- **macOS**:
+  - [Gearcoleco-1.1.0-macos-arm.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-macos-arm.zip)
+  - [Gearcoleco-1.1.0-macos-intel.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-macos-intel.zip)
+- **Linux**:
+  - [Gearcoleco-1.1.0-ubuntu-22.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-ubuntu-22.04.zip)
+  - [Gearcoleco-1.1.0-ubuntu-20.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-ubuntu-20.04.zip) 
   - NOTE: You may need to install `libsdl2` and `libglew`
 - **RetroArch**: [Libretro core documentation](https://docs.libretro.com/library/gearcoleco/).
 
@@ -25,23 +34,34 @@ If you find a bug or want new features, you can help me [openning an issue](http
 
 - Accurate Z80 core, including undocumented opcodes and behavior like R and [MEMPTR](https://gist.github.com/drhelius/8497817) registers.
 - Accurate TMS9918 emulation.
-- Sound emulation using SDL Audio and [Sms_Snd_Emu library](https://www.slack.net/~ant/libs/audio.html#Sms_Snd_Emu).
+- Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
+- Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states.
 - Compressed rom support (ZIP).
-- Supported platforms (standalone): Windows, Linux, BSD, macOS, and Raspberry Pi.
+- Supported platforms (standalone): Windows, Linux, BSD and macOS.
 - Supported platforms (libretro): Windows, Linux, macOS, Raspberry Pi, Android, iOS, tvOS, PlayStation Vita, PlayStation 3, Nintendo 3DS, Nintendo GameCube, Nintendo Wii, Nintendo WiiU, Nintendo Switch, Emscripten, Classic Mini systems (NES, SNES, C64, ...), OpenDingux, RetroFW and QNX.
 - Full debugger with just-in-time disassembler, cpu breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, memory editor, IO inspector and VRAM viewer including registries, tiles, sprites and backgrounds.
-- Windows and Linux *Portable Mode* by creating a file named `portable.ini` in the same directory as the application binary.
+- Windows and Linux *Portable Mode*.
+- Rom loading from the command line by adding the rom path as an argument.
 - Support for modern game controllers through [gamecontrollerdb.txt](https://github.com/gabomdq/SDL_GameControllerDB) file located in the same directory as the application binary.
 
 <img width="810" alt="Screen Shot 2021-08-14 at 21 15 02" src="https://user-images.githubusercontent.com/863613/129458358-58e280ce-8c4f-4685-8b8f-c3dbb0c72f13.png">
 
+## Tips
 
+- *BIOS*: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 ```2c66f5911e5b42b8ebe113403548eee7``` is recommended.
+- *Spinners*: When using any kind of spinner it is useful to capture the mouse by pressing ```F12```. It is also recommended to disable spinners for software that don't use them.
+- *Overscan*: For a precise representation of the original image using Overscan Top+Bottom and 4:3 Display Aspect Ratio is recommended.
+- *Mouse Cursor*: Automatically hides when hovering main output window or when Main Menu is disabled. 
+- *Portable Mode*: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
+- *Debug Symbols*: The emulator always tries to load a symbol file at the same time a rom is being loaded. For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. It is also possible to load a symbol file using the GUI or using the CLI.
+- *Command Line Usage*: ```gearcoleco [rom_file] [symbol_file]```
+  
 ## Build Instructions
 
 ### Windows
 
-- Install Microsoft Visual Studio Community 2019 or later.
+- Install Microsoft Visual Studio Community 2022 or later.
 - Open the Visual Studio solution in `platforms/windows/Gearcoleco.sln` and build.
 - You may want to use the `platforms/windows/Makefile` to build the application using MinGW.
 
@@ -61,7 +81,7 @@ make dist
 - Ubuntu / Debian / Raspberry Pi (Raspbian):
 
 ``` shell
-sudo apt-get install build-essential libsdl2-dev libglew-dev
+sudo apt-get install build-essential libsdl2-dev libglew-dev libgtk-3-dev
 cd platforms/linux
 make
 ```
@@ -69,24 +89,32 @@ make
 - Fedora:
 
 ``` shell
-sudo dnf install @development-tools gcc-c++ SDL2-devel glew-devel
+sudo dnf install @development-tools gcc-c++ SDL2-devel glew-devel gtk3-devel
 cd platforms/linux
 make
 ```
 
 ### BSD
 
+- FreeBSD:
+
+``` shell
+su root -c "pkg install -y git gmake pkgconf SDL2 glew lang/gcc gtk3"
+cd platforms/bsd
+gmake
+```
+
 - NetBSD:
 
 ``` shell
-su root -c "pkgin install gmake pkgconf SDL2 glew"
+su root -c "pkgin install gmake pkgconf SDL2 glew lang/gcc gtk3"
 cd platforms/bsd
 gmake
 ```
 
 ### Libretro
 
-- Ubuntu / Debian:
+- Ubuntu / Debian / Raspberry Pi (Raspbian):
 
 ``` shell
 sudo apt-get install build-essential

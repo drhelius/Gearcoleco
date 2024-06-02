@@ -38,7 +38,7 @@
 #endif
 
 #define GEARCOLECO_TITLE "Gearcoleco"
-#define GEARCOLECO_VERSION "1.0.1"
+#define GEARCOLECO_VERSION "1.1.0"
 
 #ifndef EMULATOR_BUILD
 #define EMULATOR_BUILD "undefined"
@@ -89,8 +89,17 @@ typedef void (*RamChangedCallback) (void);
 #define FLAG_SIGN 0x80
 #define FLAG_NONE 0
 
-#define GC_RESOLUTION_MAX_WIDTH 256
-#define GC_RESOLUTION_MAX_HEIGHT 192
+#define GC_RESOLUTION_WIDTH 256
+#define GC_RESOLUTION_HEIGHT 192
+
+#define GC_RESOLUTION_WIDTH_WITH_OVERSCAN 320
+#define GC_RESOLUTION_HEIGHT_WITH_OVERSCAN 288
+#define GC_RESOLUTION_SMS_OVERSCAN_H_320_L 32
+#define GC_RESOLUTION_SMS_OVERSCAN_H_320_R 32
+#define GC_RESOLUTION_SMS_OVERSCAN_H_284_L 14
+#define GC_RESOLUTION_SMS_OVERSCAN_H_284_R 14
+#define GC_RESOLUTION_OVERSCAN_V 24
+#define GC_RESOLUTION_OVERSCAN_V_PAL 48
 
 #define GC_CYCLES_PER_LINE 228
 
@@ -102,9 +111,10 @@ typedef void (*RamChangedCallback) (void);
 #define GC_LINES_PER_FRAME_PAL 313
 #define GC_FRAMES_PER_SECOND_PAL 50
 
+#define GC_AUDIO_SAMPLE_RATE 44100
 #define GC_AUDIO_BUFFER_SIZE 8192
 
-#define GC_SAVESTATE_MAGIC 0x83190128
+#define GC_SAVESTATE_MAGIC 0x09200902
 
 struct GC_Color
 {
@@ -128,9 +138,11 @@ enum GC_Keys
     Keypad_8 = 0x01,
     Keypad_4 = 0x02,
     Keypad_5 = 0x03,
+    Key_Blue = 0x04,
     Keypad_7 = 0x05,
     Keypad_Hash = 0x06,
     Keypad_2 = 0x07,
+    Key_Purple = 0x08,
     Keypad_Asterisk = 0x09,
     Keypad_0 = 0x0A,
     Keypad_9 = 0x0B,
@@ -165,14 +177,13 @@ struct GC_RuntimeInfo
 };
 
 #ifdef DEBUG_GEARCOLECO
+
 #ifdef __ANDROID__
-        #include <android/log.h>
-        #define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "GEARCOLECO", __VA_ARGS__);
-    #endif
-#define Log(msg, ...) (Log_func(msg, ##__VA_ARGS__))
-#else
-#define Log(msg, ...)
+#include <android/log.h>
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "GEARCOLECO", __VA_ARGS__);
 #endif
+
+#define Log(msg, ...) (Log_func(msg, ##__VA_ARGS__))
 
 inline void Log_func(const char* const msg, ...)
 {
@@ -189,6 +200,10 @@ inline void Log_func(const char* const msg, ...)
 
     count++;
 }
+
+#else
+#define Log(msg, ...)
+#endif
 
 inline u8 SetBit(const u8 value, const u8 bit)
 {

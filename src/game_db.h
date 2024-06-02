@@ -20,17 +20,24 @@
 #ifndef GAME_DB_H
 #define	GAME_DB_H
 
+enum GC_GameDBMode
+{
+	GC_GameDBMode_None = 0,
+	GC_GameDBMode_SRAM = 1,
+};
+
 struct GC_GameDBEntry
 {
-    u32 crc;
-    const char* title;
+	u32 crc;
+	const char* title;
+	GC_GameDBMode mode;
 };
 
 const GC_GameDBEntry kGameDatabase[] =
 {
-    {0xFFFFFFFF, "xxx"},
-        
-    {0, 0}
+	{0xFEE15196, "Lord of the Dungeon", GC_GameDBMode_SRAM},
+	{0x1053F610, "Lord of the Dungeon", GC_GameDBMode_SRAM},
+	{0, 0, GC_GameDBMode_None}
 };
 
 const uint32_t kCRC32_tab[] = 

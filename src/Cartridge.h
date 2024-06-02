@@ -29,6 +29,8 @@ public:
     enum CartridgeTypes
     {
         CartridgeColecoVision,
+        CartridgeMegaCart,
+        CartridgeActivisionCart,
         CartridgeNotSupported
     };
 
@@ -52,6 +54,7 @@ public:
     void Reset();
     u32 GetCRC() const;
     bool IsPAL() const;
+    bool HasSRAM() const;
     bool IsValidROM() const;
     bool IsReady() const;
     CartridgeTypes GetType() const;
@@ -80,6 +83,7 @@ private:
     int m_iROMBankCount;
     bool m_bPAL;
     u32 m_iCRC;
+    bool m_bSRAM;
 };
 
 #endif	/* CARTRIDGE_H */

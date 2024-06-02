@@ -31,17 +31,23 @@ Memory::Memory(Cartridge* pCartridge)
     InitPointer(m_pDisassembledRomMap);
     InitPointer(m_pDisassembledRamMap);
     InitPointer(m_pDisassembledBiosMap);
-    InitPointer(m_pDisassembledExpansionMap);
+    InitPointer(m_pDisassembledSGMRamMap);
     InitPointer(m_pRunToBreakpoint);
     InitPointer(m_pBios);
     InitPointer(m_pRam);
+    InitPointer(m_pSGMRam);
     m_bBiosLoaded = false;
+    m_bSGMUpper = false;
+    m_bSGMLower = false;
+    m_RomBankAddress = 0;
+    m_RomBank = 0;
 }
 
 Memory::~Memory()
 {
     SafeDeleteArray(m_pBios);
     SafeDeleteArray(m_pRam);
+    SafeDeleteArray(m_pSGMRam);
 
     if (IsValidPointer(m_pDisassembledRomMap))
     {
@@ -70,13 +76,13 @@ Memory::~Memory()
         SafeDeleteArray(m_pDisassembledBiosMap);
     }
 
-    if (IsValidPointer(m_pDisassembledExpansionMap))
+    if (IsValidPointer(m_pDisassembledSGMRamMap))
     {
-        for (int i = 0; i < 0x4000; i++)
+        for (int i = 0; i < 0x8000; i++)
         {
-            SafeDelete(m_pDisassembledExpansionMap[i]);
+            SafeDelete(m_pDisassembledSGMRamMap[i]);
         }
-        SafeDeleteArray(m_pDisassembledExpansionMap);
+        SafeDeleteArray(m_pDisassembledSGMRamMap);
     }
 }
 
@@ -89,6 +95,7 @@ void Memory::Init()
 {
     m_pRam = new u8[0x0400];
     m_pBios = new u8[0x2000];
+    m_pSGMRam = new u8[0x8000];
 
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
     m_pDisassembledRomMap = new stDisassembleRecord*[MAX_ROM_SIZE];
@@ -109,10 +116,10 @@ void Memory::Init()
         InitPointer(m_pDisassembledBiosMap[i]);
     }
 
-    m_pDisassembledExpansionMap = new stDisassembleRecord*[0x4000];
-    for (int i = 0; i < 0x4000; i++)
+    m_pDisassembledSGMRamMap = new stDisassembleRecord*[0x8000];
+    for (int i = 0; i < 0x8000; i++)
     {
-        InitPointer(m_pDisassembledExpansionMap[i]);
+        InitPointer(m_pDisassembledSGMRamMap[i]);
     }
 #endif
 
@@ -126,9 +133,19 @@ void Memory::Init()
 
 void Memory::Reset()
 {
+    m_bSGMUpper = false;
+    m_bSGMLower = false;
+    m_RomBank = 0;
+    m_RomBankAddress = 0x0000;
+
     for (int i = 0; i < 0x400; i++)
     {
         m_pRam[i] = rand() % 256;
+    }
+
+    for (int i = 0; i < 0x8000; i++)
+    {
+        m_pSGMRam[i] = rand() % 256;
     }
 
     if (m_pCartridge->IsPAL())
@@ -140,11 +157,21 @@ void Memory::Reset()
 void Memory::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (m_pRam), 0x400);
+    stream.write(reinterpret_cast<const char*> (m_pSGMRam), 0x8000);
+    stream.write(reinterpret_cast<const char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
+    stream.write(reinterpret_cast<const char*> (&m_bSGMLower), sizeof(m_bSGMLower));
+    stream.write(reinterpret_cast<const char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
+    stream.write(reinterpret_cast<const char*> (&m_RomBank), sizeof(m_RomBank));
 }
 
 void Memory::LoadState(std::istream& stream)
 {
     stream.read(reinterpret_cast<char*> (m_pRam), 0x400);
+    stream.read(reinterpret_cast<char*> (m_pSGMRam), 0x8000);
+    stream.read(reinterpret_cast<char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
+    stream.read(reinterpret_cast<char*> (&m_bSGMLower), sizeof(m_bSGMLower));
+    stream.read(reinterpret_cast<char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
+    stream.read(reinterpret_cast<char*> (&m_RomBank), sizeof(m_RomBank));
 }
 
 std::vector<Memory::stDisassembleRecord*>* Memory::GetBreakpointsCPU()
@@ -204,14 +231,40 @@ u8* Memory::GetRam()
     return m_pRam;
 }
 
+u8* Memory::GetSGMRam()
+{
+    return m_pSGMRam;
+}
+
+
 u8* Memory::GetBios()
 {
     return m_pBios;
 }
 
+u8 Memory::GetRomBank()
+{
+    return m_RomBank;
+}
+
+u32 Memory::GetRomBankAddress()
+{
+    return m_RomBankAddress;
+}
+
 bool Memory::IsBiosLoaded()
 {
     return m_bBiosLoaded;
+}
+
+void Memory::EnableSGMUpper(bool enable)
+{
+    m_bSGMUpper = enable;
+}
+
+void Memory::EnableSGMLower(bool enable)
+{
+    m_bSGMLower = enable;
 }
 
 void Memory::CheckBreakpoints(u16 address, bool write)
@@ -281,11 +334,11 @@ void Memory::ResetRomDisassembledMemory()
         }
     }
 
-    if (IsValidPointer(m_pDisassembledExpansionMap))
+    if (IsValidPointer(m_pDisassembledSGMRamMap))
     {
-        for (int i = 0; i < 0x4000; i++)
+        for (int i = 0; i < 0x8000; i++)
         {
-            SafeDelete(m_pDisassembledExpansionMap[i]);
+            SafeDelete(m_pDisassembledSGMRamMap[i]);
         }
     }
 
@@ -299,36 +352,55 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
     stDisassembleRecord** map = NULL;
     int offset = address;
     int segment = 0;
+    int bank = 0;
 
     switch (address & 0xE000)
     {
         case 0x0000:
         {
             offset = address;
-            map = m_pDisassembledBiosMap;
-            segment = 0;
+            map = m_bSGMLower ? m_pDisassembledSGMRamMap : m_pDisassembledBiosMap;
+            segment = m_bSGMLower ? 1 : 0;
             break;
         }
         case 0x2000:
         case 0x4000:
         {
-            offset = address - 0x2000;
-            map = m_pDisassembledExpansionMap;
+            offset = address;
+            map = m_pDisassembledSGMRamMap;
             segment = 1;
             break;
         }
         case 0x6000:
         {
-            offset = address & 0x03FF;
-            map = m_pDisassembledRamMap;
-            segment = 2;
+            offset = m_bSGMUpper ? address : address & 0x03FF;
+            map = m_bSGMUpper ? m_pDisassembledSGMRamMap : m_pDisassembledRamMap;
+            segment = m_bSGMUpper ? 1 : 2;
             break;
         }
         default:
         {
-            offset = address - 0x8000;
-            map = m_pDisassembledRomMap;
-            segment = 3;
+            if (m_pCartridge->GetType() == Cartridge::CartridgeMegaCart)
+            {
+                map = m_pDisassembledRomMap;
+                segment = 3;
+                if (address < 0xC000)
+                {
+                    offset = (address & 0x3FFF) + (m_pCartridge->GetROMSize() - 0x4000);
+                    bank = m_pCartridge->GetROMBankCount() - 1;
+                }
+                else
+                {
+                    offset = (address & 0x3FFF) + m_RomBankAddress;
+                    bank = m_RomBank;
+                }
+            }
+            else
+            {
+                offset = address - 0x8000;
+                map = m_pDisassembledRomMap;
+                segment = 3;
+            }
         }
     }
 
@@ -337,7 +409,7 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
         map[offset] = new Memory::stDisassembleRecord;
 
         map[offset]->address = address;
-        map[offset]->bank = 0;
+        map[offset]->bank = bank;
         map[offset]->name[0] = 0;
         map[offset]->bytes[0] = 0;
         map[offset]->size = 0;
@@ -355,7 +427,7 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
             }
             case 1:
             {
-                strcpy(map[offset]->segment, "EXP ");
+                strcpy(map[offset]->segment, "SGM ");
                 break;
             }
             case 2:
@@ -365,7 +437,7 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
             }
             case 3:
             {
-                strcpy(map[offset]->segment, "ROM ");
+                strcpy(map[offset]->segment, "ROM");
                 break;
             }
         }
