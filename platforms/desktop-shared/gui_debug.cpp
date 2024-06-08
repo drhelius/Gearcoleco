@@ -19,7 +19,6 @@
 
 #include <math.h>
 #include "imgui/imgui.h"
-#include "imgui/imgui_memory_editor.h"
 #include "imgui/memory_editor.h"
 #include "config.h"
 #include "emu.h"
@@ -46,8 +45,7 @@ struct DisassmeblerLine
     std::string symbol;
 };
 
-static MemoryEditor mem_edit;
-static MemEditor gear_mem_edit;
+static MemEditor mem_edit;
 static ImVec4 cyan = ImVec4(0.1f,0.9f,0.9f,1.0f);
 static ImVec4 magenta = ImVec4(1.0f,0.502f,0.957f,1.0f);
 static ImVec4 yellow = ImVec4(1.0f,0.90f,0.05f,1.0f);
@@ -234,9 +232,7 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("BIOS"))
         {
             ImGui::PushFont(gui_default_font);
-            //mem_edit.DrawContents(memory->GetBios(), 0x2000, 0);
-            //gear_mem_edit.Draw(memory->GetBios(), 0x2000, 0);
-            gear_mem_edit.Draw(memory->GetBios(), 0x2000, 0);
+            mem_edit.Draw(memory->GetBios(), 0x2000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -244,8 +240,7 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            //mem_edit.DrawContents(memory->GetRam(), 0x400, 0x7000);
-            gear_mem_edit.Draw(memory->GetRam(), 0x400, 0x7000);
+            mem_edit.Draw(memory->GetRam(), 0x400, 0x7000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -253,7 +248,7 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("SGM RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(memory->GetSGMRam(), 0x8000, 0x0000);
+            mem_edit.Draw(memory->GetSGMRam(), 0x8000, 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -261,7 +256,7 @@ static void debug_window_memory(void)
         if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(cart->GetROM(), cart->GetROMSize(), 0x0000);
+            mem_edit.Draw(cart->GetROM(), cart->GetROMSize(), 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -269,7 +264,7 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("VRAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit.DrawContents(video->GetVRAM(), 0x4000, 0);
+            mem_edit.Draw(video->GetVRAM(), 0x4000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
