@@ -149,7 +149,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                         ImVec2 cell_size = (character_size * ImVec2(max_chars_per_cell, 1)) + (ImVec2(2, 2) * ImGui::GetStyle().CellPadding) + ImVec2(1 + byte_cell_padding, 0);
                         bool cell_hovered = ImGui::IsMouseHoveringRect(cell_start_pos, cell_start_pos + cell_size, false) && ImGui::IsWindowHovered();
 
-                        DrawSelectionFrame(x, row, byte_address, cell_start_pos, cell_size);
+                        DrawSelectionBackground(x, byte_address, cell_start_pos, cell_size);
 
                         if (cell_hovered)
                         {
@@ -169,7 +169,32 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                                 m_set_keyboard_here = false;
                             }
 
-                            ImGui::InputText("##editing_input", buf, 3, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AlwaysOverwrite);
+                            ImGui::PushStyleColor(ImGuiCol_Text, red);
+                            ImGui::PushStyleColor(ImGuiCol_FrameBg, dark_cyan);
+
+                            if (ImGui::InputText("##editing_input", buf, 3, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AlwaysOverwrite))
+                            {
+                                try
+                                {
+                                    mem_data[byte_address] = (uint8_t)std::stoul(buf, 0, 16);
+
+                                    if (byte_address < (mem_size - 1))
+                                    {
+                                        m_editing_address = byte_address + 1;
+                                        m_selection_end = m_selection_start = m_editing_address;
+                                        m_set_keyboard_here = true;
+                                    }
+                                    else
+                                        m_editing_address = -1;
+                                }
+                                catch (const std::invalid_argument&)
+                                {
+                                    m_editing_address = -1;
+                                }
+                            }
+
+                            ImGui::PopStyleColor();
+                            ImGui::PopStyleColor();
                         }
                         else
                         {
@@ -191,6 +216,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                         ImGui::PopItemWidth();
                         ImGui::PopStyleVar();
 
+                        DrawSelectionFrame(x, row, byte_address, cell_start_pos, cell_size);
                     }
 
                     ImGui::PopStyleVar();
@@ -260,10 +286,9 @@ bool MemEditor::IsColumnSeparator(int current_column, int column_count)
     return (current_column > 0) && (current_column < column_count) && ((current_column % 4) == 0);
 }
 
-void MemEditor::DrawSelectionFrame(int x, int y, int address, ImVec2 cell_pos, ImVec2 cell_size)
+void MemEditor::DrawSelectionBackground(int x, int address, ImVec2 cell_pos, ImVec2 cell_size)
 {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec4 frame_color = cyan;
     ImVec4 background_color = dark_cyan;
     int start = m_selection_start <= m_selection_end ? m_selection_start : m_selection_end;
     int end = m_selection_end >= m_selection_start ? m_selection_end : m_selection_start;
@@ -277,6 +302,22 @@ void MemEditor::DrawSelectionFrame(int x, int y, int address, ImVec2 cell_pos, I
     }
 
     drawList->AddRectFilled(cell_pos, cell_pos + cell_size, ImColor(background_color));
+}
+
+void MemEditor::DrawSelectionFrame(int x, int y, int address, ImVec2 cell_pos, ImVec2 cell_size)
+{
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec4 frame_color = cyan;
+    int start = m_selection_start <= m_selection_end ? m_selection_start : m_selection_end;
+    int end = m_selection_end >= m_selection_start ? m_selection_end : m_selection_start;
+
+    if (address < start || address > end)
+        return;
+
+    if (IsColumnSeparator(x + 1, m_bytes_per_row) && (address != end))
+    {
+        cell_size.x += m_separator_column_width + 1;
+    }
 
     if (x == 0 || address == start)
         drawList->AddLine(cell_pos - ImVec2(0, 1), cell_pos + ImVec2(0, cell_size.y), ImColor(frame_color), 1);
@@ -319,6 +360,11 @@ void MemEditor::HandleSelection(int address, int row)
         int tmp = m_selection_start;
         m_selection_start = m_selection_end;
         m_selection_end = tmp;
+    }
+
+    if (m_editing_address != m_selection_start)
+    {
+        m_editing_address = -1;
     }
 }
 
