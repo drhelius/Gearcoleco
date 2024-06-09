@@ -384,7 +384,10 @@ void MemEditor::DrawCursors(int mem_size, int base_display_addr)
     ImGui::SameLine();
     ImGui::TextColored(color, " SELECTION:");
     ImGui::SameLine();
-    ImGui::Text("%04X-%04X",m_selection_start, m_selection_end);
+    if (m_selection_start == m_selection_end)
+        ImGui::Text("%04X", m_selection_start);
+    else
+        ImGui::Text("%04X-%04X",m_selection_start, m_selection_end);
     ImGui::Separator();
 }
 
