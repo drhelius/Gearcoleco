@@ -58,6 +58,7 @@ private:
     bool m_gray_out_zeros;
     int m_preview_data_type;
     int m_preview_endianess;
+    int m_jump_to_address;
 };
 
 #endif	/* MEM_EDITOR_H */

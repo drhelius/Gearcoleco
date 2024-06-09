@@ -36,6 +36,7 @@ MemEditor::MemEditor()
     m_gray_out_zeros = true;
     m_preview_data_type = 0;
     m_preview_endianess = 0;
+    m_jump_to_address = -1;
 }
 
 MemEditor::~MemEditor()
@@ -233,6 +234,13 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                 }
             }
 
+            if (m_jump_to_address >= 0 && m_jump_to_address < mem_size)
+            {
+                ImGui::SetScrollY((m_jump_to_address / m_bytes_per_row) * character_size.y);
+                m_selection_start = m_selection_end = m_jump_to_address;
+                m_jump_to_address = -1;
+            }
+
             ImGui::EndTable();
 
         }
@@ -316,8 +324,7 @@ void MemEditor::HandleSelection(int address, int row)
 
 void MemEditor::JumpToAddress(int address)
 {
-    ImVec2 character_size = ImGui::CalcTextSize("0");
-    ImGui::SetScrollY((address / m_bytes_per_row) * character_size.y);
+    m_jump_to_address = address;
 }
 
 void MemEditor::DrawCursors(int mem_size, int base_display_addr)
