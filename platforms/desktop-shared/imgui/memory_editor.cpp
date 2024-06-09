@@ -20,6 +20,7 @@
 #include "memory_editor.h"
 #include <string>
 #include <stdexcept>
+#include "colors.h"
 
 MemEditor::MemEditor()
 {
@@ -44,6 +45,13 @@ MemEditor::~MemEditor()
 
 void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
 {
+    ImVec4 addr_color = cyan;
+    ImVec4 ascii_color = magenta;
+    ImVec4 column_color = yellow;
+    ImVec4 normal_color = white;
+    ImVec4 highlight_color = orange;
+    ImVec4 gray_color = mid_gray;
+
     int total_rows = (mem_size + (m_bytes_per_row - 1)) / m_bytes_per_row;
     int separator_count = (m_bytes_per_row - 1) / 4;
     int byte_column_count = 2 + m_bytes_per_row + separator_count + 2;
@@ -51,14 +59,8 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
     int character_cell_padding = 0;
     int max_chars_per_cell = 2;
     ImVec2 character_size = ImGui::CalcTextSize("0");
-    char buf[16];
-    ImVec4 addr_color = ImVec4(0.1f,0.9f,0.9f,1.0f);
-    ImVec4 ascii_color = ImVec4(1.0f,0.502f,0.957f,1.0f);
-    ImVec4 column_color = ImVec4(1.0f,0.90f,0.05f,1.0f);
-    ImVec4 normal_color = ImVec4(1.0f,1.0f,1.0f,1.0f);
-    ImVec4 gray_color = ImVec4(0.4f,0.4f,0.4f,1.0f);
-    float height_separator = ImGui::GetStyle().ItemSpacing.y;
     float footer_height =  ImGui::GetFrameHeightWithSpacing() * 4;
+    char buf[16];
 
     if (ImGui::BeginChild("##mem", ImVec2(ImGui::GetContentRegionAvail().x, -footer_height), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav))
     {
@@ -119,13 +121,6 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
             ImGui::TableSetupColumn("  ");
             ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_WidthFixed, (character_size.x + character_cell_padding * 1) * m_bytes_per_row);
 
-            // ImGui::TableNextRow();
-            // for (int i = 0; i < ImGui::TableGetColumnCount(); i++) {
-            //     ImGui::TableNextColumn();
-            //     ImGui::TextUnformatted(ImGui::TableGetColumnName(i));
-            //     ImGui::Dummy(ImVec2(0, character_size.y / 2));
-            // }
-
             ImGuiListClipper clipper;
             clipper.Begin(total_rows);
 
@@ -180,7 +175,10 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                             ImGui::PushItemWidth((character_size).x);
 
                             bool gray_out = m_gray_out_zeros && mem_data[byte_address] == 0;
-                            ImGui::TextColored(gray_out ? gray_color : normal_color, m_uppercase_hex ? "%02X" : "%02x", mem_data[byte_address]);
+                            bool highlight = (byte_address >= m_selection_start && byte_address < (m_selection_start + DataPreviewSize()));
+
+                            ImVec4 color = highlight ? highlight_color : (gray_out ? gray_color : normal_color);
+                            ImGui::TextColored(color, m_uppercase_hex ? "%02X" : "%02x", mem_data[byte_address]);
 
                             if (cell_hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
                             {
@@ -243,9 +241,10 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
 
     }
     ImGui::EndChild();
-
-    DrawOptions(mem_size, base_display_addr);
+    
+    DrawCursors(mem_size, base_display_addr);
     DrawDataPreview(m_selection_start, mem_data, mem_size);
+    DrawOptions();
 }
 
 bool MemEditor::IsColumnSeparator(int current_column, int column_count)
@@ -256,8 +255,8 @@ bool MemEditor::IsColumnSeparator(int current_column, int column_count)
 void MemEditor::DrawSelectionFrame(int x, int y, int address, ImVec2 cell_pos, ImVec2 cell_size)
 {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec4 frame_color = ImVec4(0.1f,0.9f,0.9f,1.0f);
-    ImVec4 background_color = ImVec4(0.0f,0.3f,0.3f,1.0f);
+    ImVec4 frame_color = cyan;
+    ImVec4 background_color = dark_cyan;
     int start = m_selection_start <= m_selection_end ? m_selection_start : m_selection_end;
     int end = m_selection_end >= m_selection_start ? m_selection_end : m_selection_start;
 
@@ -321,8 +320,9 @@ void MemEditor::JumpToAddress(int address)
     ImGui::SetScrollY((address / m_bytes_per_row) * character_size.y);
 }
 
-void MemEditor::DrawOptions(int mem_size, int base_display_addr)
+void MemEditor::DrawCursors(int mem_size, int base_display_addr)
 {
+    
     ImVec4 color = ImVec4(0.1f,0.9f,0.9f,1.0f);
 
     ImGui::TextColored(color, "REGION:");
@@ -332,7 +332,11 @@ void MemEditor::DrawOptions(int mem_size, int base_display_addr)
     ImGui::TextColored(color, " SELECTION:");
     ImGui::SameLine();
     ImGui::Text("%04X-%04X",m_selection_start, m_selection_end);
+    ImGui::Separator();
+}
 
+void MemEditor::DrawOptions()
+{
     if (ImGui::Button("Options"))
         ImGui::OpenPopup("context");
 
@@ -379,17 +383,142 @@ void MemEditor::DrawDataPreview(int address, uint8_t* mem_data, int mem_size)
     if (address < 0 || address >= mem_size)
         return;
 
-    ImVec4 color = ImVec4(0.992f,0.592f,0.122f,1.0f);
+    ImVec4 color = orange;
 
     ImGui::TextColored(color, "Dec:");
     ImGui::SameLine();
-    ImGui::Text("%d", mem_data[address]);
+    DrawDataPreviewAsDec(address, mem_data, mem_size);
 
     ImGui::TextColored(color, "Hex:");
     ImGui::SameLine();
-    ImGui::Text("%02X", mem_data[address]);
+    DrawDataPreviewAsHex(address, mem_data, mem_size);
 
     ImGui::TextColored(color, "Bin:");
     ImGui::SameLine();
-    ImGui::Text("%02X", mem_data[address]);
+    DrawDataPreviewAsBin(address, mem_data, mem_size);
+}
+
+void MemEditor::DrawDataPreviewAsHex(int address, uint8_t* mem_data, int mem_size)
+{
+    int data_size = DataPreviewSize();
+    if (address + data_size > mem_size)
+    {
+        ImGui::Text(" ");
+        return;
+    }
+
+    int data = 0;
+
+    for (int i = 0; i < data_size; i++)
+    {
+        if (m_preview_endianess == 0)
+            data |= mem_data[address + i] << (i * 8);
+        else
+            data |= mem_data[address + data_size - i - 1] << (i * 8);
+    }
+
+    const char* format = ((data_size == 1) ? "%02X" : (data_size == 2 ? "%04X" : "%08X"));
+
+    ImGui::Text(format, data);
+}
+
+void MemEditor::DrawDataPreviewAsDec(int address, uint8_t* mem_data, int mem_size)
+{
+    int data_size = DataPreviewSize();
+    if (address + data_size > mem_size)
+    {
+        ImGui::Text(" ");
+        return;
+    }
+
+    int data = 0;
+
+    for (int i = 0; i < data_size; i++)
+    {
+        if (m_preview_endianess == 0)
+            data |= mem_data[address + i] << (i * 8);
+        else
+            data |= mem_data[address + data_size - i - 1] << (i * 8);
+    }
+
+    switch (m_preview_data_type)
+    {
+        case 0:
+        {
+            ImGui::Text("%u", (uint8_t)data);
+            break;
+        }
+        case 1:
+        {
+            ImGui::Text("%d", (int8_t)data);
+            break;
+        }
+        case 2:
+        {
+            ImGui::Text("%u", (uint16_t)data);
+            break;
+        }
+        case 3:
+        {
+            ImGui::Text("%d", (int16_t)data);
+            break;
+        }
+        case 4:
+        {
+            ImGui::Text("%u", (uint32_t)data);
+            break;
+        }
+        case 5:
+        {
+            ImGui::Text("%d", (int32_t)data);
+            break;
+        }
+    }
+}
+void MemEditor::DrawDataPreviewAsBin(int address, uint8_t* mem_data, int mem_size)
+{
+    int data_size = DataPreviewSize();
+    if (address + data_size > mem_size)
+    {
+        ImGui::Text(" ");
+        return;
+    };
+
+    int data = 0;
+
+    for (int i = 0; i < data_size; i++)
+    {
+        if (m_preview_endianess == 0)
+            data |= mem_data[address + i] << (i * 8);
+        else
+            data |= mem_data[address + data_size - i - 1] << (i * 8);
+    }
+
+    std::string bin = "";
+    for (int i = 0; i < data_size * 8; i++)
+    {
+        if ((i % 4) == 0 && i > 0)
+            bin = " " + bin;
+        bin = ((data >> i) & 1 ? "1" : "0") + bin;
+    }
+
+    ImGui::Text("%s", bin.c_str());
+}
+
+int MemEditor::DataPreviewSize()
+{
+    switch (m_preview_data_type)
+    {
+        case 0:
+        case 1:
+            return 1;
+        case 2:
+        case 3:
+            return 2;
+        case 4:
+        case 5:
+            return 4;
+        default:
+            return 1;
+    }
 }

@@ -37,8 +37,13 @@ private:
     void DrawSelectionFrame(int x, int y, int address, ImVec2 cellPos, ImVec2 cellSize);
     void HandleSelection(int address, int row);
     void JumpToAddress(int address);
-    void DrawOptions(int mem_size, int base_display_addr);
+    void DrawCursors(int mem_size, int base_display_addr);
+    void DrawOptions();
     void DrawDataPreview(int address, uint8_t* mem_data, int mem_size);
+    void DrawDataPreviewAsHex(int address, uint8_t* mem_data, int mem_size);
+    void DrawDataPreviewAsDec(int address, uint8_t* mem_data, int mem_size);
+    void DrawDataPreviewAsBin(int address, uint8_t* mem_data, int mem_size);
+    int DataPreviewSize();
 
 private:
     float m_separator_column_width;
