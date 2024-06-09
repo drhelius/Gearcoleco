@@ -20,6 +20,7 @@
 #include <math.h>
 #include "imgui/imgui.h"
 #include "imgui/memory_editor.h"
+#include "imgui/colors.h"
 #include "config.h"
 #include "emu.h"
 #include "renderer.h"
@@ -46,17 +47,6 @@ struct DisassmeblerLine
 };
 
 static MemEditor mem_edit;
-static ImVec4 cyan = ImVec4(0.1f,0.9f,0.9f,1.0f);
-static ImVec4 magenta = ImVec4(1.0f,0.502f,0.957f,1.0f);
-static ImVec4 yellow = ImVec4(1.0f,0.90f,0.05f,1.0f);
-static ImVec4 orange = ImVec4(0.992f,0.592f,0.122f,1.0f);
-static ImVec4 red = ImVec4(0.976f,0.149f,0.447f,1.0f);
-static ImVec4 green = ImVec4(0.1f,0.9f,0.1f,1.0f);
-static ImVec4 violet = ImVec4(0.682f,0.506f,1.0f,1.0f);
-static ImVec4 blue = ImVec4(0.2f,0.4f,1.0f,1.0f);
-static ImVec4 white = ImVec4(1.0f,1.0f,1.0f,1.0f);
-static ImVec4 gray = ImVec4(0.5f,0.5f,0.5f,1.0f);
-static ImVec4 dark_gray = ImVec4(0.1f,0.1f,0.1f,1.0f);
 static std::vector<DebugSymbol> symbols;
 static Memory::stDisassembleRecord* selected_record = NULL;
 static char brk_address_cpu[5] = "";
