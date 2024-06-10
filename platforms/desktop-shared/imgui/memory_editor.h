@@ -31,6 +31,8 @@ public:
     ~MemEditor();
 
     void Draw(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
+    void Copy(uint8_t** data, int* size);
+    void Paste(uint8_t* data, int size);
 
 private:
     bool IsColumnSeparator(int current_column, int column_count);
@@ -60,6 +62,7 @@ private:
     int m_preview_data_type;
     int m_preview_endianess;
     int m_jump_to_address;
+    uint8_t* m_mem_data;
 };
 
 #endif	/* MEM_EDITOR_H */

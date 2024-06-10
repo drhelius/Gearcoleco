@@ -211,6 +211,12 @@ void gui_shortcut(gui_ShortCutEvent event)
         if (config_debug.debug)
             gui_debug_go_back();
         break;
+    case gui_ShortcutDebugCopy:
+        gui_debug_copy_memory();
+        break;
+    case gui_ShortcutDebugPaste:
+        gui_debug_paste_memory();
+        break;
     case gui_ShortcutShowMainMenu:
         config_emulator.show_menu = !config_emulator.show_menu;
         break;

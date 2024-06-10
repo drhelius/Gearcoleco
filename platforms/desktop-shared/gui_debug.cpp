@@ -46,11 +46,8 @@ struct DisassmeblerLine
     std::string symbol;
 };
 
-static MemEditor mem_edit_bios;
-static MemEditor mem_edit_ram;
-static MemEditor mem_edit_sgmram;
-static MemEditor mem_edit_rom;
-static MemEditor mem_edit_vram;
+static MemEditor mem_edit[5];
+static int current_mem_edit = 0;
 static std::vector<DebugSymbol> symbols;
 static Memory::stDisassembleRecord* selected_record = NULL;
 static char brk_address_cpu[5] = "";
@@ -197,6 +194,65 @@ void gui_debug_go_back(void)
     goto_back_requested = true;
 }
 
+void gui_debug_copy_memory(void)
+{
+    int size = 0;
+    u8* data = NULL;
+    mem_edit[current_mem_edit].Copy(&data, &size);
+
+    if (IsValidPointer(data))
+    {
+        std::string text;
+
+        for (int i = 0; i < size; i++)
+        {
+            char byte[3];
+            sprintf(byte, "%02X", data[i]);
+            if (i > 0)
+                text += " ";
+            text += byte;
+        }
+
+        SDL_SetClipboardText(text.c_str());
+    }
+}
+
+void gui_debug_paste_memory(void)
+{
+    char* clipboard = SDL_GetClipboardText();
+
+    if (IsValidPointer(clipboard))
+    {
+        std::string text(clipboard);
+
+        text.erase(std::remove(text.begin(), text.end(), ' '), text.end());
+
+        int buffer_size = text.size() / 2;
+        u8* data = new u8[buffer_size];
+
+        for (size_t i = 0; i < buffer_size; i ++)
+        {
+            std::string byte = text.substr(i * 2, 2);
+
+            try
+            {
+                data[i] = (u8)std::stoul(byte, 0, 16);
+            }
+            catch(const std::invalid_argument&)
+            {
+                delete[] data;
+                return;
+            }
+        }
+
+        mem_edit[current_mem_edit].Paste(data, buffer_size);
+
+        delete[] data;
+    }
+
+    SDL_free(clipboard);
+}
+
 static void debug_window_memory(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
@@ -226,7 +282,8 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("BIOS"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit_bios.Draw(memory->GetBios(), 0x2000, 0);
+            current_mem_edit = 0;
+            mem_edit[current_mem_edit].Draw(memory->GetBios(), 0x2000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -234,7 +291,8 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit_ram.Draw(memory->GetRam(), 0x400, 0x7000);
+            current_mem_edit = 1;
+            mem_edit[current_mem_edit].Draw(memory->GetRam(), 0x400, 0x7000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -242,7 +300,8 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("SGM RAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit_sgmram.Draw(memory->GetSGMRam(), 0x8000, 0x0000);
+            current_mem_edit = 2;
+            mem_edit[current_mem_edit].Draw(memory->GetSGMRam(), 0x8000, 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -250,7 +309,8 @@ static void debug_window_memory(void)
         if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit_rom.Draw(cart->GetROM(), cart->GetROMSize(), 0x0000);
+            current_mem_edit = 3;
+            mem_edit[current_mem_edit].Draw(cart->GetROM(), cart->GetROMSize(), 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
@@ -258,7 +318,8 @@ static void debug_window_memory(void)
         if (ImGui::BeginTabItem("VRAM"))
         {
             ImGui::PushFont(gui_default_font);
-            mem_edit_vram.Draw(video->GetVRAM(), 0x4000, 0);
+            current_mem_edit = 4;
+            mem_edit[current_mem_edit].Draw(video->GetVRAM(), 0x4000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }

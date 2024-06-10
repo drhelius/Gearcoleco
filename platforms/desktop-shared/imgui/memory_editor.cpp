@@ -37,6 +37,7 @@ MemEditor::MemEditor()
     m_preview_data_type = 0;
     m_preview_endianess = 0;
     m_jump_to_address = -1;
+    m_mem_data = NULL;
 }
 
 MemEditor::~MemEditor()
@@ -46,6 +47,8 @@ MemEditor::~MemEditor()
 
 void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
 {
+    m_mem_data = mem_data;
+
     ImVec4 addr_color = cyan;
     ImVec4 ascii_color = magenta;
     ImVec4 column_color = yellow;
@@ -105,8 +108,6 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
             m_row_scroll_top = ImGui::GetScrollY() / character_size.y;
             m_row_scroll_bottom = m_row_scroll_top + (ImGui::GetWindowHeight() / character_size.y);
 
-            //ImGui::TableSetupScrollFreeze(0, 1);
-
             ImGui::TableSetupColumn("ADDR");
             ImGui::TableSetupColumn("");
 
@@ -157,7 +158,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                         }
 
                         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                        
+
                         if (m_editing_address == byte_address)
                         {
                             ImGui::PushItemWidth((character_size).x *2);
@@ -275,7 +276,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
 
     }
     ImGui::EndChild();
-    
+
     DrawCursors(mem_size, base_display_addr);
     DrawDataPreview(m_selection_start, mem_data, mem_size);
     DrawOptions();
@@ -375,7 +376,6 @@ void MemEditor::JumpToAddress(int address)
 
 void MemEditor::DrawCursors(int mem_size, int base_display_addr)
 {
-    
     ImVec4 color = ImVec4(0.1f,0.9f,0.9f,1.0f);
 
     ImGui::TextColored(color, "REGION:");
@@ -387,7 +387,7 @@ void MemEditor::DrawCursors(int mem_size, int base_display_addr)
     if (m_selection_start == m_selection_end)
         ImGui::Text("%04X", m_selection_start);
     else
-        ImGui::Text("%04X-%04X",m_selection_start, m_selection_end);
+        ImGui::Text("%04X-%04X", m_selection_start, m_selection_end);
     ImGui::Separator();
 }
 
@@ -576,5 +576,26 @@ int MemEditor::DataPreviewSize()
             return 4;
         default:
             return 1;
+    }
+}
+
+void MemEditor::Copy(uint8_t** data, int* size)
+{
+    int start = m_selection_start;
+    int end = m_selection_end;
+
+    *size = end - start + 1;
+    *data = m_mem_data + start;
+}
+
+void MemEditor::Paste(uint8_t* data, int size)
+{
+    int selection = m_selection_end - m_selection_start + 1;
+    int start = m_selection_start;
+    int end = m_selection_start + (size < selection ? size : selection);
+
+    for (int i = start; i < end; i++)
+    {
+        m_mem_data[i] = data[i - start];
     }
 }
