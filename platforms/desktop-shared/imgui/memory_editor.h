@@ -37,6 +37,7 @@ public:
 private:
     bool IsColumnSeparator(int current_column, int column_count);
     void DrawSelectionBackground(int x, int address, ImVec2 cellPos, ImVec2 cellSize);
+    void DrawSelectionAsciiBackground(int x, int address, ImVec2 cellPos, ImVec2 cellSize);
     void DrawSelectionFrame(int x, int y, int address, ImVec2 cellPos, ImVec2 cellSize);
     void HandleSelection(int address, int row);
     void JumpToAddress(int address);
