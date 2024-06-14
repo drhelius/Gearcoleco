@@ -244,7 +244,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                             ImVec2 cell_start_pos = ImGui::GetCursorScreenPos() - ImGui::GetStyle().CellPadding;
                             ImVec2 cell_size = (character_size * ImVec2(1, 1)) + (ImVec2(2, 2) * ImGui::GetStyle().CellPadding) + ImVec2(1 + byte_cell_padding, 0);
 
-                            DrawSelectionAsciiBackground(x, byte_address, cell_start_pos, cell_size);
+                            DrawSelectionAsciiBackground(byte_address, cell_start_pos, cell_size);
 
                             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (character_cell_padding * 1) / 2);
                             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -307,10 +307,10 @@ void MemEditor::DrawSelectionBackground(int x, int address, ImVec2 cell_pos, ImV
         cell_size.x += m_separator_column_width + 1;
     }
 
-    drawList->AddRectFilled(cell_pos, cell_pos + cell_size, ImColor(background_color));
+    drawList->AddRectFilled(cell_pos + ImVec2(x == 0 ? 1 : 0, 0), cell_pos + cell_size, ImColor(background_color));
 }
 
-void MemEditor::DrawSelectionAsciiBackground(int x, int address, ImVec2 cell_pos, ImVec2 cell_size)
+void MemEditor::DrawSelectionAsciiBackground(int address, ImVec2 cell_pos, ImVec2 cell_size)
 {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec4 background_color = dark_cyan;
@@ -338,7 +338,7 @@ void MemEditor::DrawSelectionFrame(int x, int y, int address, ImVec2 cell_pos, I
     }
 
     if (x == 0 || address == start)
-        drawList->AddLine(cell_pos - ImVec2(0, 1), cell_pos + ImVec2(0, cell_size.y), ImColor(frame_color), 1);
+        drawList->AddLine(cell_pos, cell_pos + ImVec2(0, cell_size.y), ImColor(frame_color), 1);
 
     if (x == (m_bytes_per_row - 1) || (address) == end)
         drawList->AddLine(cell_pos + ImVec2(cell_size.x, -1), cell_pos + cell_size - ImVec2(0, 1), ImColor(frame_color), 1);
