@@ -38,6 +38,8 @@ MemEditor::MemEditor()
     m_preview_endianess = 0;
     m_jump_to_address = -1;
     m_mem_data = NULL;
+    m_mem_size = 0;
+    m_mem_base_addr = 0;
 }
 
 MemEditor::~MemEditor()
@@ -48,6 +50,8 @@ MemEditor::~MemEditor()
 void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
 {
     m_mem_data = mem_data;
+    m_mem_size = mem_size;
+    m_mem_base_addr = base_display_addr;
 
     ImVec4 addr_color = cyan;
     ImVec4 ascii_color = magenta;
@@ -131,10 +135,10 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
                 for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
                 {
                     ImGui::TableNextRow();
-                    int address = (row * m_bytes_per_row) + base_display_addr;
+                    int address = (row * m_bytes_per_row);
 
                     ImGui::TableNextColumn();
-                    ImGui::Text("%04X:  ", address);
+                    ImGui::Text("%04X:  ", address + base_display_addr);
                     ImGui::TableNextColumn();
 
                     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(2.75f, 0.0f));
@@ -282,8 +286,8 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
     }
     ImGui::EndChild();
 
-    DrawCursors(mem_size, base_display_addr);
-    DrawDataPreview(m_selection_start, mem_data, mem_size);
+    DrawCursors();
+    DrawDataPreview(m_selection_start);
     DrawOptions();
 }
 
@@ -391,20 +395,20 @@ void MemEditor::JumpToAddress(int address)
     m_jump_to_address = address;
 }
 
-void MemEditor::DrawCursors(int mem_size, int base_display_addr)
+void MemEditor::DrawCursors()
 {
     ImVec4 color = ImVec4(0.1f,0.9f,0.9f,1.0f);
 
     ImGui::TextColored(color, "REGION:");
     ImGui::SameLine();
-    ImGui::Text("%04X-%04X", base_display_addr, base_display_addr + mem_size);
+    ImGui::Text("%04X-%04X", m_mem_base_addr, m_mem_base_addr + m_mem_size);
     ImGui::SameLine();
     ImGui::TextColored(color, " SELECTION:");
     ImGui::SameLine();
     if (m_selection_start == m_selection_end)
-        ImGui::Text("%04X", m_selection_start);
+        ImGui::Text("%04X", m_mem_base_addr + m_selection_start);
     else
-        ImGui::Text("%04X-%04X", m_selection_start, m_selection_end);
+        ImGui::Text("%04X-%04X", m_mem_base_addr + m_selection_start, m_mem_base_addr + m_selection_end);
     ImGui::Separator();
 }
 
@@ -451,30 +455,30 @@ void MemEditor::DrawOptions()
     }
 }
 
-void MemEditor::DrawDataPreview(int address, uint8_t* mem_data, int mem_size)
+void MemEditor::DrawDataPreview(int address)
 {
-    if (address < 0 || address >= mem_size)
+    if (address < 0 || address >= m_mem_size)
         return;
 
     ImVec4 color = orange;
 
     ImGui::TextColored(color, "Dec:");
     ImGui::SameLine();
-    DrawDataPreviewAsDec(address, mem_data, mem_size);
+    DrawDataPreviewAsDec(address);
 
     ImGui::TextColored(color, "Hex:");
     ImGui::SameLine();
-    DrawDataPreviewAsHex(address, mem_data, mem_size);
+    DrawDataPreviewAsHex(address);
 
     ImGui::TextColored(color, "Bin:");
     ImGui::SameLine();
-    DrawDataPreviewAsBin(address, mem_data, mem_size);
+    DrawDataPreviewAsBin(address);
 }
 
-void MemEditor::DrawDataPreviewAsHex(int address, uint8_t* mem_data, int mem_size)
+void MemEditor::DrawDataPreviewAsHex(int address)
 {
     int data_size = DataPreviewSize();
-    if (address + data_size > mem_size)
+    if (address + data_size > m_mem_size)
     {
         ImGui::Text(" ");
         return;
@@ -485,9 +489,9 @@ void MemEditor::DrawDataPreviewAsHex(int address, uint8_t* mem_data, int mem_siz
     for (int i = 0; i < data_size; i++)
     {
         if (m_preview_endianess == 0)
-            data |= mem_data[address + i] << (i * 8);
+            data |= m_mem_data[address + i] << (i * 8);
         else
-            data |= mem_data[address + data_size - i - 1] << (i * 8);
+            data |= m_mem_data[address + data_size - i - 1] << (i * 8);
     }
 
     const char* format = ((data_size == 1) ? "%02X" : (data_size == 2 ? "%04X" : "%08X"));
@@ -495,10 +499,10 @@ void MemEditor::DrawDataPreviewAsHex(int address, uint8_t* mem_data, int mem_siz
     ImGui::Text(format, data);
 }
 
-void MemEditor::DrawDataPreviewAsDec(int address, uint8_t* mem_data, int mem_size)
+void MemEditor::DrawDataPreviewAsDec(int address)
 {
     int data_size = DataPreviewSize();
-    if (address + data_size > mem_size)
+    if (address + data_size > m_mem_size)
     {
         ImGui::Text(" ");
         return;
@@ -509,9 +513,9 @@ void MemEditor::DrawDataPreviewAsDec(int address, uint8_t* mem_data, int mem_siz
     for (int i = 0; i < data_size; i++)
     {
         if (m_preview_endianess == 0)
-            data |= mem_data[address + i] << (i * 8);
+            data |= m_mem_data[address + i] << (i * 8);
         else
-            data |= mem_data[address + data_size - i - 1] << (i * 8);
+            data |= m_mem_data[address + data_size - i - 1] << (i * 8);
     }
 
     switch (m_preview_data_type)
@@ -548,10 +552,10 @@ void MemEditor::DrawDataPreviewAsDec(int address, uint8_t* mem_data, int mem_siz
         }
     }
 }
-void MemEditor::DrawDataPreviewAsBin(int address, uint8_t* mem_data, int mem_size)
+void MemEditor::DrawDataPreviewAsBin(int address)
 {
     int data_size = DataPreviewSize();
-    if (address + data_size > mem_size)
+    if (address + data_size > m_mem_size)
     {
         ImGui::Text(" ");
         return;
@@ -562,9 +566,9 @@ void MemEditor::DrawDataPreviewAsBin(int address, uint8_t* mem_data, int mem_siz
     for (int i = 0; i < data_size; i++)
     {
         if (m_preview_endianess == 0)
-            data |= mem_data[address + i] << (i * 8);
+            data |= m_mem_data[address + i] << (i * 8);
         else
-            data |= mem_data[address + data_size - i - 1] << (i * 8);
+            data |= m_mem_data[address + data_size - i - 1] << (i * 8);
     }
 
     std::string bin = "";

@@ -41,12 +41,12 @@ private:
     void DrawSelectionFrame(int x, int y, int address, ImVec2 cellPos, ImVec2 cellSize);
     void HandleSelection(int address, int row);
     void JumpToAddress(int address);
-    void DrawCursors(int mem_size, int base_display_addr);
+    void DrawCursors();
     void DrawOptions();
-    void DrawDataPreview(int address, uint8_t* mem_data, int mem_size);
-    void DrawDataPreviewAsHex(int address, uint8_t* mem_data, int mem_size);
-    void DrawDataPreviewAsDec(int address, uint8_t* mem_data, int mem_size);
-    void DrawDataPreviewAsBin(int address, uint8_t* mem_data, int mem_size);
+    void DrawDataPreview(int address);
+    void DrawDataPreviewAsHex(int address);
+    void DrawDataPreviewAsDec(int address);
+    void DrawDataPreviewAsBin(int address);
     int DataPreviewSize();
 
 private:
@@ -64,6 +64,8 @@ private:
     int m_preview_endianess;
     int m_jump_to_address;
     uint8_t* m_mem_data;
+    int m_mem_size;
+    int m_mem_base_addr;
 };
 
 #endif	/* MEM_EDITOR_H */
