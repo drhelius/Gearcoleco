@@ -227,7 +227,7 @@ void gui_debug_paste_memory(void)
 
         text.erase(std::remove(text.begin(), text.end(), ' '), text.end());
 
-        int buffer_size = text.size() / 2;
+        size_t buffer_size = text.size() / 2;
         u8* data = new u8[buffer_size];
 
         for (size_t i = 0; i < buffer_size; i ++)
