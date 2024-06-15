@@ -67,7 +67,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
     int character_cell_padding = 0;
     int max_chars_per_cell = 2;
     ImVec2 character_size = ImGui::CalcTextSize("0");
-    float footer_height =  ImGui::GetFrameHeightWithSpacing() * 4;
+    float footer_height = (ImGui::GetFrameHeightWithSpacing() * 4) + 4;
     char buf[16];
 
     if (ImGui::BeginChild("##mem", ImVec2(ImGui::GetContentRegionAvail().x, -footer_height), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav))
