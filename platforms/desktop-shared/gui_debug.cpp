@@ -47,6 +47,7 @@ struct DisassmeblerLine
 };
 
 static MemEditor mem_edit[5];
+static int mem_edit_select = -1;
 static int current_mem_edit = 0;
 static std::vector<DebugSymbol> symbols;
 static Memory::stDisassembleRecord* selected_record = NULL;
@@ -279,45 +280,55 @@ static void debug_window_memory(void)
 
     if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
     {
-        if (ImGui::BeginTabItem("BIOS"))
+        if (ImGui::BeginTabItem("BIOS", NULL, mem_edit_select == 0 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
         {
             ImGui::PushFont(gui_default_font);
+            if (mem_edit_select == 0)
+                mem_edit_select = -1;
             current_mem_edit = 0;
             mem_edit[current_mem_edit].Draw(memory->GetBios(), 0x2000, 0);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("RAM"))
+        if (ImGui::BeginTabItem("RAM", NULL, mem_edit_select == 1 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
         {
             ImGui::PushFont(gui_default_font);
+             if (mem_edit_select == 1)
+                mem_edit_select = -1;
             current_mem_edit = 1;
             mem_edit[current_mem_edit].Draw(memory->GetRam(), 0x400, 0x7000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("SGM RAM"))
+        if (ImGui::BeginTabItem("SGM RAM", NULL, mem_edit_select == 2 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
         {
             ImGui::PushFont(gui_default_font);
+            if (mem_edit_select == 2)
+                mem_edit_select = -1;
             current_mem_edit = 2;
             mem_edit[current_mem_edit].Draw(memory->GetSGMRam(), 0x8000, 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
 
-        if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM"))
+        if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM", NULL, mem_edit_select == 3 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
         {
             ImGui::PushFont(gui_default_font);
+            if (mem_edit_select == 3)
+                mem_edit_select = -1;
             current_mem_edit = 3;
             mem_edit[current_mem_edit].Draw(cart->GetROM(), cart->GetROMSize(), 0x0000);
             ImGui::PopFont();
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("VRAM"))
+        if (ImGui::BeginTabItem("VRAM", NULL, mem_edit_select == 4 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
         {
             ImGui::PushFont(gui_default_font);
+            if (mem_edit_select == 4)
+                mem_edit_select = -1;
             current_mem_edit = 4;
             mem_edit[current_mem_edit].Draw(video->GetVRAM(), 0x4000, 0);
             ImGui::PopFont();
@@ -1050,6 +1061,12 @@ static void debug_window_vram_background(void)
         ImGui::Text("$%03X", name_tile);
         ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
         ImGui::Text(" $%04X", tile_addr);
+
+        if (ImGui::IsMouseClicked(0))
+        {
+            mem_edit_select = 4;
+            mem_edit[4].JumpToAddress(tile_addr);
+        }
     }
 
     ImGui::Columns(1);
@@ -1133,6 +1150,12 @@ static void debug_window_vram_tiles(void)
         ImGui::Text("$%04X", tile_addr); 
 
         ImGui::PopFont();
+
+        if (ImGui::IsMouseClicked(0))
+        {
+            mem_edit_select = 4;
+            mem_edit[4].JumpToAddress(tile_addr);
+        }
     }
 
     ImGui::Columns(1);
@@ -1279,6 +1302,12 @@ static void debug_window_vram_sprites(void)
 
             ImGui::TextColored(cyan, " Early Clock:"); ImGui::SameLine();
             sprite_shift > 0 ? ImGui::TextColored(green, "ON ") : ImGui::TextColored(gray, "OFF");
+
+            if (ImGui::IsMouseClicked(0))
+            {
+                mem_edit_select = 4;
+                mem_edit[4].JumpToAddress(sprite_tile_addr);
+            }
         }
     }
 

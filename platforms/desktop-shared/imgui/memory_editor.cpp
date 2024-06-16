@@ -68,7 +68,7 @@ void MemEditor::Draw(uint8_t* mem_data, int mem_size, int base_display_addr)
     int max_chars_per_cell = 2;
     ImVec2 character_size = ImGui::CalcTextSize("0");
     float footer_height = (ImGui::GetFrameHeightWithSpacing() * 4) + 4;
-    char buf[16];
+    char buf[32];
 
     if (ImGui::BeginChild("##mem", ImVec2(ImGui::GetContentRegionAvail().x, -footer_height), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav))
     {
@@ -390,11 +390,6 @@ void MemEditor::HandleSelection(int address, int row)
     }
 }
 
-void MemEditor::JumpToAddress(int address)
-{
-    m_jump_to_address = address;
-}
-
 void MemEditor::DrawCursors()
 {
     ImVec4 color = ImVec4(0.1f,0.9f,0.9f,1.0f);
@@ -619,4 +614,9 @@ void MemEditor::Paste(uint8_t* data, int size)
     {
         m_mem_data[i] = data[i - start];
     }
+}
+
+void MemEditor::JumpToAddress(int address)
+{
+    m_jump_to_address = address - m_mem_base_addr;
 }

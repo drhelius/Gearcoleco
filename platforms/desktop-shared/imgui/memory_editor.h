@@ -33,6 +33,7 @@ public:
     void Draw(uint8_t* mem_data, int mem_size, int base_display_addr = 0x0000);
     void Copy(uint8_t** data, int* size);
     void Paste(uint8_t* data, int size);
+    void JumpToAddress(int address);
 
 private:
     bool IsColumnSeparator(int current_column, int column_count);
@@ -40,7 +41,6 @@ private:
     void DrawSelectionAsciiBackground(int address, ImVec2 cellPos, ImVec2 cellSize);
     void DrawSelectionFrame(int x, int y, int address, ImVec2 cellPos, ImVec2 cellSize);
     void HandleSelection(int address, int row);
-    void JumpToAddress(int address);
     void DrawCursors();
     void DrawOptions();
     void DrawDataPreview(int address);
