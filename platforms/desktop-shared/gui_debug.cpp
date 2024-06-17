@@ -915,7 +915,7 @@ static void debug_window_vram(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(896, 31), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(668, 624), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(668, 640), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("VDP Viewer", &config_debug.show_video);
 
@@ -1014,6 +1014,14 @@ static void debug_window_vram_background(void)
         }
     }
 
+    int name_table_addr = regs[2] << 10;
+    int color_table_addr = regs[3] << 6;
+    if (mode == 2)
+        color_table_addr &= 0x2000;
+
+    ImGui::TextColored(cyan, " Name Table Addr:"); ImGui::SameLine();
+    ImGui::Text("$%04X", name_table_addr);
+
     float mouse_x = io.MousePos.x - p.x;
     float mouse_y = io.MousePos.y - p.y;
 
@@ -1037,7 +1045,6 @@ static void debug_window_vram_background(void)
         ImGui::TextColored(cyan, " Y:"); ImGui::SameLine();
         ImGui::Text("$%02X", tile_y);
 
-        int name_table_addr = regs[2] << 10;
         int pattern_table_addr = regs[4] << 11;
         int region = (tile_y & 0x18) << 5;
 
@@ -1057,15 +1064,28 @@ static void debug_window_vram_background(void)
 
         int tile_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
 
+        int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
+
+        int color_tile_addr = 0;
+
+        if (mode == 2)
+            color_tile_addr = color_table_addr + ((name_tile & color_mask) << 3);
+        else if (mode == 0)
+            color_tile_addr = color_table_addr + (name_tile >> 3);
+
+        ImGui::TextColored(cyan, " Name Addr:"); ImGui::SameLine();
+        ImGui::Text(" $%04X", name_tile_addr);
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
         ImGui::Text("$%03X", name_tile);
         ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
         ImGui::Text(" $%04X", tile_addr);
+        ImGui::TextColored(cyan, " Color Addr:"); ImGui::SameLine();
+        ImGui::Text("$%04X", color_tile_addr);
 
         if (ImGui::IsMouseClicked(0))
         {
             mem_edit_select = 4;
-            mem_edit[4].JumpToAddress(tile_addr);
+            mem_edit[4].JumpToAddress(name_tile_addr);
         }
     }
 
@@ -1092,6 +1112,8 @@ static void debug_window_vram_tiles(void)
 
     ImGui::Checkbox("Show Grid##grid_tiles", &show_grid);
 
+    ImGui::PushFont(gui_default_font);
+
     ImGui::Columns(2, "tiles", false);
     ImGui::SetColumnOffset(1, width + 10.0f);
 
@@ -1116,6 +1138,11 @@ static void debug_window_vram_tiles(void)
         }
     }
 
+    int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
+
+    ImGui::TextColored(cyan, " Pattern Table Addr:"); ImGui::SameLine();
+    ImGui::Text("$%04X", pattern_table_addr);
+
     float mouse_x = io.MousePos.x - p.x;
     float mouse_y = io.MousePos.y - p.y;
 
@@ -1133,23 +1160,16 @@ static void debug_window_vram_tiles(void)
 
         ImGui::Image((void*)(intptr_t)renderer_emu_debug_vram_tiles, ImVec2(128.0f, 128.0f), ImVec2((1.0f / 32.0f) * tile_x, (1.0f / 32.0f) * tile_y), ImVec2((1.0f / 32.0f) * (tile_x + 1), (1.0f / 32.0f) * (tile_y + 1)));
 
-        ImGui::PushFont(gui_default_font);
-
         ImGui::TextColored(yellow, "DETAILS:");
 
         int tile = (tile_y << 5) + tile_x;
 
-        int tile_addr = 0;
-
-        int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
-        tile_addr = (pattern_table_addr + (tile << 3)) & 0x3FFF;
+        int tile_addr = (pattern_table_addr + (tile << 3)) & 0x3FFF;
 
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
         ImGui::Text("$%03X", tile); 
         ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
         ImGui::Text("$%04X", tile_addr); 
-
-        ImGui::PopFont();
 
         if (ImGui::IsMouseClicked(0))
         {
@@ -1159,6 +1179,8 @@ static void debug_window_vram_tiles(void)
     }
 
     ImGui::Columns(1);
+
+    ImGui::PopFont();
 }
 
 static void debug_window_vram_sprites(void)
@@ -1286,6 +1308,9 @@ static void debug_window_vram_sprites(void)
             draw_list->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
 
             ImGui::TextColored(yellow, "DETAILS:");
+            ImGui::TextColored(cyan, " Attribute Addr:"); ImGui::SameLine();
+            ImGui::Text("$%04X", sprite_attribute_offset);
+
             ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
             ImGui::Text("$%02X", x);
             ImGui::TextColored(cyan, " Y:"); ImGui::SameLine();
