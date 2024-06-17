@@ -345,7 +345,7 @@ void MemEditor::DrawSelectionFrame(int x, int y, int address, ImVec2 cell_pos, I
         drawList->AddLine(cell_pos, cell_pos + ImVec2(0, cell_size.y), ImColor(frame_color), 1);
 
     if (x == (m_bytes_per_row - 1) || (address) == end)
-        drawList->AddLine(cell_pos + ImVec2(cell_size.x, -1), cell_pos + cell_size - ImVec2(0, 1), ImColor(frame_color), 1);
+        drawList->AddLine(cell_pos + ImVec2(cell_size.x, 0), cell_pos + cell_size - ImVec2(0, 0), ImColor(frame_color), 1);
 
     if (y == 0 || (address - m_bytes_per_row) < start)
         drawList->AddLine(cell_pos - ImVec2(1, 0), cell_pos + ImVec2(cell_size.x + 1, 0), ImColor(frame_color), 1);
@@ -417,7 +417,7 @@ void MemEditor::DrawOptions()
         ImGui::Text("Columns:   ");
         ImGui::SameLine();
         ImGui::PushItemWidth(120.0f);
-        ImGui::SliderInt("##columns", &m_bytes_per_row, 4, 16);
+        ImGui::SliderInt("##columns", &m_bytes_per_row, 4, 32);
         ImGui::Text("Preview as:");
         ImGui::SameLine();
         ImGui::PushItemWidth(120.0f);
