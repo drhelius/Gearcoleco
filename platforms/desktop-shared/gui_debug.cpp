@@ -1027,7 +1027,7 @@ static void debug_window_vram_background(void)
 
     int tile_x = -1;
     int tile_y = -1;
-    if ((mouse_x >= 0.0f) && (mouse_x < size_h) && (mouse_y >= 0.0f) && (mouse_y < size_v))
+    if (ImGui::IsWindowHovered() && (mouse_x >= 0.0f) && (mouse_x < size_h) && (mouse_y >= 0.0f) && (mouse_y < size_v))
     {
         tile_x = (int)(mouse_x / spacing_h);
         tile_y = (int)(mouse_y / spacing_v);
@@ -1149,7 +1149,7 @@ static void debug_window_vram_tiles(void)
     int tile_x = -1;
     int tile_y = -1;
 
-    if ((mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+    if (ImGui::IsWindowHovered() && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
     {
         tile_x = (int)(mouse_x / spacing);
         tile_y = (int)(mouse_y / spacing);
@@ -1253,7 +1253,7 @@ static void debug_window_vram_sprites(void)
         float mouse_x = io.MousePos.x - p[s].x;
         float mouse_y = io.MousePos.y - p[s].y;
 
-        if ((mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+        if (ImGui::IsWindowHovered() && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
         {
             int x = 0;
             int y = 0;
