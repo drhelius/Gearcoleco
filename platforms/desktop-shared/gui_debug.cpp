@@ -1213,6 +1213,7 @@ static void debug_window_vram_sprites(void)
     ImGui::SetColumnOffset(1, sprites_16 ? 330.0f : 200.0f);
 
     ImGui::BeginChild("sprites", ImVec2(0, 0.0f), true);
+    bool window_hovered = ImGui::IsWindowHovered();
 
     for (int s = 0; s < 32; s++)
     {
@@ -1223,7 +1224,7 @@ static void debug_window_vram_sprites(void)
         float mouse_x = io.MousePos.x - p[s].x;
         float mouse_y = io.MousePos.y - p[s].y;
 
-        if ((mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+        if (window_hovered && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
             draw_list->AddRect(ImVec2(p[s].x, p[s].y), ImVec2(p[s].x + width, p[s].y + height), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 3.0f);
@@ -1253,7 +1254,7 @@ static void debug_window_vram_sprites(void)
         float mouse_x = io.MousePos.x - p[s].x;
         float mouse_y = io.MousePos.y - p[s].y;
 
-        if (ImGui::IsWindowHovered() && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+        if (window_hovered && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
         {
             int x = 0;
             int y = 0;
