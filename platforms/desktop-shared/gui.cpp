@@ -97,10 +97,6 @@ void gui_init(void)
     io.IniFilename = config_imgui_file_path;
     io.FontGlobalScale /= application_display_scale;
 
-#if defined(__APPLE__) || defined(_WIN32)
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-#endif
-
     gui_roboto_font = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoMedium_compressed_data, RobotoMedium_compressed_size, 17.0f * application_display_scale, NULL, io.Fonts->GetGlyphRangesCyrillic());
 
     ImFontConfig font_cfg;
@@ -898,6 +894,18 @@ static void main_menu(void)
             ImGui::MenuItem("Show VRAM Registers", "", &config_debug.show_video_registers, config_debug.debug);
 
             ImGui::Separator();
+
+#if defined(__APPLE__) || defined(_WIN32)
+            if (ImGui::MenuItem("Multi-Viewport", "", &config_debug.multi_viewport, config_debug.debug))
+            {
+                if (config_debug.multi_viewport)
+                    ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+                else
+                    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+            }
+
+            ImGui::Separator();
+#endif
 
             if (ImGui::MenuItem("Load Symbols...", "", (void*)0, config_debug.debug))
             {
