@@ -19,14 +19,16 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 ## Downloads
 
 - **Windows**:
-  - [Gearcoleco-1.1.0-windows.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-windows.zip)
+  - [Gearcoleco-1.2.0-windows-x64.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.2.0-windows-x64.zip)
+  - [Gearcoleco-1.2.0-windows-arm64.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.2.0-windows-arm64.zip)
   - NOTE: You may need to install the [Microsoft Visual C++ Redistributable](https://go.microsoft.com/fwlink/?LinkId=746572)
 - **macOS**:
-  - [Gearcoleco-1.1.0-macos-arm.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-macos-arm.zip)
-  - [Gearcoleco-1.1.0-macos-intel.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-macos-intel.zip)
+  - [Gearcoleco-1.2.0-macos-arm.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.2.0-macos-arm.zip)
+  - [Gearcoleco-1.2.0-macos-intel.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.2.0-macos-intel.zip)
 - **Linux**:
-  - [Gearcoleco-1.1.0-ubuntu-22.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-ubuntu-22.04.zip)
-  - [Gearcoleco-1.1.0-ubuntu-20.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.1.0/Gearcoleco-1.1.0-ubuntu-20.04.zip) 
+  - [Gearcoleco-1.2.0-ubuntu-24.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.1.0-ubuntu-24.04.zip)
+  - [Gearcoleco-1.2.0-ubuntu-22.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.1.0-ubuntu-22.04.zip)
+  - [Gearcoleco-1.2.0-ubuntu-20.04.zip](https://github.com/drhelius/Gearcoleco/releases/download/1.2.0/Gearcoleco-1.1.0-ubuntu-20.04.zip) 
   - NOTE: You may need to install `libsdl2` and `libglew`
 - **RetroArch**: [Libretro core documentation](https://docs.libretro.com/library/gearcoleco/).
 
