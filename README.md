@@ -54,7 +54,8 @@ Don't hesitate to report bugs or ask for new features by [openning an issue](htt
 - *Overscan*: For a precise representation of the original image using Overscan Top+Bottom and 4:3 Display Aspect Ratio is recommended.
 - *Mouse Cursor*: Automatically hides when hovering main output window or when Main Menu is disabled. 
 - *Portable Mode*: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
-- In debugger mode you can dock windows together by pressing SHIFT and drag'n drop a window into another. You can drag debugger windows outside the main window in macOS and Windows builds.
+- *Docking windows* In debug mode you can dock windows together by pressing SHIFT and drag'n drop a window into another.
+- *Debug multi-viewport* In Windows or macOS you can enable "multi-viewport" in debug menu. You must restart the emulator for the change to take effect. Once enabled you can drag debugger windows outside the main window. 
 - *Debug Symbols*: The emulator always tries to load a symbol file at the same time a rom is being loaded. For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. It is also possible to load a symbol file using the GUI or using the CLI.
 - *Command Line Usage*: ```gearcoleco [rom_file] [symbol_file]```
   
