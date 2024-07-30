@@ -92,9 +92,14 @@ void gui_init(void)
     ImGui::StyleColorsDark();
     ImGuiIO& io = ImGui::GetIO();
 
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigDockingWithShift = true;
     io.IniFilename = config_imgui_file_path;
-
     io.FontGlobalScale /= application_display_scale;
+
+#if defined(__APPLE__) || defined(_WIN32)
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#endif
 
     gui_roboto_font = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoMedium_compressed_data, RobotoMedium_compressed_size, 17.0f * application_display_scale, NULL, io.Fonts->GetGlyphRangesCyrillic());
 
