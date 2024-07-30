@@ -97,6 +97,11 @@ void gui_init(void)
     io.IniFilename = config_imgui_file_path;
     io.FontGlobalScale /= application_display_scale;
 
+#if defined(__APPLE__) || defined(_WIN32)
+    if (config_debug.multi_viewport)
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#endif
+
     gui_roboto_font = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoMedium_compressed_data, RobotoMedium_compressed_size, 17.0f * application_display_scale, NULL, io.Fonts->GetGlyphRangesCyrillic());
 
     ImFontConfig font_cfg;
@@ -896,14 +901,7 @@ static void main_menu(void)
             ImGui::Separator();
 
 #if defined(__APPLE__) || defined(_WIN32)
-            if (ImGui::MenuItem("Multi-Viewport", "", &config_debug.multi_viewport, config_debug.debug))
-            {
-                if (config_debug.multi_viewport)
-                    ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
-                else
-                    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-            }
-
+            ImGui::MenuItem("Multi-Viewport (Restart required)", "", &config_debug.multi_viewport, config_debug.debug);
             ImGui::Separator();
 #endif
 
