@@ -1,7 +1,15 @@
-CXX = g++
-CC = gcc
-#CXX = clang++
-#CC = clang
+define HEADER
+   ____                          _                 
+  / ___| ___  __ _ _ __ ___ ___ | | ___  ___ ___   
+ | |  _ / _ \\/ _` | '__/ __/ _ \\| |/ _ \\/ __/ _ \\  
+ | |_| |  __/ (_| | | | (_| (_) | |  __/ (_| (_) | 
+  \\____|\\___|\\__,_|_|  \\___\\___/|_|\\___|\\___\\___/  
+
+  ** Building for $(PLATFORM) platform ** 
+  ** Git version: $(GIT_VERSION) **
+
+endef
+export HEADER
 
 TARGET_NAME = gearcoleco
 GIT_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags)"
@@ -9,6 +17,15 @@ UNAME_S := $(shell uname -s)
 PLATFORM = "undefined"
 
 OBJECTS += $(SOURCES_C:.c=.o) $(SOURCES_CXX:.cpp=.o)
+
+USE_CLANG ?= 0
+ifeq ($(USE_CLANG), 1)
+    CXX = clang++
+    CC = clang
+else
+    CXX = g++
+    CC = gcc
+endif
 
 CPPFLAGS += -I../ -I../../
 CPPFLAGS += -Wall -Wextra -Wformat  -DEMULATOR_BUILD=\"$(GIT_VERSION)\"
@@ -19,8 +36,8 @@ DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     CPPFLAGS +=-DDEBUG -g3
 else
-    CPPFLAGS +=-DNDEBUG -O3 -flto
-    LDFLAGS += -flto
+    CPPFLAGS +=-DNDEBUG -O3 -flto=auto
+    LDFLAGS += -O3 -flto=auto
 endif
 
 SANITIZE ?= 0
@@ -56,7 +73,7 @@ else
     TARGET := $(TARGET_NAME)
 endif
 
-all: $(TARGET)
+all: header $(TARGET)
 	@echo Build complete for $(PLATFORM)
 
 $(TARGET): $(OBJECTS)
@@ -73,3 +90,6 @@ $(TARGET): $(OBJECTS)
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)
+
+header:
+	@echo "$$HEADER"

@@ -29,19 +29,26 @@
 #include <fstream>
 #include <sstream>
 
+#ifndef EMULATOR_BUILD
+#define EMULATOR_BUILD "undefined"
+#endif
+
+#define GEARCOLECO_TITLE "Gearcoleco"
+#define GEARCOLECO_VERSION EMULATOR_BUILD
+#define GEARCOLECO_TITLE_ASCII "" \
+"   ____                          _                 \n" \
+"  / ___| ___  __ _ _ __ ___ ___ | | ___  ___ ___   \n" \
+" | |  _ / _ \\/ _` | '__/ __/ _ \\| |/ _ \\/ __/ _ \\  \n" \
+" | |_| |  __/ (_| | | | (_| (_) | |  __/ (_| (_) | \n" \
+"  \\____|\\___|\\__,_|_|  \\___\\___/|_|\\___|\\___\\___/  \n"
+
+
 #ifdef DEBUG
 #define DEBUG_GEARCOLECO 1
 #endif
 
 #if defined(PS2) || defined(PSP)
 #define PERFORMANCE
-#endif
-
-#define GEARCOLECO_TITLE "Gearcoleco"
-#define GEARCOLECO_VERSION "1.1.0"
-
-#ifndef EMULATOR_BUILD
-#define EMULATOR_BUILD "undefined"
 #endif
 
 #ifndef NULL
