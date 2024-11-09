@@ -191,6 +191,7 @@ struct GC_RuntimeInfo
 #endif
 
 #define Log(msg, ...) (Log_func(msg, ##__VA_ARGS__))
+#define Debug(msg, ...) (Log_func(msg, ##__VA_ARGS__))
 
 inline void Log_func(const char* const msg, ...)
 {
@@ -210,6 +211,7 @@ inline void Log_func(const char* const msg, ...)
 
 #else
 #define Log(msg, ...)
+#define Debug(msg, ...)
 #endif
 
 inline u8 SetBit(const u8 value, const u8 bit)
