@@ -360,7 +360,8 @@ static void sdl_events_emu(const SDL_Event* event)
         {
             char* dropped_filedir = event->drop.file;
             gui_load_rom(dropped_filedir);
-            SDL_free(dropped_filedir);    // Free dropped_filedir memory
+            SDL_free(dropped_filedir);
+            SDL_SetWindowInputFocus(sdl_window);
         }
         break;
 
