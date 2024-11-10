@@ -138,6 +138,8 @@ void gui_render(void)
 {
     ImGui::NewFrame();
 
+    ImGui::DockSpaceOverViewport();
+
     gui_in_use = dialog_in_use;
     
     main_menu();
