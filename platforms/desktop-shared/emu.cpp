@@ -208,6 +208,11 @@ bool emu_is_audio_enabled(void)
     return audio_enabled;
 }
 
+bool emu_is_audio_open(void)
+{
+    return sound_queue->IsOpen();
+}
+
 void emu_palette(GC_Color* palette)
 {
     gearcoleco->GetVideo()->SetCustomPalette(palette);

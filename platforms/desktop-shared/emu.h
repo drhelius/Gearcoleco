@@ -60,6 +60,7 @@ EXTERN void emu_dissasemble_rom(void);
 EXTERN void emu_audio_mute(bool mute);
 EXTERN void emu_audio_reset(void);
 EXTERN bool emu_is_audio_enabled(void);
+EXTERN bool emu_is_audio_open(void);
 EXTERN void emu_palette(GC_Color* palette);
 EXTERN void emu_predefined_palette(int palette);
 EXTERN void emu_save_ram(const char* file_path);

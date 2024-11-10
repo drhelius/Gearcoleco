@@ -774,11 +774,18 @@ static void render(void)
 
 static void frame_throttle(void)
 {
-    if (emu_is_empty() || emu_is_paused() || config_emulator.ffwd)
+    if (emu_is_empty() || emu_is_paused() || !emu_is_audio_open() || config_emulator.ffwd)
     {
         float elapsed = (float)((frame_time_end - frame_time_start) * 1000) / SDL_GetPerformanceFrequency();
 
         float min = 16.666f;
+
+        if (!emu_is_audio_open())
+        {
+            GC_RuntimeInfo runtime;
+            emu_get_runtime(runtime);
+            min = runtime.region == Region_NTSC ? 16.666f : 20.0f;
+        }
 
         if (config_emulator.ffwd)
         {
