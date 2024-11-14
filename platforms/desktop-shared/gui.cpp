@@ -138,7 +138,8 @@ void gui_render(void)
 {
     ImGui::NewFrame();
 
-    ImGui::DockSpaceOverViewport();
+    if (config_debug.debug)
+        ImGui::DockSpaceOverViewport();
 
     gui_in_use = dialog_in_use;
     
