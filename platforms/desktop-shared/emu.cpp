@@ -292,11 +292,11 @@ void emu_get_info(char* info)
         int rom_banks = cart->GetROMBankCount();
         const char* mapper = get_mapper(cart->GetType());
 
-        sprintf(info, "File Name: %s\nMapper: %s\nRefresh Rate: %s\nCartridge Header: %s\nROM Banks: %d\nScreen Resolution: %dx%d", filename, mapper, pal, checksum, rom_banks, runtime.screen_width, runtime.screen_height);
+        snprintf(info, 512, "File Name: %s\nMapper: %s\nRefresh Rate: %s\nCartridge Header: %s\nROM Banks: %d\nScreen Resolution: %dx%d", filename, mapper, pal, checksum, rom_banks, runtime.screen_width, runtime.screen_height);
     }
     else
     {
-        sprintf(info, "There is no ROM loaded!");
+        snprintf(info, 512, "There is no ROM loaded!");
     }
 }
 

@@ -314,7 +314,7 @@ static void memory_editor_menu(void)
             MemEditor::Bookmark* bookmark = &(*bookmarks)[i];
 
             char label[80];
-            snprintf(label, 80, "$%04X: %s", bookmark->address, bookmark->name);
+            snprintf(label, sizeof(label), "$%04X: %s", bookmark->address, bookmark->name);
 
             if (ImGui::MenuItem(label))
             {
@@ -508,7 +508,7 @@ static void debug_window_disassembler(void)
         ImGui::Separator();
 
         if (IsValidPointer(selected_record))
-            sprintf(brk_address_cpu, "%04X", selected_record->address);
+            snprintf(brk_address_cpu, sizeof(brk_address_cpu), "%04X", selected_record->address);
 
         ImGui::PushItemWidth(70);
         if (ImGui::InputTextWithHint("##add_breakpoint_cpu", "XXXX", brk_address_cpu, IM_ARRAYSIZE(brk_address_cpu), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
@@ -835,100 +835,119 @@ static void debug_window_processor(void)
     ImGui::Separator();
     ImGui::TextColored(cyan, " A"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->AF->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF->GetHigh()));
+    char buffer[20];
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " F"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->AF->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " A'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->AF2->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF2->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF2->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " F'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->AF2->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF2->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->AF2->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " B"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->BC->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " C"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->BC->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " B'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->BC2->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC2->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC2->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " C'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->BC2->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC2->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->BC2->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " D"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->DE->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " E"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->DE->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " D'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->DE2->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE2->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE2->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " E'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->DE2->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE2->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->DE2->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " H"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->HL->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " L"); ImGui::SameLine();
     ImGui::Text(" $%02X", proc_state->HL->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " H'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->HL2->GetHigh());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL2->GetHigh()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL2->GetHigh()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " L'"); ImGui::SameLine();
     ImGui::Text("$%02X", proc_state->HL2->GetLow());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL2->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->HL2->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Separator();
     ImGui::TextColored(cyan, " I"); ImGui::SameLine();
     ImGui::Text(" $%02X", *proc_state->I);
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(*proc_state->I));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(*proc_state->I));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::TextColored(cyan, " R"); ImGui::SameLine();
     ImGui::Text(" $%02X", *proc_state->R);
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(*proc_state->R));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(*proc_state->R));
+    ImGui::Text("%s", buffer);
 
     ImGui::NextColumn();
     ImGui::Columns(1);
@@ -936,27 +955,32 @@ static void debug_window_processor(void)
     ImGui::Separator();
     ImGui::TextColored(yellow, "    IX"); ImGui::SameLine();
     ImGui::Text("= $%04X", proc_state->IX->GetValue());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->IX->GetHigh()), BYTE_TO_BINARY(proc_state->IX->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->IX->GetHigh()), BYTE_TO_BINARY(proc_state->IX->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::Separator();
     ImGui::TextColored(yellow, "    IY"); ImGui::SameLine();
     ImGui::Text("= $%04X", proc_state->IY->GetValue());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->IY->GetHigh()), BYTE_TO_BINARY(proc_state->IY->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->IY->GetHigh()), BYTE_TO_BINARY(proc_state->IY->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::Separator();
     ImGui::TextColored(yellow, "    WZ"); ImGui::SameLine();
     ImGui::Text("= $%04X", proc_state->WZ->GetValue());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->WZ->GetHigh()), BYTE_TO_BINARY(proc_state->WZ->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->WZ->GetHigh()), BYTE_TO_BINARY(proc_state->WZ->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::Separator();
     ImGui::TextColored(yellow, "    SP"); ImGui::SameLine();
     ImGui::Text("= $%04X", proc_state->SP->GetValue());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->SP->GetHigh()), BYTE_TO_BINARY(proc_state->SP->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->SP->GetHigh()), BYTE_TO_BINARY(proc_state->SP->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::Separator();
     ImGui::TextColored(yellow, "    PC"); ImGui::SameLine();
     ImGui::Text("= $%04X", proc_state->PC->GetValue());
-    ImGui::Text(BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->PC->GetHigh()), BYTE_TO_BINARY(proc_state->PC->GetLow()));
+    snprintf(buffer, sizeof(buffer), BYTE_TO_BINARY_PATTERN_SPACED " " BYTE_TO_BINARY_PATTERN_SPACED, BYTE_TO_BINARY(proc_state->PC->GetHigh()), BYTE_TO_BINARY(proc_state->PC->GetLow()));
+    ImGui::Text("%s", buffer);
 
     ImGui::Separator();
 
@@ -1518,7 +1542,6 @@ static void add_breakpoint_cpu(void)
 {
     int input_len = (int)strlen(brk_address_cpu);
     u16 target_address = 0;
-    int target_bank = 0;
 
     try
     {
@@ -1530,14 +1553,10 @@ static void add_breakpoint_cpu(void)
             if (separator != std::string::npos)
             {
                 target_address = (u16)std::stoul(str.substr(separator + 1 , std::string::npos), 0, 16);
-
-                target_bank = std::stoul(str.substr(0, separator), 0 , 16);
-                target_bank &= 0xFF;
             }
         } 
         else if (input_len == 4)
         {
-            target_bank = 0; 
             target_address = (u16)std::stoul(brk_address_cpu, 0, 16);
         }
         else

@@ -753,7 +753,7 @@ static void run_emulator(void)
             i = 0;
 
             char title[256];
-            sprintf(title, "%s %s - %s", GEARCOLECO_TITLE, GEARCOLECO_VERSION, emu_get_core()->GetCartridge()->GetFileName());
+            snprintf(title, sizeof(title), "%s %s - %s", GEARCOLECO_TITLE, GEARCOLECO_VERSION, emu_get_core()->GetCartridge()->GetFileName());
             SDL_SetWindowTitle(sdl_window, title);
         }
     }

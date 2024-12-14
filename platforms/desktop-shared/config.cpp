@@ -215,9 +215,9 @@ void config_read(void)
         char pal_label_r[32];
         char pal_label_g[32];
         char pal_label_b[32];
-        sprintf(pal_label_r, "CustomPalette%dR", i);
-        sprintf(pal_label_g, "CustomPalette%dG", i);
-        sprintf(pal_label_b, "CustomPalette%dB", i);
+        snprintf(pal_label_r, sizeof(pal_label_r), "CustomPalette%dR", i);
+        snprintf(pal_label_g, sizeof(pal_label_g), "CustomPalette%dG", i);
+        snprintf(pal_label_b, sizeof(pal_label_b), "CustomPalette%dB", i);
         config_video.color[i].red = read_int("Video", pal_label_r, config_video.color[i].red);
         config_video.color[i].green = read_int("Video", pal_label_g, config_video.color[i].green);
         config_video.color[i].blue = read_int("Video", pal_label_b, config_video.color[i].blue);
@@ -374,9 +374,9 @@ void config_write(void)
         char pal_label_r[32];
         char pal_label_g[32];
         char pal_label_b[32];
-        sprintf(pal_label_r, "CustomPalette%dR", i);
-        sprintf(pal_label_g, "CustomPalette%dG", i);
-        sprintf(pal_label_b, "CustomPalette%dB", i);
+        snprintf(pal_label_r, sizeof(pal_label_r), "CustomPalette%dR", i);
+        snprintf(pal_label_g, sizeof(pal_label_g), "CustomPalette%dG", i);
+        snprintf(pal_label_b, sizeof(pal_label_b), "CustomPalette%dB", i);
         write_int("Video", pal_label_r, config_video.color[i].red);
         write_int("Video", pal_label_g, config_video.color[i].green);
         write_int("Video", pal_label_b, config_video.color[i].blue);
