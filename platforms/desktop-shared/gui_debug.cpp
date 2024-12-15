@@ -1482,7 +1482,7 @@ static void debug_window_vram_regs(void)
 
 static void add_symbol(const char* line)
 {
-    Log("Loading symbol %s", line);
+    Debug("Loading symbol %s", line);
 
     DebugSymbol s;
 

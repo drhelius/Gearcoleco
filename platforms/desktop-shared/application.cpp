@@ -51,7 +51,6 @@ int application_init(const char* rom_file, const char* symbol_file)
 {
     Log("\n%s", GEARCOLECO_TITLE_ASCII);
     Log("%s %s Desktop App", GEARCOLECO_TITLE, GEARCOLECO_VERSION);
-    Log("By Ignacio Sánchez (drhelius)");
 
     config_init();
     config_read();
@@ -148,6 +147,9 @@ static int sdl_init(void)
     SDL_VERSION(&application_sdl_build_version);
     SDL_GetVersion(&application_sdl_link_version);
 
+    Log("Using SDL %d.%d.%d (build)", application_sdl_build_version.major, application_sdl_build_version.minor, application_sdl_build_version.patch);
+    Log("Using SDL %d.%d.%d (link) ", application_sdl_link_version.major, application_sdl_link_version.minor, application_sdl_link_version.patch);
+
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
@@ -166,13 +168,12 @@ static int sdl_init(void)
 
     if (application_gamepad_mappings > 0)
     {
-        Log("Succesfuly loaded %d game controller mappings", application_gamepad_mappings);
+        Log("Succesfuly loaded %d game controller mappings from gamecontrollerdb.txt", application_gamepad_mappings);
     }
     else
     {
-        Log("Game controller database not found!");
+        Log("ERROR: Game controller database not found (gamecontrollerdb.txt)!!");
     }
-
 
     int gamepads_found = 0;
 

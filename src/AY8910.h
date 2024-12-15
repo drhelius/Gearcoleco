@@ -21,6 +21,7 @@
 #define	AY8910_H
 
 #include "definitions.h"
+#include "log.h"
 
 class AY8910
 {

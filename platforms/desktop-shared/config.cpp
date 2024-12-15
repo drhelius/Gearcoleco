@@ -316,7 +316,7 @@ void config_read(void)
     config_input[1].gamepad_asterisk = read_int("InputB", "GamepadAsterisk", SDL_CONTROLLER_BUTTON_START);
     config_input[1].gamepad_hash = read_int("InputB", "GamepadHash", SDL_CONTROLLER_BUTTON_BACK);
 
-    Log("Settings loaded");
+    Debug("Settings loaded");
 }
 
 void config_write(void)
@@ -476,7 +476,7 @@ void config_write(void)
 
     if (config_ini_file->write(config_ini_data, true))
     {
-        Log("Settings saved");
+        Debug("Settings saved");
     }
 }
 
@@ -512,7 +512,7 @@ static int read_int(const char* group, const char* key, int default_value)
     else
         ret = std::stoi(value);
 
-    Log("Load setting: [%s][%s]=%d", group, key, ret);
+    Debug("Load setting: [%s][%s]=%d", group, key, ret);
     return ret;
 }
 
@@ -520,7 +520,7 @@ static void write_int(const char* group, const char* key, int integer)
 {
     std::string value = std::to_string(integer);
     config_ini_data[group][key] = value;
-    Log("Save setting: [%s][%s]=%s", group, key, value.c_str());
+    Debug("Save setting: [%s][%s]=%s", group, key, value.c_str());
 }
 
 static float read_float(const char* group, const char* key, float default_value)
@@ -534,7 +534,7 @@ static float read_float(const char* group, const char* key, float default_value)
     else
         ret = strtof(value.c_str(), NULL);
 
-    Log("Load setting: [%s][%s]=%.2f", group, key, ret);
+    Debug("Load setting: [%s][%s]=%.2f", group, key, ret);
     return ret;
 }
 
@@ -542,7 +542,7 @@ static void write_float(const char* group, const char* key, float value)
 {
     std::string value_str = std::to_string(value);
     config_ini_data[group][key] = value_str;
-    Log("Save setting: [%s][%s]=%s", group, key, value_str.c_str());
+    Debug("Save setting: [%s][%s]=%s", group, key, value_str.c_str());
 }
 
 static bool read_bool(const char* group, const char* key, bool default_value)
@@ -556,7 +556,7 @@ static bool read_bool(const char* group, const char* key, bool default_value)
     else
         std::istringstream(value) >> std::boolalpha >> ret;
 
-    Log("Load setting: [%s][%s]=%s", group, key, ret ? "true" : "false");
+    Debug("Load setting: [%s][%s]=%s", group, key, ret ? "true" : "false");
     return ret;
 }
 
@@ -567,18 +567,18 @@ static void write_bool(const char* group, const char* key, bool boolean)
     std::string value;
     value = converter.str();
     config_ini_data[group][key] = value;
-    Log("Save setting: [%s][%s]=%s", group, key, value.c_str());
+    Debug("Save setting: [%s][%s]=%s", group, key, value.c_str());
 }
 
 static std::string read_string(const char* group, const char* key)
 {
     std::string ret = config_ini_data[group][key];
-    Log("Load setting: [%s][%s]=%s", group, key, ret.c_str());
+    Debug("Load setting: [%s][%s]=%s", group, key, ret.c_str());
     return ret;
 }
 
 static void write_string(const char* group, const char* key, std::string value)
 {
     config_ini_data[group][key] = value;
-    Log("Save setting: [%s][%s]=%s", group, key, value.c_str());
+    Debug("Save setting: [%s][%s]=%s", group, key, value.c_str());
 }

@@ -83,7 +83,7 @@ inline u8 ColecoVisionIOPorts::In(u8 port)
         }
     }
 
-    Log("--> ** Attempting to read from port $%X", port);
+    Debug("--> ** Attempting to read from port $%X", port);
 
     return 0xFF;
 }
@@ -141,7 +141,7 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
             }
             else
             {
-                Log("--> ** Output to port $%X: %X", port, value);
+                Debug("--> ** Output to port $%X: %X", port, value);
             }
         }
     }

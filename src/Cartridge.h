@@ -22,6 +22,7 @@
 
 #include <list>
 #include "definitions.h"
+#include "log.h"
 
 class Cartridge
 {

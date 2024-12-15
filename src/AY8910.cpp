@@ -320,7 +320,7 @@ void AY8910::Sync()
 
             if (m_iBufferIndex >= GC_AUDIO_BUFFER_SIZE)
             {
-                Log("SGM Audio buffer overflow");
+                Debug("SGM Audio buffer overflow");
                 m_iBufferIndex = 0;
             }
         }

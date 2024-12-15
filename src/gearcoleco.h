@@ -21,6 +21,7 @@
 #define	GEARCOLECO_H
 
 #include "definitions.h"
+#include "log.h"
 #include "GearcolecoCore.h"
 #include "Memory.h"
 #include "Processor.h"

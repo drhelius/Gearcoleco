@@ -77,7 +77,7 @@ inline u8 Memory::Read(u16 address)
                 {
                     if (address >= 0xFF80)
                     {
-                        Log("--> ** EEPROM read: %X %X", address);
+                        Debug("--> ** EEPROM read: %X %X", address);
                     }
                     return pRom[(address & 0x3FFF) + m_RomBankAddress];
                 }
@@ -86,7 +86,7 @@ inline u8 Memory::Read(u16 address)
             {
                 if (address >= (romSize + 0x8000))
                 {
-                    Log("--> ** Attempting to read from outer ROM: %X. ROM Size: %X", address, romSize);
+                    Debug("--> ** Attempting to read from outer ROM: %X. ROM Size: %X", address, romSize);
                     return 0xFF;
                 }
 
@@ -131,7 +131,7 @@ inline void Memory::Write(u16 address, u8 value)
         case 0xA000:
         case 0xC000:
         {
-            Log("--> ** Attempting to write on ROM: %X %X", address, value);
+            Debug("--> ** Attempting to write on ROM: %X %X", address, value);
             break;
         }
         case 0xE000:
@@ -155,18 +155,18 @@ inline void Memory::Write(u16 address, u8 value)
                 }
 #ifdef DEBUG_GEARCOLECO
                 if (address == 0xFFC0)
-                    Log("--> ** EEPROM write SCL=0: %X %X", address, value);
+                    Debug("--> ** EEPROM write SCL=0: %X %X", address, value);
                 if (address == 0xFFD0)
-                    Log("--> ** EEPROM write SCL=1: %X %X", address, value);
+                    Debug("--> ** EEPROM write SCL=1: %X %X", address, value);
                 if (address == 0xFFE0)
-                    Log("--> ** EEPROM write SDA=0: %X %X", address, value);
+                    Debug("--> ** EEPROM write SDA=0: %X %X", address, value);
                 if (address == 0xFFF0)
-                    Log("--> ** EEPROM write SDA=1: %X %X", address, value);
+                    Debug("--> ** EEPROM write SDA=1: %X %X", address, value);
 #endif
             }
             else
             {
-                Log("--> ** Attempting to write on ROM: %X %X", address, value);
+                Debug("--> ** Attempting to write on ROM: %X %X", address, value);
             }
             break;
         }
