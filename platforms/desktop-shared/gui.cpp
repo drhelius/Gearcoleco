@@ -21,6 +21,7 @@
 #include "imgui/imgui.h"
 #include "imgui/colors.h"
 #include "imgui/fonts/RobotoMedium.h"
+#include "imgui/keyboard.h"
 #include "nfd/nfd.h"
 #include "config.h"
 #include "emu.h"
@@ -1281,12 +1282,22 @@ static void keyboard_configuration_item(const char* text, SDL_Scancode* key, int
     ImGui::SameLine(100);
 
     char button_label[256];
-    snprintf(button_label, sizeof(button_label), "%s##%s%d", SDL_GetScancodeName(*key), text, player);
+    snprintf(button_label, sizeof(button_label), "%s##%s%d", SDL_GetKeyName(SDL_GetKeyFromScancode(*key)), text, player);
 
     if (ImGui::Button(button_label, ImVec2(90,0)))
     {
         configured_key = key;
         ImGui::OpenPopup("Keyboard Configuration");
+    }
+
+    ImGui::SameLine();
+
+    char remove_label[256];
+    snprintf(remove_label, sizeof(remove_label), "X##rk%s%d", text, player);
+
+    if (ImGui::Button(remove_label))
+    {
+        *key = SDL_SCANCODE_UNKNOWN;
     }
 }
 
@@ -1297,13 +1308,25 @@ static void gamepad_configuration_item(const char* text, int* button, int player
 
     static const char* gamepad_names[16] = {"A", "B", "X" ,"Y", "BACK", "GUID", "START", "L3", "R3", "L1", "R1", "UP", "DOWN", "LEFT", "RIGHT", "15"};
 
+    const char* button_name = (*button >= 0 && *button < 16) ? gamepad_names[*button] : "";
+
     char button_label[256];
-    snprintf(button_label, sizeof(button_label), "%s##%s%d", gamepad_names[*button], text, player);
+    snprintf(button_label, sizeof(button_label), "%s##%s%d", button_name, text, player);
 
     if (ImGui::Button(button_label, ImVec2(70,0)))
     {
         configured_button = button;
         ImGui::OpenPopup("Gamepad Configuration");
+    }
+
+    ImGui::SameLine();
+
+    char remove_label[256];
+    snprintf(remove_label, sizeof(remove_label), "X##rg%s%d", text, player);
+
+    if (ImGui::Button(remove_label))
+    {
+        *button = SDL_CONTROLLER_BUTTON_INVALID;
     }
 }
 
@@ -1314,11 +1337,12 @@ static void popup_modal_keyboard()
         ImGui::Text("Press any key to assign...\n\n");
         ImGui::Separator();
 
-        for ( int i = 0; i < ImGuiKey_NamedKey_END; ++i )
+        for (ImGuiKey i = ImGuiKey_NamedKey_BEGIN; i < ImGuiKey_NamedKey_END; i = (ImGuiKey)(i + 1))
         {
-            if (ImGui::IsKeyDown((ImGuiKey)i))
+            if (ImGui::IsKeyDown(i))
             {
-                SDL_Scancode key = (SDL_Scancode)i;
+                SDL_Keycode key_code = ImGuiKeyToSDLKeycode(i);
+                SDL_Scancode key = SDL_GetScancodeFromKey(key_code);
 
                 if ((key != SDL_SCANCODE_LCTRL) && (key != SDL_SCANCODE_RCTRL) && (key != SDL_SCANCODE_CAPSLOCK))
                 {
