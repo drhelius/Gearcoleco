@@ -1306,7 +1306,7 @@ static void gamepad_configuration_item(const char* text, int* button, int player
     ImGui::Text("%s", text);
     ImGui::SameLine(100);
 
-    static const char* gamepad_names[16] = {"A", "B", "X" ,"Y", "BACK", "GUID", "START", "L3", "R3", "L1", "R1", "UP", "DOWN", "LEFT", "RIGHT", "15"};
+    static const char* gamepad_names[16] = {"A", "B", "X" ,"Y", "BACK", "GUIDE", "START", "L3", "R3", "L1", "R1", "UP", "DOWN", "LEFT", "RIGHT", "15"};
 
     const char* button_name = (*button >= 0 && *button < 16) ? gamepad_names[*button] : "";
 
