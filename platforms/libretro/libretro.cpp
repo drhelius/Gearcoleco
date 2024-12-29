@@ -47,6 +47,7 @@ static s16 audio_buf[GC_AUDIO_BUFFER_SIZE];
 static int audio_sample_count = 0;
 static int current_screen_width = 0;
 static int current_screen_height = 0;
+static float current_aspect_ratio = 0;
 static bool allow_up_down = false;
 static bool libretro_supports_bitmasks;
 static int spinner_support = 0;
@@ -98,7 +99,7 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 
 static const struct retro_variable vars[] = {
     { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
-    { "gearcoleco_aspect_ratio", "Aspect Ratio (restart); 1:1 PAR|4:3 DAR|16:9 DAR|16:10 DAR" },
+    { "gearcoleco_aspect_ratio", "Aspect Ratio; 1:1 PAR|4:3 DAR|16:9 DAR|16:10 DAR" },
     { "gearcoleco_overscan", "Overscan; Disabled|Top+Bottom|Full (284 width)|Full (320 width)" },
     { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
     { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
@@ -580,10 +581,13 @@ void retro_run(void)
     GC_RuntimeInfo runtime_info;
     core->GetRuntimeInfo(runtime_info);
 
-    if ((runtime_info.screen_width != current_screen_width) || (runtime_info.screen_height != current_screen_height))
+    if ((runtime_info.screen_width != current_screen_width) ||
+        (runtime_info.screen_height != current_screen_height) ||
+        (aspect_ratio != current_aspect_ratio))
     {
         current_screen_width = runtime_info.screen_width;
         current_screen_height = runtime_info.screen_height;
+        current_aspect_ratio = aspect_ratio;
 
         retro_system_av_info info;
         info.geometry.base_width   = runtime_info.screen_width;
