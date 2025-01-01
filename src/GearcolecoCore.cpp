@@ -210,7 +210,7 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
     runtime_info.screen_height = GC_RESOLUTION_HEIGHT;
     runtime_info.region = Region_NTSC;
 
-    if (m_pCartridge->IsReady())
+    if (m_pCartridge->IsReady() && m_pMemory->IsBiosLoaded())
     {
         if (m_pVideo->GetOverscan() == Video::OverscanFull284)
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
@@ -597,7 +597,7 @@ void GearcolecoCore::Reset()
 
 void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
-    int size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
+    int size = m_pMemory->IsBiosLoaded() ? GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN : GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
     u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)
