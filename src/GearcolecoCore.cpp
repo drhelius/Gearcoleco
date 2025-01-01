@@ -78,6 +78,12 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
 
 bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, bool step, bool stopOnBreakpoints)
 {
+    if (!m_pMemory->IsBiosLoaded())
+    {
+        RenderFrameBuffer(pFrameBuffer);
+        return false;
+    }
+
     bool breakpoint = false;
 
     if (!m_bPaused && m_pCartridge->IsReady())
