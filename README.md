@@ -14,7 +14,7 @@ This is an open source project with its ongoing development made possible thanks
 
 Don't hesitate to report bugs or ask for new features by [openning an issue](https://github.com/drhelius/Gearboy/issues). 
 
-<img alt="Gearcoleco" src="https://user-images.githubusercontent.com/863613/129458358-58e280ce-8c4f-4685-8b8f-c3dbb0c72f13.png">
+<img src="http://www.geardome.com/files/gearcoleco/gearcoleco_debug_01.png">
 
 ## Downloads
 
