@@ -29,7 +29,6 @@
 #define APPLICATION_IMPORT
 #include "application.h"
 
-static SDL_Window* sdl_window;
 static SDL_GLContext gl_context;
 static bool running = true;
 static bool paused_when_focus_lost = false;
@@ -65,7 +64,7 @@ int application_init(const char* rom_file, const char* symbol_file)
     
     gui_init();
 
-    ImGui_ImplSDL2_InitForOpenGL(sdl_window, gl_context);
+    ImGui_ImplSDL2_InitForOpenGL(application_sdl_window, gl_context);
 
     renderer_init();
 
@@ -124,12 +123,12 @@ void application_trigger_quit(void)
 
 void application_trigger_fullscreen(bool fullscreen)
 {
-    SDL_SetWindowFullscreen(sdl_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    SDL_SetWindowFullscreen(application_sdl_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
 void application_trigger_fit_to_content(int width, int height)
 {
-    SDL_SetWindowSize(sdl_window, width, height);
+    SDL_SetWindowSize(application_sdl_window, width, height);
 }
 
 static int sdl_init(void)
@@ -157,12 +156,12 @@ static int sdl_init(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
-    sdl_window = SDL_CreateWindow(GEARCOLECO_TITLE " " GEARCOLECO_VERSION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, config_emulator.window_width, config_emulator.window_height, window_flags);
-    gl_context = SDL_GL_CreateContext(sdl_window);
-    SDL_GL_MakeCurrent(sdl_window, gl_context);
+    application_sdl_window = SDL_CreateWindow(GEARCOLECO_TITLE " " GEARCOLECO_VERSION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, config_emulator.window_width, config_emulator.window_height, window_flags);
+    gl_context = SDL_GL_CreateContext(application_sdl_window);
+    SDL_GL_MakeCurrent(application_sdl_window, gl_context);
     SDL_GL_SetSwapInterval(0);
 
-    SDL_SetWindowMinimumSize(sdl_window, 500, 300);
+    SDL_SetWindowMinimumSize(application_sdl_window, 500, 300);
 
     application_gamepad_mappings = SDL_GameControllerAddMappingsFromRW(SDL_RWFromFile("gamecontrollerdb.txt", "rb"), 1);
 
@@ -199,8 +198,8 @@ static int sdl_init(void)
 
     int w, h;
     int display_w, display_h;
-    SDL_GetWindowSize(sdl_window, &w, &h);
-    SDL_GL_GetDrawableSize(sdl_window, &display_w, &display_h);
+    SDL_GetWindowSize(application_sdl_window, &w, &h);
+    SDL_GL_GetDrawableSize(application_sdl_window, &display_w, &display_h);
     
     if (w > 0 && h > 0)
     {
@@ -220,7 +219,7 @@ static void sdl_destroy(void)
     SDL_GameControllerClose(application_gamepad[0]);
     SDL_GameControllerClose(application_gamepad[1]);
     SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(sdl_window);
+    SDL_DestroyWindow(application_sdl_window);
     SDL_Quit();
 }
 
@@ -254,7 +253,7 @@ static void sdl_events(void)
             break;
         }
 
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(sdl_window))
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(application_sdl_window))
         {
             running = false;
             break;
@@ -362,7 +361,7 @@ static void sdl_events_emu(const SDL_Event* event)
             char* dropped_filedir = event->drop.file;
             gui_load_rom(dropped_filedir);
             SDL_free(dropped_filedir);
-            SDL_SetWindowInputFocus(sdl_window);
+            SDL_SetWindowInputFocus(application_sdl_window);
         }
         break;
 
@@ -755,7 +754,7 @@ static void run_emulator(void)
 
             char title[256];
             snprintf(title, sizeof(title), "%s %s - %s", GEARCOLECO_TITLE, GEARCOLECO_VERSION, emu_get_core()->GetCartridge()->GetFileName());
-            SDL_SetWindowTitle(sdl_window, title);
+            SDL_SetWindowTitle(application_sdl_window, title);
         }
     }
     config_emulator.paused = emu_is_paused();
@@ -771,7 +770,7 @@ static void render(void)
     renderer_render();
     renderer_end_render();
 
-    SDL_GL_SwapWindow(sdl_window);
+    SDL_GL_SwapWindow(application_sdl_window);
 }
 
 static void frame_throttle(void)
@@ -820,7 +819,7 @@ static void save_window_size(void)
     if (!config_emulator.fullscreen)
     {
         int width, height;
-        SDL_GetWindowSize(sdl_window, &width, &height);
+        SDL_GetWindowSize(application_sdl_window, &width, &height);
         config_emulator.window_width = width;
         config_emulator.window_height = height;
     }
