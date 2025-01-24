@@ -207,6 +207,7 @@ void config_read(void)
     config_video.mix_frames = read_bool("Video", "MixFrames", true);
     config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.60f);
     config_video.scanlines = read_bool("Video", "Scanlines", true);
+    config_video.scanlines_filter = read_bool("Video", "ScanlinesFilter", true);
     config_video.scanlines_intensity = read_float("Video", "ScanlinesIntensity", 0.10f);
     config_video.palette = read_int("Video", "Palette", 0);
 
@@ -367,6 +368,7 @@ void config_write(void)
     write_bool("Video", "MixFrames", config_video.mix_frames);
     write_float("Video", "MixFramesIntensity", config_video.mix_frames_intensity);
     write_bool("Video", "Scanlines", config_video.scanlines);
+    write_bool("Video", "ScanlinesFilter", config_video.scanlines_filter);
     write_float("Video", "ScanlinesIntensity", config_video.scanlines_intensity);
     write_int("Video", "Palette", config_video.palette);
     for (int i = 0; i < 16; i++)
