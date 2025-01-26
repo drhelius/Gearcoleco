@@ -19,24 +19,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\miniz\miniz.c" />
     <ClCompile Include="..\..\src\Audio.cpp" />
-    <ClCompile Include="..\..\src\AY8910.cpp" />
     <ClCompile Include="..\..\src\audio\Blip_Buffer.cpp" />
     <ClCompile Include="..\..\src\audio\Effects_Buffer.cpp" />
     <ClCompile Include="..\..\src\audio\Multi_Buffer.cpp" />
     <ClCompile Include="..\..\src\audio\Sms_Apu.cpp" />
+    <ClCompile Include="..\..\src\AY8910.cpp" />
     <ClCompile Include="..\..\src\Cartridge.cpp" />
     <ClCompile Include="..\..\src\ColecoVisionIOPorts.cpp" />
     <ClCompile Include="..\..\src\GearcolecoCore.cpp" />
     <ClCompile Include="..\..\src\Input.cpp" />
     <ClCompile Include="..\..\src\Memory.cpp" />
+    <ClCompile Include="..\..\src\miniz\miniz.c" />
     <ClCompile Include="..\..\src\opcodes.cpp" />
     <ClCompile Include="..\..\src\opcodes_cb.cpp" />
     <ClCompile Include="..\..\src\opcodes_ed.cpp" />
     <ClCompile Include="..\..\src\Processor.cpp" />
     <ClCompile Include="..\..\src\Video.cpp" />
-    <ClCompile Include="..\audio-shared\Sound_Queue.cpp" />
+    <ClCompile Include="..\audio-shared\sound_queue.cpp" />
     <ClCompile Include="..\desktop-shared\application.cpp" />
     <ClCompile Include="..\desktop-shared\config.cpp" />
     <ClCompile Include="..\desktop-shared\emu.cpp" />
@@ -47,17 +47,15 @@
     <ClCompile Include="..\desktop-shared\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\desktop-shared\imgui\imgui_impl_opengl2.cpp" />
     <ClCompile Include="..\desktop-shared\imgui\imgui_impl_sdl2.cpp" />
-    <ClCompile Include="..\desktop-shared\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\desktop-shared\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\desktop-shared\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\desktop-shared\imgui\memory_editor.cpp" />
     <ClCompile Include="..\desktop-shared\main.cpp" />
     <ClCompile Include="..\desktop-shared\nfd\nfd_win.cpp" />
     <ClCompile Include="..\desktop-shared\renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\miniz\miniz.h" />
     <ClInclude Include="..\..\src\Audio.h" />
-    <ClInclude Include="..\..\src\AY8910.h" />
     <ClInclude Include="..\..\src\audio\blargg_common.h" />
     <ClInclude Include="..\..\src\audio\blargg_config.h" />
     <ClInclude Include="..\..\src\audio\blargg_source.h" />
@@ -67,6 +65,7 @@
     <ClInclude Include="..\..\src\audio\Multi_Buffer.h" />
     <ClInclude Include="..\..\src\audio\Sms_Apu.h" />
     <ClInclude Include="..\..\src\audio\Sms_Oscs.h" />
+    <ClInclude Include="..\..\src\AY8910.h" />
     <ClInclude Include="..\..\src\Cartridge.h" />
     <ClInclude Include="..\..\src\ColecoVisionIOPorts.h" />
     <ClInclude Include="..\..\src\definitions.h" />
@@ -75,8 +74,11 @@
     <ClInclude Include="..\..\src\GearcolecoCore.h" />
     <ClInclude Include="..\..\src\Input.h" />
     <ClInclude Include="..\..\src\IOPorts.h" />
+    <ClInclude Include="..\..\src\log.h" />
     <ClInclude Include="..\..\src\Memory.h" />
     <ClInclude Include="..\..\src\Memory_inline.h" />
+    <ClInclude Include="..\..\src\miniz\miniz.h" />
+    <ClInclude Include="..\..\src\no_bios.h" />
     <ClInclude Include="..\..\src\opcodecb_names.h" />
     <ClInclude Include="..\..\src\opcodeddcb_names.h" />
     <ClInclude Include="..\..\src\opcodedd_names.h" />
@@ -91,27 +93,32 @@
     <ClInclude Include="..\..\src\Processor_inline.h" />
     <ClInclude Include="..\..\src\SixteenBitRegister.h" />
     <ClInclude Include="..\..\src\Video.h" />
-    <ClInclude Include="..\audio-shared\Sound_Queue.h" />
+    <ClInclude Include="..\audio-shared\sound_queue.h" />
     <ClInclude Include="..\desktop-shared\application.h" />
+    <ClInclude Include="..\desktop-shared\backers.h" />
     <ClInclude Include="..\desktop-shared\config.h" />
     <ClInclude Include="..\desktop-shared\emu.h" />
     <ClInclude Include="..\desktop-shared\gui.h" />
     <ClInclude Include="..\desktop-shared\gui_debug.h" />
     <ClInclude Include="..\desktop-shared\gui_debug_constants.h" />
+    <ClInclude Include="..\desktop-shared\imgui\colors.h" />
     <ClInclude Include="..\desktop-shared\imgui\fonts\RobotoMedium.h" />
     <ClInclude Include="..\desktop-shared\imgui\imconfig.h" />
     <ClInclude Include="..\desktop-shared\imgui\imgui.h" />
     <ClInclude Include="..\desktop-shared\imgui\imgui_impl_opengl2.h" />
-    <ClInclude Include="..\desktop-shared\imgui\imgui_impl_sdl.h" />
+    <ClInclude Include="..\desktop-shared\imgui\imgui_impl_sdl2.h" />
     <ClInclude Include="..\desktop-shared\imgui\imgui_internal.h" />
     <ClInclude Include="..\desktop-shared\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\desktop-shared\imgui\imstb_textedit.h" />
     <ClInclude Include="..\desktop-shared\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\desktop-shared\imgui\keyboard.h" />
+    <ClInclude Include="..\desktop-shared\imgui\memory_editor.h" />
+    <ClInclude Include="..\desktop-shared\license.h" />
     <ClInclude Include="..\desktop-shared\mINI\ini.h" />
+    <ClInclude Include="..\desktop-shared\nfd\nfd.h" />
+    <ClInclude Include="..\desktop-shared\nfd\nfd_sdl2.h" />
     <ClInclude Include="..\desktop-shared\renderer.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Manifest Include="Gearcoleco.manifest" />
+    <ClInclude Include="..\desktop-shared\stb\stb_image_write.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B12702AD-ABFB-343A-A199-8E24837244A3}</ProjectGuid>
