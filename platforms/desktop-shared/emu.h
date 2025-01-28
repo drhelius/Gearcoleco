@@ -76,7 +76,6 @@ EXTERN void emu_debug_step(void);
 EXTERN void emu_debug_continue(void);
 EXTERN void emu_debug_next_frame(void);
 EXTERN void emu_load_bios(const char* file_path);
-EXTERN void emu_load_bios(const char* file_path);
 EXTERN void emu_video_no_sprite_limit(bool enabled);
 EXTERN void emu_set_overscan(int overscan);
 EXTERN void emu_save_screenshot(const char* file_path);

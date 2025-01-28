@@ -1284,7 +1284,7 @@ static void file_dialog_load_bios(void)
     }
     else if (result != NFD_CANCEL)
     {
-        Log("Load SMS Bios Error: %s", NFD_GetError());
+        Log("Load Bios Error: %s", NFD_GetError());
     }
 }
 
