@@ -29,8 +29,6 @@ inline u8 Processor::FetchOPCode()
 {
     u8 opcode = m_pMemory->Read(PC.GetValue());
     PC.Increment();
-    // M1 1 cycle wait
-    m_iTStates++;
     return opcode;
 }
 
@@ -207,6 +205,7 @@ inline void Processor::IncreaseR()
 {
     u8 r = R;
     R = ((r + 1) & 0x7F) | (r & 0x80);
+    m_iTStates++;  // M1 1 cycle wait
 }
 
 inline void Processor::OPCodes_LD(u8* reg1, u8 value)
