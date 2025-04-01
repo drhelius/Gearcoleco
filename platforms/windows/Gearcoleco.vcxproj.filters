@@ -48,6 +48,12 @@
     <ClCompile Include="..\desktop-shared\gui_debug.cpp">
       <Filter>desktop</Filter>
     </ClCompile>
+    <ClCompile Include="..\desktop-shared\gui_debug_memory.cpp">
+      <Filter>desktop</Filter>
+    </ClCompile>
+    <ClCompile Include="..\desktop-shared\gui_debug_memeditor.cpp">
+      <Filter>desktop</Filter>
+    </ClCompile>
     <ClCompile Include="..\desktop-shared\main.cpp">
       <Filter>desktop</Filter>
     </ClCompile>
@@ -75,9 +81,7 @@
     <ClCompile Include="..\desktop-shared\imgui\imgui_widgets.cpp">
       <Filter>desktop\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\desktop-shared\imgui\memory_editor.cpp">
-      <Filter>desktop\imgui</Filter>
-    </ClCompile>
+
     <ClCompile Include="..\desktop-shared\nfd\nfd_win.cpp">
       <Filter>desktop\nfd</Filter>
     </ClCompile>
@@ -155,6 +159,12 @@
     <ClInclude Include="..\desktop-shared\gui_debug.h">
       <Filter>desktop</Filter>
     </ClInclude>
+    <ClInclude Include="..\desktop-shared\gui_debug_memory.h">
+      <Filter>desktop</Filter>
+    </ClInclude>
+    <ClInclude Include="..\desktop-shared\gui_debug_memeditor.h">
+      <Filter>desktop</Filter>
+    </ClInclude>
     <ClInclude Include="..\desktop-shared\gui_debug_constants.h">
       <Filter>desktop</Filter>
     </ClInclude>
@@ -163,9 +173,6 @@
     </ClInclude>
     <ClInclude Include="..\desktop-shared\renderer.h">
       <Filter>desktop</Filter>
-    </ClInclude>
-    <ClInclude Include="..\desktop-shared\imgui\colors.h">
-      <Filter>desktop\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\desktop-shared\imgui\imconfig.h">
       <Filter>desktop\imgui</Filter>
@@ -192,9 +199,6 @@
       <Filter>desktop\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\desktop-shared\imgui\keyboard.h">
-      <Filter>desktop\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\desktop-shared\imgui\memory_editor.h">
       <Filter>desktop\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\desktop-shared\imgui\fonts\RobotoMedium.h">

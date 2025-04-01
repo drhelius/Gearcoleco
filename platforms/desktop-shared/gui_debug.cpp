@@ -19,8 +19,6 @@
 
 #include <math.h>
 #include "imgui/imgui.h"
-#include "imgui/memory_editor.h"
-#include "imgui/colors.h"
 #include "nfd/nfd.h"
 #include "nfd/nfd_sdl2.h"
 #include "config.h"
@@ -29,6 +27,7 @@
 #include "../../src/gearcoleco.h"
 #include "gui.h"
 #include "gui_debug_constants.h"
+#include "gui_debug_memory.h"
 #include "application.h"
 
 #define GUI_DEBUG_IMPORT
@@ -49,9 +48,6 @@ struct DisassmeblerLine
     std::string symbol;
 };
 
-static MemEditor mem_edit[5];
-static int mem_edit_select = -1;
-static int current_mem_edit = 0;
 static std::vector<DebugSymbol> symbols;
 static Memory::stDisassembleRecord* selected_record = NULL;
 static char brk_address_cpu[5] = "";
@@ -63,11 +59,8 @@ static bool goto_address_requested = false;
 static u16 goto_address_target = 0;
 static bool goto_back_requested = false;
 static int goto_back = 0;
-static char set_value_buffer[5] = {0};
 
 static void debug_window_processor(void);
-static void debug_window_memory(void);
-static void memory_editor_menu(void);
 static void debug_window_disassembler(void);
 static void debug_window_vram_registers(void);
 static void debug_window_vram(void);
@@ -88,13 +81,16 @@ void gui_debug_windows(void)
         if (config_debug.show_processor)
             debug_window_processor();
         if (config_debug.show_memory)
-            debug_window_memory();
+            gui_debug_window_memory();
         if (config_debug.show_disassembler)
             debug_window_disassembler();
         if (config_debug.show_video)
             debug_window_vram();
         if (config_debug.show_video_registers)
             debug_window_vram_registers();
+
+        gui_debug_memory_watches_window();
+        gui_debug_memory_search_window();
     }
 }
 
@@ -103,6 +99,7 @@ void gui_debug_reset(void)
     gui_debug_reset_breakpoints_cpu();
     gui_debug_reset_breakpoints_mem();
     gui_debug_reset_symbols();
+    gui_debug_memory_reset();
     selected_record = NULL;
 }
 
@@ -200,236 +197,6 @@ void gui_debug_go_back(void)
     goto_back_requested = true;
 }
 
-void gui_debug_copy_memory(void)
-{
-    mem_edit[current_mem_edit].Copy();
-}
-
-void gui_debug_paste_memory(void)
-{
-    mem_edit[current_mem_edit].Paste();
-}
-
-static void memory_editor_menu(void)
-{
-    ImGui::BeginMenuBar();
-
-    if (ImGui::BeginMenu("File"))
-    {
-        if (ImGui::MenuItem("Save Memory As..."))
-        {
-            nfdchar_t *outPath;
-            nfdfilteritem_t filterItem[1] = { { "Memory Dump Files", "txt" } };
-            nfdsavedialogu8args_t args = { };
-            args.filterList = filterItem;
-            args.filterCount = 1;
-            args.defaultPath = NULL;
-            args.defaultName = NULL;
-            if (!NFD_GetNativeWindowFromSDLWindow(application_sdl_window, &args.parentWindow))
-            {
-                Log("NFD_GetNativeWindowFromSDLWindow failed: %s\n", SDL_GetError());
-            }
-
-            nfdresult_t result = NFD_SaveDialogU8_With(&outPath, &args);
-            if (result == NFD_OKAY)
-            {
-                mem_edit[current_mem_edit].SaveToFile(outPath);
-                NFD_FreePath(outPath);
-            }
-            else if (result != NFD_CANCEL)
-            {
-                Log("Save Memory Dump Error: %s", NFD_GetError());
-            }
-        }
-
-        ImGui::EndMenu();
-    }
-
-    if (ImGui::BeginMenu("Edit"))
-    {
-        if (ImGui::MenuItem("Copy", "Ctrl+C"))
-        {
-            gui_debug_copy_memory();
-        }
-
-        if (ImGui::MenuItem("Paste", "Ctrl+V"))
-        {
-            gui_debug_paste_memory();
-        }
-
-        ImGui::EndMenu();
-    }
-
-    if (ImGui::BeginMenu("Selection"))
-    {
-        if (ImGui::MenuItem("Select All", "Ctrl+A"))
-        {
-            mem_edit[current_mem_edit].SelectAll();
-        }
-
-        if (ImGui::MenuItem("Clear Selection"))
-        {
-            mem_edit[current_mem_edit].ClearSelection();
-        }
-
-        if (ImGui::BeginMenu("Set value"))
-        {
-            ImGui::SetNextItemWidth(50);
-            if (ImGui::InputTextWithHint("##set_value", "XXXX", set_value_buffer, IM_ARRAYSIZE(set_value_buffer), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase))
-            {
-                try
-                {
-                    mem_edit[current_mem_edit].SetValueToSelection((int)std::stoul(set_value_buffer, 0, 16));
-                    set_value_buffer[0] = 0;
-                }
-                catch(const std::invalid_argument&)
-                {
-                }
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Set!", ImVec2(40, 0)))
-            {
-                try
-                {
-                    mem_edit[current_mem_edit].SetValueToSelection((int)std::stoul(set_value_buffer, 0, 16));
-                    set_value_buffer[0] = 0;
-                }
-                catch(const std::invalid_argument&)
-                {
-                }
-            }
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndMenu();
-    }
-
-    if (ImGui::BeginMenu("Bookmarks"))
-    {
-        if (ImGui::MenuItem("Clear All"))
-        {
-            mem_edit[current_mem_edit].RemoveBookmarks();
-        }
-
-        if (ImGui::MenuItem("Add Bookmark"))
-        {
-            mem_edit[current_mem_edit].AddBookmark();
-        }
-
-        std::vector<MemEditor::Bookmark>* bookmarks = mem_edit[current_mem_edit].GetBookmarks();
-
-        if (bookmarks->size() > 0)
-            ImGui::Separator();
-
-        for (long unsigned int i = 0; i < bookmarks->size(); i++)
-        {
-            MemEditor::Bookmark* bookmark = &(*bookmarks)[i];
-
-            char label[80];
-            snprintf(label, sizeof(label), "$%04X: %s", bookmark->address, bookmark->name);
-
-            if (ImGui::MenuItem(label))
-            {
-                mem_edit[current_mem_edit].JumpToAddress(bookmark->address);
-            }
-        }
-
-        ImGui::EndMenu();
-    }
-
-    ImGui::EndMenuBar();
-}
-
-static void debug_window_memory(void)
-{
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
-    ImGui::SetNextWindowPos(ImVec2(567, 249), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(324, 308), ImGuiCond_FirstUseEver);
-
-    ImGui::Begin("Memory Editor", &config_debug.show_memory, ImGuiWindowFlags_MenuBar);
-
-    memory_editor_menu();
-
-    GearcolecoCore* core = emu_get_core();
-    Memory* memory = core->GetMemory();
-    Cartridge* cart = core->GetCartridge();
-    Video* video = core->GetVideo();
-
-    ImGui::PushFont(gui_default_font);
-
-    ImGui::TextColored(cyan, "  ROM: ");ImGui::SameLine();
-
-    ImGui::TextColored(magenta, "BANK");ImGui::SameLine();
-    ImGui::Text("$%02X", memory->GetRomBank()); ImGui::SameLine();
-    ImGui::TextColored(magenta, "  ADDRESS");ImGui::SameLine();
-    ImGui::Text("$%05X", memory->GetRomBankAddress());
-
-    ImGui::PopFont();
-
-    if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
-    {
-        if (ImGui::BeginTabItem("BIOS", NULL, mem_edit_select == 0 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
-        {
-            ImGui::PushFont(gui_default_font);
-            if (mem_edit_select == 0)
-                mem_edit_select = -1;
-            current_mem_edit = 0;
-            mem_edit[current_mem_edit].Draw(memory->GetBios(), 0x2000, 0);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("RAM", NULL, mem_edit_select == 1 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
-        {
-            ImGui::PushFont(gui_default_font);
-             if (mem_edit_select == 1)
-                mem_edit_select = -1;
-            current_mem_edit = 1;
-            mem_edit[current_mem_edit].Draw(memory->GetRam(), 0x400, 0x7000);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("SGM RAM", NULL, mem_edit_select == 2 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
-        {
-            ImGui::PushFont(gui_default_font);
-            if (mem_edit_select == 2)
-                mem_edit_select = -1;
-            current_mem_edit = 2;
-            mem_edit[current_mem_edit].Draw(memory->GetSGMRam(), 0x8000, 0x0000);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
-        if (IsValidPointer(cart->GetROM()) && ImGui::BeginTabItem("ROM", NULL, mem_edit_select == 3 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
-        {
-            ImGui::PushFont(gui_default_font);
-            if (mem_edit_select == 3)
-                mem_edit_select = -1;
-            current_mem_edit = 3;
-            mem_edit[current_mem_edit].Draw(cart->GetROM(), cart->GetROMSize(), 0x0000);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("VRAM", NULL, mem_edit_select == 4 ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None))
-        {
-            ImGui::PushFont(gui_default_font);
-            if (mem_edit_select == 4)
-                mem_edit_select = -1;
-            current_mem_edit = 4;
-            mem_edit[current_mem_edit].Draw(video->GetVRAM(), 0x4000, 0);
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
-    }
-
-    ImGui::End();
-    ImGui::PopStyleVar();
-}
-
 static void debug_window_disassembler(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
@@ -451,7 +218,10 @@ static void debug_window_disassembler(void)
         emu_debug_step();
     ImGui::SameLine();
     if (ImGui::Button("Step Frame"))
+    {
         emu_debug_next_frame();
+        gui_debug_memory_step_frame();
+    }
     ImGui::SameLine();
     if (ImGui::Button("Continue"))
         emu_debug_continue(); 
@@ -1196,8 +966,7 @@ static void debug_window_vram_background(void)
 
         if (ImGui::IsMouseClicked(0))
         {
-            mem_edit_select = 4;
-            mem_edit[4].JumpToAddress(name_tile_addr);
+            gui_debug_memory_goto(MEMORY_EDITOR_VRAM, name_tile_addr);
         }
     }
 
@@ -1285,8 +1054,7 @@ static void debug_window_vram_tiles(void)
 
         if (ImGui::IsMouseClicked(0))
         {
-            mem_edit_select = 4;
-            mem_edit[4].JumpToAddress(tile_addr);
+            gui_debug_memory_goto(MEMORY_EDITOR_VRAM, tile_addr);
         }
     }
 
@@ -1443,8 +1211,7 @@ static void debug_window_vram_sprites(void)
 
             if (ImGui::IsMouseClicked(0))
             {
-                mem_edit_select = 4;
-                mem_edit[4].JumpToAddress(sprite_tile_addr);
+                gui_debug_memory_goto(MEMORY_EDITOR_VRAM, sprite_tile_addr);
             }
         }
     }

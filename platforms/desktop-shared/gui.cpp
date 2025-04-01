@@ -19,7 +19,6 @@
 
 #include <math.h>
 #include "imgui/imgui.h"
-#include "imgui/colors.h"
 #include "imgui/fonts/RobotoMedium.h"
 #include "imgui/keyboard.h"
 #include "nfd/nfd.h"
@@ -32,6 +31,8 @@
 #include "license.h"
 #include "backers.h"
 #include "gui_debug.h"
+#include "gui_debug_memory.h"
+#include "gui_debug_constants.h"
 
 #define GUI_IMPORT
 #include "gui.h"
@@ -133,6 +134,8 @@ void gui_init(void)
         emu_load_bios(bios_path);
 
     emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
+
+    gui_debug_memory_init();
 }
 
 void gui_destroy(void)
@@ -213,7 +216,10 @@ void gui_shortcut(gui_ShortCutEvent event)
         break;
     case gui_ShortcutDebugNextFrame:
         if (config_debug.debug)
+        {
             emu_debug_next_frame();
+            gui_debug_memory_step_frame();
+        }
         break;
     case gui_ShortcutDebugBreakpoint:
         if (config_debug.debug)
@@ -229,11 +235,11 @@ void gui_shortcut(gui_ShortCutEvent event)
         break;
     case gui_ShortcutDebugCopy:
         if (config_debug.debug)
-            gui_debug_copy_memory();
+            gui_debug_memory_copy();
         break;
     case gui_ShortcutDebugPaste:
         if (config_debug.debug)
-            gui_debug_paste_memory();
+            gui_debug_memory_paste();
         break;
     case gui_ShortcutShowMainMenu:
         config_emulator.show_menu = !config_emulator.show_menu;
@@ -844,6 +850,7 @@ static void main_menu(void)
             if (ImGui::MenuItem("Step Frame", "CTRL + F6", (void*)0, config_debug.debug))
             {
                 emu_debug_next_frame();
+                gui_debug_memory_step_frame();
             }
 
             if (ImGui::MenuItem("Continue", "CTRL + F5", (void*)0, config_debug.debug))
