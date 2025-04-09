@@ -43,6 +43,7 @@ static const ImVec4 gray =          ImVec4(0.50f, 0.50f, 0.50f, 1.0f);
 static const ImVec4 mid_gray =      ImVec4(0.40f, 0.40f, 0.40f, 1.0f);
 static const ImVec4 dark_gray =     ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
 static const ImVec4 black =         ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
+static const ImVec4 light_brown =   ImVec4(0.78f, 0.65f, 0.56f, 1.0f);
 
 static const int gui_debug_symbols_count = 63;
 

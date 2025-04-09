@@ -80,10 +80,10 @@ void gui_debug_window_memory(void)
     Memory* memory = core->GetMemory();
 
     ImGui::PushFont(gui_default_font);
-    ImGui::TextColored(cyan, "  ROM: ");ImGui::SameLine();
-    ImGui::TextColored(magenta, "BANK");ImGui::SameLine();
+    ImGui::TextColored(light_brown, "  ROM: ");ImGui::SameLine();
+    ImGui::TextColored(cyan, "BANK");ImGui::SameLine();
     ImGui::Text("$%02X", memory->GetRomBank()); ImGui::SameLine();
-    ImGui::TextColored(magenta, "  ADDRESS");ImGui::SameLine();
+    ImGui::TextColored(cyan, "  ADDRESS");ImGui::SameLine();
     ImGui::Text("$%05X", memory->GetRomBankAddress());
     ImGui::PopFont();
 
