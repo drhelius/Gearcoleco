@@ -39,7 +39,7 @@ static const char slash = '/';
 #define JOYPAD_BUTTONS 16
 
 static struct retro_log_callback logging;
-static retro_log_printf_t log_cb;
+retro_log_printf_t log_cb;
 static char retro_system_directory[4096];
 static char retro_game_path[4096];
 
