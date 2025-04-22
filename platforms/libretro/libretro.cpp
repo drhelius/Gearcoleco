@@ -302,7 +302,7 @@ static void load_bootroms(void)
 {
     char bios_path[4113];
 
-    sprintf(bios_path, "%s%ccolecovision.rom", retro_system_directory, slash);
+    snprintf(bios_path, 4113, "%s%ccolecovision.rom", retro_system_directory, slash);
 
     core->GetMemory()->LoadBios(bios_path);
 }
@@ -634,7 +634,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
     snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path);
 
-    struct retro_memory_descriptor descs[4];
+    struct retro_memory_descriptor descs[5];
 
     memset(descs, 0, sizeof(descs));
 
@@ -650,10 +650,14 @@ bool retro_load_game(const struct retro_game_info *info)
     descs[2].ptr   = core->GetMemory()->GetRam();
     descs[2].start = 0x6000;
     descs[2].len   = 0x0400;
+    // RAM MIRROR
+    descs[3].ptr   = core->GetMemory()->GetRam();
+    descs[3].start = 0x7000;
+    descs[3].len   = 0x0400;
     // CART
-    descs[3].ptr   = core->GetCartridge()->GetROM();
-    descs[3].start = 0x8000;
-    descs[3].len   = 0x8000;
+    descs[4].ptr   = core->GetCartridge()->GetROM();
+    descs[4].start = 0x8000;
+    descs[4].len   = 0x8000;
 
     struct retro_memory_map mmaps;
     mmaps.descriptors = descs;
