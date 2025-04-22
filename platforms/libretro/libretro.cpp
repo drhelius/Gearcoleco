@@ -634,7 +634,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
     snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path);
 
-    struct retro_memory_descriptor descs[5];
+    struct retro_memory_descriptor descs[7];
 
     memset(descs, 0, sizeof(descs));
 
@@ -658,6 +658,14 @@ bool retro_load_game(const struct retro_game_info *info)
     descs[4].ptr   = core->GetCartridge()->GetROM();
     descs[4].start = 0x8000;
     descs[4].len   = 0x8000;
+    // SGM LOWER
+    descs[5].ptr   = core->GetMemory()->GetSGMRam();
+    descs[5].start = 0x010000;
+    descs[5].len   = 0x2000;
+    // SGM UPPER
+    descs[6].ptr   = core->GetMemory()->GetSGMRam() + 0x2000;
+    descs[6].start = 0x012000;
+    descs[6].len   = 0x6000;
 
     struct retro_memory_map mmaps;
     mmaps.descriptors = descs;
