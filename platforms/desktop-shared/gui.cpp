@@ -134,6 +134,7 @@ void gui_init(void)
         emu_load_bios(bios_path);
 
     emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
+    emu_video_no_sprite_limit(config_video.sprite_limit);
 
     gui_debug_memory_init();
 }
