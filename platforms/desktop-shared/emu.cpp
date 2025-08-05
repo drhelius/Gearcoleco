@@ -52,7 +52,7 @@ static void update_debug_background_buffer(void);
 static void update_debug_tile_buffer(void);
 static void update_debug_sprite_buffers(void);
 
-void emu_init(void)
+bool emu_init(void)
 {
     int screen_size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
 
@@ -71,7 +71,8 @@ void emu_init(void)
     gearcoleco->Init();
 
     sound_queue = new SoundQueue();
-    sound_queue->Start(GC_AUDIO_SAMPLE_RATE, 2);
+    if (!sound_queue->Start(GC_AUDIO_SAMPLE_RATE, 2))
+        return false;
 
     audio_buffer = new s16[GC_AUDIO_BUFFER_SIZE];
 
@@ -87,6 +88,8 @@ void emu_init(void)
     emu_savestates_dir_option = 0;
     emu_savefiles_path[0] = 0;
     emu_savestates_path[0] = 0;
+
+    return true;
 }
 
 void emu_destroy(void)
