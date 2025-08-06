@@ -62,7 +62,7 @@ inline void Audio::Tick(unsigned int clockCycles)
 
 inline void Audio::WriteAudioRegister(u8 value)
 {
-    m_pApu->write_data(m_ElapsedCycles, value);
+    m_pApu->write_data((blip_time_t)m_ElapsedCycles, value);
 }
 
 inline void Audio::SGMWrite(u8 value)

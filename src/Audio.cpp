@@ -81,8 +81,8 @@ void Audio::Mute(bool mute)
 
 void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
 {
-    m_pApu->end_frame(m_ElapsedCycles);
-    m_pBuffer->end_frame(m_ElapsedCycles);
+    m_pApu->end_frame((blip_time_t)m_ElapsedCycles);
+    m_pBuffer->end_frame((blip_time_t)m_ElapsedCycles);
 
     int count = static_cast<int>(m_pBuffer->read_samples(m_pSampleBuffer, GC_AUDIO_BUFFER_SIZE));
 
