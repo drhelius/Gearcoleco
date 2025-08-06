@@ -81,7 +81,6 @@
     <ClCompile Include="..\desktop-shared\imgui\imgui_widgets.cpp">
       <Filter>desktop\imgui</Filter>
     </ClCompile>
-
     <ClCompile Include="..\desktop-shared\nfd\nfd_win.cpp">
       <Filter>desktop\nfd</Filter>
     </ClCompile>
@@ -333,5 +332,12 @@
     <ClInclude Include="..\audio-shared\sound_queue.h">
       <Filter>audio</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="iconfile.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Gearcoleco.rc" />
   </ItemGroup>
 </Project>

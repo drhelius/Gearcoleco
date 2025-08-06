@@ -120,6 +120,13 @@
     <ClInclude Include="..\desktop-shared\nfd\nfd_sdl2.h" />
     <ClInclude Include="..\desktop-shared\renderer.h" />
     <ClInclude Include="..\desktop-shared\stb\stb_image_write.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="iconfile.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Gearcoleco.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B12702AD-ABFB-343A-A199-8E24837244A3}</ProjectGuid>
