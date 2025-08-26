@@ -20,6 +20,7 @@
 #ifndef GEARCOLECO_H
 #define	GEARCOLECO_H
 
+#include "common.h"
 #include "definitions.h"
 #include "log.h"
 #include "GearcolecoCore.h"
