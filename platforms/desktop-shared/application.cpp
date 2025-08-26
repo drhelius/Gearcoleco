@@ -677,6 +677,10 @@ static void sdl_events_emu(const SDL_Event* event)
                     emu_key_pressed(controller, Key_Left_Button);
                 else if (event->cbutton.button == config_input[i].gamepad_right_button)
                     emu_key_pressed(controller, Key_Right_Button);
+                else if (event->cbutton.button == config_input[i].gamepad_purple)
+                    emu_key_pressed(controller, Key_Purple);
+                else if (event->cbutton.button == config_input[i].gamepad_blue)
+                    emu_key_pressed(controller, Key_Blue);
                 else if (event->cbutton.button == config_input[i].gamepad_0)
                     emu_key_pressed(controller, Keypad_0);
                 else if (event->cbutton.button == config_input[i].gamepad_1)
@@ -737,6 +741,10 @@ static void sdl_events_emu(const SDL_Event* event)
                     emu_key_released(controller, Key_Left_Button);
                 else if (event->cbutton.button == config_input[i].gamepad_right_button)
                     emu_key_released(controller, Key_Right_Button);
+                else if (event->cbutton.button == config_input[i].gamepad_purple)
+                    emu_key_released(controller, Key_Purple);
+                else if (event->cbutton.button == config_input[i].gamepad_blue)
+                    emu_key_released(controller, Key_Blue);
                 else if (event->cbutton.button == config_input[i].gamepad_0)
                     emu_key_released(controller, Keypad_0);
                 else if (event->cbutton.button == config_input[i].gamepad_1)
@@ -790,40 +798,159 @@ static void sdl_events_emu(const SDL_Event* event)
                 if (!config_input[i].gamepad)
                     continue;
 
-                if (config_input[i].gamepad_directional == 0)
-                    continue;
-
                 if (event->caxis.which != id)
                     continue;
 
-                const int STICK_DEAD_ZONE = 8000;
-                    
-                if(event->caxis.axis == config_input[i].gamepad_x_axis)
+                if (config_input[i].gamepad_directional == 1)
                 {
-                    int x_motion = event->caxis.value * (config_input[i].gamepad_invert_x_axis ? -1 : 1);
+                    const int STICK_DEAD_ZONE = 8000;
 
-                    if (x_motion < -STICK_DEAD_ZONE)
-                        emu_key_pressed(controller, Key_Left);
-                    else if (x_motion > STICK_DEAD_ZONE)
-                        emu_key_pressed(controller, Key_Right);
-                    else
+                    if(event->caxis.axis == config_input[i].gamepad_x_axis)
                     {
-                        emu_key_released(controller, Key_Left);
-                        emu_key_released(controller, Key_Right);
+                        int x_motion = event->caxis.value * (config_input[i].gamepad_invert_x_axis ? -1 : 1);
+
+                        if (x_motion < -STICK_DEAD_ZONE)
+                            emu_key_pressed(controller, Key_Left);
+                        else if (x_motion > STICK_DEAD_ZONE)
+                            emu_key_pressed(controller, Key_Right);
+                        else
+                        {
+                            emu_key_released(controller, Key_Left);
+                            emu_key_released(controller, Key_Right);
+                        }
+                    }
+                    else if(event->caxis.axis == config_input[i].gamepad_y_axis)
+                    {
+                        int y_motion = event->caxis.value * (config_input[i].gamepad_invert_y_axis ? -1 : 1);
+
+                        if (y_motion < -STICK_DEAD_ZONE)
+                            emu_key_pressed(controller, Key_Up);
+                        else if (y_motion > STICK_DEAD_ZONE)
+                            emu_key_pressed(controller, Key_Down);
+                        else
+                        {
+                            emu_key_released(controller, Key_Up);
+                            emu_key_released(controller, Key_Down);
+                        }
                     }
                 }
-                else if(event->caxis.axis == config_input[i].gamepad_y_axis)
-                {
-                    int y_motion = event->caxis.value * (config_input[i].gamepad_invert_y_axis ? -1 : 1);
 
-                    if (y_motion < -STICK_DEAD_ZONE)
-                        emu_key_pressed(controller, Key_Up);
-                    else if (y_motion > STICK_DEAD_ZONE)
-                        emu_key_pressed(controller, Key_Down);
-                    else
+                if (event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)
+                {
+                    int vbtn = GAMEPAD_VBTN_AXIS_BASE + event->caxis.axis;
+                    bool pressed = event->caxis.value > GAMEPAD_VBTN_AXIS_THRESHOLD;
+
+                    if (config_input[i].gamepad_left_button == vbtn)
                     {
-                        emu_key_released(controller, Key_Up);
-                        emu_key_released(controller, Key_Down);
+                        if (pressed)
+                            emu_key_pressed(controller, Key_Left_Button);
+                        else
+                            emu_key_released(controller, Key_Left_Button);
+                    }
+                    else if (config_input[i].gamepad_right_button == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Key_Right_Button);
+                        else
+                            emu_key_released(controller, Key_Right_Button);
+                    }
+                    else if (config_input[i].gamepad_purple == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Key_Purple);
+                        else
+                            emu_key_released(controller, Key_Purple);
+                    }
+                    else if (config_input[i].gamepad_blue == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Key_Blue);
+                        else
+                            emu_key_released(controller, Key_Blue);
+                    }
+                    else if (config_input[i].gamepad_0 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_0);
+                        else
+                            emu_key_released(controller, Keypad_0);
+                    }
+                    else if (config_input[i].gamepad_1 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_1);
+                        else
+                            emu_key_released(controller, Keypad_1);
+                    }
+                    else if (config_input[i].gamepad_2 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_2);
+                        else
+                            emu_key_released(controller, Keypad_2);
+                    }
+                    else if (config_input[i].gamepad_3 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_3);
+                        else
+                            emu_key_released(controller, Keypad_3);
+                    }
+                    else if (config_input[i].gamepad_4 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_4);
+                        else
+                            emu_key_released(controller, Keypad_4);
+                    }
+                    else if (config_input[i].gamepad_5 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_5);
+                        else
+                            emu_key_released(controller, Keypad_5);
+                    }
+                    else if (config_input[i].gamepad_6 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_6);
+                        else
+                            emu_key_released(controller, Keypad_6);
+                    }
+                    else if (config_input[i].gamepad_7 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_7);
+                        else
+                            emu_key_released(controller, Keypad_7);
+                    }
+                    else if (config_input[i].gamepad_8 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_8);
+                        else
+                            emu_key_released(controller, Keypad_8);
+                    }
+                    else if (config_input[i].gamepad_9 == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_9);
+                        else
+                            emu_key_released(controller, Keypad_9);
+                    }
+                    else if (config_input[i].gamepad_asterisk == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_Asterisk);
+                        else
+                            emu_key_released(controller, Keypad_Asterisk);
+                    }
+                    else if (config_input[i].gamepad_hash == vbtn)
+                    {
+                        if (pressed)
+                            emu_key_pressed(controller, Keypad_Hash);
+                        else
+                            emu_key_released(controller, Keypad_Hash);
                     }
                 }
             }
