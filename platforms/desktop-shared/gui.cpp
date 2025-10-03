@@ -563,7 +563,7 @@ static void main_menu(void)
 
             if (ImGui::BeginMenu("Aspect Ratio"))
             {
-                ImGui::PushItemWidth(160.0f);
+                ImGui::PushItemWidth(190.0f);
                 ImGui::Combo("##ratio", &config_video.ratio, "Square Pixels (1:1 PAR)\0Standard (4:3 DAR)\0Wide (16:9 DAR)\0Wide (16:10 DAR)\0\0");
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
