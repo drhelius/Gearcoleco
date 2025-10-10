@@ -37,6 +37,7 @@ EXTERN bool emu_audio_sync;
 EXTERN bool emu_debug_disable_breakpoints_cpu;
 EXTERN bool emu_debug_disable_breakpoints_mem;
 EXTERN int emu_debug_tile_palette;
+EXTERN bool emu_debug_tile_color_mode;
 EXTERN bool emu_savefiles_dir_option;
 EXTERN bool emu_savestates_dir_option;
 EXTERN char emu_savefiles_path[4096];

@@ -983,74 +983,127 @@ static void debug_window_vram_tiles(void)
     int mode = video->GetMode();
 
     static bool show_grid = true;
-    int lines = 32;
+    static bool show_color = true;
+
+    bool split_mode2 = (mode == 2);
+    int sections = split_mode2 ? 3 : 1;
+    int lines_per_section = split_mode2 ? 32 / 3 : 32;
+
     float scale = 2.0f;
     float width = 8.0f * 32.0f * scale;
-    float height = 8.0f * lines * scale;
+    float section_height = 8.0f * lines_per_section * scale;
     float spacing = 8.0f * scale;
+    float section_margin = 10.0f;
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     ImGuiIO& io = ImGui::GetIO();
-    ImVec2 p;
 
     ImGui::Checkbox("Show Grid##grid_tiles", &show_grid);
+    ImGui::SameLine();
+    ImGui::Checkbox("Show Color##color_tiles", &show_color);
+
+    emu_debug_tile_color_mode = show_color;
 
     ImGui::PushFont(gui_default_font);
 
     ImGui::Columns(2, "tiles", false);
     ImGui::SetColumnOffset(1, width + 10.0f);
 
-    p = ImGui::GetCursorScreenPos();
+    int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
 
-    ImGui::Image((ImTextureID)(intptr_t)renderer_emu_debug_vram_tiles, ImVec2(width, height), ImVec2(0.0f, 0.0f), ImVec2(1.0f, (1.0f / 32.0f) * lines));
+    int hovered_tile_x = -1;
+    int hovered_tile_y = -1;
+    int hovered_section = -1;
 
-    if (show_grid)
+    for (int section = 0; section < sections; section++)
     {
-        float x = p.x;
-        for (int n = 0; n <= 32; n++)
+        ImVec2 p = ImGui::GetCursorScreenPos();
+
+        float tex_y_start = (float)(section * lines_per_section) / 32.0f;
+        float tex_y_end = (float)((section + 1) * lines_per_section) / 32.0f;
+
+        ImGui::Image((ImTextureID)(intptr_t)renderer_emu_debug_vram_tiles, 
+                    ImVec2(width, section_height), 
+                    ImVec2(0.0f, tex_y_start), 
+                    ImVec2(1.0f, tex_y_end));
+
+        if (show_grid)
         {
-            draw_list->AddLine(ImVec2(x, p.y), ImVec2(x, p.y + height), ImColor(dark_gray), 1.0f);
-            x += spacing;
+            float x = p.x;
+            for (int n = 0; n <= 32; n++)
+            {
+                draw_list->AddLine(ImVec2(x, p.y), ImVec2(x, p.y + section_height), ImColor(dark_gray), 1.0f);
+                x += spacing;
+            }
+
+            float y = p.y;
+            for (int n = 0; n <= lines_per_section; n++)
+            {
+                draw_list->AddLine(ImVec2(p.x, y), ImVec2(p.x + width, y), ImColor(dark_gray), 1.0f);
+                y += spacing;
+            }
         }
 
-        float y = p.y;  
-        for (int n = 0; n <= lines; n++)
+        float mouse_x = io.MousePos.x - p.x;
+        float mouse_y = io.MousePos.y - p.y;
+
+        if (ImGui::IsWindowHovered() && (mouse_x >= 0.0f) && (mouse_x < width) && 
+            (mouse_y >= 0.0f) && (mouse_y < section_height))
         {
-            draw_list->AddLine(ImVec2(p.x, y), ImVec2(p.x + width, y), ImColor(dark_gray), 1.0f);
-            y += spacing;
+            int tile_x = (int)(mouse_x / spacing);
+            int tile_y = (int)(mouse_y / spacing);
+
+            draw_list->AddRect(ImVec2(p.x + (tile_x * spacing), p.y + (tile_y * spacing)), 
+                             ImVec2(p.x + ((tile_x + 1) * spacing), p.y + ((tile_y + 1) * spacing)), 
+                             ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+
+            hovered_tile_x = tile_x;
+            hovered_tile_y = tile_y + (section * lines_per_section);
+            hovered_section = section;
+        }
+
+        if (section < sections - 1)
+        {
+            ImGui::Dummy(ImVec2(0.0f, section_margin));
         }
     }
 
-    int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
-
-    ImGui::TextColored(cyan, " Pattern Table Addr:"); ImGui::SameLine();
-    ImGui::Text("$%04X", pattern_table_addr);
-
-    float mouse_x = io.MousePos.x - p.x;
-    float mouse_y = io.MousePos.y - p.y;
-
-    int tile_x = -1;
-    int tile_y = -1;
-
-    if (ImGui::IsWindowHovered() && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+    if (hovered_tile_x >= 0)
     {
-        tile_x = (int)(mouse_x / spacing);
-        tile_y = (int)(mouse_y / spacing);
-
-        draw_list->AddRect(ImVec2(p.x + (tile_x * spacing), p.y + (tile_y * spacing)), ImVec2(p.x + ((tile_x + 1) * spacing), p.y + ((tile_y + 1) * spacing)), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
-
         ImGui::NextColumn();
 
-        ImGui::Image((ImTextureID)(intptr_t)renderer_emu_debug_vram_tiles, ImVec2(128.0f, 128.0f), ImVec2((1.0f / 32.0f) * tile_x, (1.0f / 32.0f) * tile_y), ImVec2((1.0f / 32.0f) * (tile_x + 1), (1.0f / 32.0f) * (tile_y + 1)));
+        float tex_x = (1.0f / 32.0f) * hovered_tile_x;
+        float tex_y = (1.0f / 32.0f) * hovered_tile_y;
+
+        ImGui::Image((ImTextureID)(intptr_t)renderer_emu_debug_vram_tiles, 
+                    ImVec2(128.0f, 128.0f), 
+                    ImVec2(tex_x, tex_y), 
+                    ImVec2(tex_x + (1.0f / 32.0f), tex_y + (1.0f / 32.0f)));
 
         ImGui::TextColored(light_brown, "DETAILS:");
 
-        int tile = (tile_y << 5) + tile_x;
+        int tile = (hovered_tile_y << 5) + hovered_tile_x;
 
-        int tile_addr = (pattern_table_addr + (tile << 3)) & 0x3FFF;
+        int tile_addr;
+        if (split_mode2)
+        {
+            int section_base = pattern_table_addr + (hovered_section * 0x800);
+            int tile_in_section = ((hovered_tile_y % lines_per_section) << 5) + hovered_tile_x;
+            tile_addr = (section_base + (tile_in_section << 3)) & 0x3FFF;
+
+            ImGui::TextColored(cyan, " Table Addr:"); ImGui::SameLine();
+            ImGui::Text("$%04X", section_base);
+        }
+        else
+        {
+            tile_addr = (pattern_table_addr + (tile << 3)) & 0x3FFF;
+            ImGui::TextColored(cyan, " Table Addr:"); ImGui::SameLine();
+            ImGui::Text("$%04X", pattern_table_addr);
+        }
 
         ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
         ImGui::Text("$%03X", tile); 
-        ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
+        ImGui::TextColored(cyan, " Tile Addr: "); ImGui::SameLine();
         ImGui::Text("$%04X", tile_addr); 
 
         if (ImGui::IsMouseClicked(0))

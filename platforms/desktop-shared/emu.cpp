@@ -84,6 +84,7 @@ bool emu_init(void)
     emu_debug_disable_breakpoints_cpu = false;
     emu_debug_disable_breakpoints_mem = false;
     emu_debug_tile_palette = 0;
+    emu_debug_tile_color_mode = true;
     emu_savefiles_dir_option = 0;
     emu_savestates_dir_option = 0;
     emu_savefiles_path[0] = 0;
@@ -627,28 +628,127 @@ static void update_debug_tile_buffer(void)
 
     int pattern_table_addr = (regs[4] & ((mode == 2) ? 0x04 : 0x07)) << 11;
     
-    for (int y = 0; y < 256; y++)
+    if (emu_debug_tile_color_mode)
     {
-        int width_y = (y * 256);
-        int tile_y = y / 8;
-        int offset_y = y & 0x7;
+        int color_table_addr = regs[3] << 6;
+        int backdrop_color = regs[7] & 0x0F;
+        backdrop_color = (backdrop_color > 0) ? backdrop_color : 1;
 
-        for (int x = 0; x < 256; x++)
+        if (mode == 2)
         {
-            int tile_x = x / 8;
-            int offset_x = 7 - (x & 0x7);
-            int pixel = width_y + x;
+            pattern_table_addr &= 0x2000;
+            color_table_addr &= 0x2000;
+        }
+        else if (mode == 4)
+        {
+            pattern_table_addr &= 0x2000;
+        }
 
-            int tile_number = (tile_y * 32) + tile_x;
+        for (int y = 0; y < 256; y++)
+        {
+            int width_y = (y * 256);
+            int tile_y = y / 8;
+            int offset_y = y & 0x7;
 
-            int tile_data_addr = (pattern_table_addr + (tile_number * 8) + (1 * offset_y)) & 0x3FFF;
-            bool color = IsSetBit(vram[tile_data_addr], offset_x);
+            for (int x = 0; x < 256; x++)
+            {
+                int tile_x = x / 8;
+                int offset_x = 7 - (x & 0x7);
+                int pixel = width_y + x;
 
-            u16 black = 0;
+                int tile_number = (tile_y * 32) + tile_x;
+                u8 pattern_line = 0;
+                u8 color_line = 0;
+                int fg_color = 15;
+                int bg_color = 0;
 
-            u16 white = 15;
+                if (mode == 1)
+                {
+                    fg_color = (regs[7] >> 4) & 0x0F;
+                    bg_color = backdrop_color;
+                    fg_color = (fg_color > 0) ? fg_color : backdrop_color;
 
-            debug_tile_buffer[pixel] = color ? white : black;
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                }
+                else if (mode == 4)
+                {
+                    int offset_color = pattern_table_addr + (tile_number << 3) + ((tile_y & 0x03) << 1) + (offset_y & 0x04 ? 1 : 0);
+                    color_line = vram[offset_color];
+
+                    int left_color = color_line >> 4;
+                    int right_color = color_line & 0x0F;
+                    left_color = (left_color > 0) ? left_color : backdrop_color;
+                    right_color = (right_color > 0) ? right_color : backdrop_color;
+
+                    if ((x & 0x07) < 4)
+                        debug_tile_buffer[pixel] = left_color;
+                    else
+                        debug_tile_buffer[pixel] = right_color;
+                    continue;
+                }
+                else if (mode == 0)
+                {
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                    color_line = vram[color_table_addr + (tile_number >> 3)];
+
+                    fg_color = color_line >> 4;
+                    bg_color = color_line & 0x0F;
+                    fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+                    bg_color = (bg_color > 0) ? bg_color : backdrop_color;
+                }
+                else if (mode == 2)
+                {
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+
+                    color_line = vram[color_table_addr + (tile_number * 8) + offset_y];
+
+                    fg_color = color_line >> 4;
+                    bg_color = color_line & 0x0F;
+                    fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+                    bg_color = (bg_color > 0) ? bg_color : backdrop_color;
+                }
+                else
+                {
+                    // Unknown mode, fall back to b&w
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                    fg_color = 15;
+                    bg_color = 0;
+                }
+
+                bool color_bit = IsSetBit(pattern_line, offset_x);
+                debug_tile_buffer[pixel] = color_bit ? fg_color : bg_color;
+            }
+        }
+    }
+    else
+    {
+        // Black and white mode - show raw pattern table sequentially
+        for (int y = 0; y < 256; y++)
+        {
+            int width_y = (y * 256);
+            int tile_y = y / 8;
+            int offset_y = y & 0x7;
+
+            for (int x = 0; x < 256; x++)
+            {
+                int tile_x = x / 8;
+                int offset_x = 7 - (x & 0x7);
+                int pixel = width_y + x;
+
+                int tile_number = (tile_y * 32) + tile_x;
+
+                int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                bool color = IsSetBit(vram[tile_data_addr], offset_x);
+
+                u16 black = 0;
+                u16 white = 15;
+
+                debug_tile_buffer[pixel] = color ? white : black;
+            }
         }
     }
 }
