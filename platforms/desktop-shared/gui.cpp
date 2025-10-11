@@ -637,7 +637,7 @@ static void main_menu(void)
                 for (int i = 0; i < 16; i++)
                 {
                     char text[10] = {0};
-                    snprintf(text, sizeof(text),"Color #%d", i + 1);
+                    snprintf(text, sizeof(text),"Color #%d", i);
                     if (ImGui::ColorEdit3(text, (float*)&custom_palette[i], ImGuiColorEditFlags_NoInputs))
                     {
                         update_palette();
