@@ -798,7 +798,7 @@ static void debug_window_vram(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(896, 31), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(668, 640), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(670, 648), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("VDP Viewer", &config_debug.show_video);
 
@@ -869,6 +869,8 @@ static void debug_window_vram_background(void)
 
     ImGui::Checkbox("Show Grid##grid_bg", &show_grid);
 
+    ImGui::NewLine();
+
     ImGui::PushFont(gui_default_font);
 
     ImGui::Columns(2, "bg", false);
@@ -902,7 +904,8 @@ static void debug_window_vram_background(void)
     if (mode == 2)
         color_table_addr &= 0x2000;
 
-    ImGui::TextColored(cyan, " Name Table Addr:"); ImGui::SameLine();
+    ImGui::NewLine();
+    ImGui::TextColored(cyan, "Name Table Addr:"); ImGui::SameLine();
     ImGui::Text("$%04X", name_table_addr);
 
     float mouse_x = io.MousePos.x - p.x;
@@ -987,7 +990,7 @@ static void debug_window_vram_tiles(void)
 
     bool split_mode2 = (mode == 2);
     int sections = split_mode2 ? 3 : 1;
-    int lines_per_section = split_mode2 ? 32 / 3 : 32;
+    int lines_per_section = split_mode2 ? 8 : 32;
 
     float scale = 2.0f;
     float width = 8.0f * 32.0f * scale;
@@ -1001,6 +1004,8 @@ static void debug_window_vram_tiles(void)
     ImGui::Checkbox("Show Grid##grid_tiles", &show_grid);
     ImGui::SameLine();
     ImGui::Checkbox("Show Color##color_tiles", &show_color);
+
+    ImGui::NewLine();
 
     emu_debug_tile_color_mode = show_color;
 
