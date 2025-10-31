@@ -32,6 +32,7 @@ public:
         CartridgeColecoVision,
         CartridgeMegaCart,
         CartridgeActivisionCart,
+        CartridgeOCM,
         CartridgeNotSupported
     };
 
@@ -47,6 +48,8 @@ public:
         CartridgeTypes type;
         CartridgeRegions region;
     };
+
+    u8* GetEEPROM() const;
 
 public:
     Cartridge();
@@ -85,6 +88,7 @@ private:
     bool m_bPAL;
     u32 m_iCRC;
     bool m_bSRAM;
+    u8* m_pEEPROM;
 };
 
 #endif	/* CARTRIDGE_H */

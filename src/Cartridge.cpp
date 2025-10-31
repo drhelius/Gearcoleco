@@ -27,6 +27,7 @@
 Cartridge::Cartridge()
 {
     InitPointer(m_pROM);
+    InitPointer(m_pEEPROM);
     m_iROMSize = 0;
     m_Type = CartridgeNotSupported;
     m_bValidROM = false;
@@ -42,10 +43,12 @@ Cartridge::Cartridge()
 Cartridge::~Cartridge()
 {
     SafeDeleteArray(m_pROM);
+    SafeDeleteArray(m_pEEPROM);
 }
 
 void Cartridge::Init()
 {
+    m_pEEPROM = new u8[0x400];
     Reset();
 }
 
@@ -62,6 +65,8 @@ void Cartridge::Reset()
     m_bPAL = false;
     m_bSRAM = false;
     m_iCRC = 0;
+    for (int j = 0; j < 0x400; j++)
+        m_pEEPROM[j] = 0xFF;
 }
 
 u32 Cartridge::GetCRC() const
@@ -124,6 +129,10 @@ void Cartridge::ForceConfig(Cartridge::ForceConfiguration config)
             m_Type = config.type;
             Log("Forcing Mapper: Activision");
             break;
+        case Cartridge::CartridgeOCM:
+            m_Type = config.type;
+            Log("Forcing Mapper: OCM");
+            break;
         default:
             break;
     }
@@ -152,6 +161,11 @@ const char* Cartridge::GetFileName() const
 u8* Cartridge::GetROM() const
 {
     return m_pROM;
+}
+
+u8* Cartridge::GetEEPROM() const
+{
+    return m_pEEPROM;
 }
 
 bool Cartridge::LoadFromZipFile(const u8* buffer, int size)
@@ -383,6 +397,9 @@ bool Cartridge::GatherMetadata(u32 crc)
         case Cartridge::CartridgeActivisionCart:
             Log("Activision mapper found");
             break;
+        case Cartridge::CartridgeOCM:
+            Log("OCM mapper found");
+            break;
         case Cartridge::CartridgeNotSupported:
             Log("Cartridge not supported!!");
             break;
@@ -413,6 +430,14 @@ void Cartridge::GetInfoFromDB(u32 crc)
             {
                 Log("Cartridge with SRAM");
                 m_bSRAM = true;
+            }
+
+            if (kGameDatabase[i].mode & GC_GameDBMode_OCM)
+            {
+                Log("Cartridge with OCM mapper");
+                m_Type = CartridgeOCM;
+                for (int j = 0; j < 0x400; j++)
+                    m_pEEPROM[j] = 0xFF;
             }
         }
         else

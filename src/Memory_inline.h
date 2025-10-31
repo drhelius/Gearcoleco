@@ -21,6 +21,7 @@
 #define	MEMORY_INLINE_H
 
 #include "Cartridge.h"
+#include "Mapper.h"
 
 inline u8 Memory::Read(u16 address)
 {
@@ -48,50 +49,7 @@ inline u8 Memory::Read(u16 address)
         case 0xC000:
         case 0xE000:
         {
-            u8* pRom = m_pCartridge->GetROM();
-            int romSize = m_pCartridge->GetROMSize();
-
-            if (m_pCartridge->GetType() == Cartridge::CartridgeMegaCart)
-            {
-                if (address < 0xC000)
-                {
-                    return pRom[(address & 0x3FFF) + (romSize - 0x4000)];
-                }
-                else
-                {
-                    if (address >= 0xFFC0)
-                    {
-                        m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
-                        m_RomBankAddress = m_RomBank << 14;
-                    }
-                    return pRom[(address & 0x3FFF) + m_RomBankAddress];
-                }
-            }
-            else if (m_pCartridge->GetType() == Cartridge::CartridgeActivisionCart)
-            {
-                if (address < 0xC000)
-                {
-                    return pRom[address & 0x3FFF];
-                }
-                else
-                {
-                    if (address >= 0xFF80)
-                    {
-                        Debug("--> ** EEPROM read: %X %X", address);
-                    }
-                    return pRom[(address & 0x3FFF) + m_RomBankAddress];
-                }
-            }
-            else
-            {
-                if (address >= (romSize + 0x8000))
-                {
-                    Debug("--> ** Attempting to read from outer ROM: %X. ROM Size: %X", address, romSize);
-                    return 0xFF;
-                }
-
-                return pRom[address & 0x7FFF];
-            }
+            return m_pMapper->Read(address);
         }
         default:
             return 0xFF;
@@ -130,44 +88,9 @@ inline void Memory::Write(u16 address, u8 value)
         case 0x8000:
         case 0xA000:
         case 0xC000:
-        {
-            Debug("--> ** Attempting to write on ROM: %X %X", address, value);
-            break;
-        }
         case 0xE000:
         {
-            if (m_pCartridge->HasSRAM() && (address >= 0xE000) && (address < 0xE800))
-            {
-                u8* pRom = m_pCartridge->GetROM();
-                pRom[(address + 0x800) & 0x7FFF] = value;
-            }
-            else if ((m_pCartridge->GetType() == Cartridge::CartridgeMegaCart) && (address >= 0xFFC0))
-            {
-                m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
-                m_RomBankAddress = m_RomBank << 14;
-            }
-            else if ((m_pCartridge->GetType() == Cartridge::CartridgeActivisionCart) && (address >= 0xFF90))
-            {
-                if ((address == 0xFF90) || (address == 0xFFA0) || (address == 0xFFB0))
-                {
-                    m_RomBank = (address >> 4) & (m_pCartridge->GetROMBankCount() - 1);
-                    m_RomBankAddress = m_RomBank << 14;
-                }
-#ifdef DEBUG_GEARCOLECO
-                if (address == 0xFFC0)
-                    Debug("--> ** EEPROM write SCL=0: %X %X", address, value);
-                if (address == 0xFFD0)
-                    Debug("--> ** EEPROM write SCL=1: %X %X", address, value);
-                if (address == 0xFFE0)
-                    Debug("--> ** EEPROM write SDA=0: %X %X", address, value);
-                if (address == 0xFFF0)
-                    Debug("--> ** EEPROM write SDA=1: %X %X", address, value);
-#endif
-            }
-            else
-            {
-                Debug("--> ** Attempting to write on ROM: %X %X", address, value);
-            }
+            m_pMapper->Write(address, value);
             break;
         }
     }

@@ -23,11 +23,17 @@
 #include "Memory.h"
 #include "Processor.h"
 #include "Cartridge.h"
+#include "Mapper.h"
+#include "StandardMapper.h"
+#include "MegaCartMapper.h"
+#include "ActivisionMapper.h"
+#include "OCMMapper.h"
 
 Memory::Memory(Cartridge* pCartridge)
 {
     m_pCartridge = pCartridge;
     InitPointer(m_pProcessor);
+    InitPointer(m_pMapper);
     InitPointer(m_pDisassembledRomMap);
     InitPointer(m_pDisassembledRamMap);
     InitPointer(m_pDisassembledBiosMap);
@@ -39,12 +45,11 @@ Memory::Memory(Cartridge* pCartridge)
     m_bBiosLoaded = false;
     m_bSGMUpper = false;
     m_bSGMLower = false;
-    m_RomBankAddress = 0;
-    m_RomBank = 0;
 }
 
 Memory::~Memory()
 {
+    SafeDelete(m_pMapper);
     SafeDeleteArray(m_pBios);
     SafeDeleteArray(m_pRam);
     SafeDeleteArray(m_pSGMRam);
@@ -131,12 +136,33 @@ void Memory::Init()
     Reset();
 }
 
+void Memory::SetupMapper()
+{
+    SafeDelete(m_pMapper);
+
+    switch (m_pCartridge->GetType())
+    {
+        case Cartridge::CartridgeMegaCart:
+            m_pMapper = new MegaCartMapper(m_pCartridge);
+            break;
+        case Cartridge::CartridgeActivisionCart:
+            m_pMapper = new ActivisionMapper(m_pCartridge);
+            break;
+        case Cartridge::CartridgeOCM:
+            m_pMapper = new OCMMapper(m_pCartridge);
+            break;
+        default:
+            m_pMapper = new StandardMapper(m_pCartridge);
+            break;
+    }
+
+    m_pMapper->Reset();
+}
+
 void Memory::Reset()
 {
     m_bSGMUpper = false;
     m_bSGMLower = false;
-    m_RomBank = 0;
-    m_RomBankAddress = 0x0000;
 
     for (int i = 0; i < 0x400; i++)
     {
@@ -160,8 +186,7 @@ void Memory::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (m_pSGMRam), 0x8000);
     stream.write(reinterpret_cast<const char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
     stream.write(reinterpret_cast<const char*> (&m_bSGMLower), sizeof(m_bSGMLower));
-    stream.write(reinterpret_cast<const char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
-    stream.write(reinterpret_cast<const char*> (&m_RomBank), sizeof(m_RomBank));
+    m_pMapper->SaveState(stream);
 }
 
 void Memory::LoadState(std::istream& stream)
@@ -170,8 +195,7 @@ void Memory::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (m_pSGMRam), 0x8000);
     stream.read(reinterpret_cast<char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
     stream.read(reinterpret_cast<char*> (&m_bSGMLower), sizeof(m_bSGMLower));
-    stream.read(reinterpret_cast<char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
-    stream.read(reinterpret_cast<char*> (&m_RomBank), sizeof(m_RomBank));
+    m_pMapper->LoadState(stream);
 }
 
 std::vector<Memory::stDisassembleRecord*>* Memory::GetBreakpointsCPU()
@@ -236,7 +260,6 @@ u8* Memory::GetSGMRam()
     return m_pSGMRam;
 }
 
-
 u8* Memory::GetBios()
 {
     return m_pBios;
@@ -244,12 +267,12 @@ u8* Memory::GetBios()
 
 u8 Memory::GetRomBank()
 {
-    return m_RomBank;
+    return IsValidPointer(m_pMapper) ? m_pMapper->GetRomBank() : 0;
 }
 
 u32 Memory::GetRomBankAddress()
 {
-    return m_RomBankAddress;
+    return IsValidPointer(m_pMapper) ? m_pMapper->GetRomBankAddress() : 0;
 }
 
 bool Memory::IsBiosLoaded()
@@ -380,26 +403,90 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
         }
         default:
         {
-            if (m_pCartridge->GetType() == Cartridge::CartridgeMegaCart)
+            map = m_pDisassembledRomMap;
+            segment = 3;
+
+            switch (m_pCartridge->GetType())
             {
-                map = m_pDisassembledRomMap;
-                segment = 3;
-                if (address < 0xC000)
+                case Cartridge::CartridgeMegaCart:
                 {
-                    offset = (address & 0x3FFF) + (m_pCartridge->GetROMSize() - 0x4000);
-                    bank = m_pCartridge->GetROMBankCount() - 1;
+                    if (address < 0xC000)
+                    {
+                        offset = (address & 0x3FFF) + (m_pCartridge->GetROMSize() - 0x4000);
+                        bank = m_pCartridge->GetROMBankCount() - 1;
+                    }
+                    else
+                    {
+                        offset = (address & 0x3FFF) + GetRomBankAddress();
+                        bank = GetRomBank();
+                    }
+                    break;
                 }
-                else
+                case Cartridge::CartridgeActivisionCart:
                 {
-                    offset = (address & 0x3FFF) + m_RomBankAddress;
-                    bank = m_RomBank;
+                    if (address < 0xC000)
+                    {
+                        offset = address & 0x3FFF;
+                        bank = 0;
+                    }
+                    else
+                    {
+                        offset = (address & 0x3FFF) + GetRomBankAddress();
+                        bank = GetRomBank();
+                    }
+                    break;
                 }
-            }
-            else
-            {
-                offset = address - 0x8000;
-                map = m_pDisassembledRomMap;
-                segment = 3;
+                case Cartridge::CartridgeOCM:
+                {
+                    if (IsValidPointer(m_pMapper))
+                    {
+                        OCMMapper* pOCMMapper = dynamic_cast<OCMMapper*>(m_pMapper);
+                        if (IsValidPointer(pOCMMapper))
+                        {
+                            if (address < 0xA000)
+                            {
+                                // 8000-9FFF: Bank 3
+                                offset = (address - 0x8000) + (pOCMMapper->GetBankReg(3) * 0x2000);
+                                bank = pOCMMapper->GetBankReg(3);
+                            }
+                            else if (address < 0xC000)
+                            {
+                                // A000-BFFF: Bank 0
+                                offset = (address - 0xA000) + (pOCMMapper->GetBankReg(0) * 0x2000);
+                                bank = pOCMMapper->GetBankReg(0);
+                            }
+                            else if (address < 0xE000)
+                            {
+                                // C000-DFFF: Bank 1
+                                offset = (address - 0xC000) + (pOCMMapper->GetBankReg(1) * 0x2000);
+                                bank = pOCMMapper->GetBankReg(1);
+                            }
+                            else
+                            {
+                                // E000-FFFF: Bank 2
+                                offset = (address - 0xE000) + (pOCMMapper->GetBankReg(2) * 0x2000);
+                                bank = pOCMMapper->GetBankReg(2);
+                            }
+                        }
+                        else
+                        {
+                            offset = address - 0x8000;
+                            bank = 0;
+                        }
+                    }
+                    else
+                    {
+                        offset = address - 0x8000;
+                        bank = 0;
+                    }
+                    break;
+                }
+                default:
+                {
+                    offset = address - 0x8000;
+                    bank = 0;
+                    break;
+                }
             }
         }
     }

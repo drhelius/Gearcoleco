@@ -25,6 +25,7 @@
 
 class Processor;
 class Cartridge;
+class Mapper;
 
 class Memory
 {
@@ -57,6 +58,7 @@ public:
     void SetProcessor(Processor* pProcessor);
     void Init();
     void Reset();
+    void SetupMapper();
     u8 Read(u16 address);
     void Write(u16 address, u8 value);
     u8* GetRam();
@@ -87,6 +89,7 @@ private:
 private:
     Processor* m_pProcessor;
     Cartridge* m_pCartridge;
+    Mapper* m_pMapper;
     stDisassembleRecord** m_pDisassembledRomMap;
     stDisassembleRecord** m_pDisassembledRamMap;
     stDisassembleRecord** m_pDisassembledBiosMap;
@@ -100,8 +103,6 @@ private:
     u8* m_pBios;
     u8* m_pRam;
     u8* m_pSGMRam;
-    u32 m_RomBankAddress;
-    u8 m_RomBank;
 };
 
 #include "Memory_inline.h"

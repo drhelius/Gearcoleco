@@ -129,6 +129,7 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        m_pMemory->SetupMapper();
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
@@ -147,6 +148,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        m_pMemory->SetupMapper();
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
