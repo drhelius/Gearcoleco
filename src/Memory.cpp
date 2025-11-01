@@ -29,6 +29,11 @@
 #include "ActivisionMapper.h"
 #include "OCMMapper.h"
 
+#include "Memory.h"
+#include "Processor.h"
+#include "Cartridge.h"
+#include "common.h"
+
 Memory::Memory(Cartridge* pCartridge)
 {
     m_pCartridge = pCartridge;
@@ -226,7 +231,8 @@ void Memory::LoadBios(const char* szFilePath)
 
     m_bBiosLoaded = false;
 
-    ifstream file(szFilePath, ios::in | ios::binary | ios::ate);
+    ifstream file;
+    open_ifstream_utf8(file, szFilePath, ios::in | ios::binary | ios::ate);
 
     if (file.is_open())
     {
