@@ -224,7 +224,7 @@ inline void OCMMapper::Write(u16 address, u8 value)
 
         m_BankReg[address & 0x0003] = (u8)(value & 0x0F);
 
-        Debug("--> OCM Bank[%d] = %d (addr=%04X, val=%02X)", (address & 3), m_BankReg[address & 3], address, value);
+        // Debug("--> OCM Bank[%d] = %d (addr=%04X, val=%02X)", (address & 3), m_BankReg[address & 3], address, value);
         return;
     }
 }
