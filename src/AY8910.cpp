@@ -45,19 +45,21 @@ void AY8910::Reset(int clockRate)
         m_Registers[i] = 0;
     }
 
+    m_Registers[7] = 0xFF;
+
     for (int i = 0; i < 3; i++)
     {
-        m_TonePeriod[i] = 0;
+        m_TonePeriod[i] = 1;
         m_ToneCounter[i] = 0;
         m_Amplitude[i] = 0;
-        m_ToneDisable[i] = false;
-        m_NoiseDisable[i] = false;
+        m_ToneDisable[i] = true;
+        m_NoiseDisable[i] = true;
         m_EnvelopeMode[i] = false;
         m_Sign[i] = false;
     }
 
     m_SelectedRegister = 0;
-    m_NoisePeriod = 0;
+    m_NoisePeriod = 1;
     m_NoiseCounter = 0;
     m_NoiseShift = 1;
     m_EnvelopePeriod = 0;
@@ -308,7 +310,14 @@ void AY8910::Sync()
 
             for (int i = 0; i < 3; i++)
             {
-                if ((m_ToneDisable[i] || m_Sign[i]) && (m_NoiseDisable[i] || ((m_NoiseShift & 0x01) == 0x01)))
+                // Filter out ultrasonic frequencies
+                if (m_TonePeriod[i] < 8)
+                    continue;
+
+                bool toneOutput = !m_ToneDisable[i] && m_Sign[i];
+                bool noiseOutput = !m_NoiseDisable[i] && ((m_NoiseShift & 0x01) == 0x01);
+
+                if (toneOutput || noiseOutput)
                 {
                     m_CurrentSample += m_EnvelopeMode[i] ? kAY8910VolumeTable[m_EnvelopeVolume] : kAY8910VolumeTable[m_Amplitude[i]];
                 }
