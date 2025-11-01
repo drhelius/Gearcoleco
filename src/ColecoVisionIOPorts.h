@@ -77,7 +77,6 @@ inline u8 ColecoVisionIOPorts::In(u8 port)
             if (port == 0x52)
             {
                 return m_pAudio->SGMRead();
-                return 0xAA;
             }
             return 0xFF;
         }
@@ -133,11 +132,12 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
             }
             else if (port == 0x53)
             {
-                m_pMemory->EnableSGMUpper(value & 0x01);
+                m_pMemory->EnableSGMUpper((value & 0x01) != 0);
             }
             else if (port == 0x7F)
             {
-                m_pMemory->EnableSGMLower(~value & 0x02);
+                m_pMemory->EnableSGMLower((~value & 0x02) != 0);
+                m_pMemory->EnableSGMUpper((value & 0x01) != 0);
             }
             else
             {
