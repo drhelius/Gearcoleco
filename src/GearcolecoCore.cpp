@@ -99,6 +99,7 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
 #endif
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
+            m_pMemory->Tick(clockCycles);
 
             totalClocks += clockCycles;
 

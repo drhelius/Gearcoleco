@@ -82,6 +82,8 @@ public:
     void SetRunToBreakpoint(stDisassembleRecord* pBreakpoint);
     void EnableSGMUpper(bool enable);
     void EnableSGMLower(bool enable);
+    void Tick(unsigned int cycles) { m_iTotalCycles += cycles; }
+    u64 GetTotalCycles() const { return m_iTotalCycles; }
 
 private:
     void CheckBreakpoints(u16 address, bool write);
@@ -103,6 +105,7 @@ private:
     u8* m_pBios;
     u8* m_pRam;
     u8* m_pSGMRam;
+    u64 m_iTotalCycles;
 };
 
 #include "Memory_inline.h"

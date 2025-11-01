@@ -45,6 +45,7 @@ Memory::Memory(Cartridge* pCartridge)
     m_bBiosLoaded = false;
     m_bSGMUpper = false;
     m_bSGMLower = false;
+    m_iTotalCycles = 0;
 }
 
 Memory::~Memory()
@@ -149,7 +150,7 @@ void Memory::SetupMapper()
             m_pMapper = new ActivisionMapper(m_pCartridge);
             break;
         case Cartridge::CartridgeOCM:
-            m_pMapper = new OCMMapper(m_pCartridge);
+            m_pMapper = new OCMMapper(m_pCartridge, this);
             break;
         default:
             m_pMapper = new StandardMapper(m_pCartridge);
@@ -161,6 +162,7 @@ void Memory::SetupMapper()
 
 void Memory::Reset()
 {
+    m_iTotalCycles = 0;
     m_bSGMUpper = false;
     m_bSGMLower = false;
 
