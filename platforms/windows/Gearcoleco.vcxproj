@@ -36,6 +36,7 @@
     <ClCompile Include="..\..\src\opcodes_ed.cpp" />
     <ClCompile Include="..\..\src\Processor.cpp" />
     <ClCompile Include="..\..\src\Video.cpp" />
+    <ClCompile Include="..\..\src\VgmRecorder.cpp" />
     <ClCompile Include="..\audio-shared\sound_queue.cpp" />
     <ClCompile Include="..\desktop-shared\application.cpp" />
     <ClCompile Include="..\desktop-shared\config.cpp" />
@@ -94,6 +95,7 @@
     <ClInclude Include="..\..\src\Processor_inline.h" />
     <ClInclude Include="..\..\src\SixteenBitRegister.h" />
     <ClInclude Include="..\..\src\Video.h" />
+    <ClInclude Include="..\..\src\VgmRecorder.h" />
     <ClInclude Include="..\audio-shared\sound_queue.h" />
     <ClInclude Include="..\desktop-shared\application.h" />
     <ClInclude Include="..\desktop-shared\backers.h" />

@@ -30,6 +30,8 @@ Audio::Audio()
     InitPointer(m_pAY8910);
     InitPointer(m_pSGMBuffer);
     m_bMute = false;
+    m_bVgmRecordingEnabled = false;
+    m_AY8910Register = 0;
 }
 
 Audio::~Audio()
@@ -101,6 +103,11 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
         }
     }
 
+#ifndef GEARCOLECO_DISABLE_VGMRECORDER
+    if (m_bVgmRecordingEnabled)
+        m_VgmRecorder.UpdateTiming(count / 2);
+#endif
+
     m_ElapsedCycles = 0;
 }
 
@@ -122,4 +129,28 @@ void Audio::LoadState(std::istream& stream)
     m_pApu->reset();
     m_pApu->volume(0.6);
     m_pBuffer->clear();
+}
+
+bool Audio::StartVgmRecording(const char* file_path, int clock_rate, bool is_pal)
+{
+    if (m_bVgmRecordingEnabled)
+        return false;
+
+    m_VgmRecorder.Start(file_path, clock_rate, is_pal);
+    m_bVgmRecordingEnabled = m_VgmRecorder.IsRecording();
+    return m_bVgmRecordingEnabled;
+}
+
+void Audio::StopVgmRecording()
+{
+    if (m_bVgmRecordingEnabled)
+    {
+        m_VgmRecorder.Stop();
+        m_bVgmRecordingEnabled = false;
+    }
+}
+
+bool Audio::IsVgmRecording() const
+{
+    return m_bVgmRecordingEnabled;
 }

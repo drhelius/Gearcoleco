@@ -80,6 +80,9 @@ EXTERN void emu_load_bios(const char* file_path);
 EXTERN void emu_video_no_sprite_limit(bool enabled);
 EXTERN void emu_set_overscan(int overscan);
 EXTERN void emu_save_screenshot(const char* file_path);
+EXTERN void emu_start_vgm_recording(const char* file_path);
+EXTERN void emu_stop_vgm_recording();
+EXTERN bool emu_is_vgm_recording();
 
 #undef EMU_IMPORT
 #undef EXTERN

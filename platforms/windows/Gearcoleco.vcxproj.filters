@@ -120,6 +120,9 @@
     <ClCompile Include="..\..\src\Video.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\VgmRecorder.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\audio\Blip_Buffer.cpp">
       <Filter>core\audio</Filter>
     </ClCompile>
@@ -297,6 +300,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Video.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\VgmRecorder.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\audio\blargg_common.h">

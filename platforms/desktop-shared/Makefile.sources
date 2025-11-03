@@ -35,6 +35,7 @@ SOURCES_CXX := \
     $(SRC_DIR)/opcodes_ed.cpp \
     $(SRC_DIR)/Processor.cpp \
     $(SRC_DIR)/Video.cpp \
+    $(SRC_DIR)/VgmRecorder.cpp \
     $(SRC_DIR)/audio/Blip_Buffer.cpp \
     $(SRC_DIR)/audio/Effects_Buffer.cpp \
     $(SRC_DIR)/audio/Sms_Apu.cpp \
