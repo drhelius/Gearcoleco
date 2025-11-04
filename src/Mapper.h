@@ -38,7 +38,8 @@ public:
     virtual void LoadState(std::istream& stream) = 0;
     virtual u8 GetRomBank() { return 0; }
     virtual u32 GetRomBankAddress() { return 0; }
-    
+    virtual u8 GetBankReg(int) { return 0; }
+
 protected:
     Cartridge* m_pCartridge;
 };

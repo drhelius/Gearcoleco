@@ -36,8 +36,7 @@ public:
     virtual void Write(u16 address, u8 value);
     virtual void SaveState(std::ostream& stream);
     virtual void LoadState(std::istream& stream);
-
-    u8 GetBankReg(int index) const { return (index >= 0 && index < 4) ? m_BankReg[index] : 0; }
+    virtual u8 GetBankReg(int index) { return (index >= 0 && index < 4) ? m_BankReg[index] : 0; }
 
 private:
     // EEPROM state machine

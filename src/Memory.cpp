@@ -446,46 +446,29 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
                 }
                 case Cartridge::CartridgeOCM:
                 {
-                    if (IsValidPointer(m_pMapper))
+                    if (address < 0xA000)
                     {
-                        OCMMapper* pOCMMapper = dynamic_cast<OCMMapper*>(m_pMapper);
-                        if (IsValidPointer(pOCMMapper))
-                        {
-                            if (address < 0xA000)
-                            {
-                                // 8000-9FFF: Bank 3
-                                offset = (address - 0x8000) + (pOCMMapper->GetBankReg(3) * 0x2000);
-                                bank = pOCMMapper->GetBankReg(3);
-                            }
-                            else if (address < 0xC000)
-                            {
-                                // A000-BFFF: Bank 0
-                                offset = (address - 0xA000) + (pOCMMapper->GetBankReg(0) * 0x2000);
-                                bank = pOCMMapper->GetBankReg(0);
-                            }
-                            else if (address < 0xE000)
-                            {
-                                // C000-DFFF: Bank 1
-                                offset = (address - 0xC000) + (pOCMMapper->GetBankReg(1) * 0x2000);
-                                bank = pOCMMapper->GetBankReg(1);
-                            }
-                            else
-                            {
-                                // E000-FFFF: Bank 2
-                                offset = (address - 0xE000) + (pOCMMapper->GetBankReg(2) * 0x2000);
-                                bank = pOCMMapper->GetBankReg(2);
-                            }
-                        }
-                        else
-                        {
-                            offset = address - 0x8000;
-                            bank = 0;
-                        }
+                        // 8000-9FFF: Bank 3
+                        offset = (address - 0x8000) + (m_pMapper->GetBankReg(3) * 0x2000);
+                        bank = m_pMapper->GetBankReg(3);
+                    }
+                    else if (address < 0xC000)
+                    {
+                        // A000-BFFF: Bank 0
+                        offset = (address - 0xA000) + (m_pMapper->GetBankReg(0) * 0x2000);
+                        bank = m_pMapper->GetBankReg(0);
+                    }
+                    else if (address < 0xE000)
+                    {
+                        // C000-DFFF: Bank 1
+                        offset = (address - 0xC000) + (m_pMapper->GetBankReg(1) * 0x2000);
+                        bank = m_pMapper->GetBankReg(1);
                     }
                     else
                     {
-                        offset = address - 0x8000;
-                        bank = 0;
+                        // E000-FFFF: Bank 2
+                        offset = (address - 0xE000) + (m_pMapper->GetBankReg(2) * 0x2000);
+                        bank = m_pMapper->GetBankReg(2);
                     }
                     break;
                 }
