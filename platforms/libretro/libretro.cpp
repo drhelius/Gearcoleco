@@ -372,10 +372,12 @@ static void update_input(void)
         int analog_right_x = input_state_cb( j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
         int analog_right_y = input_state_cb( j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
 
-        joypad_ext[j][0] = analog_left_x != 0 ? 1 : 0;
-        joypad_ext[j][1] = analog_left_y != 0 ? 1 : 0;
-        joypad_ext[j][2] = analog_right_x != 0 ? 1 : 0;
-        joypad_ext[j][3] = analog_right_y != 0 ? 1 : 0;
+        const int threshold = 4000;
+
+        joypad_ext[j][0] = (analog_left_x > threshold || analog_left_x < -threshold) ? 1 : 0;
+        joypad_ext[j][1] = (analog_left_y > threshold || analog_left_y < -threshold) ? 1 : 0;
+        joypad_ext[j][2] = (analog_right_x > threshold || analog_right_x < -threshold) ? 1 : 0;
+        joypad_ext[j][3] = (analog_right_y > threshold || analog_right_y < -threshold) ? 1 : 0;
     }
 
     for (int j = 0; j < MAX_PADS; j++)
