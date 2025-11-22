@@ -95,6 +95,9 @@ void Video::Reset(bool bPAL)
     m_iCycleCounter = 0;
     m_iRenderLine = 0;
 
+    for (int i = 0; i < 128; i++)
+        m_SpriteAttribLatch[i] = 0;
+
     m_Timing[TIMING_VINT] = 220;
     m_Timing[TIMING_RENDER] = 195;
     m_Timing[TIMING_DISPLAY] = 37;
@@ -142,10 +145,9 @@ bool Video::Tick(unsigned int clockCycles)
     ///// END OF LINE /////
     if (m_iCycleCounter >= GC_CYCLES_PER_LINE)
     {
+        LatchSpriteAttributes();
         if (m_iRenderLine == GC_RESOLUTION_HEIGHT)
-        {
             return_vblank = true;
-        }
         m_iRenderLine++;
         m_iRenderLine %= m_iLinesPerFrame;
         m_iCycleCounter -= GC_CYCLES_PER_LINE;
@@ -296,6 +298,14 @@ void Video::ScanLine(int line)
     }
 }
 
+void Video::LatchSpriteAttributes()
+{
+    u16 sprite_attribute_addr = (m_VdpRegister[5] & 0x7F) << 7;
+
+    for (int i = 0; i < 128; i++)
+        m_SpriteAttribLatch[i] = m_pVdpVRAM[sprite_attribute_addr + i];
+}
+
 void Video::RenderBackground(int line)
 {
     int line_offset = line * GC_RESOLUTION_WIDTH;
@@ -431,16 +441,19 @@ void Video::RenderSprites(int line)
     int line_width = line * GC_RESOLUTION_WIDTH;
     int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
     bool sprite_zoom = IsSetBit(m_VdpRegister[1], 0);
+
     if (sprite_zoom)
         sprite_size *= 2;
-    u16 sprite_attribute_addr = (m_VdpRegister[5] & 0x7F) << 7;
+
     u16 sprite_pattern_addr = (m_VdpRegister[6] & 0x07) << 11;
 
     int max_sprite = 31;
 
     for (int sprite = 0; sprite <= max_sprite; sprite++)
     {
-        if (m_pVdpVRAM[sprite_attribute_addr + (sprite << 2)] == 0xD0)
+        int o = sprite << 2;
+
+        if (m_SpriteAttribLatch[o] == 0xD0)
         {
             max_sprite = sprite - 1;
             break;
@@ -449,8 +462,8 @@ void Video::RenderSprites(int line)
 
     for (int sprite = 0; sprite <= max_sprite; sprite++)
     {
-        int sprite_attribute_offset = sprite_attribute_addr + (sprite << 2);
-        int sprite_y = (m_pVdpVRAM[sprite_attribute_offset] + 1) & 0xFF;
+        int attrib_i = sprite << 2;
+        int sprite_y = (m_SpriteAttribLatch[attrib_i] + 1) & 0xFF;
 
         if (sprite_y >= 0xE0)
             sprite_y = -(0x100 - sprite_y);
@@ -459,31 +472,34 @@ void Video::RenderSprites(int line)
             continue;
 
         sprite_count++;
+
         if (!IsSetBit(m_VdpStatus, 6) && (sprite_count > 4))
         {
             m_VdpStatus = SetBit(m_VdpStatus, 6);
             m_VdpStatus = (m_VdpStatus & 0xE0) | sprite;
         }
 
-        int sprite_color = m_pVdpVRAM[sprite_attribute_offset + 3] & 0x0F;
+        int sprite_color = m_SpriteAttribLatch[attrib_i + 3] & 0x0F;
 
         if (sprite_color == 0)
             continue;
 
-        int sprite_shift = (m_pVdpVRAM[sprite_attribute_offset + 3] & 0x80) ? 32 : 0;
-        int sprite_x = m_pVdpVRAM[sprite_attribute_offset + 1] - sprite_shift;
+        int sprite_shift = (m_SpriteAttribLatch[attrib_i + 3] & 0x80) ? 32 : 0;
+        int sprite_x = m_SpriteAttribLatch[attrib_i + 1] - sprite_shift;
 
         if (sprite_x >= GC_RESOLUTION_WIDTH)
             continue;
 
-        int sprite_tile = m_pVdpVRAM[sprite_attribute_offset + 2];
+        int sprite_tile = m_SpriteAttribLatch[attrib_i + 2];
         sprite_tile &= IsSetBit(m_VdpRegister[1], 1) ? 0xFC : 0xFF;
 
-        int sprite_line_addr = sprite_pattern_addr + (sprite_tile << 3) + ((line - sprite_y ) >> (sprite_zoom ? 1 : 0));
+        int sprite_line_addr = sprite_pattern_addr + (sprite_tile << 3) +
+                               ((line - sprite_y) >> (sprite_zoom ? 1 : 0));
 
         for (int tile_x = 0; tile_x < sprite_size; tile_x++)
         {
             int sprite_pixel_x = sprite_x + tile_x;
+
             if (sprite_pixel_x >= GC_RESOLUTION_WIDTH)
                 break;
             if (sprite_pixel_x < 0)
@@ -510,7 +526,7 @@ void Video::RenderSprites(int line)
 
                 if (IsSetBit(m_pInfoBuffer[pixel], 1))
                 {
-                     m_VdpStatus = SetBit(m_VdpStatus, 5);
+                    m_VdpStatus = SetBit(m_VdpStatus, 5);
                 }
                 else
                 {
@@ -520,6 +536,7 @@ void Video::RenderSprites(int line)
         }
     }
 }
+
 
 void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
 {

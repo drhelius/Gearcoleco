@@ -69,6 +69,7 @@ public:
 
 private:
     void ScanLine(int line);
+    void LatchSpriteAttributes();
     void RenderBackground(int line);
     void RenderSprites(int line);
     void InitPalettes();
@@ -89,6 +90,7 @@ private:
     bool m_bPAL;
     int m_iMode;
     int m_iRenderLine;
+    u8 m_SpriteAttribLatch[128];
     Overscan m_Overscan;
 
     struct LineEvents 
