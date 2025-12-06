@@ -81,6 +81,15 @@
     <ClCompile Include="..\desktop-shared\imgui\imgui_widgets.cpp">
       <Filter>desktop\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\desktop-shared\imgui\implot.cpp">
+      <Filter>desktop\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\desktop-shared\imgui\implot_demo.cpp">
+      <Filter>desktop\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\desktop-shared\imgui\implot_items.cpp">
+      <Filter>desktop\imgui</Filter>
+    </ClCompile>
     <ClCompile Include="..\desktop-shared\nfd\nfd_win.cpp">
       <Filter>desktop\nfd</Filter>
     </ClCompile>
@@ -198,6 +207,12 @@
       <Filter>desktop\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\desktop-shared\imgui\imstb_truetype.h">
+      <Filter>desktop\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\desktop-shared\imgui\implot.h">
+      <Filter>desktop\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\desktop-shared\imgui\implot_internal.h">
       <Filter>desktop\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\desktop-shared\imgui\keyboard.h">
