@@ -77,6 +77,8 @@ struct config_Video
     bool scanlines_filter = true;
     float scanlines_intensity = 0.10f;
     bool sync = true;
+    float background_color[3] = {0.1f, 0.1f, 0.1f};
+    float background_color_debugger[3] = {0.2f, 0.2f, 0.2f};
     int palette = 0;
     GC_Color color[16] = {
         {255, 0, 255}, {0, 0, 0}, {33, 200, 66}, {94, 220, 120},

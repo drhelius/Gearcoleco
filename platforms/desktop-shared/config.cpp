@@ -246,6 +246,12 @@ void config_read(void)
     config_video.scanlines = read_bool("Video", "Scanlines", true);
     config_video.scanlines_filter = read_bool("Video", "ScanlinesFilter", true);
     config_video.scanlines_intensity = read_float("Video", "ScanlinesIntensity", 0.10f);
+    config_video.background_color[0] = read_float("Video", "BackgroundColorR", 0.1f);
+    config_video.background_color[1] = read_float("Video", "BackgroundColorG", 0.1f);
+    config_video.background_color[2] = read_float("Video", "BackgroundColorB", 0.1f);
+    config_video.background_color_debugger[0] = read_float("Video", "BackgroundColorDebuggerR", 0.2f);
+    config_video.background_color_debugger[1] = read_float("Video", "BackgroundColorDebuggerG", 0.2f);
+    config_video.background_color_debugger[2] = read_float("Video", "BackgroundColorDebuggerB", 0.2f);
     config_video.palette = read_int("Video", "Palette", 0);
 
     for (int i = 0; i < 16; i++)
@@ -448,6 +454,12 @@ void config_write(void)
     write_bool("Video", "Scanlines", config_video.scanlines);
     write_bool("Video", "ScanlinesFilter", config_video.scanlines_filter);
     write_float("Video", "ScanlinesIntensity", config_video.scanlines_intensity);
+    write_float("Video", "BackgroundColorR", config_video.background_color[0]);
+    write_float("Video", "BackgroundColorG", config_video.background_color[1]);
+    write_float("Video", "BackgroundColorB", config_video.background_color[2]);
+    write_float("Video", "BackgroundColorDebuggerR", config_video.background_color_debugger[0]);
+    write_float("Video", "BackgroundColorDebuggerG", config_video.background_color_debugger[1]);
+    write_float("Video", "BackgroundColorDebuggerB", config_video.background_color_debugger[2]);
     write_int("Video", "Palette", config_video.palette);
     for (int i = 0; i < 16; i++)
     {
