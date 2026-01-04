@@ -83,6 +83,7 @@ bool emu_init(void)
     emu_audio_sync = true;
     emu_debug_disable_breakpoints_cpu = false;
     emu_debug_disable_breakpoints_mem = false;
+    emu_debug_step_frames_pending = 0;
     emu_debug_tile_palette = 0;
     emu_debug_tile_color_mode = true;
     emu_savefiles_dir_option = 0;
@@ -126,7 +127,18 @@ void emu_update(void)
                 debugging = true;
             }
 
-            debug_next_frame = false;
+            if (debug_next_frame && emu_debug_step_frames_pending > 0)
+            {
+                emu_debug_step_frames_pending--;
+                if (emu_debug_step_frames_pending > 0)
+                    debug_next_frame = true;
+                else
+                    debug_next_frame = false;
+            }
+            else
+            {
+                debug_next_frame = false;
+            }
             debug_step = false;
         }
 
@@ -328,6 +340,7 @@ void emu_debug_next_frame(void)
 {
     debugging = debug_next_frame = true;
     debug_step = false;
+    emu_debug_step_frames_pending++;
     gearcoleco->Pause(false);
 }
 
