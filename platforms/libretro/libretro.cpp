@@ -303,8 +303,14 @@ static void load_bootroms(void)
     char bios_path[4113];
 
     snprintf(bios_path, 4113, "%s%ccolecovision.rom", retro_system_directory, slash);
-
     core->GetMemory()->LoadBios(bios_path);
+
+    if (!core->GetMemory()->IsBiosLoaded())
+    {
+        // Fallback to coleco.rom if colecovision.rom is not found
+        snprintf(bios_path, 4113, "%s%ccoleco.rom", retro_system_directory, slash);
+        core->GetMemory()->LoadBios(bios_path);
+    }
 }
 
 static void update_input(void)
