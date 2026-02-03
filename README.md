@@ -24,7 +24,6 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <th>Platform</th>
       <th>Architecture</th>
       <th>Download Link</th>
-      <th>Notes</th>
     </tr>
   </thead>
   <tbody>
@@ -32,7 +31,6 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td rowspan="2"><strong>Windows</strong></td>
       <td>x64</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-windows-x64.zip">Gearcoleco-1.5.5-windows-x64.zip</a></td>
-      <td rowspan="2">May need <a href="https://go.microsoft.com/fwlink/?LinkId=746572">Visual C++ Redistributable</a> and <a href="https://apps.microsoft.com/detail/9nqpsl29bfff">OpenGL Compatibility Pack</a></td>
     </tr>
     <tr>
       <td>ARM64</td>
@@ -42,7 +40,6 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td rowspan="2"><strong>macOS</strong></td>
       <td>Apple Silicon</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-arm.zip">Gearcoleco-1.5.5-macos-arm.zip</a></td>
-      <td rowspan="2"></td>
     </tr>
     <tr>
       <td>Intel</td>
@@ -52,7 +49,6 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td rowspan="2"><strong>Linux</strong></td>
       <td>Ubuntu 24.04</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu-24.04.zip">Gearcoleco-1.5.5-ubuntu-24.04.zip</a></td>
-      <td rowspan="2">May need <code>libsdl2</code></td>
     </tr>
     <tr>
       <td>Ubuntu 22.04</td>
@@ -62,16 +58,18 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td><strong>RetroArch</strong></td>
       <td>All platforms</td>
       <td><a href="https://docs.libretro.com/library/gearcoleco/">Libretro core documentation</a></td>
-      <td></td>
     </tr>
     <tr>
       <td><strong>Dev Builds</strong></td>
       <td>All platforms</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/actions/workflows/gearcoleco.yml">GitHub Actions</a></td>
-      <td>Latest development builds</td>
     </tr>
   </tbody>
 </table>
+
+**Notes:**
+- **Windows**: May need [Visual C++ Redistributable](https://go.microsoft.com/fwlink/?LinkId=746572) and [OpenGL Compatibility Pack](https://apps.microsoft.com/detail/9nqpsl29bfff)
+- **Linux**: May need `libsdl2`
 
 ## Features
 
