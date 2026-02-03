@@ -100,6 +100,7 @@
     <ClInclude Include="..\desktop-shared\application.h" />
     <ClInclude Include="..\desktop-shared\backers.h" />
     <ClInclude Include="..\desktop-shared\config.h" />
+    <ClInclude Include="..\desktop-shared\console_utils.h" />
     <ClInclude Include="..\desktop-shared\emu.h" />
     <ClInclude Include="..\desktop-shared\gui.h" />
     <ClInclude Include="..\desktop-shared\gui_debug.h" />
