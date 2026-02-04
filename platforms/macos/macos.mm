@@ -13,8 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/
- *
+ * along with this program.  If not, see http://www.gnu.org/licenses/ 
+ * 
  */
 
 #import <Cocoa/Cocoa.h>
@@ -86,5 +86,22 @@ extern "C" void macos_set_native_fullscreen(void* nswindow, bool enter)
     else if (!enter && isFullScreen)
     {
         [win toggleFullScreen:nil];
+    }
+}
+
+// Workaround for macOS Tahoe bug: AutoFill helper processes are not terminated on app exit
+extern "C" void macos_kill_autofill_helpers(const char* app_name)
+{
+    @autoreleasepool {
+        NSString* appNameLower = [[NSString stringWithUTF8String:app_name] lowercaseString];
+
+        for (NSRunningApplication *app in [[NSWorkspace sharedWorkspace] runningApplications]) {
+            if ([app.bundleIdentifier isEqualToString:@"com.apple.SafariPlatformSupport.Helper"]) {
+                NSString* localizedNameLower = [[app localizedName] lowercaseString];
+                if ([localizedNameLower hasPrefix:@"autofill"] && [localizedNameLower containsString:appNameLower]) {
+                    [app forceTerminate];
+                }
+            }
+        }
     }
 }
