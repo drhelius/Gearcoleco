@@ -62,7 +62,7 @@ jobs:
         run: |
           cat > homebrew-tap/Casks/${{ env.NAME_LOWER }}.rb << EOF
           cask "${{ env.NAME_LOWER }}" do
-            arch arm: "arm64", intel: "intel"
+            arch arm: "arm", intel: "intel"
 
             version "${{ env.VERSION }}"
             sha256 arm:   "${{ env.ARM64_SHA }}",
