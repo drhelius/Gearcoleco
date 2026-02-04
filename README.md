@@ -37,7 +37,11 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-windows-arm64.zip">Gearcoleco-1.5.5-windows-arm64.zip</a></td>
     </tr>
     <tr>
-      <td rowspan="2"><strong>macOS</strong></td>
+      <td rowspan="3"><strong>macOS</strong></td>
+      <td>Homebrew</td>
+      <td><code>brew install --cask drhelius/geardome/gearcoleco</code></td>
+    </tr>
+    <tr>
       <td>Apple Silicon</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-arm.zip">Gearcoleco-1.5.5-macos-arm.zip</a></td>
     </tr>
