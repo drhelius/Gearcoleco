@@ -106,6 +106,7 @@ void emu_destroy(void)
 
 void emu_load_rom(const char* file_path, Cartridge::ForceConfiguration config)
 {
+    emu_audio_reset();
     save_ram();
     gearcoleco->LoadROM(file_path, &config);
     load_ram();
@@ -199,6 +200,7 @@ bool emu_is_bios_loaded(void)
 
 void emu_reset(Cartridge::ForceConfiguration config)
 {
+    emu_audio_reset();
     save_ram();
     gearcoleco->ResetROM(&config);
     load_ram();
