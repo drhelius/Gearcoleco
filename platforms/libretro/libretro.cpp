@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include "libretro.h"
+#include "libretro_core_options.h"
 
 #include "../../src/gearcoleco.h"
 
@@ -53,6 +54,7 @@ static bool libretro_supports_bitmasks;
 static int spinner_support = 0;
 static int spinner_sensitivity = 1;
 static float aspect_ratio = 0.0f;
+static bool categories_supported = false;
 
 static GearcolecoCore* core;
 static u8* frame_buffer;
@@ -96,17 +98,6 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
     vfprintf(stderr, fmt, va);
     va_end(va);
 }
-
-static const struct retro_variable vars[] = {
-    { "gearcoleco_timing", "Refresh Rate (restart); Auto|NTSC (60 Hz)|PAL (50 Hz)" },
-    { "gearcoleco_aspect_ratio", "Aspect Ratio; 1:1 PAR|4:3 DAR|16:9 DAR|16:10 DAR" },
-    { "gearcoleco_overscan", "Overscan; Disabled|Top+Bottom|Full (284 width)|Full (320 width)" },
-    { "gearcoleco_up_down_allowed", "Allow Up+Down / Left+Right; Disabled|Enabled" },
-    { "gearcoleco_no_sprite_limit", "No Sprite Limit; Disabled|Enabled" },
-    { "gearcoleco_spinners", "Spinner support; Disabled|Super Action Controller|Wheel Controller|Roller Controller" },
-    { "gearcoleco_spinner_sensitivity", "Spinner Sensitivity; 1|2|3|4|5|6|7|8|9|10" },
-    { NULL }
-};
 
 static retro_environment_t environ_cb;
 
@@ -270,7 +261,7 @@ void retro_set_environment(retro_environment_t cb)
 
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
-    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
+    libretro_set_core_options(environ_cb, &categories_supported);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)
