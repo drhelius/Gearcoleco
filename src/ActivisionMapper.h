@@ -79,12 +79,7 @@ inline u8 ActivisionMapper::Read(u16 address)
 
 inline void ActivisionMapper::Write(u16 address, u8 value)
 {
-    if (m_pCartridge->HasSRAM() && (address >= 0xE000) && (address < 0xE800))
-    {
-        u8* pRom = m_pCartridge->GetROM();
-        pRom[(address + 0x800) & 0x7FFF] = value;
-    }
-    else if (address >= 0xFF90)
+    if (address >= 0xFF90)
     {
         if ((address == 0xFF90) || (address == 0xFFA0) || (address == 0xFFB0))
         {

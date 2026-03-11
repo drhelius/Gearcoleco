@@ -29,6 +29,7 @@
 #include "libretro_core_options.h"
 
 #include "../../src/gearcoleco.h"
+#include "../../src/Mapper.h"
 
 #ifdef _WIN32
 static const char slash = '\\';
@@ -714,7 +715,12 @@ void *retro_get_memory_data(unsigned id)
     switch (id)
     {
         case RETRO_MEMORY_SAVE_RAM:
+        {
+            Mapper* mapper = core->GetMemory()->GetMapper();
+            if (mapper)
+                return mapper->GetSaveData();
             return NULL;
+        }
         case RETRO_MEMORY_SYSTEM_RAM:
             return core->GetMemory()->GetRam();
     }
@@ -727,7 +733,12 @@ size_t retro_get_memory_size(unsigned id)
     switch (id)
     {
         case RETRO_MEMORY_SAVE_RAM:
+        {
+            Mapper* mapper = core->GetMemory()->GetMapper();
+            if (mapper)
+                return mapper->GetSaveDataSize();
             return 0;
+        }
         case RETRO_MEMORY_SYSTEM_RAM:
             return 0x400;
     }

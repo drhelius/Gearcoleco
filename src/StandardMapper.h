@@ -22,6 +22,7 @@
 
 #include "Mapper.h"
 #include "Cartridge.h"
+#include <cstring>
 
 class StandardMapper : public Mapper
 {
@@ -34,10 +35,16 @@ public:
     virtual void Write(u16 address, u8 value);
     virtual void SaveState(std::ostream& stream);
     virtual void LoadState(std::istream& stream);
+    virtual u8* GetSaveData();
+    virtual int GetSaveDataSize();
+
+private:
+    u8 m_SRAM[0x800];
 };
 
 inline StandardMapper::StandardMapper(Cartridge* pCartridge) : Mapper(pCartridge)
 {
+    memset(m_SRAM, 0, sizeof(m_SRAM));
 }
 
 inline StandardMapper::~StandardMapper()
@@ -46,10 +53,16 @@ inline StandardMapper::~StandardMapper()
 
 inline void StandardMapper::Reset()
 {
+    memset(m_SRAM, 0, sizeof(m_SRAM));
 }
 
 inline u8 StandardMapper::Read(u16 address)
 {
+    if (m_pCartridge->HasSRAM() && (address >= 0xE000))
+    {
+        return m_SRAM[address & 0x7FF];
+    }
+
     u8* pRom = m_pCartridge->GetROM();
     int romSize = m_pCartridge->GetROMSize();
 
@@ -64,10 +77,9 @@ inline u8 StandardMapper::Read(u16 address)
 
 inline void StandardMapper::Write(u16 address, u8 value)
 {
-    if (m_pCartridge->HasSRAM() && (address >= 0xE000) && (address < 0xE800))
+    if (m_pCartridge->HasSRAM() && (address >= 0xE000))
     {
-        u8* pRom = m_pCartridge->GetROM();
-        pRom[(address + 0x800) & 0x7FFF] = value;
+        m_SRAM[address & 0x7FF] = value;
     }
     else
     {
@@ -77,12 +89,32 @@ inline void StandardMapper::Write(u16 address, u8 value)
 
 inline void StandardMapper::SaveState(std::ostream& stream)
 {
-    (void)stream;
+    if (m_pCartridge->HasSRAM())
+    {
+        stream.write(reinterpret_cast<const char*>(m_SRAM), sizeof(m_SRAM));
+    }
 }
 
 inline void StandardMapper::LoadState(std::istream& stream)
 {
-    (void)stream;
+    if (m_pCartridge->HasSRAM())
+    {
+        stream.read(reinterpret_cast<char*>(m_SRAM), sizeof(m_SRAM));
+    }
+}
+
+inline u8* StandardMapper::GetSaveData()
+{
+    if (m_pCartridge->HasSRAM())
+        return m_SRAM;
+    return NULL;
+}
+
+inline int StandardMapper::GetSaveDataSize()
+{
+    if (m_pCartridge->HasSRAM())
+        return sizeof(m_SRAM);
+    return 0;
 }
 
 #endif /* STANDARDMAPPER_H */

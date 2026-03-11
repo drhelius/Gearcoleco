@@ -39,6 +39,8 @@ public:
     virtual u8 GetRomBank() { return 0; }
     virtual u32 GetRomBankAddress() { return 0; }
     virtual u8 GetBankReg(int) { return 0; }
+    virtual u8* GetSaveData() { return NULL; }
+    virtual int GetSaveDataSize() { return 0; }
 
 protected:
     Cartridge* m_pCartridge;

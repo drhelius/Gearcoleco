@@ -298,6 +298,11 @@ void Memory::EnableSGMLower(bool enable)
     m_bSGMLower = enable;
 }
 
+Mapper* Memory::GetMapper()
+{
+    return m_pMapper;
+}
+
 void Memory::CheckBreakpoints(u16 address, bool write)
 {
     size_t size = m_BreakpointsMem.size();

@@ -37,6 +37,8 @@ public:
     virtual void SaveState(std::ostream& stream);
     virtual void LoadState(std::istream& stream);
     virtual u8 GetBankReg(int index) { return (index >= 0 && index < 4) ? m_BankReg[index] : 0; }
+    virtual u8* GetSaveData();
+    virtual int GetSaveDataSize();
 
 private:
     // EEPROM state machine
@@ -272,6 +274,16 @@ inline void OCMMapper::LoadState(std::istream& stream)
 
     u8* pEEPROM = m_pCartridge->GetEEPROM();
     stream.read(reinterpret_cast<char*>(pEEPROM), 0x400);
+}
+
+inline u8* OCMMapper::GetSaveData()
+{
+    return m_pCartridge->GetEEPROM();
+}
+
+inline int OCMMapper::GetSaveDataSize()
+{
+    return 0x400;
 }
 
 #endif /* OCMMAPPER_H */

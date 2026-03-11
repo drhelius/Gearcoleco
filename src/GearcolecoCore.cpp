@@ -325,9 +325,59 @@ void GearcolecoCore::SaveRam()
     SaveRam(NULL);
 }
 
-void GearcolecoCore::SaveRam(const char*, bool)
+void GearcolecoCore::SaveRam(const char* szPath, bool fullPath)
 {
-    // TODO
+    if (!m_pCartridge->IsReady())
+        return;
+
+    Mapper* pMapper = m_pMemory->GetMapper();
+
+    if (!IsValidPointer(pMapper) || pMapper->GetSaveDataSize() <= 0)
+        return;
+
+    Log("Saving RAM...");
+
+    using namespace std;
+
+    string path = "";
+
+    if (fullPath)
+    {
+        path = szPath;
+    }
+    else if (IsValidPointer(szPath))
+    {
+        path += szPath;
+        path += "/";
+        path += m_pCartridge->GetFileName();
+    }
+    else
+    {
+        path = m_pCartridge->GetFilePath();
+    }
+
+    string::size_type i = path.rfind('.', path.length());
+
+    if (i != string::npos)
+    {
+        path.replace(i + 1, path.length() - i - 1, "sav");
+    }
+
+    Log("Save CSV file: %s", path.c_str());
+
+    ofstream file;
+    open_ofstream_utf8(file, path.c_str(), ios::out | ios::binary);
+
+    if (file.is_open())
+    {
+        file.write(reinterpret_cast<const char*>(pMapper->GetSaveData()), pMapper->GetSaveDataSize());
+        file.close();
+        Log("RAM saved to %s", path.c_str());
+    }
+    else
+    {
+        Log("Unable to open RAM file for writing: %s", path.c_str());
+    }
 }
 
 void GearcolecoCore::LoadRam()
@@ -335,9 +385,59 @@ void GearcolecoCore::LoadRam()
     LoadRam(NULL);
 }
 
-void GearcolecoCore::LoadRam(const char*, bool)
+void GearcolecoCore::LoadRam(const char* szPath, bool fullPath)
 {
-    // TODO
+    if (!m_pCartridge->IsReady())
+        return;
+
+    Mapper* pMapper = m_pMemory->GetMapper();
+
+    if (!IsValidPointer(pMapper) || pMapper->GetSaveDataSize() <= 0)
+        return;
+
+    Log("Loading RAM...");
+
+    using namespace std;
+
+    string path = "";
+
+    if (fullPath)
+    {
+        path = szPath;
+    }
+    else if (IsValidPointer(szPath))
+    {
+        path += szPath;
+        path += "/";
+        path += m_pCartridge->GetFileName();
+    }
+    else
+    {
+        path = m_pCartridge->GetFilePath();
+    }
+
+    string::size_type i = path.rfind('.', path.length());
+
+    if (i != string::npos)
+    {
+        path.replace(i + 1, path.length() - i - 1, "sav");
+    }
+
+    Log("Load RAM file: %s", path.c_str());
+
+    ifstream file;
+    open_ifstream_utf8(file, path.c_str(), ios::in | ios::binary);
+
+    if (file.is_open())
+    {
+        file.read(reinterpret_cast<char*>(pMapper->GetSaveData()), pMapper->GetSaveDataSize());
+        file.close();
+        Log("RAM loaded from %s", path.c_str());
+    }
+    else
+    {
+        Log("Unable to open RAM file for reading: %s", path.c_str());
+    }
 }
 
 void GearcolecoCore::SaveState(int index)

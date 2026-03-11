@@ -79,12 +79,7 @@ inline u8 MegaCartMapper::Read(u16 address)
 
 inline void MegaCartMapper::Write(u16 address, u8 value)
 {
-    if (m_pCartridge->HasSRAM() && (address >= 0xE000) && (address < 0xE800))
-    {
-        u8* pRom = m_pCartridge->GetROM();
-        pRom[(address + 0x800) & 0x7FFF] = value;
-    }
-    else if (address >= 0xFFC0)
+    if (address >= 0xFFC0)
     {
         m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
         m_RomBankAddress = m_RomBank << 14;

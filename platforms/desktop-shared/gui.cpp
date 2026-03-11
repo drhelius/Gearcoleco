@@ -26,6 +26,7 @@
 #include "config.h"
 #include "emu.h"
 #include "../../src/gearcoleco.h"
+#include "../../src/Mapper.h"
 #include "renderer.h"
 #include "application.h"
 #include "license.h"
@@ -63,6 +64,7 @@ static void file_dialog_save_ram(void);
 static void file_dialog_load_state(void);
 static void file_dialog_save_state(void);
 static void file_dialog_choose_savestate_path(void);
+static void file_dialog_choose_savefiles_path(void);
 static void file_dialog_load_bios(void);
 static void file_dialog_load_symbols(void);
 static void file_dialog_save_screenshot(void);
@@ -138,6 +140,11 @@ bool gui_init(void)
     strcpy(bios_path, config_emulator.bios_path.c_str());
     strcpy(savefiles_path, config_emulator.savefiles_path.c_str());
     strcpy(savestates_path, config_emulator.savestates_path.c_str());
+
+    emu_savefiles_dir_option = config_emulator.savefiles_dir_option;
+    strcpy(emu_savefiles_path, savefiles_path);
+    emu_savestates_dir_option = config_emulator.savestates_dir_option;
+    strcpy(emu_savestates_path, savestates_path);
 
     if (strlen(bios_path) > 0)
         emu_load_bios(bios_path);
@@ -320,6 +327,7 @@ static void main_menu(void)
     bool save_screenshot = false;
     bool save_vgm = false;
     bool choose_savestates_path = false;
+    bool choose_savefiles_path = false;
     bool open_bios = false;
     bool open_bios_warning = false;
 
@@ -392,6 +400,20 @@ static void main_menu(void)
                 ImGui::Combo("##fwd", &config_emulator.ffwd_speed, "X 1.5\0X 2\0X 2.5\0X 3\0Unlimited\0\0");
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+
+            bool has_save_data = !emu_is_empty() && emu_get_core()->GetMemory()->GetMapper() && emu_get_core()->GetMemory()->GetMapper()->GetSaveDataSize() > 0;
+
+            if (ImGui::MenuItem("Save RAM As...", NULL, false, has_save_data))
+            {
+                save_ram = true;
+            }
+
+            if (ImGui::MenuItem("Load RAM From...", NULL, false, has_save_data))
+            {
+                open_ram = true;
             }
 
             ImGui::Separator();
@@ -497,6 +519,33 @@ static void main_menu(void)
             ImGui::MenuItem("Pause When Inactive", "", &config_emulator.pause_when_inactive);
             
             ImGui::Separator();
+
+            if (ImGui::BeginMenu("Save Files Location"))
+            {
+                ImGui::PushItemWidth(220.0f);
+                if (ImGui::Combo("##savefiles_option", &config_emulator.savefiles_dir_option, "Save Files In Custom Folder\0Save Files In ROM Folder\0\0"))
+                {
+                    emu_savefiles_dir_option = config_emulator.savefiles_dir_option;
+                }
+
+                if (config_emulator.savefiles_dir_option == 0)
+                {
+                    if (ImGui::MenuItem("Choose Save Files Folder..."))
+                    {
+                        choose_savefiles_path = true;
+                    }
+
+                    ImGui::PushItemWidth(350);
+                    if (ImGui::InputText("##savefiles_path", savefiles_path, IM_ARRAYSIZE(savefiles_path), ImGuiInputTextFlags_AutoSelectAll))
+                    {
+                        config_emulator.savefiles_path.assign(savefiles_path);
+                        strcpy(emu_savefiles_path, savefiles_path);
+                    }
+                    ImGui::PopItemWidth();
+                }
+
+                ImGui::EndMenu();
+            }
 
             if (ImGui::BeginMenu("Save State Location"))
             {
@@ -1165,6 +1214,9 @@ static void main_menu(void)
     if (choose_savestates_path)
         file_dialog_choose_savestate_path();
 
+    if (choose_savefiles_path)
+        file_dialog_choose_savefiles_path();
+
     if (open_bios)
         file_dialog_load_bios();
 
@@ -1455,6 +1507,27 @@ static void file_dialog_choose_savestate_path(void)
     else if (result != NFD_CANCEL)
     {
         Log("Savestate Path Error: %s", NFD_GetError());
+    }
+}
+
+static void file_dialog_choose_savefiles_path(void)
+{
+    nfdchar_t *outPath;
+    nfdpickfolderu8args_t args = { };
+    args.defaultPath = savefiles_path;
+    file_dialog_set_native_window(application_sdl_window, &args.parentWindow);
+
+    nfdresult_t result = NFD_PickFolderU8_With(&outPath, &args);
+    if (result == NFD_OKAY)
+    {
+        strcpy(savefiles_path, outPath);
+        config_emulator.savefiles_path.assign(outPath);
+        strcpy(emu_savefiles_path, outPath);
+        NFD_FreePath(outPath);
+    }
+    else if (result != NFD_CANCEL)
+    {
+        Log("Save Files Path Error: %s", NFD_GetError());
     }
 }
 

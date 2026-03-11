@@ -82,6 +82,7 @@ public:
     void SetRunToBreakpoint(stDisassembleRecord* pBreakpoint);
     void EnableSGMUpper(bool enable);
     void EnableSGMLower(bool enable);
+    Mapper* GetMapper();
     void Tick(unsigned int cycles) { m_iTotalCycles += cycles; }
     u64 GetTotalCycles() const { return m_iTotalCycles; }
 
