@@ -337,7 +337,7 @@ void Memory::CheckBreakpoints(u16 address, bool write)
 
 void Memory::ResetRomDisassembledMemory()
 {
-    #ifndef GEARCOLECO_DISABLE_DISSSEMBLER
+    #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
     m_BreakpointsCPU.clear();
 
@@ -378,7 +378,7 @@ void Memory::ResetRomDisassembledMemory()
 
 Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool createIfNotFound)
 {
-    #ifndef GEARCOLECO_DISABLE_DISSSEMBLER
+    #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
     stDisassembleRecord** map = NULL;
     int offset = address;
