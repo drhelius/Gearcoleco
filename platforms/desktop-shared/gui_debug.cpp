@@ -18,6 +18,7 @@
  */
 
 #include <math.h>
+#include <cmath>
 #include "imgui/imgui.h"
 #include "nfd/nfd.h"
 #include "nfd/nfd_sdl2.h"
@@ -1155,6 +1156,9 @@ static void debug_window_vram_sprites(void)
     ImGui::BeginChild("sprites", ImVec2(0, 0.0f), true);
     bool window_hovered = ImGui::IsWindowHovered();
 
+    static int selected_sprite = -1;
+    int hovered_sprite = -1;
+
     for (int s = 0; s < 32; s++)
     {
         p[s] = ImGui::GetCursorScreenPos();
@@ -1164,7 +1168,16 @@ static void debug_window_vram_sprites(void)
         float mouse_x = io.MousePos.x - p[s].x;
         float mouse_y = io.MousePos.y - p[s].y;
 
-        if (window_hovered && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+        bool is_hovered = window_hovered && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height);
+
+        if (is_hovered)
+        {
+            hovered_sprite = s;
+            if (ImGui::IsMouseClicked(0))
+                selected_sprite = (selected_sprite == s) ? -1 : s;
+        }
+
+        if (is_hovered || selected_sprite == s)
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
             draw_list->AddRect(ImVec2(p[s].x, p[s].y), ImVec2(p[s].x + width, p[s].y + height), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 3.0f);
@@ -1186,94 +1199,91 @@ static void debug_window_vram_sprites(void)
 
     ImGui::Image((ImTextureID)(intptr_t)renderer_emu_texture, ImVec2(runtime.screen_width * screen_scale, runtime.screen_height * screen_scale), ImVec2(0, 0), ImVec2(tex_h, tex_v));
 
-    for (int s = 0; s < 64; s++)
+    int display_sprite = (hovered_sprite >= 0) ? hovered_sprite : selected_sprite;
+
+    if (display_sprite >= 0)
     {
-        if ((p[s].x == 0) && (p[s].y == 0))
-            continue;
+        int s = display_sprite;
+        int x = 0;
+        int y = 0;
+        int tile = 0;
+        int sprite_tile_addr = 0;
+        int sprite_shift = 0;
+        int sprite_color = 0;
+        float real_x = 0.0f;
+        float real_y = 0.0f;
 
-        float mouse_x = io.MousePos.x - p[s].x;
-        float mouse_y = io.MousePos.y - p[s].y;
+        u16 sprite_attribute_addr = (regs[5] & 0x7F) << 7;
+        u16 sprite_pattern_addr = (regs[6] & 0x07) << 11;
+        int sprite_attribute_offset = sprite_attribute_addr + (s << 2);
+        tile = vram[sprite_attribute_offset + 2];
+        sprite_tile_addr = sprite_pattern_addr + (tile << 3);
+        sprite_shift = (vram[sprite_attribute_offset + 3] & 0x80) ? 32 : 0;
+        sprite_color = vram[sprite_attribute_offset + 3] & 0x0F;
+        x = vram[sprite_attribute_offset + 1];
+        y = vram[sprite_attribute_offset];
 
-        if (window_hovered && (mouse_x >= 0.0f) && (mouse_x < width) && (mouse_y >= 0.0f) && (mouse_y < height))
+        int final_y = (y + 1) & 0xFF;
+
+        if (final_y >= 0xE0)
+            final_y = -(0x100 - final_y);
+
+        real_x = (float)(x - sprite_shift);
+        real_y = (float)final_y;
+
+        float max_width = 8.0f;
+        float max_height = sprites_16 ? 16.0f : 8.0f;
+
+        if (sprites_16)
+            max_width = 16.0f;
+
+        if(IsSetBit(regs[1], 0))
         {
-            int x = 0;
-            int y = 0;
-            int tile = 0;
-            int sprite_tile_addr = 0;
-            int sprite_shift = 0;
-            int sprite_color = 0;
-            float real_x = 0.0f;
-            float real_y = 0.0f;
-
-            u16 sprite_attribute_addr = (regs[5] & 0x7F) << 7;
-            u16 sprite_pattern_addr = (regs[6] & 0x07) << 11;
-            int sprite_attribute_offset = sprite_attribute_addr + (s << 2);
-            tile = vram[sprite_attribute_offset + 2];
-            sprite_tile_addr = sprite_pattern_addr + (tile << 3);
-            sprite_shift = (vram[sprite_attribute_offset + 3] & 0x80) ? 32 : 0;
-            sprite_color = vram[sprite_attribute_offset + 3] & 0x0F;
-            x = vram[sprite_attribute_offset + 1];
-            y = vram[sprite_attribute_offset];
-
-            int final_y = (y + 1) & 0xFF;
-
-            if (final_y >= 0xE0)
-                final_y = -(0x100 - final_y);
-
-            real_x = (float)(x - sprite_shift);
-            real_y = (float)final_y;
-
-            float max_width = 8.0f;
-            float max_height = sprites_16 ? 16.0f : 8.0f;
-
-            if (sprites_16)
-                max_width = 16.0f;
-
-            if(IsSetBit(regs[1], 0))
-            {
-                max_width *= 2.0f;
-                max_height *= 2.0f;
-            }
-
-            float rectx_min = p_screen.x + (real_x * screen_scale);
-            float rectx_max = p_screen.x + ((real_x + max_width) * screen_scale);
-            float recty_min = p_screen.y + (real_y * screen_scale);
-            float recty_max = p_screen.y + ((real_y + max_height) * screen_scale);
-
-            rectx_min = fminf(fmaxf(rectx_min, p_screen.x), p_screen.x + (runtime.screen_width * screen_scale));
-            rectx_max = fminf(fmaxf(rectx_max, p_screen.x), p_screen.x + (runtime.screen_width * screen_scale));
-            recty_min = fminf(fmaxf(recty_min, p_screen.y), p_screen.y + (runtime.screen_height * screen_scale));
-            recty_max = fminf(fmaxf(recty_max, p_screen.y), p_screen.y + (runtime.screen_height * screen_scale));
-            
-            ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            draw_list->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
-
-            ImGui::TextColored(light_brown, "DETAILS:");
-            ImGui::TextColored(cyan, " Attribute Addr:"); ImGui::SameLine();
-            ImGui::Text("$%04X", sprite_attribute_offset);
-
-            ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
-            ImGui::Text("$%02X", x);
-            ImGui::TextColored(cyan, " Y:"); ImGui::SameLine();
-            ImGui::Text("$%02X", y);
-
-            ImGui::TextColored(cyan, " Tile:"); ImGui::SameLine();
-            ImGui::Text("$%02X", tile);
-
-            ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
-            ImGui::Text("$%04X", sprite_tile_addr);
-
-            ImGui::TextColored(cyan, " Color:"); ImGui::SameLine();
-            ImGui::Text("$%02X", sprite_color);
-
-            ImGui::TextColored(cyan, " Early Clock:"); ImGui::SameLine();
-            sprite_shift > 0 ? ImGui::TextColored(green, "ON ") : ImGui::TextColored(gray, "OFF");
-
-            if (ImGui::IsMouseClicked(0))
-            {
-                gui_debug_memory_goto(MEMORY_EDITOR_VRAM, sprite_tile_addr);
-            }
+            max_width *= 2.0f;
+            max_height *= 2.0f;
         }
+
+        float rectx_min = p_screen.x + (real_x * screen_scale);
+        float rectx_max = p_screen.x + ((real_x + max_width) * screen_scale);
+        float recty_min = p_screen.y + (real_y * screen_scale);
+        float recty_max = p_screen.y + ((real_y + max_height) * screen_scale);
+
+        rectx_min = fminf(fmaxf(rectx_min, p_screen.x), p_screen.x + (runtime.screen_width * screen_scale));
+        rectx_max = fminf(fmaxf(rectx_max, p_screen.x), p_screen.x + (runtime.screen_width * screen_scale));
+        recty_min = fminf(fmaxf(recty_min, p_screen.y), p_screen.y + (runtime.screen_height * screen_scale));
+        recty_max = fminf(fmaxf(recty_max, p_screen.y), p_screen.y + (runtime.screen_height * screen_scale));
+
+        float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
+        ImVec4 pulse_color = ImVec4(
+            red.x + (white.x - red.x) * t,
+            red.y + (white.y - red.y) * t,
+            red.z + (white.z - red.z) * t,
+            1.0f);
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+
+        ImGui::NewLine();
+
+        ImGui::TextColored(light_brown, "DETAILS:");
+        ImGui::TextColored(cyan, " Attribute Addr:"); ImGui::SameLine();
+        ImGui::Text("$%04X", sprite_attribute_offset);
+
+        ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
+        ImGui::Text("$%02X", x);
+        ImGui::TextColored(cyan, " Y:"); ImGui::SameLine();
+        ImGui::Text("$%02X", y);
+
+        ImGui::TextColored(cyan, " Tile:"); ImGui::SameLine();
+        ImGui::Text("$%02X", tile);
+
+        ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
+        ImGui::Text("$%04X", sprite_tile_addr);
+
+        ImGui::TextColored(cyan, " Color:"); ImGui::SameLine();
+        ImGui::Text("$%02X", sprite_color);
+
+        ImGui::TextColored(cyan, " Early Clock:"); ImGui::SameLine();
+        sprite_shift > 0 ? ImGui::TextColored(green, "ON ") : ImGui::TextColored(gray, "OFF");
     }
 
     ImGui::Columns(1);
