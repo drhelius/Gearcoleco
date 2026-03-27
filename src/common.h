@@ -142,18 +142,24 @@ inline bool parse_hex_string(const char* str, size_t len, u32* result)
 
 inline char* strncpy_fit(char* dest, const char* src, size_t dest_size)
 {
-    if (dest_size != 0)
-        dest_size -= 1;
+    if (dest_size == 0)
+        return dest;
 
-    return strncpy(dest, src, dest_size);
+    strncpy(dest, src, dest_size - 1);
+    dest[dest_size - 1] = '\0';
+    return dest;
 }
 
 inline char* strncat_fit(char* dest, const char* src, size_t dest_size)
 {
-    if (dest_size != 0)
-        dest_size -= strlen(dest) + 1;
+    if (dest_size == 0)
+        return dest;
 
-    return strncat(dest, src, dest_size);
+    size_t len = strlen(dest);
+    if (len + 1 >= dest_size)
+        return dest;
+
+    return strncat(dest, src, dest_size - len - 1);
 }
 
 #if defined(_WIN32)
@@ -219,5 +225,43 @@ inline void open_ofstream_utf8(std::ofstream& stream, const char* path, std::ios
     stream.open(path, mode);
 }
 #endif
+
+#include <sys/stat.h>
+#if !defined(_WIN32)
+#include <dirent.h>
+#include <unistd.h>
+#endif
+
+inline void create_directory_if_not_exists(const char* path)
+{
+#if defined(_WIN32)
+    _mkdir(path);
+#else
+    mkdir(path, 0755);
+#endif
+}
+
+inline void remove_directory_and_contents(const char* path)
+{
+#if defined(_WIN32)
+    _rmdir(path);
+#else
+    DIR* dir = opendir(path);
+    if (dir)
+    {
+        struct dirent* entry;
+        char filepath[1024];
+        while ((entry = readdir(dir)) != NULL)
+        {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                continue;
+            snprintf(filepath, sizeof(filepath), "%s/%s", path, entry->d_name);
+            unlink(filepath);
+        }
+        closedir(dir);
+        rmdir(path);
+    }
+#endif
+}
 
 #endif /* COMMON_H */
