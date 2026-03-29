@@ -173,12 +173,6 @@ u8 Video::GetStatusFlags()
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpStatus;
     m_VdpStatus &= 0x1F;
-
-    if (IsSetBit(m_VdpRegister[1], 5) && IsSetBit(m_VdpStatus, 7))
-    {
-        m_pProcessor->RequestNMI();
-    }
-
     return ret;
 }
 
