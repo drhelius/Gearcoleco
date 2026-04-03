@@ -303,6 +303,15 @@ static void load_bootroms(void)
         snprintf(bios_path, 4113, "%s%ccoleco.rom", retro_system_directory, slash);
         core->GetMemory()->LoadBios(bios_path);
     }
+
+    if (!core->GetMemory()->IsBiosLoaded())
+    {
+        struct retro_message msg = {};
+        msg.msg = "BIOS not found: coleco.rom";
+        msg.frames = 360;
+        environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+        log_cb(RETRO_LOG_ERROR, "BIOS not found: colecovision.rom or coleco.rom\n");
+    }
 }
 
 static void update_input(void)
