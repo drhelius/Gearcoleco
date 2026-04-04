@@ -391,24 +391,18 @@ static void update_input(void)
     {
         for (int i = 0; i < JOYPAD_BUTTONS; i++)
         {
-            if (joypad[j][i] != joypre[j][i])
-            {
-                if (joypad[j][i] == 1)
-                    core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i]);
-                else
-                    core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i]);
-            }
+            if (joypad[j][i])
+                core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i]);
+            else
+                core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i]);
         }
 
         for (int i = 0; i < 4; i++)
         {
-            if (joypad_ext[j][i] != joypre_ext[j][i])
-            {
-                if (joypad_ext[j][i] == 1)
-                    core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i + JOYPAD_BUTTONS]);
-                else
-                    core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i + JOYPAD_BUTTONS]);
-            }
+            if (joypad_ext[j][i])
+                core->KeyPressed(static_cast<GC_Controllers>(j), keymap[i + JOYPAD_BUTTONS]);
+            else
+                core->KeyReleased(static_cast<GC_Controllers>(j), keymap[i + JOYPAD_BUTTONS]);
         }
     }
 
@@ -457,20 +451,15 @@ static void update_input(void)
                 break;
         }
 
-        if (mouse[0] != mousepre[0])
-        {
-            if (mouse[0])
-                core->KeyPressed(Controller_1, Key_Left_Button);
-            else
-                core->KeyReleased(Controller_1, Key_Left_Button);
-        }
-        if (mouse[1] != mousepre[1])
-        {
-            if (mouse[1])
-                core->KeyPressed(Controller_1, Key_Right_Button);
-            else
-                core->KeyReleased(Controller_1, Key_Right_Button);
-        }
+        if (mouse[0])
+            core->KeyPressed(Controller_1, Key_Left_Button);
+        else
+            core->KeyReleased(Controller_1, Key_Left_Button);
+
+        if (mouse[1])
+            core->KeyPressed(Controller_1, Key_Right_Button);
+        else
+            core->KeyReleased(Controller_1, Key_Right_Button);
     }
 }
 
