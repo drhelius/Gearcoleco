@@ -42,14 +42,18 @@ public:
     void Spinner1(int movement);
     void Spinner2(int movement);
     void SaveState(std::ostream& stream);
-    void LoadState(std::istream& stream);
+    void LoadState(std::istream& stream, u32 version);
     void SetInputSegment(InputSegments segment);
     u8 ReadInput(u8 port);
+
+private:
+    void UpdateKeypadState(GC_Controllers controller);
 
 private:
     Processor* m_pProcessor;
     u8 m_Gamepad[2];
     u8 m_Keypad[2];
+    u16 m_KeypadState[2];
     InputSegments m_Segment;
     int m_iSpinnerRel[2];
 };

@@ -35,6 +35,7 @@ void Input::Reset()
     m_Segment = SegmentKeypadRightButtons;
     m_Gamepad[0] = m_Gamepad[1] = 0xFF;
     m_Keypad[0] = m_Keypad[1] = 0xFF;
+    m_KeypadState[0] = m_KeypadState[1] = 0;
     m_iSpinnerRel[0] = m_iSpinnerRel[1] = 0;
 }
 
@@ -82,7 +83,8 @@ void Input::KeyPressed(GC_Controllers controller, GC_Keys key)
     }
     else
     {
-        m_Keypad[controller] &= (key & 0x0F);
+        m_KeypadState[controller] |= (1 << (key & 0x0F));
+        UpdateKeypadState(controller);
     }
 }
 
@@ -94,7 +96,18 @@ void Input::KeyReleased(GC_Controllers controller, GC_Keys key)
     }
     else
     {
-        m_Keypad[controller] |= ~(key & 0x0F);
+        m_KeypadState[controller] &= ~(1 << (key & 0x0F));
+        UpdateKeypadState(controller);
+    }
+}
+
+void Input::UpdateKeypadState(GC_Controllers controller)
+{
+    m_Keypad[controller] = 0xFF;
+    for (int i = 0; i < 16; i++)
+    {
+        if (m_KeypadState[controller] & (1 << i))
+            m_Keypad[controller] &= i;
     }
 }
 
@@ -112,14 +125,25 @@ void Input::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.write(reinterpret_cast<const char*> (m_Keypad), sizeof(m_Keypad));
+    stream.write(reinterpret_cast<const char*> (m_KeypadState), sizeof(m_KeypadState));
     stream.write(reinterpret_cast<const char*> (&m_Segment), sizeof(m_Segment));
     stream.write(reinterpret_cast<const char*> (m_iSpinnerRel), sizeof(m_iSpinnerRel));
 }
 
-void Input::LoadState(std::istream& stream)
+void Input::LoadState(std::istream& stream, u32 version)
 {
     stream.read(reinterpret_cast<char*> (m_Gamepad), sizeof(m_Gamepad));
     stream.read(reinterpret_cast<char*> (m_Keypad), sizeof(m_Keypad));
+
+    if (version >= 102)
+    {
+        stream.read(reinterpret_cast<char*> (m_KeypadState), sizeof(m_KeypadState));
+    }
+    else
+    {
+        m_KeypadState[0] = m_KeypadState[1] = 0;
+    }
+
     stream.read(reinterpret_cast<char*> (&m_Segment), sizeof(m_Segment));
     stream.read(reinterpret_cast<char*> (m_iSpinnerRel), sizeof(m_iSpinnerRel));
 }
