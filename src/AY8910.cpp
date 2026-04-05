@@ -323,15 +323,15 @@ void AY8910::Sync()
                 }
             }
 
-            m_pBuffer[m_iBufferIndex] = m_CurrentSample;
-            m_pBuffer[m_iBufferIndex + 1] = m_CurrentSample;
-            m_iBufferIndex += 2;
-
-            if (m_iBufferIndex >= GC_AUDIO_BUFFER_SIZE)
+            if (m_iBufferIndex < 0 || (m_iBufferIndex + 1) >= GC_AUDIO_BUFFER_SIZE)
             {
                 Debug("SGM Audio buffer overflow");
                 m_iBufferIndex = 0;
             }
+
+            m_pBuffer[m_iBufferIndex] = m_CurrentSample;
+            m_pBuffer[m_iBufferIndex + 1] = m_CurrentSample;
+            m_iBufferIndex += 2;
         }
     }
 
