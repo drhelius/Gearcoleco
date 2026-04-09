@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Gearcoleco
+GenericName=ColecoVision emulator
+Comment=Play ColecoVision games
+Exec=/usr/games/gearcoleco %f
+TryExec=/usr/games/gearcoleco
+Icon=gearcoleco
+Terminal=false
+Categories=Game;Emulator;
+Keywords=ColecoVision;Coleco;
+StartupNotify=true
