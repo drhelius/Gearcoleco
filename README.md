@@ -50,7 +50,11 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-intel.zip">Gearcoleco-1.5.5-macos-intel.zip</a></td>
     </tr>
     <tr>
-      <td rowspan="3"><strong>Linux</strong></td>
+      <td rowspan="4"><strong>Linux</strong></td>
+      <td>Ubuntu PPA</td>
+      <td><a href="https://github.com/drhelius/ppa-geardome">drhelius/ppa-geardome</a></td>
+    </tr>
+    <tr>
       <td>Ubuntu 24.04 x64</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu24.04-x64.zip">Gearcoleco-1.5.5-ubuntu24.04-x64.zip</a></td>
     </tr>
@@ -144,7 +148,7 @@ make dist
 - Ubuntu / Debian / Raspberry Pi (Raspbian):
 
 ``` shell
-sudo apt install build-essential libsdl2-dev libgtk-3-dev
+sudo apt install build-essential libsdl2-dev
 cd platforms/linux
 make
 ```
@@ -152,7 +156,7 @@ make
 - Fedora:
 
 ``` shell
-sudo dnf install @development-tools gcc-c++ SDL2-devel gtk3-devel
+sudo dnf install @development-tools gcc-c++ SDL2-devel
 cd platforms/linux
 make
 ```
@@ -160,7 +164,7 @@ make
 - Arch Linux:
 
 ``` shell
-sudo pacman -S base-devel sdl2 gtk3
+sudo pacman -S base-devel sdl2
 cd platforms/linux
 make
 ```
@@ -170,17 +174,25 @@ make
 - FreeBSD:
 
 ``` shell
-su root -c "pkg install -y git gmake pkgconf SDL2 lang/gcc gtk3"
+su root -c "pkg install -y git gmake pkgconf sdl2"
 cd platforms/bsd
-gmake
+USE_CLANG=1 gmake
 ```
 
 - NetBSD:
 
 ``` shell
-su root -c "pkgin install gmake pkgconf SDL2 lang/gcc gtk3"
+su root -c "pkgin install gmake pkgconf SDL2"
 cd platforms/bsd
 gmake
+```
+
+- OpenBSD
+
+``` shell
+doas pkg_add gmake sdl2
+cd platforms/bsd
+LDFLAGS=-L/usr/X11R6/lib/ USE_CLANG=1 gmake
 ```
 
 ### Libretro
