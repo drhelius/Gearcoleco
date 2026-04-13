@@ -631,7 +631,7 @@ bool retro_load_game(const struct retro_game_info *info)
         return false;
     }
 
-    snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path);
+    snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path ? info->path : "");
 
     struct retro_memory_descriptor descs[7];
 
