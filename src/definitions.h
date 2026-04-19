@@ -78,6 +78,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(value, min, max) MIN(MAX(value, min), max)
+#define UNUSED(expr) (void)(expr)
 
 typedef uint8_t u8;
 typedef int8_t s8;
@@ -125,9 +126,42 @@ typedef void (*RamChangedCallback) (void);
 #define GC_FRAMES_PER_SECOND_PAL 50
 
 #define GC_AUDIO_SAMPLE_RATE 44100
-#define GC_AUDIO_BUFFER_SIZE 8192
+#define GC_AUDIO_BUFFER_SIZE 2048
+#define GC_AUDIO_BUFFER_SIZE_V1 8192
+#define GC_AUDIO_QUEUE_SIZE 1792
 
 #define GC_SAVESTATE_MAGIC 0x09200902
+#define GC_SAVESTATE_VERSION 103
+#define GC_SAVESTATE_MIN_VERSION 100
+#define GC_SAVESTATE_VERSION_V1 1
+
+struct GC_SaveState_Header
+{
+    u32 magic;
+    u32 version;
+    u32 size;
+    s64 timestamp;
+    char rom_name[128];
+    u32 rom_crc;
+    u32 screenshot_size;
+    u16 screenshot_width;
+    u16 screenshot_height;
+    char emu_build[32];
+};
+
+struct GC_SaveState_Header_Libretro
+{
+    u32 magic;
+    u32 version;
+};
+
+struct GC_SaveState_Screenshot
+{
+    u32 width;
+    u32 height;
+    u32 size;
+    u8* data;
+};
 
 struct GC_Color
 {
@@ -140,10 +174,10 @@ enum GC_Color_Format
 {
     GC_PIXEL_RGB565,
     GC_PIXEL_RGB555,
-    GC_PIXEL_RGB888,
+    GC_PIXEL_RGBA8888,
     GC_PIXEL_BGR565,
     GC_PIXEL_BGR555,
-    GC_PIXEL_BGR888
+    GC_PIXEL_BGRA8888
 };
 
 enum GC_Keys

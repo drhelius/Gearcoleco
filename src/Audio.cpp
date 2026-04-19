@@ -131,6 +131,22 @@ void Audio::LoadState(std::istream& stream)
     m_pBuffer->clear();
 }
 
+void Audio::LoadStateV1(std::istream& stream)
+{
+    using namespace std;
+
+    stream.read(reinterpret_cast<char*> (&m_ElapsedCycles), sizeof(m_ElapsedCycles));
+    stream.seekg(sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE_V1, ios::cur);
+    memset(m_pSampleBuffer, 0, sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
+    stream.seekg(sizeof(s16) * GC_AUDIO_BUFFER_SIZE_V1, ios::cur);
+    memset(m_pSGMBuffer, 0, sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
+    m_pAY8910->LoadState(stream);
+
+    m_pApu->reset();
+    m_pApu->volume(0.6);
+    m_pBuffer->clear();
+}
+
 bool Audio::StartVgmRecording(const char* file_path, int clock_rate, bool is_pal)
 {
     if (m_bVgmRecordingEnabled)

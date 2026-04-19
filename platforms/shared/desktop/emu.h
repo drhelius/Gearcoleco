@@ -1,0 +1,109 @@
+/*
+ * Gearcoleco - ColecoVision Emulator
+ * Copyright (C) 2021  Ignacio Sanchez
+
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
+ */
+
+#ifndef EMU_H
+#define EMU_H
+
+#include "gearcoleco.h"
+
+#ifdef EMU_IMPORT
+    #define EXTERN
+#else
+    #define EXTERN extern
+#endif
+
+enum Directory_Location
+{
+    Directory_Location_Default = 0,
+    Directory_Location_ROM = 1,
+    Directory_Location_Custom = 2
+};
+
+EXTERN u8* emu_frame_buffer;
+EXTERN GC_SaveState_Header emu_savestates[5];
+EXTERN GC_SaveState_Screenshot emu_savestates_screenshots[5];
+EXTERN u8* emu_debug_background_buffer;
+EXTERN u8* emu_debug_tile_buffer;
+EXTERN u8* emu_debug_sprite_buffers[64];
+
+EXTERN bool emu_audio_sync;
+EXTERN bool emu_debug_disable_breakpoints_cpu;
+EXTERN bool emu_debug_disable_breakpoints_mem;
+EXTERN int emu_debug_step_frames_pending;
+EXTERN int emu_debug_tile_palette;
+EXTERN bool emu_debug_tile_color_mode;
+
+EXTERN bool emu_init(void);
+EXTERN void emu_destroy(void);
+EXTERN void emu_update(void);
+EXTERN void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration config);
+EXTERN bool emu_is_media_loading(void);
+EXTERN bool emu_finish_media_loading(void);
+EXTERN void emu_key_pressed(GC_Controllers controller, GC_Keys key);
+EXTERN void emu_key_released(GC_Controllers controller, GC_Keys key);
+EXTERN void emu_spinner1(int movement);
+EXTERN void emu_spinner2(int movement);
+EXTERN void emu_pause(void);
+EXTERN void emu_resume(void);
+EXTERN bool emu_is_paused(void);
+EXTERN bool emu_is_debug_idle(void);
+EXTERN bool emu_is_empty(void);
+EXTERN bool emu_is_bios_loaded(void);
+EXTERN void emu_reset(Cartridge::ForceConfiguration config);
+EXTERN void emu_dissasemble_rom(void);
+EXTERN void emu_audio_mute(bool mute);
+EXTERN void emu_audio_reset(void);
+EXTERN bool emu_is_audio_enabled(void);
+EXTERN bool emu_is_audio_open(void);
+EXTERN void emu_palette(GC_Color* palette);
+EXTERN void emu_predefined_palette(int palette);
+EXTERN void emu_save_ram(const char* file_path);
+EXTERN void emu_load_ram(const char* file_path, Cartridge::ForceConfiguration config);
+EXTERN void emu_save_state_slot(int index);
+EXTERN void emu_load_state_slot(int index);
+EXTERN void emu_save_state_file(const char* file_path);
+EXTERN void emu_load_state_file(const char* file_path);
+EXTERN void emu_get_runtime(GC_RuntimeInfo& runtime);
+EXTERN void emu_get_info(char* info, int buffer_size);
+EXTERN GearcolecoCore* emu_get_core(void);
+EXTERN void emu_debug_step(void);
+EXTERN void emu_debug_step_over(void);
+EXTERN void emu_debug_step_into(void);
+EXTERN void emu_debug_step_out(void);
+EXTERN void emu_debug_step_frame(void);
+EXTERN void emu_debug_break(void);
+EXTERN void emu_debug_continue(void);
+EXTERN void emu_debug_next_frame(void);
+EXTERN void emu_mcp_start(void);
+EXTERN void emu_mcp_stop(void);
+EXTERN void emu_mcp_set_transport(int mode, int port);
+EXTERN bool emu_mcp_is_running(void);
+EXTERN int emu_mcp_get_transport_mode(void);
+EXTERN void emu_load_bios(const char* file_path);
+EXTERN void emu_video_no_sprite_limit(bool enabled);
+EXTERN void emu_set_overscan(int overscan);
+EXTERN void emu_save_screenshot(const char* file_path);
+EXTERN void emu_start_vgm_recording(const char* file_path);
+EXTERN void emu_stop_vgm_recording(void);
+EXTERN bool emu_is_vgm_recording(void);
+EXTERN void update_savestates_data(void);
+
+#undef EMU_IMPORT
+#undef EXTERN
+#endif /* EMU_H */

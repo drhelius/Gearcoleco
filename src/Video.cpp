@@ -532,7 +532,7 @@ void Video::RenderSprites(int line)
 }
 
 
-void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
+void Video::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
 {
     int x = 0;
     int y = 0;
@@ -544,8 +544,8 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     int overscan_total_height = 0;
     bool overscan_enabled = false;
     int overscan_color = (m_VdpRegister[7] & 0x0F) * 3;
-    int buffer_size = size * 3;
-    bool bgr = (pixelFormat == GC_PIXEL_BGR888);
+    int buffer_size = size * 4;
+    bool bgr = (pixelFormat == GC_PIXEL_BGRA8888);
 
     if (overscan && (m_Overscan != OverscanDisabled))
     {
@@ -569,7 +569,7 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
     }
 
-    for (int i = 0, j = 0; j < buffer_size; j += 3)
+    for (int i = 0, j = 0; j < buffer_size; j += 4)
     {
         u16 src_color = 0;
         if (overscan_enabled)
@@ -597,6 +597,7 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         dstFrameBuffer[j + 0] = bgr ? m_pCurrentPalette[src_color + 2] : m_pCurrentPalette[src_color];
         dstFrameBuffer[j + 1] = m_pCurrentPalette[src_color + 1];
         dstFrameBuffer[j + 2] = bgr ? m_pCurrentPalette[src_color] : m_pCurrentPalette[src_color + 2];
+        dstFrameBuffer[j + 3] = 0xFF;
     }
 }
 

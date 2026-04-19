@@ -52,7 +52,7 @@ public:
     u8* GetRegisters();
     u16* GetFrameBuffer();
     int GetMode();
-    void Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
+    void Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
     void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
     void SetOverscan(Overscan overscan);
     Overscan GetOverscan();

@@ -41,7 +41,7 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pColecoVisionIOPorts);
     InitPointer(m_pFrameBuffer);
     m_bPaused = true;
-    m_pixelFormat = GC_PIXEL_RGB888;
+    m_pixelFormat = GC_PIXEL_RGBA8888;
 }
 
 GearcolecoCore::~GearcolecoCore()
@@ -574,7 +574,7 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
             header.screenshot_width = runtime_info.screen_width;
             header.screenshot_height = runtime_info.screen_height;
 
-            int bytes_per_pixel = 3;
+            int bytes_per_pixel = (m_pixelFormat == GC_PIXEL_RGBA8888 || m_pixelFormat == GC_PIXEL_BGRA8888) ? 4 : 2;
             header.screenshot_size = header.screenshot_width * header.screenshot_height * bytes_per_pixel;
             stream.write(reinterpret_cast<const char*>(m_pFrameBuffer), header.screenshot_size);
         }
@@ -728,7 +728,12 @@ bool GearcolecoCore::LoadState(std::istream& stream)
 
             m_pMemory->LoadState(stream);
             m_pProcessor->LoadState(stream);
-            m_pAudio->LoadState(stream);
+
+            if (header.version <= 102)
+                m_pAudio->LoadStateV1(stream);
+            else
+                m_pAudio->LoadState(stream);
+
             m_pVideo->LoadState(stream);
             m_pInput->LoadState(stream, header.version);
 
@@ -756,7 +761,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
 
                 m_pMemory->LoadState(stream);
                 m_pProcessor->LoadState(stream);
-                m_pAudio->LoadState(stream);
+                m_pAudio->LoadStateV1(stream);
                 m_pVideo->LoadState(stream);
                 m_pInput->LoadState(stream, GC_SAVESTATE_VERSION_V1);
 
@@ -915,10 +920,10 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
             m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
-        case GC_PIXEL_RGB888:
-        case GC_PIXEL_BGR888:
+        case GC_PIXEL_RGBA8888:
+        case GC_PIXEL_BGRA8888:
         {
-            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
+            m_pVideo->Render32bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
     }

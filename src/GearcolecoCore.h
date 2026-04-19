@@ -36,7 +36,7 @@ class GearcolecoCore
 public:
     GearcolecoCore();
     ~GearcolecoCore();
-    void Init(GC_Color_Format pixelFormat = GC_PIXEL_RGB888);
+    void Init(GC_Color_Format pixelFormat = GC_PIXEL_RGBA8888);
     bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, bool step = false, bool stopOnBreakpoints = false);
     bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL);
     bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
@@ -55,14 +55,12 @@ public:
     void SaveRam(const char* szPath, bool fullPath = false);
     void LoadRam();
     void LoadRam(const char* szPath, bool fullPath = false);
-    void SaveState(int index);
-    void SaveState(const char* szPath, int index);
-    bool SaveState(u8* buffer, size_t& size);
-    bool SaveState(std::ostream& stream, size_t& size);
-    void LoadState(int index);
-    void LoadState(const char* szPath, int index);
+    bool SaveState(const char* path = NULL, int index = -1, bool screenshot = false);
+    bool SaveState(u8* buffer, size_t& size, bool screenshot = false);
+    bool LoadState(const char* path = NULL, int index = -1);
     bool LoadState(const u8* buffer, size_t size);
-    bool LoadState(std::istream& stream);
+    bool GetSaveStateHeader(int index, const char* path, GC_SaveState_Header* header);
+    bool GetSaveStateScreenshot(int index, const char* path, GC_SaveState_Screenshot* screenshot);
     Memory* GetMemory();
     Cartridge* GetCartridge();
     Processor* GetProcessor();
@@ -72,6 +70,9 @@ public:
 private:
     void Reset();
     void RenderFrameBuffer(u8* finalFrameBuffer);
+    bool SaveState(std::ostream& stream, size_t& size, bool screenshot);
+    bool LoadState(std::istream& stream);
+    std::string GetSaveStatePath(const char* path, int index);
 
 private:
     Memory* m_pMemory;
@@ -83,6 +84,7 @@ private:
     ColecoVisionIOPorts* m_pColecoVisionIOPorts;
     bool m_bPaused;
     GC_Color_Format m_pixelFormat;
+    u8* m_pFrameBuffer;
 };
 
 #endif	/* CORE_H */

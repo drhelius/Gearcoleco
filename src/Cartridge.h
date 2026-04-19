@@ -67,6 +67,7 @@ public:
     int GetROMBankCount() const;
     const char* GetFilePath() const;
     const char* GetFileName() const;
+    const char* GetFileDirectory() const;
     u8* GetROM() const;
     bool LoadFromFile(const char* path);
     bool LoadFromBuffer(const u8* buffer, int size);
@@ -84,6 +85,7 @@ private:
     bool m_bReady;
     char m_szFilePath[512];
     char m_szFileName[512];
+    char m_szFileDirectory[512];
     int m_iROMBankCount;
     bool m_bPAL;
     u32 m_iCRC;

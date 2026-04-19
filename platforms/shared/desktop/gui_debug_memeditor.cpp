@@ -1,6 +1,6 @@
 /*
- * Gearsystem - Sega Master System / Game Gear Emulator
- * Copyright (C) 2013  Ignacio Sanchez
+ * Gearcoleco - ColecoVision Emulator
+ * Copyright (C) 2021  Ignacio Sanchez
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -142,7 +142,7 @@ static void set_defaults(void)
     }
 
     config_hotkeys[config_HotkeyIndex_OpenROM] = make_hotkey(SDL_SCANCODE_O, SDL_KMOD_CTRL);
-    config_hotkeys[config_HotkeyIndex_ReloadROM] = make_hotkey(SDL_SCANCODE_UNKNOWN, SDL_KMOD_NONE);
+    config_hotkeys[config_HotkeyIndex_ReloadROM] = make_hotkey(SDL_SCANCODE_D, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_Quit] = make_hotkey(SDL_SCANCODE_Q, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_Reset] = make_hotkey(SDL_SCANCODE_R, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_Pause] = make_hotkey(SDL_SCANCODE_P, SDL_KMOD_CTRL);
@@ -174,11 +174,7 @@ void config_init(void)
     const char* root_path = NULL;
 
     if (check_portable())
-    {
-        const char* base_path = SDL_GetBasePath();
-        root_path = SDL_strdup(base_path);
-        SDL_free((void*)base_path);
-    }
+        root_path = SDL_strdup(SDL_GetBasePath());
     else
         root_path = SDL_GetPrefPath("Geardome", GEARCOLECO_TITLE);
 
@@ -245,40 +241,56 @@ void config_read(void)
 #endif
     config_debug.show_disassembler = read_bool("Debug", "Disassembler", true);
     config_debug.show_screen = read_bool("Debug", "Screen", true);
-    config_debug.show_memory = read_bool("Debug", "Memory", true);
+    config_debug.show_memory = read_bool("Debug", "Memory", false);
     config_debug.show_processor = read_bool("Debug", "Processor", true);
-    // REMOVED: config_debug.show_call_stack = read_bool("Debug", "CallStack", false);
-    // REMOVED: config_debug.show_breakpoints = read_bool("Debug", "Breakpoints", false);
-    // REMOVED: config_debug.show_symbols = read_bool("Debug", "Symbols", false);
+    config_debug.show_call_stack = read_bool("Debug", "CallStack", false);
+    config_debug.show_breakpoints = read_bool("Debug", "Breakpoints", false);
+    config_debug.show_symbols = read_bool("Debug", "Symbols", false);
     config_debug.show_video = read_bool("Debug", "Video", false);
-    config_debug.show_video_registers = read_bool("Debug", "VideoRegisters", false);
-    // REMOVED: config_debug.show_video_nametable = read_bool("Debug", "VideoNameTable", false);
-    // REMOVED: config_debug.show_video_tiles = read_bool("Debug", "VideoTiles", false);
-    // REMOVED: config_debug.show_video_sprites = read_bool("Debug", "VideoSprites", false);
-    // REMOVED: config_debug.show_video_palettes = read_bool("Debug", "VideoPalettes", false);
-    // REMOVED: config_debug.show_video_regs = read_bool("Debug", "VideoRegs", false);
-    // REMOVED: config_debug.show_psg = read_bool("Debug", "PSG", false);
-    // REMOVED: config_debug.show_ym2413 = read_bool("Debug", "YM2413", false);
-    // REMOVED: config_debug.show_trace_logger = read_bool("Debug", "TraceLogger", false);
-    // REMOVED: config_debug.trace_counter = read_bool("Debug", "TraceCounter", true);
-    // REMOVED: config_debug.trace_bank = read_bool("Debug", "TraceBank", true);
-    // REMOVED: config_debug.trace_registers = read_bool("Debug", "TraceRegisters", true);
-    // REMOVED: config_debug.trace_flags = read_bool("Debug", "TraceFlags", true);
-    // REMOVED: config_debug.trace_bytes = read_bool("Debug", "TraceBytes", true);
-    // REMOVED: config_debug.dis_show_mem = read_bool("Debug", "DisMem", true);
-    // REMOVED: config_debug.dis_show_symbols = read_bool("Debug", "DisSymbols", true);
-    // REMOVED: config_debug.dis_show_segment = read_bool("Debug", "DisSegment", true);
-    // REMOVED: config_debug.dis_show_bank = read_bool("Debug", "DisBank", true);
-    // REMOVED: config_debug.dis_show_auto_symbols = read_bool("Debug", "DisAutoSymbols", true);
-    // REMOVED: config_debug.dis_dim_auto_symbols = read_bool("Debug", "DisDimAutoSymbols", false);
-    // REMOVED: config_debug.dis_replace_symbols = read_bool("Debug", "DisReplaceSymbols", true);
-    // REMOVED: config_debug.dis_replace_labels = read_bool("Debug", "DisReplaceLabels", true);
-    // REMOVED: config_debug.dis_look_ahead_count = read_int("Debug", "DisLookAheadCount", 20);
+    config_debug.show_video_nametable = read_bool("Debug", "VideoNameTable", false);
+    config_debug.show_video_tiles = read_bool("Debug", "VideoTiles", false);
+    config_debug.show_video_sprites = read_bool("Debug", "VideoSprites", false);
+    config_debug.show_video_palettes = read_bool("Debug", "VideoPalettes", false);
+    config_debug.show_video_regs = read_bool("Debug", "VideoRegs", false);
+    config_debug.show_psg = read_bool("Debug", "PSG", false);
+    config_debug.show_ym2413 = read_bool("Debug", "YM2413", false);
+    config_debug.show_trace_logger = read_bool("Debug", "TraceLogger", false);
+    config_debug.trace_counter = read_bool("Debug", "TraceCounter", true);
+    config_debug.trace_bank = read_bool("Debug", "TraceBank", true);
+    config_debug.trace_registers = read_bool("Debug", "TraceRegisters", true);
+    config_debug.trace_flags = read_bool("Debug", "TraceFlags", true);
+    config_debug.trace_bytes = read_bool("Debug", "TraceBytes", true);
+    config_debug.trace_cpu_irq = read_bool("Debug", "TraceCpuIrq", true);
+    config_debug.trace_vdp_write = read_bool("Debug", "TraceVdpWrite", true);
+    config_debug.trace_vdp_status = read_bool("Debug", "TraceVdpStatus", true);
+    config_debug.trace_psg = read_bool("Debug", "TracePsg", true);
+    config_debug.trace_ym2413 = read_bool("Debug", "TraceYm2413", true);
+    config_debug.trace_io_port = read_bool("Debug", "TraceIoPort", true);
+    config_debug.trace_bank_switch = read_bool("Debug", "TraceBankSwitch", true);
+    config_debug.dis_show_mem = read_bool("Debug", "DisMem", true);
+    config_debug.dis_show_symbols = read_bool("Debug", "DisSymbols", true);
+    config_debug.dis_show_segment = read_bool("Debug", "DisSegment", true);
+    config_debug.dis_show_bank = read_bool("Debug", "DisBank", true);
+    config_debug.dis_show_auto_symbols = read_bool("Debug", "DisAutoSymbols", true);
+    config_debug.dis_dim_auto_symbols = read_bool("Debug", "DisDimAutoSymbols", false);
+    config_debug.dis_replace_symbols = read_bool("Debug", "DisReplaceSymbols", true);
+    config_debug.dis_replace_labels = read_bool("Debug", "DisReplaceLabels", true);
+    config_debug.dis_look_ahead_count = read_int("Debug", "DisLookAheadCount", 20);
     config_debug.font_size = read_int("Debug", "FontSize", 0);
     config_debug.scale = read_int("Debug", "Scale", 1);
     config_debug.multi_viewport = read_bool("Debug", "MultiViewport", false);
     config_debug.single_instance = read_bool("Debug", "SingleInstance", false);
-    // REMOVED: config_debug.auto_debug_settings = read_bool("Debug", "AutoDebugSettings", false);
+    config_debug.auto_debug_settings = read_bool("Debug", "AutoDebugSettings", false);
+
+    for (int i = 0; i < config_memory_editor_count; i++)
+    {
+        std::string section = "MemEditor_" + std::to_string(i);
+        config_debug.mem_editor_bytes_per_row[i] = read_int(section.c_str(), "BytesPerRow", 16);
+        config_debug.mem_editor_preview_data_type[i] = read_int(section.c_str(), "PreviewDataType", 0);
+        config_debug.mem_editor_preview_endianess[i] = read_int(section.c_str(), "PreviewEndianess", 0);
+        config_debug.mem_editor_uppercase_hex[i] = read_bool(section.c_str(), "UppercaseHex", true);
+        config_debug.mem_editor_gray_out_zeros[i] = read_bool(section.c_str(), "GrayOutZeros", true);
+    }
 
     config_emulator.maximized = read_bool("Emulator", "Maximized", false);
     config_emulator.fullscreen = read_bool("Emulator", "FullScreen", false);
@@ -288,18 +300,10 @@ void config_read(void)
     config_emulator.save_slot = read_int("Emulator", "SaveSlot", 0);
     config_emulator.start_paused = read_bool("Emulator", "StartPaused", false);
     config_emulator.pause_when_inactive = read_bool("Emulator", "PauseWhenInactive", true);
-    // REMOVED: config_emulator.system = read_int("Emulator", "System", 0);
-    // REMOVED: config_emulator.zone = read_int("Emulator", "Zone", 0);
-    // REMOVED: config_emulator.mapper = read_int("Emulator", "Mapper", 0);
     config_emulator.region = read_int("Emulator", "Region", 0);
     config_emulator.bios_path = read_string("Emulator", "BiosPath");
     config_emulator.spinner = read_int("Emulator", "Spinner", 0);
     config_emulator.spinner_sensitivity = read_int("Emulator", "SpinnerSensitivity", 4);
-    // REMOVED: config_emulator.sms_bootrom = read_bool("Emulator", "SMSBootrom", false);
-    // REMOVED: config_emulator.sms_bootrom_path = read_string("Emulator", "SMSBootromPath");
-    // REMOVED: config_emulator.gg_bootrom = read_bool("Emulator", "GGBootrom", false);
-    // REMOVED: config_emulator.gg_bootrom_path = read_string("Emulator", "GGBootromPath");
-    // REMOVED: config_emulator.media = read_int("Emulator", "Media", 0);
     config_emulator.savefiles_dir_option = read_int("Emulator", "SaveFilesDirOption", 0);
     config_emulator.savefiles_path = read_string("Emulator", "SaveFilesPath");
     config_emulator.savestates_dir_option = read_int("Emulator", "SaveStatesDirOption", 0);
@@ -310,18 +314,7 @@ void config_read(void)
     config_emulator.window_width = read_int("Emulator", "WindowWidth", 770);
     config_emulator.window_height = read_int("Emulator", "WindowHeight", 600);
     config_emulator.status_messages = read_bool("Emulator", "StatusMessages", false);
-    // REMOVED: config_emulator.mcp_tcp_port = read_int("Emulator", "MCPTCPPort", 7777);
-    // REMOVED: config_emulator.light_phaser = read_bool("Emulator", "LightPhaser", false);
-    // REMOVED: config_emulator.light_phaser_crosshair = read_bool("Emulator", "LightPhaserCrosshair", false);
-    // REMOVED: config_emulator.light_phaser_crosshair_shape = read_int("Emulator", "LightPhaserCrosshairShape", 0);
-    // REMOVED: config_emulator.light_phaser_crosshair_color = read_int("Emulator", "LightPhaserCrosshairColor", 0);
-    // REMOVED: config_emulator.light_phaser_x_offset = read_int("Emulator", "LightPhaserXOffset", 0);
-    // REMOVED: config_emulator.light_phaser_y_offset = read_int("Emulator", "LightPhaserYOffset", 0);
-    // REMOVED: config_emulator.paddle_control = read_bool("Emulator", "PaddleControl", false);
-    // REMOVED: config_emulator.paddle_sensitivity = read_int("Emulator", "PaddleSensitivity", 5);
-
-    // REMOVED: if (config_emulator.light_phaser)
-    // REMOVED: config_emulator.paddle_control = false;
+    config_emulator.mcp_tcp_port = read_int("Emulator", "MCPTCPPort", 7777);
 
     if (config_emulator.savefiles_path.empty())
     {
@@ -348,11 +341,10 @@ void config_read(void)
     config_video.scale_manual = read_int("Video", "ScaleManual", 1);
     config_video.ratio = read_int("Video", "AspectRatio", 1);
     config_video.overscan = read_int("Video", "Overscan", 1);
-    // REMOVED: config_video.hide_left_bar = read_int("Video", "HideLeftBar", 0);
     config_video.fps = read_bool("Video", "FPS", false);
     config_video.bilinear = read_bool("Video", "Bilinear", false);
     config_video.mix_frames = read_bool("Video", "MixFrames", true);
-    config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.60f);
+    config_video.mix_frames_intensity = read_float("Video", "MixFramesIntensity", 0.50f);
     config_video.scanlines = read_bool("Video", "Scanlines", true);
     config_video.scanlines_filter = read_bool("Video", "ScanlinesFilter", true);
     config_video.scanlines_intensity = read_float("Video", "ScanlinesIntensity", 0.10f);
@@ -375,14 +367,10 @@ void config_read(void)
         config_video.color[i].green = (u8)read_int("Video", key_g, config_video.color[i].green);
         config_video.color[i].blue = (u8)read_int("Video", key_b, config_video.color[i].blue);
     }
-    // REMOVED: config_video.glasses = read_int("Video", "3DGlasses", 0);
 
     config_audio.enable = read_bool("Audio", "Enable", true);
     config_audio.sync = read_bool("Audio", "Sync", true);
-    // REMOVED: config_audio.psg_volume = read_float("Audio", "PSGVolume", 1.0f);
-    // REMOVED: config_audio.fm_volume = read_float("Audio", "FMVolume", 1.0f);
-    // REMOVED: config_audio.ym2413 = read_int("Audio", "YM2413", 0);
-    // REMOVED: config_audio.buffer_count = read_int("Audio", "BufferCount", 3);
+    config_audio.buffer_count = read_int("Audio", "BufferCount", 3);
 
     config_input[0].key_left = (SDL_Scancode)read_int("InputA", "KeyLeft", SDL_SCANCODE_LEFT);
     config_input[0].key_right = (SDL_Scancode)read_int("InputA", "KeyRight", SDL_SCANCODE_RIGHT);
@@ -486,7 +474,7 @@ void config_read(void)
 
     // Read hotkeys
     config_hotkeys[config_HotkeyIndex_OpenROM] = read_hotkey("Hotkeys", "OpenROM", make_hotkey(SDL_SCANCODE_O, SDL_KMOD_CTRL));
-    config_hotkeys[config_HotkeyIndex_ReloadROM] = read_hotkey("Hotkeys", "ReloadROM", make_hotkey(SDL_SCANCODE_UNKNOWN, SDL_KMOD_NONE));
+    config_hotkeys[config_HotkeyIndex_ReloadROM] = read_hotkey("Hotkeys", "ReloadROM", make_hotkey(SDL_SCANCODE_D, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_Quit] = read_hotkey("Hotkeys", "Quit", make_hotkey(SDL_SCANCODE_Q, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_Reset] = read_hotkey("Hotkeys", "Reset", make_hotkey(SDL_SCANCODE_R, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_Pause] = read_hotkey("Hotkeys", "Pause", make_hotkey(SDL_SCANCODE_P, SDL_KMOD_CTRL));
@@ -529,38 +517,55 @@ void config_write(void)
     write_bool("Debug", "Screen", config_debug.show_screen);
     write_bool("Debug", "Memory", config_debug.show_memory);
     write_bool("Debug", "Processor", config_debug.show_processor);
-    // REMOVED: write_bool("Debug", "CallStack", config_debug.show_call_stack);
-    // REMOVED: write_bool("Debug", "Breakpoints", config_debug.show_breakpoints);
-    // REMOVED: write_bool("Debug", "Symbols", config_debug.show_symbols);
+    write_bool("Debug", "CallStack", config_debug.show_call_stack);
+    write_bool("Debug", "Breakpoints", config_debug.show_breakpoints);
+    write_bool("Debug", "Symbols", config_debug.show_symbols);
     write_bool("Debug", "Video", config_debug.show_video);
-    write_bool("Debug", "VideoRegisters", config_debug.show_video_registers);
-    // REMOVED: write_bool("Debug", "VideoNameTable", config_debug.show_video_nametable);
-    // REMOVED: write_bool("Debug", "VideoTiles", config_debug.show_video_tiles);
-    // REMOVED: write_bool("Debug", "VideoSprites", config_debug.show_video_sprites);
-    // REMOVED: write_bool("Debug", "VideoPalettes", config_debug.show_video_palettes);
-    // REMOVED: write_bool("Debug", "VideoRegs", config_debug.show_video_regs);
-    // REMOVED: write_bool("Debug", "PSG", config_debug.show_psg);
-    // REMOVED: write_bool("Debug", "YM2413", config_debug.show_ym2413);
-    // REMOVED: write_bool("Debug", "TraceLogger", config_debug.show_trace_logger);
-    // REMOVED: write_bool("Debug", "TraceCounter", config_debug.trace_counter);
-    // REMOVED: write_bool("Debug", "TraceBank", config_debug.trace_bank);
-    // REMOVED: write_bool("Debug", "TraceRegisters", config_debug.trace_registers);
-    // REMOVED: write_bool("Debug", "TraceFlags", config_debug.trace_flags);
-    // REMOVED: write_bool("Debug", "TraceBytes", config_debug.trace_bytes);
-    // REMOVED: write_bool("Debug", "DisMem", config_debug.dis_show_mem);
-    // REMOVED: write_bool("Debug", "DisSymbols", config_debug.dis_show_symbols);
-    // REMOVED: write_bool("Debug", "DisSegment", config_debug.dis_show_segment);
-    // REMOVED: write_bool("Debug", "DisBank", config_debug.dis_show_bank);
-    // REMOVED: write_bool("Debug", "DisAutoSymbols", config_debug.dis_show_auto_symbols);
-    // REMOVED: write_bool("Debug", "DisDimAutoSymbols", config_debug.dis_dim_auto_symbols);
-    // REMOVED: write_bool("Debug", "DisReplaceSymbols", config_debug.dis_replace_symbols);
-    // REMOVED: write_bool("Debug", "DisReplaceLabels", config_debug.dis_replace_labels);
-    // REMOVED: write_int("Debug", "DisLookAheadCount", config_debug.dis_look_ahead_count);
+    //write_bool("Debug", "VideoRegisters", config_debug.show_video_registers);
+    write_bool("Debug", "VideoNameTable", config_debug.show_video_nametable);
+    write_bool("Debug", "VideoTiles", config_debug.show_video_tiles);
+    write_bool("Debug", "VideoSprites", config_debug.show_video_sprites);
+    write_bool("Debug", "VideoPalettes", config_debug.show_video_palettes);
+    write_bool("Debug", "VideoRegs", config_debug.show_video_regs);
+    write_bool("Debug", "PSG", config_debug.show_psg);
+    write_bool("Debug", "YM2413", config_debug.show_ym2413);
+    write_bool("Debug", "TraceLogger", config_debug.show_trace_logger);
+    write_bool("Debug", "TraceCounter", config_debug.trace_counter);
+    write_bool("Debug", "TraceBank", config_debug.trace_bank);
+    write_bool("Debug", "TraceRegisters", config_debug.trace_registers);
+    write_bool("Debug", "TraceFlags", config_debug.trace_flags);
+    write_bool("Debug", "TraceBytes", config_debug.trace_bytes);
+    write_bool("Debug", "TraceCpuIrq", config_debug.trace_cpu_irq);
+    write_bool("Debug", "TraceVdpWrite", config_debug.trace_vdp_write);
+    write_bool("Debug", "TraceVdpStatus", config_debug.trace_vdp_status);
+    write_bool("Debug", "TracePsg", config_debug.trace_psg);
+    write_bool("Debug", "TraceYm2413", config_debug.trace_ym2413);
+    write_bool("Debug", "TraceIoPort", config_debug.trace_io_port);
+    write_bool("Debug", "TraceBankSwitch", config_debug.trace_bank_switch);
+    write_bool("Debug", "DisMem", config_debug.dis_show_mem);
+    write_bool("Debug", "DisSymbols", config_debug.dis_show_symbols);
+    write_bool("Debug", "DisSegment", config_debug.dis_show_segment);
+    write_bool("Debug", "DisBank", config_debug.dis_show_bank);
+    write_bool("Debug", "DisAutoSymbols", config_debug.dis_show_auto_symbols);
+    write_bool("Debug", "DisDimAutoSymbols", config_debug.dis_dim_auto_symbols);
+    write_bool("Debug", "DisReplaceSymbols", config_debug.dis_replace_symbols);
+    write_bool("Debug", "DisReplaceLabels", config_debug.dis_replace_labels);
+    write_int("Debug", "DisLookAheadCount", config_debug.dis_look_ahead_count);
     write_int("Debug", "FontSize", config_debug.font_size);
     write_int("Debug", "Scale", config_debug.scale);
     write_bool("Debug", "MultiViewport", config_debug.multi_viewport);
     write_bool("Debug", "SingleInstance", config_debug.single_instance);
-    // REMOVED: write_bool("Debug", "AutoDebugSettings", config_debug.auto_debug_settings);
+    write_bool("Debug", "AutoDebugSettings", config_debug.auto_debug_settings);
+
+    for (int i = 0; i < config_memory_editor_count; i++)
+    {
+        std::string section = "MemEditor_" + std::to_string(i);
+        write_int(section.c_str(), "BytesPerRow", config_debug.mem_editor_bytes_per_row[i]);
+        write_int(section.c_str(), "PreviewDataType", config_debug.mem_editor_preview_data_type[i]);
+        write_int(section.c_str(), "PreviewEndianess", config_debug.mem_editor_preview_endianess[i]);
+        write_bool(section.c_str(), "UppercaseHex", config_debug.mem_editor_uppercase_hex[i]);
+        write_bool(section.c_str(), "GrayOutZeros", config_debug.mem_editor_gray_out_zeros[i]);
+    }
 
     write_bool("Emulator", "Maximized", config_emulator.maximized);
     write_bool("Emulator", "FullScreen", config_emulator.fullscreen);
@@ -570,18 +575,10 @@ void config_write(void)
     write_int("Emulator", "SaveSlot", config_emulator.save_slot);
     write_bool("Emulator", "StartPaused", config_emulator.start_paused);
     write_bool("Emulator", "PauseWhenInactive", config_emulator.pause_when_inactive);
-    // REMOVED: write_int("Emulator", "System", config_emulator.system);
-    // REMOVED: write_int("Emulator", "Zone", config_emulator.zone);
-    // REMOVED: write_int("Emulator", "Mapper", config_emulator.mapper);
     write_int("Emulator", "Region", config_emulator.region);
     write_string("Emulator", "BiosPath", config_emulator.bios_path);
     write_int("Emulator", "Spinner", config_emulator.spinner);
     write_int("Emulator", "SpinnerSensitivity", config_emulator.spinner_sensitivity);
-    // REMOVED: write_bool("Emulator", "SMSBootrom", config_emulator.sms_bootrom);
-    // REMOVED: write_string("Emulator", "SMSBootromPath", config_emulator.sms_bootrom_path);
-    // REMOVED: write_bool("Emulator", "GGBootrom", config_emulator.gg_bootrom);
-    // REMOVED: write_string("Emulator", "GGBootromPath", config_emulator.gg_bootrom_path);
-    // REMOVED: write_int("Emulator", "Media", config_emulator.media);
     write_int("Emulator", "SaveFilesDirOption", config_emulator.savefiles_dir_option);
     write_string("Emulator", "SaveFilesPath", config_emulator.savefiles_path);
     write_int("Emulator", "SaveStatesDirOption", config_emulator.savestates_dir_option);
@@ -592,16 +589,7 @@ void config_write(void)
     write_int("Emulator", "WindowWidth", config_emulator.window_width);
     write_int("Emulator", "WindowHeight", config_emulator.window_height);
     write_bool("Emulator", "StatusMessages", config_emulator.status_messages);
-    // REMOVED: write_int("Emulator", "MCPTCPPort", config_emulator.mcp_tcp_port);
-    // REMOVED: write_bool("Emulator", "LightPhaser", config_emulator.light_phaser);
-    // REMOVED: write_bool("Emulator", "LightPhaserCrosshair", config_emulator.light_phaser_crosshair);
-    // REMOVED: write_int("Emulator", "LightPhaserCrosshairShape", config_emulator.light_phaser_crosshair_shape);
-    // REMOVED: write_int("Emulator", "LightPhaserCrosshairColor", config_emulator.light_phaser_crosshair_color);
-    // REMOVED: write_int("Emulator", "LightPhaserXOffset", config_emulator.light_phaser_x_offset);
-    // REMOVED: write_int("Emulator", "LightPhaserYOffset", config_emulator.light_phaser_y_offset);
-    // REMOVED: write_bool("Emulator", "PaddleControl", config_emulator.paddle_control);
-    // REMOVED: write_int("Emulator", "PaddleSensitivity", config_emulator.paddle_sensitivity);
-
+    write_int("Emulator", "MCPTCPPort", config_emulator.mcp_tcp_port);
     for (int i = 0; i < config_max_recent_roms; i++)
     {
         std::string item = "RecentROM" + std::to_string(i);
@@ -612,7 +600,6 @@ void config_write(void)
     write_int("Video", "ScaleManual", config_video.scale_manual);
     write_int("Video", "AspectRatio", config_video.ratio);
     write_int("Video", "Overscan", config_video.overscan);
-    // REMOVED: write_int("Video", "HideLeftBar", config_video.hide_left_bar);
     write_bool("Video", "FPS", config_video.fps);
     write_bool("Video", "Bilinear", config_video.bilinear);
     write_bool("Video", "MixFrames", config_video.mix_frames);
@@ -639,14 +626,10 @@ void config_write(void)
         write_int("Video", key_g, config_video.color[i].green);
         write_int("Video", key_b, config_video.color[i].blue);
     }
-    // REMOVED: write_int("Video", "3DGlasses", config_video.glasses);
 
     write_bool("Audio", "Enable", config_audio.enable);
     write_bool("Audio", "Sync", config_audio.sync);
-    // REMOVED: write_float("Audio", "PSGVolume", config_audio.psg_volume);
-    // REMOVED: write_float("Audio", "FMVolume", config_audio.fm_volume);
-    // REMOVED: write_int("Audio", "YM2413", config_audio.ym2413);
-    // REMOVED: write_int("Audio", "BufferCount", config_audio.buffer_count);
+    write_int("Audio", "BufferCount", config_audio.buffer_count);
 
     write_int("InputA", "KeyLeft", config_input[0].key_left);
     write_int("InputA", "KeyRight", config_input[0].key_right);
@@ -796,7 +779,6 @@ static bool check_portable(void)
         return false;
     
     snprintf(portable_file_path, sizeof(portable_file_path), "%sportable.ini", base_path);
-    SDL_free((void*)base_path);
 
     FILE* file = fopen_utf8(portable_file_path, "r");
     
