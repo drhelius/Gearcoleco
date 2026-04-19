@@ -79,6 +79,7 @@ inline u8 ActivisionMapper::Read(u16 address)
 
 inline void ActivisionMapper::Write(u16 address, u8 value)
 {
+    UNUSED(value);
     if (address >= 0xFF90)
     {
         if ((address == 0xFF90) || (address == 0xFFA0) || (address == 0xFFB0))

@@ -79,6 +79,7 @@ inline u8 MegaCartMapper::Read(u16 address)
 
 inline void MegaCartMapper::Write(u16 address, u8 value)
 {
+    UNUSED(value);
     if (address >= 0xFFC0)
     {
         m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
