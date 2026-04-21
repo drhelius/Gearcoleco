@@ -328,6 +328,12 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
     {
         Log("Loading from buffer... Size: %d", size);
 
+        if (size <= 0)
+        {
+            Log("Invalid size found. %d bytes", size);
+            return false;
+        }
+
         // Unkown size
         if ((size % 1024) != 0)
         {
