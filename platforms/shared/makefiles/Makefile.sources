@@ -18,6 +18,7 @@ SOURCES_CXX := \
     $(DEPS_DIR)/imgui/implot_demo.cpp \
     $(DESKTOP_SRC_DIR)/main.cpp \
     $(DESKTOP_SRC_DIR)/application.cpp \
+    $(DESKTOP_SRC_DIR)/application_headless.cpp \
     $(DESKTOP_SRC_DIR)/config.cpp \
     $(DESKTOP_SRC_DIR)/gui.cpp \
     $(DESKTOP_SRC_DIR)/gui_filedialogs.cpp \
@@ -29,9 +30,21 @@ SOURCES_CXX := \
     $(DESKTOP_SRC_DIR)/events.cpp \
     $(DESKTOP_SRC_DIR)/gamepad.cpp \
     $(DESKTOP_SRC_DIR)/emu.cpp \
+    $(DESKTOP_SRC_DIR)/rewind.cpp \
     $(DESKTOP_SRC_DIR)/sound_queue.cpp \
     $(DESKTOP_SRC_DIR)/single_instance.cpp \
-    $(DESKTOP_SRC_DIR)/gui_debug_stubs.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_disassembler.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_memory.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_memeditor.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_processor.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_rewind.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_trace_logger.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_psg.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_ay8910.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_tms9918.cpp \
+    $(DESKTOP_SRC_DIR)/mcp/mcp_debug_adapter.cpp \
+    $(DESKTOP_SRC_DIR)/mcp/mcp_server.cpp \
     $(SRC_DIR)/Audio.cpp \
     $(SRC_DIR)/AY8910.cpp \
     $(SRC_DIR)/Cartridge.cpp \
@@ -43,6 +56,7 @@ SOURCES_CXX := \
     $(SRC_DIR)/opcodes_cb.cpp \
     $(SRC_DIR)/opcodes_ed.cpp \
     $(SRC_DIR)/Processor.cpp \
+    $(SRC_DIR)/TraceLogger.cpp \
     $(SRC_DIR)/Video.cpp \
     $(SRC_DIR)/VgmRecorder.cpp \
     $(SRC_DIR)/audio/Blip_Buffer.cpp \

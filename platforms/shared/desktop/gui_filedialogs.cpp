@@ -67,7 +67,7 @@ static FileDialogID pending_dialog_id = FileDialog_None;
 static std::string pending_dialog_path;
 static bool dialog_active = false;
 static bool pending_refocus_window = false;
-//static int pending_dialog_int_param1 = 0;
+static int pending_dialog_int_param1 = 0;
 #if !defined(__APPLE__)
 static bool was_exclusive_fullscreen = false;
 #endif
@@ -187,21 +187,41 @@ void gui_file_dialog_save_vgm(void)
     SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveVGM, application_sdl_window, filters, 1, NULL);
 }
 
-// Function removed (Gearsystem-specific)
+void gui_file_dialog_save_sprite(int index)
+{
+    if (!begin_dialog())
+        return;
 
-// Function removed (Gearsystem-specific)
+    pending_dialog_int_param1 = index;
+    SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveSprite, application_sdl_window, filters, 1, NULL);
+}
 
-// Function removed (Gearsystem-specific)
+void gui_file_dialog_save_all_sprites(void)
+{
+    if (!begin_dialog())
+        return;
 
-// Function removed (Gearsystem-specific)
+    SDL_ShowOpenFolderDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveAllSprites, application_sdl_window, NULL, false);
+}
 
-// Function removed (Gearsystem-specific)
+void gui_file_dialog_save_background(void)
+{
+    if (!begin_dialog())
+        return;
 
-// Function removed (Gearsystem-specific)
+    SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveBackground, application_sdl_window, filters, 1, NULL);
+}
 
-// Function removed (Gearsystem-specific)
+void gui_file_dialog_save_tiles(void)
+{
+    if (!begin_dialog())
+        return;
 
-// Function removed (Gearsystem-specific)
+    SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveTiles, application_sdl_window, filters, 1, NULL);
+}
 
 void gui_file_dialog_save_memory_dump(bool binary)
 {
@@ -268,10 +288,6 @@ void gui_file_dialog_load_bios(void)
     SDL_DialogFileFilter filters[] = { { "BIOS Files", "rom;bin;col;bios" }, { "All Files", "*" } };
     SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadBios, application_sdl_window, filters, 2, NULL, false);
 }
-
-// Function removed (Gearsystem-specific)
-
-// Function removed (Gearsystem-specific)
 
 void gui_file_dialog_process_results(void)
 {
@@ -391,22 +407,22 @@ static void process_dialog_result(FileDialogID id, const char* path)
         }
         case FileDialog_SaveSprite:
         {
-    // REMOVED: gui_action_save_sprite(path, pending_dialog_int_param1);
+            gui_action_save_sprite(path, pending_dialog_int_param1);
             break;
         }
         case FileDialog_SaveAllSprites:
         {
-    // REMOVED: gui_action_save_all_sprites(path);
+            gui_action_save_all_sprites(path);
             break;
         }
         case FileDialog_SaveBackground:
         {
-    // REMOVED: gui_action_save_background(path);
+            gui_action_save_background(path);
             break;
         }
         case FileDialog_SaveTiles:
         {
-    // REMOVED: gui_action_save_tiles(path);
+            gui_action_save_tiles(path);
             break;
         }
         case FileDialog_SaveMemoryDumpBinary:

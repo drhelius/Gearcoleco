@@ -38,40 +38,49 @@ static void memory_editor_menu(void);
 static void draw_tabs(void);
 static void draw_single_tab(int i);
 
+void gui_debug_memory_init(void)
+{
+    gui_debug_memory_reset();
+
+    for (int i = 0; i < MEMORY_EDITOR_MAX; i++)
+    {
+        MemEditor::Options options;
+        options.bytes_per_row = config_debug.mem_editor_bytes_per_row[i];
+        options.preview_data_type = config_debug.mem_editor_preview_data_type[i];
+        options.preview_endianess = config_debug.mem_editor_preview_endianess[i];
+        options.uppercase_hex = config_debug.mem_editor_uppercase_hex[i];
+        options.gray_out_zeros = config_debug.mem_editor_gray_out_zeros[i];
+        mem_edit[i].SetOptions(options);
+    }
+}
+
+void gui_debug_memory_destroy(void)
+{
+    for (int i = 0; i < MEMORY_EDITOR_MAX; i++)
+    {
+        MemEditor::Options options = mem_edit[i].GetOptions();
+        config_debug.mem_editor_bytes_per_row[i] = options.bytes_per_row;
+        config_debug.mem_editor_preview_data_type[i] = options.preview_data_type;
+        config_debug.mem_editor_preview_endianess[i] = options.preview_endianess;
+        config_debug.mem_editor_uppercase_hex[i] = options.uppercase_hex;
+        config_debug.mem_editor_gray_out_zeros[i] = options.gray_out_zeros;
+    }
+}
+
 void gui_debug_memory_reset(void)
 {
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Memory* memory = core->GetMemory();
     Cartridge* cart = core->GetCartridge();
     Video* video = core->GetVideo();
 
-    mem_edit[MEMORY_EDITOR_FIXED_1K].Reset("FIXED 1KB", memory->GetMemoryMap(), 0x400, 0);
-    bool flash = (core->GetCartridge()->GetType() == Cartridge::CartridgeIratahackMapper);
-    const char* slot0_label = flash ? "FLASH0" : "ROM0";
-    const char* slot1_label = flash ? "FLASH1" : "ROM1";
-    const char* slot2_label = flash ? "FLASH2" : "ROM2";
+    mem_edit[MEMORY_EDITOR_BIOS].Reset("BIOS", memory->GetBios(), 0x2000, 0x0000);
+    mem_edit[MEMORY_EDITOR_RAM].Reset("RAM", memory->GetRam(), 0x0400, 0x6000);
+    mem_edit[MEMORY_EDITOR_SGM_RAM].Reset("SGM RAM", memory->GetSGMRam(), 0x8000, 0x0000);
+    mem_edit[MEMORY_EDITOR_VRAM].Reset("VRAM", video->GetVRAM(), 0x4000, 0x0000);
 
-    mem_edit[MEMORY_EDITOR_ROM0_SEGA].Reset(slot0_label, memory->GetCurrentRule()->GetPage(0) + 0x400, 0x4000 - 0x400, 0x400);
-    mem_edit[MEMORY_EDITOR_ROM0].Reset(slot0_label, memory->GetCurrentRule()->GetPage(0), 0x4000, 0);
-    mem_edit[MEMORY_EDITOR_ROM1].Reset(slot1_label, memory->GetCurrentRule()->GetPage(1), 0x4000, 0x4000);
-    mem_edit[MEMORY_EDITOR_ROM2_CODEMASTERS].Reset(slot2_label, memory->GetCurrentRule()->GetPage(2), 0x2000, 0x8000);
-    mem_edit[MEMORY_EDITOR_EXT_RAM].Reset("EXT RAM", memory->GetCurrentRule()->GetRamBanks(), 0x2000, 0xA000);
-    mem_edit[MEMORY_EDITOR_ROM2].Reset(slot2_label, memory->GetCurrentRule()->GetPage(2), 0x4000, 0x8000);
-    mem_edit[MEMORY_EDITOR_RAM].Reset("RAM", memory->GetMemoryMap() + 0xC000, 0x4000, 0xC000);
-    mem_edit[MEMORY_EDITOR_VRAM].Reset("VRAM", video->GetVRAM(), 0x4000, 0);
-    mem_edit[MEMORY_EDITOR_CRAM].Reset("CRAM", video->GetCRAM(), 0x40, 0);
-    mem_edit[MEMORY_EDITOR_ROM].Reset("FULL ROM", cart->GetROM(), cart->GetROMSize(), 0);
-
-    if (IsValidPointer(memory->GetBootrom()))
-        mem_edit[MEMORY_EDITOR_BIOS].Reset("BIOS", memory->GetBootrom(), memory->GetBootromSize(), 0);
-
-    for (int i = MEMORY_EDITOR_ROM0_8K; i <= MEMORY_EDITOR_ROM5_8K; i++)
-    {
-        int page = i - MEMORY_EDITOR_ROM0_8K;
-        char label[16];
-        snprintf(label, 16, "%s%d", flash ? "FLASH" : "ROM", page);
-        mem_edit[i].Reset(label, memory->GetCurrentRule()->GetPage(page), 0x2000, 0x2000 * page);
-    }
+    if (IsValidPointer(cart->GetROM()))
+        mem_edit[MEMORY_EDITOR_ROM].Reset("ROM", cart->GetROM(), cart->GetROMSize(), 0x0000);
 }
 
 void gui_debug_window_memory(void)
@@ -91,43 +100,17 @@ void gui_debug_window_memory(void)
 
     memory_editor_menu();
 
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Memory* memory = core->GetMemory();
-    Cartridge* cart = core->GetCartridge();
 
     ImGui::PushFont(gui_default_font);
-    ImGui::TextColored(green, "  BANKS: ");ImGui::SameLine();
-
-    bool flash = (cart->GetType() == Cartridge::CartridgeIratahackMapper);
-    const char* slot_prefix = flash ? "FLASH" : "ROM";
-
-    if (memory->GetCurrentRule()->Has8kBanks())
-    {
-        for (int i = 0; i < 6; i++)
-        {
-            ImGui::TextColored(cyan, "%s%d", slot_prefix, i);ImGui::SameLine();
-            ImGui::Text("$%02X", memory->GetCurrentRule()->GetBank(i));
-            if (i != 5)
-                ImGui::SameLine();
-        }
-    }
-    else
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            ImGui::TextColored(cyan, "%s%d", slot_prefix, i);ImGui::SameLine();
-            ImGui::Text("$%02X", memory->GetCurrentRule()->GetBank(i));
-            if (i != 2)
-                ImGui::SameLine();
-        }
-    }
-
-    if (cart->GetType() == Cartridge::CartridgeSegaMapper)
-    {
-        ImGui::SameLine();
-        ImGui::TextColored(cyan, "  RAM");ImGui::SameLine();
-        ImGui::Text("$%02X", memory->GetCurrentRule()->GetRamBank());
-    }
+    ImGui::TextColored(green, "  BANK: ");ImGui::SameLine();
+    ImGui::TextColored(cyan, "ROM");ImGui::SameLine();
+    ImGui::Text("$%02X", memory->GetRomBank());ImGui::SameLine();
+    ImGui::TextColored(cyan, "  SGM Upper");ImGui::SameLine();
+    ImGui::Text("%s", memory->IsSGMUpperEnabled() ? "ON" : "OFF");ImGui::SameLine();
+    ImGui::TextColored(cyan, "  SGM Lower");ImGui::SameLine();
+    ImGui::Text("%s", memory->IsSGMLowerEnabled() ? "ON" : "OFF");
     ImGui::PopFont();
 
     if (ImGui::BeginTabBar("##memory_tabs", ImGuiTabBarFlags_None))
@@ -209,51 +192,19 @@ void gui_debug_memory_save_dump(const char* file_path, bool binary)
 
 static void draw_tabs(void)
 {
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Cartridge* cart = core->GetCartridge();
     Memory* memory = core->GetMemory();
 
-    if (memory->GetCurrentRule()->Has8kBanks())
-    {
-        for (int i = MEMORY_EDITOR_ROM0_8K; i <= MEMORY_EDITOR_ROM5_8K; i++)
-        {
-            draw_single_tab(i);
-        }
-    }
-    else
-    {
-        if ((cart->GetType() == Cartridge::CartridgeSegaMapper) || (cart->GetType() == Cartridge::CartridgeEeprom93C46Mapper))
-        {
-            draw_single_tab(MEMORY_EDITOR_FIXED_1K);
-            draw_single_tab(MEMORY_EDITOR_ROM0_SEGA);
-        }
-        else
-        {
-            draw_single_tab(MEMORY_EDITOR_ROM0);
-        }
-
-        draw_single_tab(MEMORY_EDITOR_ROM1);
-
-        if ((cart->GetType() == Cartridge::CartridgeCodemastersMapper) && IsValidPointer(memory->GetCurrentRule()->GetRamBanks()))
-        {
-            draw_single_tab(MEMORY_EDITOR_ROM2_CODEMASTERS);
-            draw_single_tab(MEMORY_EDITOR_EXT_RAM);
-        }
-        else
-        {
-            draw_single_tab(MEMORY_EDITOR_ROM2);
-        }
-    }
+    if (memory->IsBiosLoaded())
+        draw_single_tab(MEMORY_EDITOR_BIOS);
 
     draw_single_tab(MEMORY_EDITOR_RAM);
+    draw_single_tab(MEMORY_EDITOR_SGM_RAM);
     draw_single_tab(MEMORY_EDITOR_VRAM);
-    draw_single_tab(MEMORY_EDITOR_CRAM);
 
     if (IsValidPointer(cart->GetROM()))
         draw_single_tab(MEMORY_EDITOR_ROM);
-
-    if (IsValidPointer(memory->GetBootrom()))
-        draw_single_tab(MEMORY_EDITOR_BIOS);
 }
 
 static void draw_single_tab(int i)

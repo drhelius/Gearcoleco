@@ -31,27 +31,16 @@
 
 enum Memory_Editor_Tabs
 {
-    MEMORY_EDITOR_FIXED_1K = 0,
-    MEMORY_EDITOR_ROM0_SEGA,
-    MEMORY_EDITOR_ROM0,
-    MEMORY_EDITOR_ROM1,
-    MEMORY_EDITOR_ROM2_CODEMASTERS,
-    MEMORY_EDITOR_EXT_RAM,
-    MEMORY_EDITOR_ROM2,
+    MEMORY_EDITOR_BIOS = 0,
     MEMORY_EDITOR_RAM,
+    MEMORY_EDITOR_SGM_RAM,
     MEMORY_EDITOR_VRAM,
-    MEMORY_EDITOR_CRAM,
-    MEMORY_EDITOR_ROM0_8K,
-    MEMORY_EDITOR_ROM1_8K,
-    MEMORY_EDITOR_ROM2_8K,
-    MEMORY_EDITOR_ROM3_8K,
-    MEMORY_EDITOR_ROM4_8K,
-    MEMORY_EDITOR_ROM5_8K,
     MEMORY_EDITOR_ROM,
-    MEMORY_EDITOR_BIOS,
     MEMORY_EDITOR_MAX
 };
 
+EXTERN void gui_debug_memory_init(void);
+EXTERN void gui_debug_memory_destroy(void);
 EXTERN void gui_debug_memory_reset(void);
 EXTERN void gui_debug_window_memory(void);
 EXTERN void gui_debug_memory_search_window(void);

@@ -38,8 +38,8 @@ static void headless_signal_handler(int sig)
 
 int application_headless_init(const char* rom_file, const char* symbol_file, int mcp_mode, int mcp_tcp_port)
 {
-    Log("\n%s", GS_TITLE_ASCII);
-    Log("%s %s Headless Mode", GS_TITLE, GS_VERSION);
+    Log("\n%s", GEARCOLECO_TITLE_ASCII);
+    Log("%s %s Headless Mode", GEARCOLECO_TITLE, GEARCOLECO_VERSION);
 
     if (mcp_mode < 0)
     {
@@ -66,21 +66,12 @@ int application_headless_init(const char* rom_file, const char* symbol_file, int
 
     gui_debug_init();
 
-    if (strlen(config_emulator.sms_bootrom_path.c_str()) > 0)
+    if (strlen(config_emulator.bios_path.c_str()) > 0)
     {
-        Log("Loading SMS bootrom: %s", config_emulator.sms_bootrom_path.c_str());
-        emu_load_bootrom_sms(config_emulator.sms_bootrom_path.c_str());
+        Log("Loading BIOS: %s", config_emulator.bios_path.c_str());
+        emu_load_bios(config_emulator.bios_path.c_str());
     }
-    if (strlen(config_emulator.gg_bootrom_path.c_str()) > 0)
-    {
-        Log("Loading GG bootrom: %s", config_emulator.gg_bootrom_path.c_str());
-        emu_load_bootrom_gg(config_emulator.gg_bootrom_path.c_str());
-    }
-    emu_enable_bootrom_sms(config_emulator.sms_bootrom);
-    emu_enable_bootrom_gg(config_emulator.gg_bootrom);
-    emu_set_media_slot(config_emulator.media);
-    emu_set_hide_left_bar(config_video.hide_left_bar);
-    emu_disable_ym2413(config_audio.ym2413 == 1);
+    emu_video_no_sprite_limit(config_video.sprite_limit);
 
     if (IsValidPointer(rom_file) && (strlen(rom_file) > 0))
     {
@@ -131,7 +122,7 @@ void application_headless_mainloop(void)
         Uint64 frame_end = SDL_GetPerformanceCounter();
         float elapsed_ms = (float)(frame_end - frame_start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
 
-        GS_RuntimeInfo runtime;
+        GC_RuntimeInfo runtime;
         emu_get_runtime(runtime);
         float target_ms = (runtime.region == Region_PAL) ? 20.0f : 16.666f;
 

@@ -22,16 +22,27 @@
 AY8910::AY8910()
 {
     InitPointer(m_pBuffer);
+    m_DebugEnabled = false;
+    for (int i = 0; i < 3; i++)
+    {
+        InitPointer(m_pDebugChannelBuffer[i]);
+        m_DebugChannelSamples[i] = 0;
+        m_ChannelMute[i] = false;
+    }
 }
 
 AY8910::~AY8910()
 {
     SafeDeleteArray(m_pBuffer);
+    for (int i = 0; i < 3; i++)
+        SafeDeleteArray(m_pDebugChannelBuffer[i]);
 }
 
 void AY8910::Init(int clockRate)
 {
     m_pBuffer = new s16[GC_AUDIO_BUFFER_SIZE];
+    for (int i = 0; i < 3; i++)
+        m_pDebugChannelBuffer[i] = new s16[GC_AUDIO_BUFFER_SIZE];
     Reset(clockRate);
 }
 
@@ -74,7 +85,12 @@ void AY8910::Reset(int clockRate)
     for (int i = 0; i < GC_AUDIO_BUFFER_SIZE; i++)
     {
         m_pBuffer[i] = 0;
+        for (int c = 0; c < 3; c++)
+            m_pDebugChannelBuffer[c][i] = 0;
     }
+
+    for (int i = 0; i < 3; i++)
+        m_DebugChannelSamples[i] = 0;
 
     m_ElapsedCycles = 0;
     m_CurrentSample = 0;
@@ -307,6 +323,7 @@ void AY8910::Sync()
         {
             m_iSampleCounter -= m_iCyclesPerSample;
             m_CurrentSample = 0;
+            s16 channel_sample[3] = { 0, 0, 0 };
 
             for (int i = 0; i < 3; i++)
             {
@@ -319,7 +336,9 @@ void AY8910::Sync()
 
                 if (toneOutput || noiseOutput)
                 {
-                    m_CurrentSample += m_EnvelopeMode[i] ? kAY8910VolumeTable[m_EnvelopeVolume] : kAY8910VolumeTable[m_Amplitude[i]];
+                    channel_sample[i] = m_EnvelopeMode[i] ? kAY8910VolumeTable[m_EnvelopeVolume] : kAY8910VolumeTable[m_Amplitude[i]];
+                    if (!m_ChannelMute[i])
+                        m_CurrentSample += channel_sample[i];
                 }
             }
 
@@ -331,6 +350,16 @@ void AY8910::Sync()
 
             m_pBuffer[m_iBufferIndex] = m_CurrentSample;
             m_pBuffer[m_iBufferIndex + 1] = m_CurrentSample;
+
+            if (m_DebugEnabled)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    m_pDebugChannelBuffer[i][m_iBufferIndex] = channel_sample[i];
+                    m_pDebugChannelBuffer[i][m_iBufferIndex + 1] = channel_sample[i];
+                }
+            }
+
             m_iBufferIndex += 2;
         }
     }
@@ -354,9 +383,43 @@ int AY8910::EndFrame(s16* pSampleBuffer)
         }
     }
 
+    for (int i = 0; i < 3; i++)
+        m_DebugChannelSamples[i] = m_DebugEnabled ? m_iBufferIndex : 0;
+
     m_iBufferIndex = 0;
 
     return ret;
+}
+
+void AY8910::EnableDebug(bool enable)
+{
+    m_DebugEnabled = enable;
+    if (!enable)
+    {
+        for (int i = 0; i < 3; i++)
+            m_DebugChannelSamples[i] = 0;
+    }
+}
+
+s16* AY8910::GetDebugChannelBuffer(int channel)
+{
+    if (channel < 0 || channel >= 3)
+        return NULL;
+    return m_pDebugChannelBuffer[channel];
+}
+
+int AY8910::GetDebugChannelSamples(int channel) const
+{
+    if (channel < 0 || channel >= 3)
+        return 0;
+    return m_DebugChannelSamples[channel];
+}
+
+bool* AY8910::GetChannelMute(int channel)
+{
+    if (channel < 0 || channel >= 3)
+        return NULL;
+    return &m_ChannelMute[channel];
 }
 
 void AY8910::SaveState(std::ostream& stream)

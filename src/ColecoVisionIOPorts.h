@@ -28,6 +28,7 @@ class Input;
 class Cartridge;
 class Memory;
 class Processor;
+class TraceLogger;
 
 class ColecoVisionIOPorts : public IOPorts
 {
@@ -35,6 +36,7 @@ public:
     ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory, Processor* pProcessor);
     ~ColecoVisionIOPorts();
     void Reset();
+    void SetTraceLogger(TraceLogger* pTraceLogger);
     u8 In(u8 port);
     void Out(u8 port, u8 value);
 private:
@@ -44,6 +46,7 @@ private:
     Cartridge* m_pCartridge;
     Memory* m_pMemory;
     Processor* m_pProcessor;
+    TraceLogger* m_pTraceLogger;
 };
 
 #include "Video.h"
@@ -52,43 +55,70 @@ private:
 #include "Cartridge.h"
 #include "Memory.h"
 #include "Processor.h"
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+#include "TraceLogger.h"
+#endif
+
+inline void ColecoVisionIOPorts::SetTraceLogger(TraceLogger* pTraceLogger)
+{
+    m_pTraceLogger = pTraceLogger;
+}
 
 inline u8 ColecoVisionIOPorts::In(u8 port)
 {
+    u8 ret = 0xFF;
+
     switch(port & 0xE0) {
         case 0xA0:
         {
             if (port & 0x01)
-            {
-                return m_pVideo->GetStatusFlags();
-            }
+                ret = m_pVideo->GetStatusFlags();
             else
-            {
-                return m_pVideo->GetDataPort();
-            }
+                ret = m_pVideo->GetDataPort();
             break;
         }
         case 0xE0:
         {
-            return m_pInput->ReadInput(port);
+            ret = m_pInput->ReadInput(port);
+            break;
         }
         default:
         {
             if (port == 0x52)
-            {
-                return m_pAudio->SGMRead();
-            }
-            return 0xFF;
+                ret = m_pAudio->SGMRead();
+            break;
         }
     }
 
-    Debug("--> ** Attempting to read from port $%X", port);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_IO_PORT))
+    {
+        GC_Trace_Entry e = {};
+        e.type = TRACE_IO_PORT;
+        e.io_port.port = port;
+        e.io_port.value = ret;
+        e.io_port.is_write = false;
+        m_pTraceLogger->TraceLog(e);
+    }
+#endif
 
-    return 0xFF;
+    return ret;
 }
 
 inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
 {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_IO_PORT))
+    {
+        GC_Trace_Entry e = {};
+        e.type = TRACE_IO_PORT;
+        e.io_port.port = port;
+        e.io_port.value = value;
+        e.io_port.is_write = true;
+        m_pTraceLogger->TraceLog(e);
+    }
+#endif
+
     switch(port & 0xE0) {
         case 0x80:
         {
@@ -114,6 +144,15 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         }
         case 0xE0:
         {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+            if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_PSG))
+            {
+                GC_Trace_Entry e = {};
+                e.type = TRACE_PSG;
+                e.psg.value = value;
+                m_pTraceLogger->TraceLog(e);
+            }
+#endif
             m_pAudio->WriteAudioRegister(value);
             m_pProcessor->InjectTStates(32);
             break;
@@ -122,20 +161,62 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         {
             if (port == 0x50)
             {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_AY8910))
+                {
+                    GC_Trace_Entry e = {};
+                    e.type = TRACE_AY8910;
+                    e.ay8910.reg = value;
+                    e.ay8910.value = 0;
+                    e.ay8910.is_write = false;
+                    m_pTraceLogger->TraceLog(e);
+                }
+#endif
                 m_pAudio->SGMRegister(value);
                 break;
             }
             else if (port == 0x51)
             {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_AY8910))
+                {
+                    GC_Trace_Entry e = {};
+                    e.type = TRACE_AY8910;
+                    e.ay8910.reg = 0xFF;
+                    e.ay8910.value = value;
+                    e.ay8910.is_write = true;
+                    m_pTraceLogger->TraceLog(e);
+                }
+#endif
                 m_pAudio->SGMWrite(value);
                 break;
             }
             else if (port == 0x53)
             {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_SGM))
+                {
+                    GC_Trace_Entry e = {};
+                    e.type = TRACE_SGM;
+                    e.sgm.port = port;
+                    e.sgm.value = value;
+                    m_pTraceLogger->TraceLog(e);
+                }
+#endif
                 m_pMemory->EnableSGMUpper((value & 0x01) != 0);
             }
             else if (port == 0x7F)
             {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_SGM))
+                {
+                    GC_Trace_Entry e = {};
+                    e.type = TRACE_SGM;
+                    e.sgm.port = port;
+                    e.sgm.value = value;
+                    m_pTraceLogger->TraceLog(e);
+                }
+#endif
                 m_pMemory->EnableSGMLower((~value & 0x02) != 0);
                 m_pMemory->EnableSGMUpper((value & 0x01) != 0);
             }

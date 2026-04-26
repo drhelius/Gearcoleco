@@ -46,6 +46,16 @@ public:
     bool StartVgmRecording(const char* file_path, int clock_rate, bool is_pal);
     void StopVgmRecording();
     bool IsVgmRecording() const;
+    void EnablePSGDebug(bool enable);
+    bool IsPSGDebugEnabled();
+    blip_sample_t* GetDebugChannelBuffer(int channel);
+    int GetDebugChannelSamples(int channel);
+    void EnableAY8910Debug(bool enable);
+    bool IsAY8910DebugEnabled();
+    s16* GetAY8910DebugChannelBuffer(int channel);
+    int GetAY8910DebugChannelSamples(int channel);
+    Sms_Apu* GetPSG() { return m_pApu; }
+    AY8910* GetAY8910() { return m_pAY8910; }
 
 private:
     Sms_Apu* m_pApu;
@@ -60,6 +70,8 @@ private:
     VgmRecorder m_VgmRecorder;
     bool m_bVgmRecordingEnabled;
     u8 m_AY8910Register;
+    blip_sample_t* m_pDebugChannelBuffer[4];
+    long m_iDebugChannelSamples[4];
 };
 
 inline void Audio::Tick(unsigned int clockCycles)
@@ -95,6 +107,58 @@ inline void Audio::SGMRegister(u8 reg)
 {
     m_pAY8910->SelectRegister(reg);
     m_AY8910Register = reg;
+}
+
+inline void Audio::EnablePSGDebug(bool enable)
+{
+    if (enable && !m_pApu->is_debug_enabled())
+    {
+        long clock = m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
+        m_pApu->init_debug_buffers(m_iSampleRate, clock);
+    }
+    else if (!enable && m_pApu->is_debug_enabled())
+    {
+        m_pApu->disable_debug_buffers();
+    }
+}
+
+inline bool Audio::IsPSGDebugEnabled()
+{
+    return m_pApu->is_debug_enabled();
+}
+
+inline blip_sample_t* Audio::GetDebugChannelBuffer(int channel)
+{
+    if (channel < 0 || channel >= 4)
+        return NULL;
+    return m_pDebugChannelBuffer[channel];
+}
+
+inline int Audio::GetDebugChannelSamples(int channel)
+{
+    if (channel < 0 || channel >= 4)
+        return 0;
+    return (int)m_iDebugChannelSamples[channel];
+}
+
+inline void Audio::EnableAY8910Debug(bool enable)
+{
+    m_pAY8910->EnableDebug(enable);
+}
+
+inline bool Audio::IsAY8910DebugEnabled()
+{
+    return m_pAY8910->IsDebugEnabled();
+}
+
+inline s16* Audio::GetAY8910DebugChannelBuffer(int channel)
+{
+    return m_pAY8910->GetDebugChannelBuffer(channel);
+}
+
+inline int Audio::GetAY8910DebugChannelSamples(int channel)
+{
+    return m_pAY8910->GetDebugChannelSamples(channel);
 }
 
 #endif	/* AUDIO_H */

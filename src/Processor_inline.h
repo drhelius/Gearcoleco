@@ -291,17 +291,29 @@ inline void Processor::OPCodes_LDD()
 
 inline void Processor::OPCodes_RST(u16 address)
 {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    u16 pc = PC.GetValue();
+#endif
     StackPush(&PC);
     PC.SetValue(address);
     WZ.SetValue(address);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    PushCallStack(pc - 1, address, pc, m_pMemory->GetBank(address));
+#endif
 }
 
 inline void Processor::OPCodes_CALL_nn()
 {
     u16 address = FetchArg16();
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    u16 pc = PC.GetValue();
+#endif
     StackPush(&PC);
     PC.SetValue(address);
     WZ.SetValue(address);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    PushCallStack(pc - 3, address, pc, m_pMemory->GetBank(address));
+#endif
 }
 
 inline void Processor::OPCodes_CALL_nn_Conditional(bool condition)
@@ -309,9 +321,15 @@ inline void Processor::OPCodes_CALL_nn_Conditional(bool condition)
     u16 address = FetchArg16();
     if (condition)
     {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+        u16 pc = PC.GetValue();
+#endif
         StackPush(&PC);
         PC.SetValue(address);
         m_bBranchTaken = true;
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    PushCallStack(pc - 3, address, pc, m_pMemory->GetBank(address));
+#endif
     }
     WZ.SetValue(address);
 }
@@ -364,6 +382,9 @@ inline void Processor::OPCodes_RET()
 {
     StackPop(&PC);
     WZ.SetValue(PC.GetValue());
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    PopCallStack();
+#endif
 }
 
 inline void Processor::OPCodes_RET_Conditional(bool condition)
@@ -1225,6 +1246,16 @@ inline void Processor::OPCodes_RES_HL(int bit)
     u8 result = m_pMemory->Read(address);
     result &= ~(0x1 << bit);
     m_pMemory->Write(address, result);
+}
+
+inline std::vector<Processor::GC_Breakpoint>* Processor::GetBreakpoints()
+{
+    return &m_breakpoints;
+}
+
+inline std::stack<Processor::GC_CallStackEntry>* Processor::GetDisassemblerCallStack()
+{
+    return &m_disassembler_call_stack;
 }
 
 #endif	/* PROCESSOR_INLINE_H */

@@ -21,7 +21,7 @@
 #include "gui_debug_processor.h"
 
 #include "imgui.h"
-#include "gearsystem.h"
+#include "gearcoleco.h"
 #include "gui_debug_constants.h"
 #include "gui_debug_memory.h"
 #include "gui_debug_widgets.h"
@@ -61,7 +61,7 @@ enum Z80RegId
 
 static void Z80WriteCallback8(u16 reg_id, u8 value, void* user_data)
 {
-    GearsystemCore* core = (GearsystemCore*)user_data;
+    GearcolecoCore* core = (GearcolecoCore*)user_data;
     Processor::ProcessorState* proc_state = core->GetProcessor()->GetState();
 
     switch (reg_id)
@@ -89,7 +89,7 @@ static void Z80WriteCallback8(u16 reg_id, u8 value, void* user_data)
 
 static void Z80WriteCallback1(u16 reg_id, u8 bit_index, bool value, void* user_data)
 {
-    GearsystemCore* core = (GearsystemCore*)user_data;
+    GearcolecoCore* core = (GearcolecoCore*)user_data;
     Processor::ProcessorState* proc_state = core->GetProcessor()->GetState();
 
     if (reg_id == Z80RegId_F)
@@ -122,7 +122,7 @@ static void Z80WriteCallback1(u16 reg_id, u8 bit_index, bool value, void* user_d
 
 static void Z80WriteCallback16(u16 reg_id, u16 value, void* user_data)
 {
-    GearsystemCore* core = (GearsystemCore*)user_data;
+    GearcolecoCore* core = (GearcolecoCore*)user_data;
     Processor::ProcessorState* proc_state = core->GetProcessor()->GetState();
 
     switch (reg_id)
@@ -144,7 +144,7 @@ void gui_debug_window_processor(void)
 
     ImGui::PushFont(gui_default_font);
 
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Processor* processor = core->GetProcessor();
     Processor::ProcessorState* proc_state = processor->GetState();
 
@@ -153,14 +153,14 @@ void gui_debug_window_processor(void)
         ImGui::TableNextColumn();
         u8 f = proc_state->AF->GetLow();
         ImGui::Text(" ");
-        ImGui::SameLine(0, 0); ImGui::TextColored(orange, "S");
-        ImGui::SameLine(); ImGui::TextColored(orange, "Z");
-        ImGui::SameLine(); ImGui::TextColored(orange, "Y");
-        ImGui::SameLine(); ImGui::TextColored(orange, "H");
-        ImGui::SameLine(); ImGui::TextColored(orange, "X");
-        ImGui::SameLine(); ImGui::TextColored(orange, "P");
-        ImGui::SameLine(); ImGui::TextColored(orange, "N");
-        ImGui::SameLine(); ImGui::TextColored(orange, "C");
+        ImGui::SameLine(0, 0); ImGui::TextColored(brown, "S");
+        ImGui::SameLine(); ImGui::TextColored(brown, "Z");
+        ImGui::SameLine(); ImGui::TextColored(brown, "Y");
+        ImGui::SameLine(); ImGui::TextColored(brown, "H");
+        ImGui::SameLine(); ImGui::TextColored(brown, "X");
+        ImGui::SameLine(); ImGui::TextColored(brown, "P");
+        ImGui::SameLine(); ImGui::TextColored(brown, "N");
+        ImGui::SameLine(); ImGui::TextColored(brown, "C");
         ImGui::Text(" ");
         ImGui::SameLine(0, 0);
         EditableRegister1(Z80RegId_F, 7, (f >> 7) & 1, Z80WriteCallback1, core);
@@ -477,8 +477,8 @@ void gui_debug_window_processor(void)
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
-            ImGui::TextColored(green, "Hex: $%04X", proc_state->IX->GetValue());
-            ImGui::TextColored(green, "Dec: %u (%d)", proc_state->IX->GetValue(), (s16)proc_state->IX->GetValue());
+            ImGui::TextColored(yellow, "Hex: $%04X", proc_state->IX->GetValue());
+            ImGui::TextColored(yellow, "Dec: %u (%d)", proc_state->IX->GetValue(), (s16)proc_state->IX->GetValue());
             ImGui::EndTooltip();
         }
 

@@ -174,6 +174,17 @@ static void menu_gearcoleco(void)
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Rewind"))
+        {
+            ImGui::MenuItem("Enabled", config_hotkeys[config_HotkeyIndex_Rewind].str, &config_rewind.enabled);
+
+            ImGui::PushItemWidth(140.0f);
+            ImGui::SliderFloat("Speed", &config_rewind.speed, 1.0f, 8.0f, "%.0fx");
+            ImGui::PopItemWidth();
+
+            ImGui::EndMenu();
+        }
+
         ImGui::Separator();
 
         bool has_save_data = !emu_is_empty() && emu_get_core()->GetMemory()->GetMapper() && emu_get_core()->GetMemory()->GetMapper()->GetSaveDataSize() > 0;
@@ -457,6 +468,7 @@ static void menu_emulator(void)
             hotkey_configuration_item("Reset:", &config_hotkeys[config_HotkeyIndex_Reset]);
             hotkey_configuration_item("Pause:", &config_hotkeys[config_HotkeyIndex_Pause]);
             hotkey_configuration_item("Fast Forward:", &config_hotkeys[config_HotkeyIndex_FFWD]);
+            hotkey_configuration_item("Rewind:", &config_hotkeys[config_HotkeyIndex_Rewind]);
             hotkey_configuration_item("Save State:", &config_hotkeys[config_HotkeyIndex_SaveState]);
             hotkey_configuration_item("Load State:", &config_hotkeys[config_HotkeyIndex_LoadState]);
             hotkey_configuration_item("Save State Slot 1:", &config_hotkeys[config_HotkeyIndex_SelectSlot1]);
@@ -811,6 +823,7 @@ static void menu_input(void)
                     gamepad_configuration_item("Reset:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_Reset], 0);
                     gamepad_configuration_item("Pause:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_Pause], 0);
                     gamepad_configuration_item("Fast Forward:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_FFWD], 0);
+                    gamepad_configuration_item("Rewind:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_Rewind], 0);
                     gamepad_configuration_item("Screenshot:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_Screenshot], 0);
 
                     gui_popup_modal_gamepad(0);
@@ -883,6 +896,7 @@ static void menu_input(void)
                     gamepad_configuration_item("Reset:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_Reset], 1);
                     gamepad_configuration_item("Pause:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_Pause], 1);
                     gamepad_configuration_item("Fast Forward:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_FFWD], 1);
+                    gamepad_configuration_item("Rewind:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_Rewind], 1);
                     gamepad_configuration_item("Screenshot:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_Screenshot], 1);
 
                     gui_popup_modal_gamepad(1);
@@ -931,16 +945,16 @@ static void menu_audio(void)
             emu_audio_mute(!config_audio.enable);
         }
 
-        if (ImGui::MenuItem("Sync With Emulator", "", &config_audio.sync))
-        {
-            config_emulator.ffwd = false;
+        // if (ImGui::MenuItem("Sync With Emulator", "", &config_audio.sync))
+        // {
+        //     config_emulator.ffwd = false;
 
-            if (!config_audio.sync)
-            {
-                config_video.sync = false;
-                display_set_vsync(false);
-            }
-        }
+        //     if (!config_audio.sync)
+        //     {
+        //         config_video.sync = false;
+        //         display_set_vsync(false);
+        //     }
+        // }
 
         ImGui::Separator();
 
@@ -1109,10 +1123,12 @@ static void menu_debug(void)
         if (ImGui::BeginMenu("Audio", config_debug.debug))
         {
             ImGui::MenuItem("Show PSG", "", &config_debug.show_psg, config_debug.debug);
+            ImGui::MenuItem("Show AY-3-8910 (SGM)", "", &config_debug.show_ay8910, config_debug.debug);
             ImGui::EndMenu();
         }
 
         ImGui::MenuItem("Show Trace Logger", "", &config_debug.show_trace_logger, config_debug.debug);
+        ImGui::MenuItem("Show Rewind", "", &config_debug.show_rewind, config_debug.debug);
 
 
 #if defined(__APPLE__) || defined(_WIN32)

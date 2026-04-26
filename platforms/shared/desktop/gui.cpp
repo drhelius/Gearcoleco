@@ -112,7 +112,7 @@ bool gui_init(void)
 
     emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
 
-    strcpy(gui_bios_path, config_emulator.bios_path.c_str());
+    strncpy_fit(gui_bios_path, config_emulator.bios_path.c_str(), sizeof(gui_bios_path));
     if (strlen(gui_bios_path) > 0)
         emu_load_bios(gui_bios_path);
 
@@ -122,9 +122,9 @@ bool gui_init(void)
         gui_custom_palette[i] = color_int_to_float(config_video.color[i]);
     update_palette();
 
-    strcpy(gui_savefiles_path, config_emulator.savefiles_path.c_str());
-    strcpy(gui_savestates_path, config_emulator.savestates_path.c_str());
-    strcpy(gui_screenshots_path, config_emulator.screenshots_path.c_str());
+    strncpy_fit(gui_savefiles_path, config_emulator.savefiles_path.c_str(), sizeof(gui_savefiles_path));
+    strncpy_fit(gui_savestates_path, config_emulator.savestates_path.c_str(), sizeof(gui_savestates_path));
+    strncpy_fit(gui_screenshots_path, config_emulator.screenshots_path.c_str(), sizeof(gui_screenshots_path));
 
     gui_debug_init();
     gui_init_menus();
@@ -292,7 +292,7 @@ void gui_set_status_message(const char* message, Uint64 milliseconds)
 {
     if (config_emulator.status_messages)
     {
-        strcpy(status_message, message);
+        strncpy_fit(status_message, message, sizeof(status_message));
         status_message_active = true;
         status_message_start_time = SDL_GetTicks();
         status_message_duration = milliseconds;
@@ -301,7 +301,7 @@ void gui_set_status_message(const char* message, Uint64 milliseconds)
 
 void gui_set_error_message(const char* message)
 {
-    strcpy(error_message, message);
+    strncpy_fit(error_message, message, sizeof(error_message));
     error_window_active = true;
 }
 
@@ -526,15 +526,16 @@ static void show_loading_popup(void)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(30.0f, 20.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 12.0f));
+    ImVec4 highlight_color = ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive];
     ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.10f, 0.10f, 0.10f, 0.95f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.41f, 0.70f, 0.02f, 0.80f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(highlight_color.x, highlight_color.y, highlight_color.z, 0.80f));
     ImGui::OpenPopup("##loading");
 
     if (ImGui::BeginPopupModal("##loading", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove))
     {
         ImGui::PushFont(gui_roboto_font);
 
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.41f, 0.70f, 0.02f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, highlight_color);
         ImGui::TextUnformatted(ICON_MD_HOURGLASS_EMPTY);
         ImGui::PopStyleColor();
 

@@ -32,6 +32,11 @@ Audio::Audio()
     m_bMute = false;
     m_bVgmRecordingEnabled = false;
     m_AY8910Register = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        InitPointer(m_pDebugChannelBuffer[i]);
+        m_iDebugChannelSamples[i] = 0;
+    }
 }
 
 Audio::~Audio()
@@ -41,6 +46,8 @@ Audio::~Audio()
     SafeDeleteArray(m_pSampleBuffer);
     SafeDelete(m_pAY8910);
     SafeDeleteArray(m_pSGMBuffer);
+    for (int i = 0; i < 4; i++)
+        SafeDeleteArray(m_pDebugChannelBuffer[i]);
 }
 
 void Audio::Init()
@@ -63,6 +70,9 @@ void Audio::Init()
 
     m_pAY8910 = new AY8910();
     m_pAY8910->Init(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
+
+    for (int i = 0; i < 4; i++)
+        m_pDebugChannelBuffer[i] = new blip_sample_t[GC_AUDIO_BUFFER_SIZE];
 }
 
 void Audio::Reset(bool bPAL)
@@ -74,6 +84,11 @@ void Audio::Reset(bool bPAL)
     m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
     m_ElapsedCycles = 0;
     m_pAY8910->Reset(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
+    if (m_pApu->is_debug_enabled())
+    {
+        long clock = m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
+        m_pApu->init_debug_buffers(m_iSampleRate, clock);
+    }
 }
 
 void Audio::Mute(bool mute)
@@ -87,6 +102,12 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
     m_pBuffer->end_frame((blip_time_t)m_ElapsedCycles);
 
     int count = static_cast<int>(m_pBuffer->read_samples(m_pSampleBuffer, GC_AUDIO_BUFFER_SIZE));
+
+    if (m_pApu->is_debug_enabled())
+    {
+        for (int i = 0; i < 4; i++)
+            m_pApu->read_debug_samples(m_pDebugChannelBuffer[i], i, GC_AUDIO_BUFFER_SIZE, &m_iDebugChannelSamples[i]);
+    }
 
     m_pAY8910->EndFrame(m_pSGMBuffer);
 

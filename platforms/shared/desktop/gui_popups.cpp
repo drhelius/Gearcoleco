@@ -326,7 +326,7 @@ void gui_popup_modal_bios(void)
     if (ImGui::BeginPopupModal("BIOS not found", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::Text("IMPORTANT! ColecoVision BIOS is required to run ROMs.\n\n");
-        ImGui::Text("601 Coleco ROM is needed.\n\nFile must be a 8KB file.\n\n");
+        ImGui::Text("A ColecoVision BIOS ROM is needed.\n\nFile must be an 8 KB file.\n\n");
         ImGui::Text("Go to Emulator settings to configure the BIOS path.\n\n");
 
         ImGui::Separator();

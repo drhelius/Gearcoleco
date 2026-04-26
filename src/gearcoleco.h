@@ -29,6 +29,9 @@
 #include "Cartridge.h"
 #include "Audio.h"
 #include "Video.h"
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+#include "TraceLogger.h"
+#endif
 
 #endif	/* GEARCOLECO_H */
 

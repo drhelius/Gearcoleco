@@ -43,7 +43,6 @@ Memory::Memory(Cartridge* pCartridge)
     InitPointer(m_pDisassembledRamMap);
     InitPointer(m_pDisassembledBiosMap);
     InitPointer(m_pDisassembledSGMRamMap);
-    InitPointer(m_pRunToBreakpoint);
     InitPointer(m_pBios);
     InitPointer(m_pRam);
     InitPointer(m_pSGMRam);
@@ -109,35 +108,30 @@ void Memory::Init()
     m_pSGMRam = new u8[0x8000];
 
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-    m_pDisassembledRomMap = new stDisassembleRecord*[MAX_ROM_SIZE];
+    m_pDisassembledRomMap = new GC_Disassembler_Record*[MAX_ROM_SIZE];
     for (int i = 0; i < MAX_ROM_SIZE; i++)
     {
         InitPointer(m_pDisassembledRomMap[i]);
     }
 
-    m_pDisassembledRamMap = new stDisassembleRecord*[0x400];
+    m_pDisassembledRamMap = new GC_Disassembler_Record*[0x400];
     for (int i = 0; i < 0x400; i++)
     {
         InitPointer(m_pDisassembledRamMap[i]);
     }
 
-    m_pDisassembledBiosMap = new stDisassembleRecord*[0x2000];
+    m_pDisassembledBiosMap = new GC_Disassembler_Record*[0x2000];
     for (int i = 0; i < 0x2000; i++)
     {
         InitPointer(m_pDisassembledBiosMap[i]);
     }
 
-    m_pDisassembledSGMRamMap = new stDisassembleRecord*[0x8000];
+    m_pDisassembledSGMRamMap = new GC_Disassembler_Record*[0x8000];
     for (int i = 0; i < 0x8000; i++)
     {
         InitPointer(m_pDisassembledSGMRamMap[i]);
     }
 #endif
-
-    m_BreakpointsCPU.clear();
-    m_BreakpointsMem.clear();
-
-    InitPointer(m_pRunToBreakpoint);
 
     Reset();
 }
@@ -203,26 +197,6 @@ void Memory::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_bSGMUpper), sizeof(m_bSGMUpper));
     stream.read(reinterpret_cast<char*> (&m_bSGMLower), sizeof(m_bSGMLower));
     m_pMapper->LoadState(stream);
-}
-
-std::vector<Memory::stDisassembleRecord*>* Memory::GetBreakpointsCPU()
-{
-    return &m_BreakpointsCPU;
-}
-
-std::vector<Memory::stMemoryBreakpoint>* Memory::GetBreakpointsMem()
-{
-    return &m_BreakpointsMem;
-}
-
-Memory::stDisassembleRecord* Memory::GetRunToBreakpoint()
-{
-    return m_pRunToBreakpoint;
-}
-
-void Memory::SetRunToBreakpoint(Memory::stDisassembleRecord* pBreakpoint)
-{
-    m_pRunToBreakpoint = pBreakpoint;
 }
 
 void Memory::LoadBios(const char* szFilePath)
@@ -303,48 +277,9 @@ Mapper* Memory::GetMapper()
     return m_pMapper;
 }
 
-void Memory::CheckBreakpoints(u16 address, bool write)
-{
-    size_t size = m_BreakpointsMem.size();
-
-    for (size_t b = 0; b < size; b++)
-    {
-        if (write && !m_BreakpointsMem[b].write)
-            continue;
-
-        if (!write && !m_BreakpointsMem[b].read)
-            continue;
-
-        bool proceed = false;
-
-        if (m_BreakpointsMem[b].range)
-        {
-            if ((address >= m_BreakpointsMem[b].address1) && (address <= m_BreakpointsMem[b].address2))
-            {
-                proceed = true;
-            }
-        }
-        else
-        {
-            if (m_BreakpointsMem[b].address1 == address)
-            {
-                proceed = true;
-            }
-        }
-
-        if (proceed)
-        {
-            m_pProcessor->RequestMemoryBreakpoint();
-            break;
-        }
-    }
-}
-
 void Memory::ResetRomDisassembledMemory()
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-
-    m_BreakpointsCPU.clear();
 
     if (IsValidPointer(m_pDisassembledRomMap))
     {
@@ -381,13 +316,12 @@ void Memory::ResetRomDisassembledMemory()
     #endif
 }
 
-Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool createIfNotFound)
+GC_Disassembler_Record* Memory::GetOrCreateDisassemblerRecord(u16 address)
 {
-    #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
+#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
-    stDisassembleRecord** map = NULL;
+    GC_Disassembler_Record** map = NULL;
     int offset = address;
-    int segment = 0;
     int bank = 0;
 
     switch (address & 0xE000)
@@ -396,7 +330,6 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
         {
             offset = address;
             map = m_bSGMLower ? m_pDisassembledSGMRamMap : m_pDisassembledBiosMap;
-            segment = m_bSGMLower ? 1 : 0;
             break;
         }
         case 0x2000:
@@ -404,20 +337,17 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
         {
             offset = address;
             map = m_pDisassembledSGMRamMap;
-            segment = 1;
             break;
         }
         case 0x6000:
         {
             offset = m_bSGMUpper ? address : address & 0x03FF;
             map = m_bSGMUpper ? m_pDisassembledSGMRamMap : m_pDisassembledRamMap;
-            segment = m_bSGMUpper ? 1 : 2;
             break;
         }
         default:
         {
             map = m_pDisassembledRomMap;
-            segment = 3;
 
             switch (m_pCartridge->GetType())
             {
@@ -453,25 +383,21 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
                 {
                     if (address < 0xA000)
                     {
-                        // 8000-9FFF: Bank 3
                         offset = (address - 0x8000) + (m_pMapper->GetBankReg(3) * 0x2000);
                         bank = m_pMapper->GetBankReg(3);
                     }
                     else if (address < 0xC000)
                     {
-                        // A000-BFFF: Bank 0
                         offset = (address - 0xA000) + (m_pMapper->GetBankReg(0) * 0x2000);
                         bank = m_pMapper->GetBankReg(0);
                     }
                     else if (address < 0xE000)
                     {
-                        // C000-DFFF: Bank 1
                         offset = (address - 0xC000) + (m_pMapper->GetBankReg(1) * 0x2000);
                         bank = m_pMapper->GetBankReg(1);
                     }
                     else
                     {
-                        // E000-FFFF: Bank 2
                         offset = (address - 0xE000) + (m_pMapper->GetBankReg(2) * 0x2000);
                         bank = m_pMapper->GetBankReg(2);
                     }
@@ -487,50 +413,195 @@ Memory::stDisassembleRecord* Memory::GetDisassembleRecord(u16 address, bool crea
         }
     }
 
-    if (!IsValidPointer(map[offset]) && createIfNotFound)
+    GC_Disassembler_Record* record = map[offset];
+
+    if (!IsValidPointer(record))
     {
-        map[offset] = new Memory::stDisassembleRecord;
+        record = new GC_Disassembler_Record();
+        record->address = offset;
+        record->bank = (u8)bank;
+        record->segment[0] = 0;
+        record->name[0] = 0;
+        record->bytes[0] = 0;
+        record->size = 0;
+        for (int i = 0; i < 7; i++)
+            record->opcodes[i] = 0;
+        record->jump = false;
+        record->jump_address = 0;
+        record->jump_bank = 0;
+        record->subroutine = false;
+        record->irq = 0;
+        record->has_operand_address = false;
+        record->operand_address = 0;
+        record->auto_symbol[0] = 0;
+        map[offset] = record;
+    }
 
-        map[offset]->address = address;
-        map[offset]->bank = bank;
-        map[offset]->name[0] = 0;
-        map[offset]->bytes[0] = 0;
-        map[offset]->size = 0;
-        for (int i = 0; i < 4; i++)
-            map[offset]->opcodes[i] = 0;
-        map[offset]->jump = false;
-        map[offset]->jump_address = 0;
+    return record;
 
-        switch (segment)
+#else
+    UNUSED(address);
+    return NULL;
+#endif
+}
+
+GC_Disassembler_Record* Memory::GetDisassemblerRecord(u16 address)
+{
+#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
+
+    GC_Disassembler_Record** map = NULL;
+    int offset = address;
+
+    switch (address & 0xE000)
+    {
+        case 0x0000:
         {
-            case 0:
+            offset = address;
+            map = m_bSGMLower ? m_pDisassembledSGMRamMap : m_pDisassembledBiosMap;
+            break;
+        }
+        case 0x2000:
+        case 0x4000:
+        {
+            offset = address;
+            map = m_pDisassembledSGMRamMap;
+            break;
+        }
+        case 0x6000:
+        {
+            offset = m_bSGMUpper ? address : address & 0x03FF;
+            map = m_bSGMUpper ? m_pDisassembledSGMRamMap : m_pDisassembledRamMap;
+            break;
+        }
+        default:
+        {
+            map = m_pDisassembledRomMap;
+
+            switch (m_pCartridge->GetType())
             {
-                strcpy(map[offset]->segment, "BIOS");
-                break;
-            }
-            case 1:
-            {
-                strcpy(map[offset]->segment, "SGM ");
-                break;
-            }
-            case 2:
-            {
-                strcpy(map[offset]->segment, "RAM ");
-                break;
-            }
-            case 3:
-            {
-                strcpy(map[offset]->segment, "ROM");
-                break;
+                case Cartridge::CartridgeMegaCart:
+                {
+                    if (address < 0xC000)
+                    {
+                        offset = (address & 0x3FFF) + (m_pCartridge->GetROMSize() - 0x4000);
+                    }
+                    else
+                    {
+                        offset = (address & 0x3FFF) + GetRomBankAddress();
+                    }
+                    break;
+                }
+                case Cartridge::CartridgeActivisionCart:
+                {
+                    if (address < 0xC000)
+                    {
+                        offset = address & 0x3FFF;
+                    }
+                    else
+                    {
+                        offset = (address & 0x3FFF) + GetRomBankAddress();
+                    }
+                    break;
+                }
+                case Cartridge::CartridgeOCM:
+                {
+                    if (address < 0xA000)
+                        offset = (address - 0x8000) + (m_pMapper->GetBankReg(3) * 0x2000);
+                    else if (address < 0xC000)
+                        offset = (address - 0xA000) + (m_pMapper->GetBankReg(0) * 0x2000);
+                    else if (address < 0xE000)
+                        offset = (address - 0xC000) + (m_pMapper->GetBankReg(1) * 0x2000);
+                    else
+                        offset = (address - 0xE000) + (m_pMapper->GetBankReg(2) * 0x2000);
+                    break;
+                }
+                default:
+                {
+                    offset = address - 0x8000;
+                    break;
+                }
             }
         }
     }
 
     return map[offset];
 
-    #else
-
+#else
+    UNUSED(address);
     return NULL;
+#endif
+}
 
-    #endif
+u32 Memory::GetPhysicalAddress(u16 address)
+{
+    if (address < 0x8000)
+        return (u32)address;
+
+    switch (m_pCartridge->GetType())
+    {
+        case Cartridge::CartridgeMegaCart:
+        {
+            if (address < 0xC000)
+                return (u32)((address & 0x3FFF) + (m_pCartridge->GetROMSize() - 0x4000));
+            else
+                return (u32)((address & 0x3FFF) + GetRomBankAddress());
+        }
+        case Cartridge::CartridgeActivisionCart:
+        {
+            if (address < 0xC000)
+                return (u32)(address & 0x3FFF);
+            else
+                return (u32)((address & 0x3FFF) + GetRomBankAddress());
+        }
+        case Cartridge::CartridgeOCM:
+        {
+            if (address < 0xA000)
+                return (u32)((address - 0x8000) + (m_pMapper->GetBankReg(3) * 0x2000));
+            else if (address < 0xC000)
+                return (u32)((address - 0xA000) + (m_pMapper->GetBankReg(0) * 0x2000));
+            else if (address < 0xE000)
+                return (u32)((address - 0xC000) + (m_pMapper->GetBankReg(1) * 0x2000));
+            else
+                return (u32)((address - 0xE000) + (m_pMapper->GetBankReg(2) * 0x2000));
+        }
+        default:
+            return (u32)(address - 0x8000);
+    }
+}
+
+u8 Memory::GetBank(u16 address)
+{
+    if (address < 0x8000)
+        return 0;
+
+    switch (m_pCartridge->GetType())
+    {
+        case Cartridge::CartridgeMegaCart:
+        {
+            if (address < 0xC000)
+                return (u8)(m_pCartridge->GetROMBankCount() - 1);
+            else
+                return GetRomBank();
+        }
+        case Cartridge::CartridgeActivisionCart:
+        {
+            if (address < 0xC000)
+                return 0;
+            else
+                return GetRomBank();
+        }
+        case Cartridge::CartridgeOCM:
+        {
+            if (address < 0xA000)
+                return (u8)m_pMapper->GetBankReg(3);
+            else if (address < 0xC000)
+                return (u8)m_pMapper->GetBankReg(0);
+            else if (address < 0xE000)
+                return (u8)m_pMapper->GetBankReg(1);
+            else
+                return (u8)m_pMapper->GetBankReg(2);
+        }
+        default:
+            return 0;
+    }
 }

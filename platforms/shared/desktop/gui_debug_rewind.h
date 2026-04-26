@@ -17,19 +17,17 @@
  *
  */
 
-#ifndef GUI_DEBUG_YM2413_H
-#define GUI_DEBUG_YM2413_H
+#ifndef GUI_DEBUG_REWIND_H
+#define GUI_DEBUG_REWIND_H
 
-#ifdef GUI_DEBUG_YM2413_IMPORT
+#ifdef GUI_DEBUG_REWIND_IMPORT
     #define EXTERN
 #else
     #define EXTERN extern
 #endif
 
-EXTERN void gui_debug_ym2413_init(void);
-EXTERN void gui_debug_ym2413_destroy(void);
-EXTERN void gui_debug_window_ym2413(void);
+EXTERN void gui_debug_window_rewind(void);
 
-#undef GUI_DEBUG_YM2413_IMPORT
+#undef GUI_DEBUG_REWIND_IMPORT
 #undef EXTERN
-#endif /* GUI_DEBUG_YM2413_H */
+#endif /* GUI_DEBUG_REWIND_H */

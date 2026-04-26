@@ -21,13 +21,14 @@
 #include "gui_debug.h"
 
 #include <fstream>
-#include "gearsystem.h"
+#include "gearcoleco.h"
 #include "imgui.h"
 #include "gui_debug_disassembler.h"
 #include "gui_debug_memory.h"
 #include "gui_debug_processor.h"
+#include "gui_debug_rewind.h"
 #include "gui_debug_psg.h"
-#include "gui_debug_ym2413.h"
+#include "gui_debug_ay8910.h"
 #include "gui_debug_tms9918.h"
 #include "gui_debug_trace_logger.h"
 #include "emu.h"
@@ -38,14 +39,16 @@ void gui_debug_init(void)
 {
     gui_debug_disassembler_init();
     gui_debug_psg_init();
-    gui_debug_ym2413_init();
-    gui_debug_memory_reset();
+    gui_debug_ay8910_init();
+    gui_debug_memory_init();
 }
 
 void gui_debug_destroy(void)
 {
+    gui_debug_memory_destroy();
     gui_debug_disassembler_destroy();
     gui_debug_psg_destroy();
+    gui_debug_ay8910_destroy();
 }
 
 void gui_debug_reset(void)
@@ -56,14 +59,10 @@ void gui_debug_reset(void)
     gui_debug_reset_symbols();
 }
 
-void gui_debug_callback(void)
-{
-    gui_debug_trace_logger_update();
-}
-
 void gui_debug_windows(void)
 {
     emu_get_core()->GetAudio()->EnablePSGDebug(config_debug.debug && config_debug.show_psg);
+    emu_get_core()->GetAudio()->EnableAY8910Debug(config_debug.debug && config_debug.show_ay8910);
 
     if (config_debug.debug)
     {
@@ -81,8 +80,8 @@ void gui_debug_windows(void)
             gui_debug_window_symbols();
         if (config_debug.show_psg)
             gui_debug_window_psg();
-        if (config_debug.show_ym2413)
-            gui_debug_window_ym2413();
+        if (config_debug.show_ay8910)
+            gui_debug_window_ay8910();
         if (config_debug.show_video_nametable)
             gui_debug_window_vram_nametable();
         if (config_debug.show_video_tiles)
@@ -95,6 +94,8 @@ void gui_debug_windows(void)
             gui_debug_window_vram_regs();
         if (config_debug.show_trace_logger)
             gui_debug_window_trace_logger();
+        if (config_debug.show_rewind)
+            gui_debug_window_rewind();
 
         gui_debug_memory_watches_window();
         gui_debug_memory_search_window();
@@ -116,15 +117,15 @@ void gui_debug_save_settings(const char* file_path)
 
     file.write(GSDEBUG_MAGIC, GSDEBUG_MAGIC_LEN);
 
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Processor* processor = core->GetProcessor();
 
-    std::vector<Processor::GS_Breakpoint>* breakpoints = processor->GetBreakpoints();
+    std::vector<Processor::GC_Breakpoint>* breakpoints = processor->GetBreakpoints();
     int bp_count = (int)breakpoints->size();
     file.write((const char*)&bp_count, sizeof(int));
     for (int i = 0; i < bp_count; i++)
     {
-        Processor::GS_Breakpoint& bp = (*breakpoints)[i];
+        Processor::GC_Breakpoint& bp = (*breakpoints)[i];
         file.write((const char*)&bp.enabled, sizeof(bool));
         file.write((const char*)&bp.type, sizeof(int));
         file.write((const char*)&bp.address1, sizeof(u16));
@@ -176,16 +177,16 @@ void gui_debug_load_settings(const char* file_path)
         return;
     }
 
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Processor* processor = core->GetProcessor();
 
     processor->ResetBreakpoints();
     int bp_count = 0;
     file.read((char*)&bp_count, sizeof(int));
-    std::vector<Processor::GS_Breakpoint>* breakpoints = processor->GetBreakpoints();
+    std::vector<Processor::GC_Breakpoint>* breakpoints = processor->GetBreakpoints();
     for (int i = 0; i < bp_count; i++)
     {
-        Processor::GS_Breakpoint bp;
+        Processor::GC_Breakpoint bp;
         file.read((char*)&bp.enabled, sizeof(bool));
         file.read((char*)&bp.type, sizeof(int));
         file.read((char*)&bp.address1, sizeof(u16));
@@ -220,7 +221,7 @@ void gui_debug_load_settings(const char* file_path)
 
 static std::string get_auto_debug_settings_path(void)
 {
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     if (!core || !core->GetCartridge() || strlen(core->GetCartridge()->GetFileName()) == 0)
         return "";
 

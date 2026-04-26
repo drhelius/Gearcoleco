@@ -29,15 +29,25 @@ class Audio;
 class Video;
 class Input;
 class ColecoVisionIOPorts;
+class TraceLogger;
 
 class GearcolecoCore
 {
 
 public:
+    struct GC_Debug_Run
+    {
+        bool step_debugger;
+        bool stop_on_breakpoint;
+        bool stop_on_run_to_breakpoint;
+        bool stop_on_irq;
+    };
+
+public:
     GearcolecoCore();
     ~GearcolecoCore();
     void Init(GC_Color_Format pixelFormat = GC_PIXEL_RGBA8888);
-    bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, bool step = false, bool stopOnBreakpoints = false);
+    bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug = NULL);
     bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL);
     bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
     void SaveDisassembledROM();
@@ -66,6 +76,8 @@ public:
     Processor* GetProcessor();
     Audio* GetAudio();
     Video* GetVideo();
+    TraceLogger* GetTraceLogger();
+    u64 GetMasterClockCycles();
 
 private:
     void Reset();
@@ -82,9 +94,11 @@ private:
     Input* m_pInput;
     Cartridge* m_pCartridge;
     ColecoVisionIOPorts* m_pColecoVisionIOPorts;
+    TraceLogger* m_pTraceLogger;
     bool m_bPaused;
     GC_Color_Format m_pixelFormat;
     u8* m_pFrameBuffer;
+    u64 m_MasterClockCycles;
 };
 
 #endif	/* CORE_H */

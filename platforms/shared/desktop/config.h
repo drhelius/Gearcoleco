@@ -34,8 +34,7 @@
 
 static const int config_version = 2;
 static const int config_max_recent_roms = 10;
-// TODO: set correct mem editor tab count
-static const int config_memory_editor_count = 18;
+static const int config_memory_editor_count = 5;
 
 struct config_Emulator
 {
@@ -100,6 +99,14 @@ struct config_Audio
     bool enable = true;
     bool sync = true;
     int buffer_count = 3;
+};
+
+struct config_Rewind
+{
+    bool enabled = true;
+    int buffer_seconds = 10;
+    int frames_per_snapshot = 1;
+    float speed = 2.0f;
 };
 
 struct config_Input
@@ -176,6 +183,7 @@ enum config_HotkeyIndex
     config_HotkeyIndex_SelectSlot3,
     config_HotkeyIndex_SelectSlot4,
     config_HotkeyIndex_SelectSlot5,
+    config_HotkeyIndex_Rewind,
     config_HotkeyIndex_COUNT
 };
 
@@ -208,20 +216,22 @@ struct config_Debug
     bool show_video_palettes = false;
     bool show_video_regs = false;
     bool show_psg = false;
-    bool show_ym2413 = false;
+    bool show_ay8910 = false;
     bool show_trace_logger = false;
+    bool show_rewind = false;
     bool trace_counter = true;
     bool trace_bank = true;
     bool trace_registers = true;
     bool trace_flags = true;
     bool trace_bytes = true;
+    bool trace_cpu = true;
     bool trace_cpu_irq = true;
     bool trace_vdp_write = true;
     bool trace_vdp_status = true;
     bool trace_psg = true;
-    bool trace_ym2413 = true;
+    bool trace_ay8910 = true;
     bool trace_io_port = true;
-    bool trace_bank_switch = true;
+    bool trace_sgm = true;
     bool dis_show_mem = true;
     bool dis_show_symbols = true;
     bool dis_show_segment = true;
@@ -236,11 +246,11 @@ struct config_Debug
     bool multi_viewport = false;
     bool single_instance = false;
     bool auto_debug_settings = false;
-    int mem_editor_bytes_per_row[config_memory_editor_count] = {16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
-    int mem_editor_preview_data_type[config_memory_editor_count] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int mem_editor_preview_endianess[config_memory_editor_count] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    bool mem_editor_uppercase_hex[config_memory_editor_count] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
-    bool mem_editor_gray_out_zeros[config_memory_editor_count] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
+    int mem_editor_bytes_per_row[config_memory_editor_count] = {16, 16, 16, 16, 16};
+    int mem_editor_preview_data_type[config_memory_editor_count] = {0, 0, 0, 0, 0};
+    int mem_editor_preview_endianess[config_memory_editor_count] = {0, 0, 0, 0, 0};
+    bool mem_editor_uppercase_hex[config_memory_editor_count] = {true, true, true, true, true};
+    bool mem_editor_gray_out_zeros[config_memory_editor_count] = {true, true, true, true, true};
 };
 
 EXTERN mINI::INIFile* config_ini_file;
@@ -252,6 +262,7 @@ EXTERN char config_imgui_file_path[512];
 EXTERN config_Emulator config_emulator;
 EXTERN config_Video config_video;
 EXTERN config_Audio config_audio;
+EXTERN config_Rewind config_rewind;
 EXTERN config_Input config_input[2];
 EXTERN config_Input_Gamepad_Shortcuts config_input_gamepad_shortcuts[2];
 EXTERN config_Hotkey config_hotkeys[config_HotkeyIndex_COUNT];

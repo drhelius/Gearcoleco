@@ -35,7 +35,7 @@ struct DisassemblerLine
 {
     u16 address;
     bool is_breakpoint;
-    GS_Disassembler_Record* record;
+    GC_Disassembler_Record* record;
     char name_enhanced[64];
     char tooltip[128];
     int name_real_length;
@@ -66,7 +66,7 @@ static std::vector<DisassemblerLine> disassembler_lines(0x10000);
 static std::vector<DisassemblerBookmark> bookmarks;
 static int selected_address = -1;
 static int selected_bank = -1;
-static int new_breakpoint_type = Processor::GS_BREAKPOINT_TYPE_ROMRAM;
+static int new_breakpoint_type = Processor::GC_BREAKPOINT_TYPE_ROMRAM;
 static char new_breakpoint_buffer[10] = "";
 static bool new_breakpoint_read = false;
 static bool new_breakpoint_write = false;
@@ -90,10 +90,9 @@ static void draw_disassembly(void);
 static void draw_context_menu(DisassemblerLine* line);
 static void add_debug_symbols();
 static void add_symbol(const char* line);
-static void add_auto_symbol(GS_Disassembler_Record* record, u16 address);
 static void add_breakpoint(int type);
 static void request_goto_address(u16 addr);
-static bool is_return_instruction(GS_Disassembler_Record* record);
+static bool is_return_instruction(GC_Disassembler_Record* record);
 static void replace_symbols(DisassemblerLine* line, const char* jump_color, const char* operand_color, const char* auto_color, const char* original_color);
 static void replace_labels(DisassemblerLine* line, const char* color, const char* original_color);
 static void draw_instruction_name(DisassemblerLine* line, bool is_pc);
@@ -101,6 +100,7 @@ static void disassembler_menu(void);
 static void add_bookmark_popup(void);
 static void add_symbol_popup(void);
 static void save_full_disassembler(FILE* file);
+static void save_full_disassembler_map(FILE* file, const char* map_name, GC_Disassembler_Record** records, int size);
 static void save_current_disassembler(FILE* file);
 static bool symbol_sort_address_asc(const SymbolEntry& a, const SymbolEntry& b);
 static bool symbol_sort_address_desc(const SymbolEntry& a, const SymbolEntry& b);
@@ -228,8 +228,8 @@ void gui_debug_toggle_breakpoint(void)
 {
     if (selected_address >= 0)
     {
-        if (emu_get_core()->GetProcessor()->IsBreakpoint(Processor::GS_BREAKPOINT_TYPE_ROMRAM, selected_address))
-            emu_get_core()->GetProcessor()->RemoveBreakpoint(Processor::GS_BREAKPOINT_TYPE_ROMRAM, selected_address);
+        if (emu_get_core()->GetProcessor()->IsBreakpoint(Processor::GC_BREAKPOINT_TYPE_ROMRAM, selected_address))
+            emu_get_core()->GetProcessor()->RemoveBreakpoint(Processor::GC_BREAKPOINT_TYPE_ROMRAM, selected_address);
         else
             emu_get_core()->GetProcessor()->AddBreakpoint(selected_address);
     }
@@ -392,12 +392,12 @@ static void draw_controls(void)
     ImGui::TextColored(emu_is_debug_idle() ? red : green, emu_is_debug_idle() ? "   PAUSED" : "   RUNNING");
 }
 
-static const char* k_breakpoint_types[] = { "ROM/RAM ", "VRAM    ", "VDP Reg ", "CRAM    " };
+static const char* k_breakpoint_types[] = { "ROM/RAM ", "VRAM    ", "VDP Reg " };
 
 static const char* k_vdp_register_names[16] = {
     "Mode 1", "Mode 2", "Name Table", "Color Table",
     "Pattern", "Sprite Attr", "Sprite Pat", "Backdrop",
-    "H Scroll", "V Scroll", "Line Count", "???",
+    "???", "???", "???", "???",
     "???", "???", "???", "???"
 };
 
@@ -418,7 +418,7 @@ static void draw_breakpoints_content(void)
     ImGui::Separator();
 
     ImGui::PushItemWidth(120);
-    ImGui::Combo("Type##type", &new_breakpoint_type, "ROM/RAM\0VRAM\0VDP Reg\0CRAM\0");
+    ImGui::Combo("Type##type", &new_breakpoint_type, "ROM/RAM\0VRAM\0VDP Reg\0");
 
     ImGui::PushItemWidth(85);
     if (ImGui::InputTextWithHint("##add_breakpoint", "XXXX-XXXX", new_breakpoint_buffer, IM_ARRAYSIZE(new_breakpoint_buffer), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
@@ -433,7 +433,7 @@ static void draw_breakpoints_content(void)
     ImGui::Checkbox("Read", &new_breakpoint_read);
     ImGui::Checkbox("Write", &new_breakpoint_write);
 
-    if (new_breakpoint_type == Processor::GS_BREAKPOINT_TYPE_ROMRAM)
+    if (new_breakpoint_type == Processor::GC_BREAKPOINT_TYPE_ROMRAM)
         ImGui::Checkbox("Execute", &new_breakpoint_execute);
 
     if (ImGui::Button("Add##add", ImVec2(85, 0)))
@@ -447,11 +447,11 @@ static void draw_breakpoints_content(void)
     ImGui::PushFont(gui_default_font);
 
     int remove = -1;
-    std::vector<Processor::GS_Breakpoint>* breakpoints = emu_get_core()->GetProcessor()->GetBreakpoints();
+    std::vector<Processor::GC_Breakpoint>* breakpoints = emu_get_core()->GetProcessor()->GetBreakpoints();
 
     for (long unsigned int b = 0; b < breakpoints->size(); b++)
     {
-        Processor::GS_Breakpoint* brk = &(*breakpoints)[b];
+        Processor::GC_Breakpoint* brk = &(*breakpoints)[b];
 
         ImGui::PushID(10000 + b);
         if (ImGui::SmallButton("X"))
@@ -494,16 +494,16 @@ static void draw_breakpoints_content(void)
         ImGui::SameLine(0, 0); ImGui::TextColored(brk->enabled && brk->read ? orange : gray, " R");
         ImGui::SameLine(0, 2); ImGui::TextColored(brk->enabled && brk->write ? orange : gray, "W");
 
-        if (brk->type == Processor::GS_BREAKPOINT_TYPE_ROMRAM)
+        if (brk->type == Processor::GC_BREAKPOINT_TYPE_ROMRAM)
         {
             ImGui::SameLine(0, 2); ImGui::TextColored(brk->enabled && brk->execute ? orange : gray, "X");
         }
 
-        GS_Disassembler_Record* record = emu_get_core()->GetMemory()->GetDisassemblerRecord(brk->address1);
+        GC_Disassembler_Record* record = emu_get_core()->GetMemory()->GetDisassemblerRecord(brk->address1);
 
         bool symbol_shown = false;
 
-        if (!brk->range && (brk->type == Processor::GS_BREAKPOINT_TYPE_ROMRAM) && IsValidPointer(record))
+        if (!brk->range && (brk->type == Processor::GC_BREAKPOINT_TYPE_ROMRAM) && IsValidPointer(record))
         {
             DebugSymbol* symbol = fixed_symbols[record->bank][brk->address1];
             if (!IsValidPointer(symbol))
@@ -512,6 +512,12 @@ static void draw_breakpoints_content(void)
             {
                 ImGui::SameLine(0, 0);
                 ImGui::TextColored(brk->enabled ? green : gray, " %s", symbol->text);
+                symbol_shown = true;
+            }
+            else if (record->auto_symbol[0] != 0)
+            {
+                ImGui::SameLine(0, 0);
+                ImGui::TextColored(brk->enabled ? green : gray, " %s", record->auto_symbol);
                 symbol_shown = true;
             }
         }
@@ -523,7 +529,7 @@ static void draw_breakpoints_content(void)
             TextColoredEx(" %s", record->name);
             ImGui::PopStyleColor();
         }
-        else if (!brk->range && (brk->type == Processor::GS_BREAKPOINT_TYPE_VDP_REGISTER) && (brk->address1 < 16))
+        else if (!brk->range && (brk->type == Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER) && (brk->address1 < 16))
         {
             ImGui::SameLine(0, 0);
             ImGui::TextColored(brk->enabled ? violet : gray, " %s", k_vdp_register_names[brk->address1]);
@@ -578,18 +584,38 @@ static void prepare_drawable_lines(void)
 
     for (int i = 0; i < 0x10000; i++)
     {
-        GS_Disassembler_Record* record = memory->GetDisassemblerRecord(i);
-
-        if (IsValidPointer(record) && (record->name[0] != 0))
-            add_auto_symbol(record, i);
-    }
-
-    for (int i = 0; i < 0x10000; i++)
-    {
-        GS_Disassembler_Record* record = memory->GetDisassemblerRecord(i);
+        GC_Disassembler_Record* record = memory->GetDisassemblerRecord(i);
 
         if (IsValidPointer(record) && (record->name[0] != 0))
         {
+            if (record->auto_symbol[0] != 0)
+            {
+                DebugSymbol* existing = dynamic_symbols[record->bank][i];
+                if (!IsValidPointer(existing))
+                {
+                    existing = new DebugSymbol;
+                    existing->address = (u16)i;
+                    existing->bank = record->bank;
+                    snprintf(existing->text, 64, "%s", record->auto_symbol);
+                    dynamic_symbols[record->bank][i] = existing;
+
+                    SymbolEntry entry;
+                    entry.symbol = existing;
+                    entry.is_manual = false;
+                    entry.bank = record->bank;
+                    dynamic_symbol_list.push_back(entry);
+
+                    if (show_auto_symbols)
+                        symbols_dirty = true;
+                }
+                else if (strcmp(existing->text, record->auto_symbol) != 0)
+                {
+                    snprintf(existing->text, 64, "%s", record->auto_symbol);
+                    if (show_auto_symbols)
+                        symbols_dirty = true;
+                }
+            }
+
             bool fixed_symbol_found = false;
             if (config_debug.dis_show_symbols)
             {
@@ -628,11 +654,11 @@ static void prepare_drawable_lines(void)
             snprintf(line.name_enhanced, 64, "%s", line.record->name);
             line.tooltip[0] = 0;
 
-            std::vector<Processor::GS_Breakpoint>* breakpoints = emu_get_core()->GetProcessor()->GetBreakpoints();
+            std::vector<Processor::GC_Breakpoint>* breakpoints = emu_get_core()->GetProcessor()->GetBreakpoints();
 
             for (long unsigned int b = 0; b < breakpoints->size(); b++)
             {
-                Processor::GS_Breakpoint* brk = &(*breakpoints)[b];
+                Processor::GC_Breakpoint* brk = &(*breakpoints)[b];
 
                 if (brk->execute && (brk->address1 == i))
                 {
@@ -1066,75 +1092,13 @@ static void add_symbol(const char* line)
     }
 }
 
-static const char* k_irq_symbol_format[4] = {
-    "????_%02X_%04X",
-    "RESET_%02X_%04X",
-    "NMI_%02X_%04X",
-    "INT_%02X_%04X"
-};
-
-static void add_auto_symbol(GS_Disassembler_Record* record, u16 address)
-{
-    DebugSymbol s;
-    bool insert = false;
-
-    if (record->irq > 0 && record->irq < 4)
-    {
-        s.address = address;
-        s.bank = record->bank;
-        insert = true;
-        snprintf(s.text, 64, k_irq_symbol_format[record->irq], record->bank, address);
-    }
-    else if (record->jump)
-    {
-        s.address = record->jump_address;
-        s.bank = record->jump_bank;
-        insert = true;
-        if (record->subroutine)
-            snprintf(s.text, 64, "SUB_%02X_%04X", record->jump_bank, record->jump_address);
-        else
-            snprintf(s.text, 64, "TAG_%02X_%04X", record->jump_bank, record->jump_address);
-    }
-
-    if (insert)
-    {
-        DebugSymbol* new_symbol = dynamic_symbols[s.bank][s.address];
-
-        if (IsValidPointer(new_symbol))
-        {
-           if (record->subroutine && strncmp(dynamic_symbols[s.bank][s.address]->text, "TAG_", 4) == 0)
-               snprintf(dynamic_symbols[s.bank][s.address]->text, 64, "SUB_%02X_%04X", record->jump_bank, record->jump_address);
-           if (show_auto_symbols)
-               symbols_dirty = true;
-        }
-        else
-        {
-            new_symbol = new DebugSymbol;
-            new_symbol->address = s.address;
-            new_symbol->bank = s.bank;
-            snprintf(new_symbol->text, 64, "%s", s.text);
-
-            dynamic_symbols[s.bank][s.address] = new_symbol;
-
-            SymbolEntry entry;
-            entry.symbol = new_symbol;
-            entry.is_manual = false;
-            entry.bank = s.bank;
-            dynamic_symbol_list.push_back(entry);
-
-            if (show_auto_symbols)
-                symbols_dirty = true;
-        }
-    }
-}
-
 static void add_breakpoint(int type)
 {
     bool read = new_breakpoint_read;
     bool write = new_breakpoint_write;
     bool execute = new_breakpoint_execute;
 
-    if (type != Processor::GS_BREAKPOINT_TYPE_ROMRAM)
+    if (type != Processor::GC_BREAKPOINT_TYPE_ROMRAM)
     {
         if (!read && !write)
             return;
@@ -1151,7 +1115,7 @@ static void request_goto_address(u16 address)
     goto_address_target = address;
 }
 
-static bool is_return_instruction(GS_Disassembler_Record* record)
+static bool is_return_instruction(GC_Disassembler_Record* record)
 {
     if (!IsValidPointer(record) || record->size == 0)
         return false;
@@ -1223,7 +1187,7 @@ static bool replace_address_in_string(std::string& instr, u16 address, bool is_z
     return false;
 }
 
-static bool get_record_operand(GS_Disassembler_Record* record, u16* out_address, bool* out_is_zp)
+static bool get_record_operand(GC_Disassembler_Record* record, u16* out_address, bool* out_is_zp)
 {
     if (record->jump)
     {
@@ -1241,7 +1205,7 @@ static bool get_record_operand(GS_Disassembler_Record* record, u16* out_address,
     return false;
 }
 
-bool gui_debug_resolve_symbol(GS_Disassembler_Record* record, std::string& instr, const char* color, const char* original_color, const char** out_name, u16* out_address)
+bool gui_debug_resolve_symbol(GC_Disassembler_Record* record, std::string& instr, const char* color, const char* original_color, const char** out_name, u16* out_address)
 {
     u16 lookup_address = 0;
     bool is_zp = false;
@@ -1265,7 +1229,7 @@ bool gui_debug_resolve_symbol(GS_Disassembler_Record* record, std::string& instr
     return false;
 }
 
-bool gui_debug_resolve_label(GS_Disassembler_Record* record, std::string& instr, const char* color, const char* original_color, const char** out_name, u16* out_address)
+bool gui_debug_resolve_label(GC_Disassembler_Record* record, std::string& instr, const char* color, const char* original_color, const char** out_name, u16* out_address)
 {
     u8 opcode = record->opcodes[0];
     bool is_in = (opcode == 0xDB);
@@ -1324,13 +1288,25 @@ static void replace_symbols(DisassemblerLine* line, const char* jump_color, cons
 
     DebugSymbol* dynamic_symbol = dynamic_symbols[line->record->jump_bank][lookup_address];
 
+    const char* auto_symbol_text = NULL;
     if (IsValidPointer(dynamic_symbol))
     {
-        std::string replacement = std::string(auto_color) + dynamic_symbol->text + original_color;
+        auto_symbol_text = dynamic_symbol->text;
+    }
+    else
+    {
+        GC_Disassembler_Record* target = emu_get_core()->GetMemory()->GetDisassemblerRecord(lookup_address, line->record->jump_bank);
+        if (IsValidPointer(target) && target->auto_symbol[0] != 0)
+            auto_symbol_text = target->auto_symbol;
+    }
+
+    if (auto_symbol_text != NULL)
+    {
+        std::string replacement = std::string(auto_color) + auto_symbol_text + original_color;
         if (replace_address_in_string(instr, lookup_address, is_zp, replacement.c_str()))
         {
             snprintf(line->name_enhanced, 64, "%s", instr.c_str());
-            snprintf(line->tooltip, 128, "%s%s%s = %s$%04X", auto_color, dynamic_symbol->text, c_white, c_cyan, lookup_address);
+            snprintf(line->tooltip, 128, "%s%s%s = %s$%04X", auto_color, auto_symbol_text, c_white, c_cyan, lookup_address);
         }
     }
 }
@@ -1698,7 +1674,7 @@ static void add_bookmark_popup(void)
                 if (strlen(name_bookmark) == 0)
                 {
                     Memory* memory = emu_get_core()->GetMemory();
-                    GS_Disassembler_Record* record = memory->GetDisassemblerRecord(bookmark_address);
+                    GC_Disassembler_Record* record = memory->GetDisassemblerRecord(bookmark_address);
 
                     if (IsValidPointer(record) && (record->name[0] != 0))
                     {
@@ -1805,10 +1781,10 @@ void gui_debug_window_call_stack(void)
 
     ImGui::Begin("Call Stack", &config_debug.show_call_stack);
 
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Memory* memory = core->GetMemory();
     Processor* processor = core->GetProcessor();
-    std::stack<Processor::GS_CallStackEntry> temp_stack = *processor->GetDisassemblerCallStack();
+    std::stack<Processor::GC_CallStackEntry> temp_stack = *processor->GetDisassemblerCallStack();
 
     char symbol_text[64] = { };
 
@@ -1829,26 +1805,24 @@ void gui_debug_window_call_stack(void)
         {
             ImGui::TableNextRow();
 
-            Processor::GS_CallStackEntry entry = temp_stack.top();
+            Processor::GC_CallStackEntry entry = temp_stack.top();
             temp_stack.pop();
 
-            GS_Disassembler_Record* record = memory->GetDisassemblerRecord(entry.dest);
+            symbol_text[0] = 0;
+
+            GC_Disassembler_Record* record = memory->GetDisassemblerRecord(entry.dest, entry.bank);
 
             if (IsValidPointer(record) && (record->name[0] != 0))
             {
-                DebugSymbol* symbol = fixed_symbols[record->bank][entry.dest];
+                DebugSymbol* symbol = fixed_symbols[entry.bank][entry.dest];
+
+                if (!IsValidPointer(symbol))
+                    symbol = dynamic_symbols[entry.bank][entry.dest];
 
                 if (IsValidPointer(symbol))
                     snprintf(symbol_text, sizeof(symbol_text), "%s", symbol->text);
-                else 
-                {
-                    DebugSymbol* symbol = dynamic_symbols[record->bank][entry.dest];
-
-                    if (IsValidPointer(symbol))
-                        snprintf(symbol_text, sizeof(symbol_text), "%s", symbol->text);
-                    else
-                        symbol_text[0] = 0;
-                }
+                else if (record->auto_symbol[0] != 0)
+                    snprintf(symbol_text, sizeof(symbol_text), "%s", record->auto_symbol);
             }
 
             ImGui::TableNextColumn();
@@ -1864,7 +1838,7 @@ void gui_debug_window_call_stack(void)
             {
                 if (ImGui::Selectable("Add Breakpoint"))
                 {
-                    if (!emu_get_core()->GetProcessor()->IsBreakpoint(Processor::GS_BREAKPOINT_TYPE_ROMRAM, entry.dest))
+                    if (!emu_get_core()->GetProcessor()->IsBreakpoint(Processor::GC_BREAKPOINT_TYPE_ROMRAM, entry.dest))
                         emu_get_core()->GetProcessor()->AddBreakpoint(entry.dest);
                 }
 
@@ -2053,7 +2027,7 @@ void gui_debug_window_symbols(void)
                 {
                     if (ImGui::Selectable("Add Breakpoint"))
                     {
-                        if (!emu_get_core()->GetProcessor()->IsBreakpoint(Processor::GS_BREAKPOINT_TYPE_ROMRAM, symbol->address))
+                        if (!emu_get_core()->GetProcessor()->IsBreakpoint(Processor::GC_BREAKPOINT_TYPE_ROMRAM, symbol->address))
                             emu_get_core()->GetProcessor()->AddBreakpoint(symbol->address);
                     }
 
@@ -2132,7 +2106,7 @@ void gui_debug_add_disassembler_bookmark(u16 address, const char* name)
     {
         // Auto-generate name from instruction
         Memory* memory = emu_get_core()->GetMemory();
-        GS_Disassembler_Record* record = memory->GetDisassemblerRecord(address);
+        GC_Disassembler_Record* record = memory->GetDisassemblerRecord(address);
 
         if (IsValidPointer(record) && (record->name[0] != 0))
         {
@@ -2183,11 +2157,21 @@ int gui_debug_get_symbols(void** symbols_ptr)
 static void save_full_disassembler(FILE* file)
 {
     Memory* memory = emu_get_core()->GetMemory();
-    GS_Disassembler_Record** records = memory->GetAllDisassemblerRecords();
 
-    for (int i = 0; i < 0x200000; i++)
+    save_full_disassembler_map(file, "BIOS", memory->GetDisassemblerBiosMap(), 0x2000);
+    save_full_disassembler_map(file, "RAM", memory->GetDisassemblerRamMap(), 0x400);
+    save_full_disassembler_map(file, "SGM", memory->GetDisassemblerSGMRamMap(), 0x8000);
+    save_full_disassembler_map(file, "ROM", memory->GetDisassemblerRomMap(), MAX_ROM_SIZE);
+}
+
+static void save_full_disassembler_map(FILE* file, const char* map_name, GC_Disassembler_Record** records, int size)
+{
+    if (!IsValidPointer(records))
+        return;
+
+    for (int i = 0; i < size; i++)
     {
-        GS_Disassembler_Record* record = records[i];
+        GC_Disassembler_Record* record = records[i];
 
         if (IsValidPointer(record) && (record->name[0] != 0))
         {
@@ -2207,7 +2191,7 @@ static void save_full_disassembler(FILE* file)
                 spaces[i] = ' ';
             spaces[offset] = 0;
 
-            fprintf(file, "%06X-%02X:    %s%s;%s\n", i, record->bank, name, spaces, record->bytes);
+            fprintf(file, "%-4s %06X-%02X:    %s%s;%s\n", map_name, i, record->bank, name, spaces, record->bytes);
 
             if (is_return_instruction(record))
                 fprintf(file, "\n");

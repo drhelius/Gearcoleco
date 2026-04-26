@@ -23,6 +23,8 @@
 #include "gui_debug_trace_logger.h"
 #include "config.h"
 #include "emu.h"
+#include "rewind.h"
+#include "events.h"
 #include "gearcoleco.h"
 #include "application.h"
 #include "display.h"
@@ -87,6 +89,33 @@ void gui_action_ffwd(void)
     }
 }
 
+void gui_action_rewind_pressed(void)
+{
+    if (emu_is_empty() || !config_rewind.enabled)
+        return;
+    if (rewind_get_snapshot_count() < 1)
+        return;
+    if (rewind_is_active())
+        return;
+
+    emu_reset_rewind_timing();
+    rewind_set_active(true);
+    display_set_vsync(config_video.sync);
+    gui_set_status_message("Rewinding...", 500);
+}
+
+void gui_action_rewind_released(void)
+{
+    if (!rewind_is_active())
+        return;
+
+    rewind_set_active(false);
+    events_sync_input();
+    emu_reset_rewind_timing();
+    display_set_vsync(config_emulator.ffwd ? false : config_video.sync);
+    emu_audio_reset();
+}
+
 void gui_action_save_screenshot(const char* path)
 {
     using namespace std;
@@ -138,6 +167,60 @@ void gui_action_save_screenshot(const char* path)
     gui_set_status_message(message.c_str(), 3000);
 }
 
+void gui_action_save_sprite(const char* path, int index)
+{
+    using namespace std;
 
+    if (!emu_get_core()->GetCartridge()->IsReady())
+        return;
 
+    emu_save_sprite(path, index);
+
+    string message = "Sprite saved to " + string(path);
+    gui_set_status_message(message.c_str(), 3000);
+}
+
+void gui_action_save_all_sprites(const char* folder_path)
+{
+    using namespace std;
+
+    if (!emu_get_core()->GetCartridge()->IsReady())
+        return;
+
+    for (int i = 0; i < GC_MAX_SPRITES; i++)
+    {
+        char file_path[512];
+        snprintf(file_path, sizeof(file_path), "%s/sprite_id%02d.png", folder_path, i);
+        emu_save_sprite(file_path, i);
+    }
+
+    string message = "All sprites saved to " + string(folder_path);
+    gui_set_status_message(message.c_str(), 3000);
+}
+
+void gui_action_save_background(const char* path)
+{
+    using namespace std;
+
+    if (!emu_get_core()->GetCartridge()->IsReady())
+        return;
+
+    emu_save_background(path);
+
+    string message = "Background saved to " + string(path);
+    gui_set_status_message(message.c_str(), 3000);
+}
+
+void gui_action_save_tiles(const char* path)
+{
+    using namespace std;
+
+    if (!emu_get_core()->GetCartridge()->IsReady())
+        return;
+
+    emu_save_tiles(path);
+
+    string message = "Pattern table saved to " + string(path);
+    gui_set_status_message(message.c_str(), 3000);
+}
 

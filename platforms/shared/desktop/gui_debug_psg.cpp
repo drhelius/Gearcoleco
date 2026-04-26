@@ -23,7 +23,7 @@
 #include "imgui.h"
 #include "implot.h"
 #include "fonts/IconsMaterialDesign.h"
-#include "gearsystem.h"
+#include "gearcoleco.h"
 #include "gui.h"
 #include "gui_debug_constants.h"
 #include "config.h"
@@ -37,7 +37,7 @@ static const char* k_noise_rate_names[4] = { "N/512", "N/1024", "N/2048", "Tone 
 
 void gui_debug_psg_init(void)
 {
-    wave_buffer = new float[GS_AUDIO_BUFFER_SIZE];
+    wave_buffer = new float[GC_AUDIO_BUFFER_SIZE];
 }
 
 void gui_debug_psg_destroy(void)
@@ -50,20 +50,17 @@ void gui_debug_window_psg(void)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(180, 45), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(296, 316), ImGuiCond_FirstUseEver);
-    ImGui::Begin("PSG", &config_debug.show_psg);
+    ImGui::Begin("PSG (SN76489)", &config_debug.show_psg);
 
-    GearsystemCore* core = emu_get_core();
+    GearcolecoCore* core = emu_get_core();
     Audio* audio = core->GetAudio();
 
     Sms_Apu* psg = audio->GetPSG();
     Sms_Apu_State psg_state = psg->GetState();
 
-    bool is_gg = core->GetCartridge()->IsGameGear();
-    bool is_sg = core->GetCartridge()->IsSG1000() && !core->GetCartridge()->IsSG1000II();
-
-    GS_RuntimeInfo runtime;
+    GC_RuntimeInfo runtime;
     core->GetRuntimeInfo(runtime);
-    int master_clock = (runtime.region == Region_PAL) ? GS_MASTER_CLOCK_PAL : GS_MASTER_CLOCK_NTSC;
+    int master_clock = (runtime.region == Region_PAL) ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
 
     if (ImGui::BeginTabBar("##psg_tabs", ImGuiTabBarFlags_None))
     {
@@ -132,7 +129,7 @@ void gui_debug_window_psg(void)
                     if (ch_buf && data_size > 0)
                     {
                         for (int i = 0; i < data_size; i++)
-                            wave_buffer[i] = (float)ch_buf[i] / 32768.0f * 8.0f;
+                            wave_buffer[i] = (float)ch_buf[i] / 32768.0f * 5.0f;
                     }
                     else
                     {
@@ -159,7 +156,7 @@ void gui_debug_window_psg(void)
                     if (ImPlot::BeginPlot("Waveform", ImVec2(180, 50), ImPlotFlags_CanvasOnly))
                     {
                         ImPlot::SetupAxes("x", "y", flags, flags);
-                        ImPlot::SetupAxesLimits(x_min, x_max, -1.0f, 1.0f, ImPlotCond_Always);
+                        ImPlot::SetupAxesLimits(x_min, x_max, -1.11f, 1.11f, ImPlotCond_Always);
                         ImPlot::SetNextLineStyle(green, 1.0f);
                         ImPlot::PlotLine("Wave", wave_buffer, data_size);
                         ImPlot::EndPlot();
@@ -219,7 +216,7 @@ void gui_debug_window_psg(void)
                     ImGui::TextColored(white, "$%02X", noise_ctrl);
 
                     ImGui::TextColored(violet, "TYPE        "); ImGui::SameLine();
-                    ImGui::TextColored(psg_state.noise_white ? white : white, "%s", psg_state.noise_white ? "White" : "Periodic");
+                    ImGui::TextColored(white, "%s", psg_state.noise_white ? "White" : "Periodic");
 
                     ImGui::TextColored(violet, "RATE        "); ImGui::SameLine();
                     ImGui::TextColored(white, "%s", k_noise_rate_names[psg_state.noise_rate]);
@@ -257,7 +254,7 @@ void gui_debug_window_psg(void)
                 ImGui::Separator();
 
                 ImGui::TextColored(violet, "CHIP        "); ImGui::SameLine();
-                ImGui::TextColored(white, "%s", is_sg ? "SN76489" : "ASIC");
+                ImGui::TextColored(white, "SN76489");
 
                 int latch_ch = (psg_state.latch >> 5) & 3;
                 bool latch_vol = (psg_state.latch & 0x10) != 0;
@@ -265,57 +262,10 @@ void gui_debug_window_psg(void)
                 ImGui::TextColored(white, "$%02X", psg_state.latch); ImGui::SameLine();
                 ImGui::TextColored(gray, " (CH%d %s)", latch_ch, latch_vol ? "VOL" : "TONE");
 
-                {
-                    int gg_flags = psg_state.ggstereo >> c;
-                    bool right = is_gg && (gg_flags & 0x01) != 0;
-                    bool left = is_gg && (gg_flags >> 4 & 0x01) != 0;
-
-                    ImGui::TextColored(is_gg ? violet : mid_gray, "GG STEREO   "); ImGui::SameLine();
-                    ImGui::TextColored(is_gg ? white : gray, "$%02X", psg_state.ggstereo);
-
-                    ImGui::TextColored(is_gg ? violet : mid_gray, "OUTPUT      "); ImGui::SameLine();
-                    ImGui::TextColored(left ? green : gray, "L:%s", left ? "ON " : "OFF"); ImGui::SameLine();
-                    ImGui::TextColored(right ? green : gray, " R:%s", right ? "ON" : "OFF");
-                }
-
                 ImGui::PopFont();
                 ImGui::EndTabItem();
             }
         }
-
-        ImGui::BeginDisabled(!is_gg);
-        if (ImGui::BeginTabItem("Stereo"))
-        {
-            ImGui::PushFont(gui_default_font);
-
-            ImGui::TextColored(violet, "GG STEREO   "); ImGui::SameLine();
-            ImGui::TextColored(white, "$%02X", psg_state.ggstereo);
-
-            ImGui::Separator();
-
-            for (int ch = 0; ch < 4; ch++)
-            {
-                int flags = psg_state.ggstereo >> ch;
-                bool left = (flags >> 4 & 0x01) != 0;
-                bool right = (flags & 0x01) != 0;
-
-                ImGui::TextColored(violet, "%s:  ", ch < 3 ? "TONE " : "NOISE"); ImGui::SameLine();
-                if (ch < 3)
-                {
-                    ImGui::TextColored(violet, "%d  ", ch + 1); ImGui::SameLine();
-                }
-                else
-                {
-                    ImGui::TextColored(violet, "   "); ImGui::SameLine();
-                }
-                ImGui::TextColored(left ? green : gray, "L:%s", left ? "ON " : "OFF"); ImGui::SameLine();
-                ImGui::TextColored(right ? green : gray, " R:%s", right ? "ON " : "OFF");
-            }
-
-            ImGui::PopFont();
-            ImGui::EndTabItem();
-        }
-        ImGui::EndDisabled();
 
         ImGui::EndTabBar();
     }

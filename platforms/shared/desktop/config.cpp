@@ -46,6 +46,7 @@ static void set_defaults(void)
     config_emulator = config_Emulator();
     config_video = config_Video();
     config_audio = config_Audio();
+    config_rewind = config_Rewind();
     config_input[0] = config_Input();
     config_input[1] = config_Input();
     config_debug = config_Debug();
@@ -147,6 +148,7 @@ static void set_defaults(void)
     config_hotkeys[config_HotkeyIndex_Reset] = make_hotkey(SDL_SCANCODE_R, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_Pause] = make_hotkey(SDL_SCANCODE_P, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_FFWD] = make_hotkey(SDL_SCANCODE_F, SDL_KMOD_CTRL);
+    config_hotkeys[config_HotkeyIndex_Rewind] = make_hotkey(SDL_SCANCODE_BACKSPACE, SDL_KMOD_NONE);
     config_hotkeys[config_HotkeyIndex_SaveState] = make_hotkey(SDL_SCANCODE_S, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_LoadState] = make_hotkey(SDL_SCANCODE_L, SDL_KMOD_CTRL);
     config_hotkeys[config_HotkeyIndex_Screenshot] = make_hotkey(SDL_SCANCODE_X, SDL_KMOD_CTRL);
@@ -253,20 +255,22 @@ void config_read(void)
     config_debug.show_video_palettes = read_bool("Debug", "VideoPalettes", false);
     config_debug.show_video_regs = read_bool("Debug", "VideoRegs", false);
     config_debug.show_psg = read_bool("Debug", "PSG", false);
-    config_debug.show_ym2413 = read_bool("Debug", "YM2413", false);
+    config_debug.show_ay8910 = read_bool("Debug", "AY8910", false);
     config_debug.show_trace_logger = read_bool("Debug", "TraceLogger", false);
+    config_debug.show_rewind = read_bool("Debug", "Rewind", false);
     config_debug.trace_counter = read_bool("Debug", "TraceCounter", true);
     config_debug.trace_bank = read_bool("Debug", "TraceBank", true);
     config_debug.trace_registers = read_bool("Debug", "TraceRegisters", true);
     config_debug.trace_flags = read_bool("Debug", "TraceFlags", true);
     config_debug.trace_bytes = read_bool("Debug", "TraceBytes", true);
+    config_debug.trace_cpu = read_bool("Debug", "TraceCpu", true);
     config_debug.trace_cpu_irq = read_bool("Debug", "TraceCpuIrq", true);
     config_debug.trace_vdp_write = read_bool("Debug", "TraceVdpWrite", true);
     config_debug.trace_vdp_status = read_bool("Debug", "TraceVdpStatus", true);
     config_debug.trace_psg = read_bool("Debug", "TracePsg", true);
-    config_debug.trace_ym2413 = read_bool("Debug", "TraceYm2413", true);
+    config_debug.trace_ay8910 = read_bool("Debug", "TraceAy8910", true);
     config_debug.trace_io_port = read_bool("Debug", "TraceIoPort", true);
-    config_debug.trace_bank_switch = read_bool("Debug", "TraceBankSwitch", true);
+    config_debug.trace_sgm = read_bool("Debug", "TraceSgm", true);
     config_debug.dis_show_mem = read_bool("Debug", "DisMem", true);
     config_debug.dis_show_symbols = read_bool("Debug", "DisSymbols", true);
     config_debug.dis_show_segment = read_bool("Debug", "DisSegment", true);
@@ -472,6 +476,11 @@ void config_read(void)
         }
     }
 
+    config_rewind.enabled = read_bool("Rewind", "Enabled", true);
+    config_rewind.buffer_seconds = read_int("Rewind", "BufferSeconds", 10);
+    config_rewind.frames_per_snapshot = read_int("Rewind", "FramesPerSnapshot", 1);
+    config_rewind.speed = read_float("Rewind", "Speed", 2.0f);
+
     // Read hotkeys
     config_hotkeys[config_HotkeyIndex_OpenROM] = read_hotkey("Hotkeys", "OpenROM", make_hotkey(SDL_SCANCODE_O, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_ReloadROM] = read_hotkey("Hotkeys", "ReloadROM", make_hotkey(SDL_SCANCODE_D, SDL_KMOD_CTRL));
@@ -479,6 +488,7 @@ void config_read(void)
     config_hotkeys[config_HotkeyIndex_Reset] = read_hotkey("Hotkeys", "Reset", make_hotkey(SDL_SCANCODE_R, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_Pause] = read_hotkey("Hotkeys", "Pause", make_hotkey(SDL_SCANCODE_P, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_FFWD] = read_hotkey("Hotkeys", "FFWD", make_hotkey(SDL_SCANCODE_F, SDL_KMOD_CTRL));
+    config_hotkeys[config_HotkeyIndex_Rewind] = read_hotkey("Hotkeys", "Rewind", make_hotkey(SDL_SCANCODE_BACKSPACE, SDL_KMOD_NONE));
     config_hotkeys[config_HotkeyIndex_SaveState] = read_hotkey("Hotkeys", "SaveState", make_hotkey(SDL_SCANCODE_S, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_LoadState] = read_hotkey("Hotkeys", "LoadState", make_hotkey(SDL_SCANCODE_L, SDL_KMOD_CTRL));
     config_hotkeys[config_HotkeyIndex_Screenshot] = read_hotkey("Hotkeys", "Screenshot", make_hotkey(SDL_SCANCODE_X, SDL_KMOD_CTRL));
@@ -528,20 +538,22 @@ void config_write(void)
     write_bool("Debug", "VideoPalettes", config_debug.show_video_palettes);
     write_bool("Debug", "VideoRegs", config_debug.show_video_regs);
     write_bool("Debug", "PSG", config_debug.show_psg);
-    write_bool("Debug", "YM2413", config_debug.show_ym2413);
+    write_bool("Debug", "AY8910", config_debug.show_ay8910);
     write_bool("Debug", "TraceLogger", config_debug.show_trace_logger);
+    write_bool("Debug", "Rewind", config_debug.show_rewind);
     write_bool("Debug", "TraceCounter", config_debug.trace_counter);
     write_bool("Debug", "TraceBank", config_debug.trace_bank);
     write_bool("Debug", "TraceRegisters", config_debug.trace_registers);
     write_bool("Debug", "TraceFlags", config_debug.trace_flags);
     write_bool("Debug", "TraceBytes", config_debug.trace_bytes);
+    write_bool("Debug", "TraceCpu", config_debug.trace_cpu);
     write_bool("Debug", "TraceCpuIrq", config_debug.trace_cpu_irq);
     write_bool("Debug", "TraceVdpWrite", config_debug.trace_vdp_write);
     write_bool("Debug", "TraceVdpStatus", config_debug.trace_vdp_status);
     write_bool("Debug", "TracePsg", config_debug.trace_psg);
-    write_bool("Debug", "TraceYm2413", config_debug.trace_ym2413);
+    write_bool("Debug", "TraceAy8910", config_debug.trace_ay8910);
     write_bool("Debug", "TraceIoPort", config_debug.trace_io_port);
-    write_bool("Debug", "TraceBankSwitch", config_debug.trace_bank_switch);
+    write_bool("Debug", "TraceSgm", config_debug.trace_sgm);
     write_bool("Debug", "DisMem", config_debug.dis_show_mem);
     write_bool("Debug", "DisSymbols", config_debug.dis_show_symbols);
     write_bool("Debug", "DisSegment", config_debug.dis_show_segment);
@@ -630,6 +642,11 @@ void config_write(void)
     write_bool("Audio", "Enable", config_audio.enable);
     write_bool("Audio", "Sync", config_audio.sync);
     write_int("Audio", "BufferCount", config_audio.buffer_count);
+
+    write_bool("Rewind", "Enabled", config_rewind.enabled);
+    write_int("Rewind", "BufferSeconds", config_rewind.buffer_seconds);
+    write_int("Rewind", "FramesPerSnapshot", config_rewind.frames_per_snapshot);
+    write_float("Rewind", "Speed", config_rewind.speed);
 
     write_int("InputA", "KeyLeft", config_input[0].key_left);
     write_int("InputA", "KeyRight", config_input[0].key_right);
@@ -738,6 +755,7 @@ void config_write(void)
     write_hotkey("Hotkeys", "Reset", config_hotkeys[config_HotkeyIndex_Reset]);
     write_hotkey("Hotkeys", "Pause", config_hotkeys[config_HotkeyIndex_Pause]);
     write_hotkey("Hotkeys", "FFWD", config_hotkeys[config_HotkeyIndex_FFWD]);
+    write_hotkey("Hotkeys", "Rewind", config_hotkeys[config_HotkeyIndex_Rewind]);
     write_hotkey("Hotkeys", "SaveState", config_hotkeys[config_HotkeyIndex_SaveState]);
     write_hotkey("Hotkeys", "LoadState", config_hotkeys[config_HotkeyIndex_LoadState]);
     write_hotkey("Hotkeys", "Screenshot", config_hotkeys[config_HotkeyIndex_Screenshot]);

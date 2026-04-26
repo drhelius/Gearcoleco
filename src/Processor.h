@@ -21,15 +21,46 @@
 #define	PROCESSOR_H
 
 #include <list>
+#include <vector>
+#include <stack>
 #include "definitions.h"
 #include "SixteenBitRegister.h"
-#include "Memory.h"
 
+class Memory;
 class IOPorts;
+class TraceLogger;
 
 class Processor
 {
 public:
+    enum GC_Breakpoint_Type
+    {
+        GC_BREAKPOINT_TYPE_ROMRAM = 0,
+        GC_BREAKPOINT_TYPE_VRAM,
+        GC_BREAKPOINT_TYPE_VDP_REGISTER,
+        GC_BREAKPOINT_TYPE_COUNT
+    };
+
+    struct GC_Breakpoint
+    {
+        bool enabled;
+        int type;
+        u16 address1;
+        u16 address2;
+        bool read;
+        bool write;
+        bool execute;
+        bool range;
+    };
+
+    struct GC_CallStackEntry
+    {
+        u16 src;
+        u16 dest;
+        u16 back;
+        u8 bank;
+    };
+
     struct ProcessorState
     {        
         SixteenBitRegister* AF;
@@ -52,6 +83,7 @@ public:
         bool* Halt;
         bool* INT;
         bool* NMI;
+        int* InterruptMode;
     };
 
 public:
@@ -68,12 +100,30 @@ public:
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
     ProcessorState* GetState();
-    bool Disassemble(u16 address);
-    void DisassembleNextOpcode();
+    void DisassembleNextOPCode();
+    void PopulateDisassemblerRecord(GC_Disassembler_Record* record, u16 address);
+    void InvalidateOverlappingRecords(u16 address, u8 opcode_size);
+    void DisassembleAhead(int count);
+    void DisassembleAhead(u16 start_address, int count, int depth);
+    u32 RunInstruction();
     bool BreakpointHit();
+    bool MemoryBreakpointHit();
+    bool RunToBreakpointHit();
     void RequestMemoryBreakpoint();
     bool Halted();
     bool DuringInputOpcode();
+    void EnableBreakpoints(bool enable, bool irqs);
+    void ResetBreakpoints();
+    bool AddBreakpoint(int type, char* text, bool read, bool write, bool execute);
+    bool AddBreakpoint(u16 address);
+    void AddRunToBreakpoint(u16 address);
+    void RemoveBreakpoint(int type, u16 address);
+    bool IsBreakpoint(int type, u16 address);
+    std::vector<GC_Breakpoint>* GetBreakpoints();
+    void ClearDisassemblerCallStack();
+    std::stack<GC_CallStackEntry>* GetDisassemblerCallStack();
+    void CheckMemoryBreakpoints(int type, u16 address, bool read);
+    void SetTraceLogger(TraceLogger* pTraceLogger);
 
 private:
     typedef void (Processor::*OPCptr) (void);
@@ -81,6 +131,7 @@ private:
     OPCptr m_OPCodesCB[256];
     OPCptr m_OPCodesED[256];
     Memory* m_pMemory;
+    TraceLogger* m_pTraceLogger;
     SixteenBitRegister AF;
     SixteenBitRegister BC;
     SixteenBitRegister DE;
@@ -111,8 +162,16 @@ private:
     bool m_bPrefixedCBOpcode;
     u8 m_PrefixedCBValue;
     bool m_bInputLastCycle;
-    bool m_bBreakpointHit;
-    bool m_bRequestMemBreakpoint;
+    bool m_breakpoints_enabled;
+    bool m_breakpoints_irq_enabled;
+    bool m_cpu_breakpoint_hit;
+    bool m_memory_breakpoint_hit;
+    bool m_run_to_breakpoint_hit;
+    std::vector<GC_Breakpoint> m_breakpoints;
+    GC_Breakpoint m_run_to_breakpoint;
+    bool m_run_to_breakpoint_requested;
+    std::stack<GC_CallStackEntry> m_disassembler_call_stack;
+    s32 m_debug_next_irq;
     ProcessorState m_ProcessorState;
 
 private:
@@ -137,6 +196,9 @@ private:
     void UpdateProActionReplay();
     void InvalidOPCode();
     void UndocumentedOPCode();
+    void CheckBreakpoints();
+    void PushCallStack(u16 src, u16 dest, u16 back, u8 bank);
+    void PopCallStack();
     SixteenBitRegister* GetPrefixedRegister();
     u16 GetEffectiveAddress();
     bool IsPrefixedInstruction();
@@ -833,6 +895,7 @@ const bool kZ80ParityTable[256] = {
     false, true, true, false, true, false, false, true
 };
 
+#include "Memory.h"
 #include "Processor_inline.h"
 
 #endif	/* PROCESSOR_H */

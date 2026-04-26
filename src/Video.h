@@ -24,6 +24,7 @@
 
 class Memory;
 class Processor;
+class TraceLogger;
 
 class Video
 {
@@ -66,6 +67,7 @@ public:
     int GetRenderLine();
     int GetCycleCounter();
     bool GetLatch();
+    void SetTraceLogger(TraceLogger* pTraceLogger);
 
 private:
     void ScanLine(int line);
@@ -77,6 +79,7 @@ private:
 private:
     Memory* m_pMemory;
     Processor* m_pProcessor;
+    TraceLogger* m_pTraceLogger;
     u8* m_pInfoBuffer;
     u16* m_pFrameBuffer;
     u8* m_pVdpVRAM;
@@ -90,7 +93,7 @@ private:
     bool m_bPAL;
     int m_iMode;
     int m_iRenderLine;
-    u8 m_SpriteAttribLatch[128];
+    u8 m_SpriteAttribLatch[GC_MAX_SPRITES * 4];
     Overscan m_Overscan;
 
     struct LineEvents 

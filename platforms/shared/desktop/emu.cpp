@@ -26,6 +26,10 @@
 #include "gearcoleco.h"
 #include "sound_queue.h"
 #include "config.h"
+#include "rewind.h"
+#include "events.h"
+#include "no_bios.h"
+#include "mcp/mcp_manager.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #if defined(_WIN32)
@@ -34,15 +38,17 @@
 #include "stb_image_write.h"
 
 static GearcolecoCore* gearcoleco;
+static McpManager* mcp_manager;
 static s16* audio_buffer;
 static bool audio_enabled;
-static bool debugging = false;
-static bool debug_step = false;
-static bool debug_next_frame = false;
+static int emu_debug_halt_step_frames_pending;
+static const int kDebugHaltStepMaxFrames = 4;
+static Uint64 rewind_last_counter = 0;
+static double rewind_pop_accumulator = 0.0;
 
 u16* debug_background_buffer;
 u16* debug_tile_buffer;
-u16* debug_sprite_buffers[64];
+u16* debug_sprite_buffers[GC_MAX_SPRITES];
 
 enum Loading_State
 {
@@ -66,6 +72,12 @@ static const char* get_configurated_dir(int option, const char* path);
 static void init_debug(void);
 static void destroy_debug(void);
 static void update_debug(void);
+static void update_debug_background_buffer(void);
+static void update_debug_tile_buffer(void);
+static void update_debug_sprite_buffers(void);
+static void debug_step_instruction(void);
+static void reset_rewind_timing(void);
+static int get_rewind_pop_budget(void);
 
 bool emu_init(void)
 {
@@ -80,12 +92,19 @@ bool emu_init(void)
     gearcoleco = new GearcolecoCore();
     gearcoleco->Init();
 
+    mcp_manager = new McpManager();
+    mcp_manager->Init(gearcoleco);
+
     sound_queue_init();
+    rewind_init();
 
     audio_enabled = true;
     emu_audio_sync = true;
-    emu_debug_disable_breakpoints_cpu = false;
-    emu_debug_disable_breakpoints_mem = false;
+    emu_debug_disable_breakpoints = false;
+    emu_debug_irq_breakpoints = false;
+    emu_debug_command = Debug_Command_None;
+    emu_debug_halt_step_frames_pending = 0;
+    emu_debug_pc_changed = false;
     emu_debug_step_frames_pending = 0;
     emu_debug_tile_palette = 0;
     emu_debug_tile_color_mode = true;
@@ -112,6 +131,8 @@ void emu_destroy(void)
     loading_state.store(Loading_State_None);
 
     save_ram();
+    SafeDelete(mcp_manager);
+    rewind_destroy();
     SafeDeleteArray(audio_buffer);
     sound_queue_destroy();
     SafeDelete(gearcoleco);
@@ -133,6 +154,7 @@ void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     if (loading_state.load() != Loading_State_None)
         return;
 
+    emu_debug_command = Debug_Command_None;
     reset_buffers();
     save_ram();
 
@@ -171,13 +193,38 @@ bool emu_finish_media_loading(void)
     emu_audio_reset();
     load_ram();
 
+    if (config_debug.debug && (config_debug.dis_look_ahead_count > 0))
+        gearcoleco->GetProcessor()->DisassembleAhead(config_debug.dis_look_ahead_count);
+
     update_savestates_data();
+    rewind_reset();
 
     return true;
 }
 
+void emu_render_current_frame(void)
+{
+    if (emu_is_empty())
+        return;
+
+    int size = gearcoleco->GetMemory()->IsBiosLoaded() ? GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN : GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
+    u16* src_buffer = gearcoleco->GetMemory()->IsBiosLoaded() ? gearcoleco->GetVideo()->GetFrameBuffer() : kNoBiosImage;
+
+    gearcoleco->GetVideo()->Render32bit(src_buffer, emu_frame_buffer, GC_PIXEL_RGBA8888, size, true);
+
+    if (config_debug.debug)
+        update_debug();
+}
+
+void emu_reset_rewind_timing(void)
+{
+    reset_rewind_timing();
+}
+
 void emu_update(void)
 {
+    emu_mcp_pump_commands();
+
     if (loading_state.load() != Loading_State_None)
         return;
 
@@ -185,38 +232,147 @@ void emu_update(void)
         return;
 
     int sampleCount = 0;
+    bool frame_executed = false;
 
-    if (!debugging || debug_step || debug_next_frame)
+    if (rewind_is_active())
     {
-        bool breakpoints = (!emu_debug_disable_breakpoints_cpu && !emu_debug_disable_breakpoints_mem) || IsValidPointer(gearcoleco->GetMemory()->GetRunToBreakpoint());
+        int to_pop = get_rewind_pop_budget();
 
-        if (gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &sampleCount, debug_step, breakpoints))
+        for (int i = 0; i < to_pop; i++)
         {
-            debugging = true;
+            if (!rewind_pop())
+                break;
         }
 
-        if (debug_next_frame && emu_debug_step_frames_pending > 0)
+        int silence_count = GC_AUDIO_QUEUE_SIZE;
+        memset(audio_buffer, 0, silence_count * sizeof(s16));
+        sound_queue_write(audio_buffer, silence_count, false);
+        return;
+    }
+
+    reset_rewind_timing();
+
+    if (config_debug.debug)
+    {
+        bool breakpoint_hit = false;
+        GearcolecoCore::GC_Debug_Run debug_run;
+        debug_run.step_debugger = (emu_debug_command == Debug_Command_Step);
+        debug_run.stop_on_breakpoint = !emu_debug_disable_breakpoints && (emu_debug_halt_step_frames_pending == 0);
+        debug_run.stop_on_run_to_breakpoint = true;
+        debug_run.stop_on_irq = emu_debug_irq_breakpoints && (emu_debug_halt_step_frames_pending == 0);
+
+        if (emu_debug_command != Debug_Command_None)
+        {
+            rewind_commit_seek();
+            breakpoint_hit = gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &sampleCount, &debug_run);
+            frame_executed = true;
+        }
+
+        if (breakpoint_hit || emu_debug_command == Debug_Command_StepFrame || emu_debug_command == Debug_Command_Step)
+        {
+            emu_debug_pc_changed = true;
+
+            if (config_debug.dis_look_ahead_count > 0)
+                gearcoleco->GetProcessor()->DisassembleAhead(config_debug.dis_look_ahead_count);
+        }
+
+        if (emu_debug_halt_step_frames_pending > 0)
+        {
+            if (breakpoint_hit)
+                emu_debug_halt_step_frames_pending = 0;
+            else if (emu_debug_command == Debug_Command_Continue)
+            {
+                emu_debug_halt_step_frames_pending--;
+
+                if (emu_debug_halt_step_frames_pending == 0)
+                {
+                    emu_debug_command = Debug_Command_None;
+                    emu_debug_pc_changed = true;
+
+                    if (config_debug.dis_look_ahead_count > 0)
+                        gearcoleco->GetProcessor()->DisassembleAhead(config_debug.dis_look_ahead_count);
+                }
+            }
+        }
+
+        if (breakpoint_hit)
+            emu_debug_command = Debug_Command_None;
+
+        if (emu_debug_command == Debug_Command_StepFrame && emu_debug_step_frames_pending > 0)
         {
             emu_debug_step_frames_pending--;
             if (emu_debug_step_frames_pending > 0)
-                debug_next_frame = true;
+                emu_debug_command = Debug_Command_StepFrame;
             else
-                debug_next_frame = false;
+                emu_debug_command = Debug_Command_None;
         }
-        else
+        else if (emu_debug_command != Debug_Command_Continue)
+            emu_debug_command = Debug_Command_None;
+
+        update_debug();
+    }
+    else
+    {
+        rewind_commit_seek();
+
+        if (!gearcoleco->IsPaused())
         {
-            debug_next_frame = false;
+            gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &sampleCount);
+            frame_executed = true;
         }
-        debug_step = false;
     }
 
-    if (config_debug.debug)
-        update_debug();
+    if (frame_executed)
+        rewind_push();
 
     if ((sampleCount > 0) && !gearcoleco->IsPaused())
     {
         sound_queue_write(audio_buffer, sampleCount, emu_audio_sync);
     }
+    else if (gearcoleco->IsPaused())
+    {
+        int silence_count = GC_AUDIO_QUEUE_SIZE;
+        memset(audio_buffer, 0, silence_count * sizeof(s16));
+        sound_queue_write(audio_buffer, silence_count, false);
+    }
+}
+
+static void reset_rewind_timing(void)
+{
+    rewind_last_counter = 0;
+    rewind_pop_accumulator = 0.0;
+}
+
+static int get_rewind_pop_budget(void)
+{
+    Uint64 now = SDL_GetPerformanceCounter();
+
+    if (rewind_last_counter == 0)
+    {
+        rewind_last_counter = now;
+        return 0;
+    }
+
+    double elapsed = (double)(now - rewind_last_counter) / (double)SDL_GetPerformanceFrequency();
+    rewind_last_counter = now;
+
+    if (elapsed < 0.0)
+        elapsed = 0.0;
+    else if (elapsed > 0.25)
+        elapsed = 0.25;
+
+    int frames_per_snapshot = rewind_get_frames_per_snapshot();
+    if (frames_per_snapshot < 1)
+        frames_per_snapshot = 1;
+
+    double snapshots_per_second = (60.0 * (double)config_rewind.speed) / (double)frames_per_snapshot;
+    rewind_pop_accumulator += elapsed * snapshots_per_second;
+
+    int to_pop = (int)rewind_pop_accumulator;
+    if (to_pop > 0)
+        rewind_pop_accumulator -= (double)to_pop;
+
+    return to_pop;
 }
 
 void emu_key_pressed(GC_Controllers controller, GC_Keys key)
@@ -256,7 +412,7 @@ bool emu_is_paused(void)
 
 bool emu_is_debug_idle(void)
 {
-    return config_debug.debug && debugging && !debug_step && !debug_next_frame;
+    return config_debug.debug && (emu_debug_command == Debug_Command_None);
 }
 
 bool emu_is_empty(void)
@@ -277,6 +433,7 @@ void emu_reset(Cartridge::ForceConfiguration config)
     save_ram();
     gearcoleco->ResetROM(&config);
     load_ram();
+    rewind_reset();
 }
 
 void emu_dissasemble_rom(void)
@@ -329,6 +486,7 @@ void emu_load_ram(const char* file_path, Cartridge::ForceConfiguration config)
         save_ram();
         gearcoleco->ResetROM(&config);
         gearcoleco->LoadRam(file_path, true);
+        rewind_reset();
     }
 }
 
@@ -347,7 +505,11 @@ void emu_load_state_slot(int index)
     if (!emu_is_empty())
     {
         const char* dir = get_configurated_dir(config_emulator.savestates_dir_option, config_emulator.savestates_path.c_str());
-        gearcoleco->LoadState(dir, index);
+        if (gearcoleco->LoadState(dir, index))
+        {
+            events_sync_input();
+            rewind_reset();
+        }
     }
 }
 
@@ -360,7 +522,13 @@ void emu_save_state_file(const char* file_path)
 void emu_load_state_file(const char* file_path)
 {
     if (!emu_is_empty())
-        gearcoleco->LoadState(file_path, -1);
+    {
+        if (gearcoleco->LoadState(file_path, -1))
+        {
+            events_sync_input();
+            rewind_reset();
+        }
+    }
 }
 
 void emu_get_runtime(GC_RuntimeInfo& runtime)
@@ -395,85 +563,109 @@ GearcolecoCore* emu_get_core(void)
     return gearcoleco;
 }
 
-void emu_debug_step(void)
-{
-    debugging = debug_step = true;
-    debug_next_frame = false;
-    gearcoleco->Pause(false);
-}
-
-void emu_debug_continue(void)
-{
-    debugging = debug_step = debug_next_frame = false;
-    gearcoleco->Pause(false);
-}
-
-void emu_debug_next_frame(void)
-{
-    debugging = debug_next_frame = true;
-    debug_step = false;
-    emu_debug_step_frames_pending++;
-    gearcoleco->Pause(false);
-}
-
 void emu_debug_step_over(void)
 {
-    // TODO: implement step over
-    emu_debug_step();
+    Processor* processor = emu_get_core()->GetProcessor();
+    Processor::ProcessorState* proc_state = processor->GetState();
+    Memory* memory = emu_get_core()->GetMemory();
+    u16 pc = proc_state->PC->GetValue();
+    GC_Disassembler_Record* record = memory->GetDisassemblerRecord(pc);
+
+    if (IsValidPointer(record) && record->subroutine)
+    {
+        u16 return_address = pc + record->size;
+        processor->AddRunToBreakpoint(return_address);
+        emu_debug_command = Debug_Command_Continue;
+    }
+    else
+    {
+        debug_step_instruction();
+        return;
+    }
+
+    gearcoleco->Pause(false);
 }
 
 void emu_debug_step_into(void)
 {
-    // TODO: implement step into
-    emu_debug_step();
+    debug_step_instruction();
 }
 
 void emu_debug_step_out(void)
 {
-    // TODO: implement step out
-    emu_debug_step();
+    Processor* processor = emu_get_core()->GetProcessor();
+    std::stack<Processor::GC_CallStackEntry>* call_stack = processor->GetDisassemblerCallStack();
+
+    if (call_stack->size() > 0)
+    {
+        Processor::GC_CallStackEntry entry = call_stack->top();
+        u16 return_address = entry.back;
+        processor->AddRunToBreakpoint(return_address);
+        emu_debug_command = Debug_Command_Continue;
+    }
+    else
+    {
+        debug_step_instruction();
+        return;
+    }
+
+    gearcoleco->Pause(false);
 }
 
 void emu_debug_step_frame(void)
 {
-    // TODO: implement step frame
-    emu_debug_next_frame();
+    gearcoleco->Pause(false);
+    emu_debug_step_frames_pending++;
+    emu_debug_command = Debug_Command_StepFrame;
 }
 
 void emu_debug_break(void)
 {
-    // TODO: implement break
-    debugging = debug_step = true;
-    debug_next_frame = false;
+    gearcoleco->Pause(false);
+    if (emu_debug_command == Debug_Command_Continue)
+        emu_debug_command = Debug_Command_Step;
+}
+
+void emu_debug_continue(void)
+{
+    gearcoleco->Pause(false);
+    emu_debug_halt_step_frames_pending = 0;
+    emu_debug_command = Debug_Command_Continue;
+}
+
+bool emu_debug_halt_step_active(void)
+{
+    return emu_debug_halt_step_frames_pending > 0;
 }
 
 void emu_mcp_start(void)
 {
-    // TODO: implement MCP start
+    mcp_manager->Start();
 }
 
 void emu_mcp_stop(void)
 {
-    // TODO: implement MCP stop
+    mcp_manager->Stop();
 }
 
 void emu_mcp_set_transport(int mode, int port)
 {
-    // TODO: implement MCP set transport
-    UNUSED(mode);
-    UNUSED(port);
+    mcp_manager->SetTransportMode((McpTransportMode)mode, port);
 }
 
 bool emu_mcp_is_running(void)
 {
-    // TODO: implement MCP is running
-    return false;
+    return mcp_manager && mcp_manager->IsRunning();
 }
 
 int emu_mcp_get_transport_mode(void)
 {
-    // TODO: implement MCP get transport mode
-    return 0;
+    return mcp_manager ? mcp_manager->GetTransportMode() : -1;
+}
+
+void emu_mcp_pump_commands(void)
+{
+    mcp_manager->PumpCommands(gearcoleco);
 }
 
 void emu_load_bios(const char* file_path)
@@ -518,6 +710,85 @@ void emu_save_screenshot(const char* file_path)
     stbi_write_png(file_path, runtime.screen_width, runtime.screen_height, 4, emu_frame_buffer, runtime.screen_width * 4);
 
     Log("Screenshot saved to %s", file_path);
+}
+
+void emu_save_sprite(const char* file_path, int index)
+{
+    if (!gearcoleco->GetCartridge()->IsReady())
+        return;
+
+    update_debug();
+
+    int sprite_size = IsSetBit(gearcoleco->GetVideo()->GetRegisters()[1], 1) ? 16 : 8;
+
+    stbi_write_png(file_path, sprite_size, sprite_size, 4, emu_debug_sprite_buffers[index], 16 * 4);
+
+    Log("Sprite saved to %s", file_path);
+}
+
+void emu_save_background(const char* file_path)
+{
+    if (!gearcoleco->GetCartridge()->IsReady())
+        return;
+
+    update_debug();
+
+    stbi_write_png(file_path, 256, 192, 4, emu_debug_background_buffer, 256 * 4);
+
+    Log("Background saved to %s", file_path);
+}
+
+void emu_save_tiles(const char* file_path)
+{
+    if (!gearcoleco->GetCartridge()->IsReady())
+        return;
+
+    update_debug();
+
+    stbi_write_png(file_path, 256, 256, 4, emu_debug_tile_buffer, 256 * 4);
+
+    Log("Pattern table saved to %s", file_path);
+}
+
+int emu_get_screenshot_png(unsigned char** out_buffer)
+{
+    if (!gearcoleco->GetCartridge()->IsReady())
+        return 0;
+
+    GC_RuntimeInfo runtime;
+    emu_get_runtime(runtime);
+
+    int stride = runtime.screen_width * 4;
+    int len = 0;
+
+    *out_buffer = stbi_write_png_to_mem(emu_frame_buffer, stride,
+                                         runtime.screen_width, runtime.screen_height,
+                                         4, &len);
+
+    return len;
+}
+
+int emu_get_sprite_png(int sprite_index, unsigned char** out_buffer)
+{
+    if (!gearcoleco->GetCartridge()->IsReady())
+        return 0;
+
+    if (sprite_index < 0 || sprite_index >= GC_MAX_SPRITES)
+        return 0;
+
+    update_debug();
+
+    int sprite_size = IsSetBit(gearcoleco->GetVideo()->GetRegisters()[1], 1) ? 16 : 8;
+
+    u8* buffer = emu_debug_sprite_buffers[sprite_index];
+
+    if (!buffer)
+        return 0;
+
+    int len = 0;
+    *out_buffer = stbi_write_png_to_mem(buffer, 16 * 4, sprite_size, sprite_size, 4, &len);
+
+    return len;
 }
 
 void emu_start_vgm_recording(const char* file_path)
@@ -620,7 +891,7 @@ static void init_debug(void)
     memset(debug_tile_buffer, 0, 32 * 32 * 64 * sizeof(u16));
     memset(emu_debug_tile_buffer, 0, 32 * 32 * 64 * 4);
 
-    for (int s = 0; s < 64; s++)
+    for (int s = 0; s < GC_MAX_SPRITES; s++)
     {
         emu_debug_sprite_buffers[s] = new u8[16 * 16 * 4];
         debug_sprite_buffers[s] = new u16[16 * 16];
@@ -639,22 +910,348 @@ static void destroy_debug(void)
     SafeDeleteArray(debug_background_buffer);
     SafeDeleteArray(debug_tile_buffer);
 
-    for (int s = 0; s < 64; s++)
+    for (int s = 0; s < GC_MAX_SPRITES; s++)
     {
         SafeDeleteArray(emu_debug_sprite_buffers[s]);
         SafeDeleteArray(debug_sprite_buffers[s]);
     }
 }
 
+static void debug_step_instruction(void)
+{
+    Processor* processor = emu_get_core()->GetProcessor();
+    u16 pc = processor->GetState()->PC->GetValue();
+
+    emu_debug_halt_step_frames_pending = 0;
+
+    if (processor->Halted() || (emu_get_core()->GetMemory()->DebugRetrieve(pc) == 0x76))
+    {
+        processor->AddRunToBreakpoint(pc + 1);
+        emu_debug_halt_step_frames_pending = kDebugHaltStepMaxFrames;
+        emu_debug_command = Debug_Command_Continue;
+    }
+    else
+        emu_debug_command = Debug_Command_Step;
+
+    gearcoleco->Pause(false);
+}
+
 static void update_debug(void)
 {
     Video* video = gearcoleco->GetVideo();
 
+    update_debug_background_buffer();
+    update_debug_tile_buffer();
+    update_debug_sprite_buffers();
+
     video->Render32bit(debug_background_buffer, emu_debug_background_buffer, GC_PIXEL_RGBA8888, 256 * 256);
     video->Render32bit(debug_tile_buffer, emu_debug_tile_buffer, GC_PIXEL_RGBA8888, 32 * 32 * 64);
 
-    for (int s = 0; s < 64; s++)
+    for (int s = 0; s < GC_MAX_SPRITES; s++)
         video->Render32bit(debug_sprite_buffers[s], emu_debug_sprite_buffers[s], GC_PIXEL_RGBA8888, 16 * 16);
+}
+
+static void update_debug_background_buffer(void)
+{
+    Video* video = gearcoleco->GetVideo();
+    u8* vram = video->GetVRAM();
+    u8* regs = video->GetRegisters();
+    int mode = video->GetMode();
+
+    int name_table_addr = regs[2] << 10;
+    int color_table_addr = regs[3] << 6;
+    int pattern_table_addr = regs[4] << 11;
+    int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
+    int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
+    int backdrop_color = regs[7] & 0x0F;
+    backdrop_color = (backdrop_color > 0) ? backdrop_color : 1;
+    int region = 0;
+
+    switch (mode)
+    {
+        case 1:
+        {
+            int fg_color = (regs[7] >> 4) & 0x0F;
+            int bg_color = backdrop_color;
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+
+            for (int line = 0; line < 192; line++)
+            {
+                int line_offset = line * GC_RESOLUTION_WIDTH;
+                int tile_y = line >> 3;
+                int tile_y_offset = line & 7;
+
+                for (int tile_x = 0; tile_x < 40; tile_x++)
+                {
+                    int tile_number = (tile_y * 40) + tile_x;
+                    int name_tile_addr = name_table_addr + tile_number;
+                    int name_tile = vram[name_tile_addr & 0x3FFF];
+                    u8 pattern_line = vram[(pattern_table_addr + (name_tile << 3) + tile_y_offset) & 0x3FFF];
+
+                    int screen_offset = line_offset + (tile_x * 6);
+
+                    for (int tile_pixel = 0; tile_pixel < 6; tile_pixel++)
+                    {
+                        int pixel = screen_offset + tile_pixel;
+                        if (pixel < 256 * 256)
+                            debug_background_buffer[pixel] = IsSetBit(pattern_line, 7 - tile_pixel) ? fg_color : bg_color;
+                    }
+                }
+            }
+            return;
+        }
+        case 2:
+        {
+            pattern_table_addr &= 0x2000;
+            color_table_addr &= 0x2000;
+            break;
+        }
+        case 4:
+        {
+            pattern_table_addr &= 0x2000;
+            break;
+        }
+    }
+
+    for (int line = 0; line < 192; line++)
+    {
+        int line_offset = line * GC_RESOLUTION_WIDTH;
+        int tile_y = line >> 3;
+        int tile_y_offset = line & 7;
+        region = (tile_y & 0x18) << 5;
+
+        for (int tile_x = 0; tile_x < 32; tile_x++)
+        {
+            int tile_number = (tile_y << 5) + tile_x;
+            int name_tile_addr = name_table_addr + tile_number;
+            int name_tile = vram[name_tile_addr & 0x3FFF];
+            u8 pattern_line = 0;
+            u8 color_line = 0;
+
+            if (mode == 4)
+            {
+                int offset_color = pattern_table_addr + (name_tile << 3) + ((tile_y & 0x03) << 1) + (line & 0x04 ? 1 : 0);
+                color_line = vram[offset_color & 0x3FFF];
+
+                int left_color = color_line >> 4;
+                int right_color = color_line & 0x0F;
+                left_color = (left_color > 0) ? left_color : backdrop_color;
+                right_color = (right_color > 0) ? right_color : backdrop_color;
+
+                int screen_offset = line_offset + (tile_x << 3);
+
+                for (int tile_pixel = 0; tile_pixel < 4; tile_pixel++)
+                {
+                    int pixel = screen_offset + tile_pixel;
+                    if (pixel < 256 * 256)
+                        debug_background_buffer[pixel] = left_color;
+                }
+
+                for (int tile_pixel = 4; tile_pixel < 8; tile_pixel++)
+                {
+                    int pixel = screen_offset + tile_pixel;
+                    if (pixel < 256 * 256)
+                        debug_background_buffer[pixel] = right_color;
+                }
+
+                continue;
+            }
+            else if (mode == 0)
+            {
+                pattern_line = vram[(pattern_table_addr + (name_tile << 3) + tile_y_offset) & 0x3FFF];
+                color_line = vram[(color_table_addr + (name_tile >> 3)) & 0x3FFF];
+            }
+            else if (mode == 2)
+            {
+                name_tile += region;
+                pattern_line = vram[(pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset) & 0x3FFF];
+                color_line = vram[(color_table_addr + ((name_tile & color_mask) << 3) + tile_y_offset) & 0x3FFF];
+            }
+
+            int fg_color = color_line >> 4;
+            int bg_color = color_line & 0x0F;
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+            bg_color = (bg_color > 0) ? bg_color : backdrop_color;
+
+            int screen_offset = line_offset + (tile_x << 3);
+
+            for (int tile_pixel = 0; tile_pixel < 8; tile_pixel++)
+            {
+                int pixel = screen_offset + tile_pixel;
+                if (pixel < 256 * 256)
+                    debug_background_buffer[pixel] = IsSetBit(pattern_line, 7 - tile_pixel) ? fg_color : bg_color;
+            }
+        }
+    }
+}
+
+static void update_debug_tile_buffer(void)
+{
+    Video* video = gearcoleco->GetVideo();
+    u8* vram = video->GetVRAM();
+    u8* regs = video->GetRegisters();
+    int mode = video->GetMode();
+
+    int pattern_table_addr = (regs[4] & ((mode == 2) ? 0x04 : 0x07)) << 11;
+
+    if (emu_debug_tile_color_mode)
+    {
+        int color_table_addr = regs[3] << 6;
+        int backdrop_color = regs[7] & 0x0F;
+        backdrop_color = (backdrop_color > 0) ? backdrop_color : 1;
+
+        if (mode == 2)
+        {
+            pattern_table_addr &= 0x2000;
+            color_table_addr &= 0x2000;
+        }
+        else if (mode == 4)
+        {
+            pattern_table_addr &= 0x2000;
+        }
+
+        for (int y = 0; y < 256; y++)
+        {
+            int width_y = (y * 256);
+            int tile_y = y / 8;
+            int offset_y = y & 0x7;
+
+            for (int x = 0; x < 256; x++)
+            {
+                int tile_x = x / 8;
+                int offset_x = 7 - (x & 0x7);
+                int pixel = width_y + x;
+
+                int tile_number = (tile_y * 32) + tile_x;
+                u8 pattern_line = 0;
+                u8 color_line = 0;
+                int fg_color = 15;
+                int bg_color = 0;
+
+                if (mode == 1)
+                {
+                    fg_color = (regs[7] >> 4) & 0x0F;
+                    bg_color = backdrop_color;
+                    fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                }
+                else if (mode == 4)
+                {
+                    int offset_color = pattern_table_addr + (tile_number << 3) + ((tile_y & 0x03) << 1) + (offset_y & 0x04 ? 1 : 0);
+                    color_line = vram[offset_color & 0x3FFF];
+
+                    int left_color = color_line >> 4;
+                    int right_color = color_line & 0x0F;
+                    left_color = (left_color > 0) ? left_color : backdrop_color;
+                    right_color = (right_color > 0) ? right_color : backdrop_color;
+
+                    if ((x & 0x07) < 4)
+                        debug_tile_buffer[pixel] = left_color;
+                    else
+                        debug_tile_buffer[pixel] = right_color;
+                    continue;
+                }
+                else if (mode == 0)
+                {
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                    color_line = vram[(color_table_addr + (tile_number >> 3)) & 0x3FFF];
+
+                    fg_color = color_line >> 4;
+                    bg_color = color_line & 0x0F;
+                    fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+                    bg_color = (bg_color > 0) ? bg_color : backdrop_color;
+                }
+                else if (mode == 2)
+                {
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                    color_line = vram[(color_table_addr + (tile_number * 8) + offset_y) & 0x3FFF];
+
+                    fg_color = color_line >> 4;
+                    bg_color = color_line & 0x0F;
+                    fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+                    bg_color = (bg_color > 0) ? bg_color : backdrop_color;
+                }
+                else
+                {
+                    int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                    pattern_line = vram[tile_data_addr];
+                    fg_color = 15;
+                    bg_color = 0;
+                }
+
+                bool color_bit = IsSetBit(pattern_line, offset_x);
+                debug_tile_buffer[pixel] = color_bit ? fg_color : bg_color;
+            }
+        }
+    }
+    else
+    {
+        for (int y = 0; y < 256; y++)
+        {
+            int width_y = (y * 256);
+            int tile_y = y / 8;
+            int offset_y = y & 0x7;
+
+            for (int x = 0; x < 256; x++)
+            {
+                int tile_x = x / 8;
+                int offset_x = 7 - (x & 0x7);
+                int pixel = width_y + x;
+
+                int tile_number = (tile_y * 32) + tile_x;
+
+                int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
+                bool color = IsSetBit(vram[tile_data_addr], offset_x);
+
+                debug_tile_buffer[pixel] = color ? 15 : 0;
+            }
+        }
+    }
+}
+
+static void update_debug_sprite_buffers(void)
+{
+    Video* video = gearcoleco->GetVideo();
+    u8* regs = video->GetRegisters();
+    u8* vram = video->GetVRAM();
+
+    int sprite_size = IsSetBit(regs[1], 1) ? 16 : 8;
+    u16 sprite_attribute_addr = (regs[5] & 0x7F) << 7;
+    u16 sprite_pattern_addr = (regs[6] & 0x07) << 11;
+
+    for (int s = 0; s < GC_MAX_SPRITES; s++)
+    {
+        int sprite_attribute_offset = sprite_attribute_addr + (s << 2);
+        int sprite_color = vram[sprite_attribute_offset + 3] & 0x0F;
+        int sprite_tile = vram[sprite_attribute_offset + 2];
+        sprite_tile &= (sprite_size == 16) ? 0xFC : 0xFF;
+
+        for (int pixel_y = 0; pixel_y < sprite_size; pixel_y++)
+        {
+            int sprite_line_addr = (sprite_pattern_addr + (sprite_tile << 3) + pixel_y) & 0x3FFF;
+
+            for (int pixel_x = 0; pixel_x < 16; pixel_x++)
+            {
+                if ((sprite_size == 8) && (pixel_x == 8))
+                    break;
+
+                int pixel = (pixel_y * 16) + pixel_x;
+
+                bool sprite_pixel = false;
+
+                if (pixel_x < 8)
+                    sprite_pixel = IsSetBit(vram[sprite_line_addr], 7 - pixel_x);
+                else
+                    sprite_pixel = IsSetBit(vram[(sprite_line_addr + 16) & 0x3FFF], 15 - pixel_x);
+
+                debug_sprite_buffers[s][pixel] = sprite_pixel ? sprite_color : 0;
+            }
+        }
+    }
 }
 
 void update_savestates_data(void)

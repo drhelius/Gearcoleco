@@ -21,6 +21,7 @@
 #include "gearcoleco.h"
 #include "config.h"
 #include "gui.h"
+#include "gui_actions.h"
 #include "emu.h"
 #include "application.h"
 #include "gamepad.h"
@@ -36,17 +37,32 @@ struct KeyState
     bool pressed;
 };
 
-static KeyState input_last_state[GC_MAX_GAMEPADS][22] = { };
+static KeyState input_last_state[GC_MAX_GAMEPADS][20] = { };
 static bool input_initialized = false;
 
 static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat);
+static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
+static void input_force_key(int controller, int index, GC_Keys key, bool pressed);
 static void input_poll_controller(int controller);
 static void input_send_key(int controller, int index, GC_Keys key, bool pressed);
 
 void events_shortcuts(const SDL_Event* event)
 {
+    if (event->type == SDL_EVENT_KEY_UP)
+    {
+        if (events_match_hotkey_scancode(event, config_hotkeys[config_HotkeyIndex_Rewind]))
+            gui_action_rewind_released();
+        return;
+    }
+
     if (event->type != SDL_EVENT_KEY_DOWN)
         return;
+
+    if (events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Rewind], false))
+    {
+        gui_action_rewind_pressed();
+        return;
+    }
 
     // Check special case hotkeys first
     if (events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Quit], false))
@@ -94,7 +110,7 @@ void events_shortcuts(const SDL_Event* event)
 
     if (event->key.repeat == 0 && key == SDL_SCANCODE_A && (mods & SDL_KMOD_CTRL))
     {
-        // TODO: debugger - gui_shortcut(gui_ShortcutDebugSelectAll);
+        gui_shortcut(gui_ShortcutDebugSelectAll);
         return;
     }
 
@@ -233,6 +249,33 @@ void events_emu(void)
     }
 }
 
+void events_sync_input(void)
+{
+    SDL_PumpEvents();
+
+    if (!input_initialized)
+    {
+        input_initialized = true;
+        memset(input_last_state, 0, sizeof(input_last_state));
+    }
+
+    static const GC_Keys keys[20] = {
+        Key_Left, Key_Right, Key_Up, Key_Down,
+        Key_Left_Button, Key_Right_Button, Key_Blue, Key_Purple,
+        Keypad_0, Keypad_1, Keypad_2, Keypad_3,
+        Keypad_4, Keypad_5, Keypad_6, Keypad_7,
+        Keypad_8, Keypad_9, Keypad_Asterisk, Keypad_Hash
+    };
+
+    for (int controller = 0; controller < 2; controller++)
+    {
+        for (int i = 0; i < 20; i++)
+            input_force_key(controller, i, keys[i], false);
+
+        input_poll_controller(controller);
+    }
+}
+
 void events_reset_input(void)
 {
     input_updated = false;
@@ -243,15 +286,21 @@ bool events_input_updated(void)
     return input_updated;
 }
 
+static void input_force_key(int controller, int index, GC_Keys key, bool pressed)
+{
+    input_last_state[controller][index].pressed = pressed;
+
+    if (pressed)
+        emu_key_pressed((GC_Controllers)controller, key);
+    else
+        emu_key_released((GC_Controllers)controller, key);
+}
+
 static void input_send_key(int controller, int index, GC_Keys key, bool pressed)
 {
     if (pressed != input_last_state[controller][index].pressed)
     {
-        input_last_state[controller][index].pressed = pressed;
-        if (pressed)
-            emu_key_pressed((GC_Controllers)controller, key);
-        else
-            emu_key_released((GC_Controllers)controller, key);
+        input_force_key(controller, index, key, pressed);
     }
 }
 
@@ -366,4 +415,9 @@ static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hot
     if (expected & (SDL_KMOD_LGUI | SDL_KMOD_RGUI | SDL_KMOD_GUI)) expected_normalized = (SDL_Keymod)(expected_normalized | SDL_KMOD_GUI);
 
     return mods_normalized == expected_normalized;
+}
+
+static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey)
+{
+    return event->key.scancode == hotkey.key;
 }

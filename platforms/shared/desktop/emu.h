@@ -28,6 +28,14 @@
     #define EXTERN extern
 #endif
 
+enum Debug_Command
+{
+    Debug_Command_Continue,
+    Debug_Command_Step,
+    Debug_Command_StepFrame,
+    Debug_Command_None
+};
+
 enum Directory_Location
 {
     Directory_Location_Default = 0,
@@ -40,12 +48,14 @@ EXTERN GC_SaveState_Header emu_savestates[5];
 EXTERN GC_SaveState_Screenshot emu_savestates_screenshots[5];
 EXTERN u8* emu_debug_background_buffer;
 EXTERN u8* emu_debug_tile_buffer;
-EXTERN u8* emu_debug_sprite_buffers[64];
+EXTERN u8* emu_debug_sprite_buffers[GC_MAX_SPRITES];
 
-EXTERN bool emu_audio_sync;
-EXTERN bool emu_debug_disable_breakpoints_cpu;
-EXTERN bool emu_debug_disable_breakpoints_mem;
+EXTERN Debug_Command emu_debug_command;
+EXTERN bool emu_debug_pc_changed;
 EXTERN int emu_debug_step_frames_pending;
+EXTERN bool emu_audio_sync;
+EXTERN bool emu_debug_disable_breakpoints;
+EXTERN bool emu_debug_irq_breakpoints;
 EXTERN int emu_debug_tile_palette;
 EXTERN bool emu_debug_tile_color_mode;
 
@@ -55,6 +65,8 @@ EXTERN void emu_update(void);
 EXTERN void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration config);
 EXTERN bool emu_is_media_loading(void);
 EXTERN bool emu_finish_media_loading(void);
+EXTERN void emu_render_current_frame(void);
+EXTERN void emu_reset_rewind_timing(void);
 EXTERN void emu_key_pressed(GC_Controllers controller, GC_Keys key);
 EXTERN void emu_key_released(GC_Controllers controller, GC_Keys key);
 EXTERN void emu_spinner1(int movement);
@@ -82,23 +94,28 @@ EXTERN void emu_load_state_file(const char* file_path);
 EXTERN void emu_get_runtime(GC_RuntimeInfo& runtime);
 EXTERN void emu_get_info(char* info, int buffer_size);
 EXTERN GearcolecoCore* emu_get_core(void);
-EXTERN void emu_debug_step(void);
 EXTERN void emu_debug_step_over(void);
 EXTERN void emu_debug_step_into(void);
 EXTERN void emu_debug_step_out(void);
 EXTERN void emu_debug_step_frame(void);
 EXTERN void emu_debug_break(void);
 EXTERN void emu_debug_continue(void);
-EXTERN void emu_debug_next_frame(void);
+EXTERN bool emu_debug_halt_step_active(void);
 EXTERN void emu_mcp_start(void);
 EXTERN void emu_mcp_stop(void);
 EXTERN void emu_mcp_set_transport(int mode, int port);
 EXTERN bool emu_mcp_is_running(void);
 EXTERN int emu_mcp_get_transport_mode(void);
+EXTERN void emu_mcp_pump_commands(void);
 EXTERN void emu_load_bios(const char* file_path);
 EXTERN void emu_video_no_sprite_limit(bool enabled);
 EXTERN void emu_set_overscan(int overscan);
 EXTERN void emu_save_screenshot(const char* file_path);
+EXTERN void emu_save_sprite(const char* file_path, int index);
+EXTERN void emu_save_background(const char* file_path);
+EXTERN void emu_save_tiles(const char* file_path);
+EXTERN int emu_get_screenshot_png(unsigned char** out_buffer);
+EXTERN int emu_get_sprite_png(int sprite_index, unsigned char** out_buffer);
 EXTERN void emu_start_vgm_recording(const char* file_path);
 EXTERN void emu_stop_vgm_recording(void);
 EXTERN bool emu_is_vgm_recording(void);

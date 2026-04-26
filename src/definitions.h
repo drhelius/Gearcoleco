@@ -105,6 +105,7 @@ typedef void (*RamChangedCallback) (void);
 #define GC_RESOLUTION_HEIGHT 192
 
 #define GC_MAX_GAMEPADS 2
+#define GC_MAX_SPRITES 32
 
 #define GC_RESOLUTION_WIDTH_WITH_OVERSCAN 320
 #define GC_RESOLUTION_HEIGHT_WITH_OVERSCAN 288
@@ -221,6 +222,25 @@ struct GC_RuntimeInfo
     int screen_width;
     int screen_height;
     GC_Region region;
+};
+
+struct GC_Disassembler_Record
+{
+    u32 address;
+    u8 bank;
+    char name[64];
+    char bytes[25];
+    char segment[8];
+    u8 opcodes[7];
+    int size;
+    bool jump;
+    u16 jump_address;
+    u8 jump_bank;
+    bool subroutine;
+    int irq;
+    bool has_operand_address;
+    u16 operand_address;
+    char auto_symbol[64];
 };
 
 inline u8 SetBit(const u8 value, const u8 bit)

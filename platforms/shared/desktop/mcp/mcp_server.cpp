@@ -23,13 +23,53 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+#include <limits>
+#include <cstdlib>
 #include "log.h"
+
+template<typename T>
+static bool parse_mcp_hex_with_prefix(const std::string& hex_str, T* result)
+{
+    const char* str = hex_str.c_str();
+    size_t len = hex_str.length();
+
+    if (len >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
+    {
+        str += 2;
+        len -= 2;
+    }
+    else if (len >= 1 && str[0] == '$')
+    {
+        str += 1;
+        len -= 1;
+    }
+
+    if (len == 0)
+        return false;
+
+    char* end = NULL;
+    unsigned long value = strtoul(str, &end, 16);
+
+    if (!end || *end != '\0')
+        return false;
+    if (value > (unsigned long)std::numeric_limits<T>::max())
+        return false;
+
+    *result = (T)value;
+    return true;
+}
 
 static void* ReaderThreadFunc(void* arg)
 {
     McpServer* server = (McpServer*)arg;
     server->ReaderLoop();
     return NULL;
+}
+
+static bool file_exists(const std::string& path)
+{
+    std::ifstream file(path.c_str());
+    return file.good();
 }
 
 void McpServer::ReaderLoop()
@@ -202,10 +242,10 @@ void McpServer::HandleInitialize(const json& request)
             {"resources", json::object()}
         }},
         {"serverInfo", {
-            {"name", "gearsystem-mcp-server"},
-            {"title", "Gearsystem MCP Server"},
-            {"description", "Debug and control Gearsystem Sega Master System / Game Gear / SG-1000 emulator. Provides tools for: execution control (pause, continue, step, reset), breakpoints (exec/read/write), memory inspection and modification, Z80 CPU register access, VDP status, PSG status, YM2413 FM synthesis status, disassembly, save states, controller input, sprites, and screenshots."},
-            {"version", GS_VERSION}
+            {"name", "gearcoleco-mcp-server"},
+            {"title", "Gearcoleco MCP Server"},
+            {"description", "Debug and control Gearcoleco ColecoVision emulator. Provides tools for: execution control (pause, continue, step, reset), breakpoints (exec/read/write), memory inspection and modification, Z80 CPU register access, VDP status, PSG status, AY-3-8910 SGM status, disassembly, save states, controller input, sprites, and screenshots."},
+            {"version", GEARCOLECO_VERSION}
         }}
     };
 
@@ -229,7 +269,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "debug_pause"},
         {"title", "Debug Pause"},
-        {"description", "Pause Gearsystem emulator execution (break at current instruction)"},
+        {"description", "Pause Gearcoleco emulator execution (break at current instruction)"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -240,7 +280,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "debug_continue"},
         {"title", "Debug Continue"},
-        {"description", "Resume Gearsystem emulator execution"},
+        {"description", "Resume Gearcoleco emulator execution"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -295,7 +335,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "debug_reset"},
         {"title", "Debug Reset"},
-        {"description", "Reset the Sega Master System / Game Gear / SG-1000 emulated system"},
+        {"description", "Reset the ColecoVision emulated system"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -318,18 +358,18 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "set_breakpoint"},
         {"title", "Set Breakpoint"},
-        {"description", "Set a breakpoint at specified logical address in SMS/GG memory (ROM/RAM, VRAM, CRAM, or VDP registers)"},
+        {"description", "Set a breakpoint at specified logical address in ColecoVision memory (ROM/RAM, VRAM, or VDP registers)"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", {
                 {"address", {
                     {"type", "string"},
-                    {"description", "Logical address in hex (e.g., '8000', '0x8000', '$8000'). Valid ranges: rom_ram 0000-FFFF, vram 0000-3FFF, cram 00-3F, vdp_reg 00-0A"}
+                    {"description", "Logical address in hex (e.g., '8000', '0x8000', '$8000'). Valid ranges: rom_ram 0000-FFFF, vram 0000-3FFF, vdp_reg 00-07"}
                 }},
                 {"memory_area", {
                     {"type", "string"},
-                    {"description", "Memory area: rom_ram (default, 0000-FFFF), vram (0000-3FFF), cram (00-3F, 64 bytes), vdp_reg (00-0A, 11 registers)"},
-                    {"enum", json::array({"rom_ram", "vram", "vdp_reg", "cram"})}
+                    {"description", "Memory area: rom_ram (default, 0000-FFFF), vram (0000-3FFF), vdp_reg (00-07, 8 registers)"},
+                    {"enum", json::array({"rom_ram", "vram", "vdp_reg"})}
                 }},
                 {"read", {
                     {"type", "boolean"},
@@ -357,16 +397,16 @@ void McpServer::HandleToolsList(const json& request)
             {"properties", {
                 {"start_address", {
                     {"type", "string"},
-                    {"description", "Start logical address in hex (e.g., '8000'). Valid ranges: rom_ram 0000-FFFF, vram 0000-3FFF, cram 00-3F, vdp_reg 00-0A"}
+                    {"description", "Start logical address in hex (e.g., '8000'). Valid ranges: rom_ram 0000-FFFF, vram 0000-3FFF, vdp_reg 00-07"}
                 }},
                 {"end_address", {
                     {"type", "string"},
-                    {"description", "End logical address in hex (e.g., '8FFF'). Valid ranges: rom_ram 0000-FFFF, vram 0000-3FFF, cram 00-3F, vdp_reg 00-0A"}
+                    {"description", "End logical address in hex (e.g., '8FFF'). Valid ranges: rom_ram 0000-FFFF, vram 0000-3FFF, vdp_reg 00-07"}
                 }},
                 {"memory_area", {
                     {"type", "string"},
-                    {"description", "Memory area: rom_ram (0000-FFFF), vram (0000-3FFF), cram (00-3F, 64 bytes), vdp_reg (00-0A, 11 registers)"},
-                    {"enum", json::array({"rom_ram", "vram", "vdp_reg", "cram"})}
+                    {"description", "Memory area: rom_ram (0000-FFFF), vram (0000-3FFF), vdp_reg (00-07, 8 registers)"},
+                    {"enum", json::array({"rom_ram", "vram", "vdp_reg"})}
                 }},
                 {"read", {
                     {"type", "boolean"},
@@ -402,8 +442,8 @@ void McpServer::HandleToolsList(const json& request)
                 }},
                 {"memory_area", {
                     {"type", "string"},
-                    {"description", "Memory area: rom_ram (default), vram, cram, vdp_reg"},
-                    {"enum", json::array({"rom_ram", "vram", "vdp_reg", "cram"})}
+                    {"description", "Memory area: rom_ram (default), vram, vdp_reg"},
+                    {"enum", json::array({"rom_ram", "vram", "vdp_reg"})}
                 }}
             }},
             {"required", json::array({"address"})}
@@ -559,7 +599,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "get_media_info"},
         {"title", "Get Media Info"},
-        {"description", "Get information about the loaded SMS/GG ROM (file path, type, size, mapper, zone, etc.)"},
+        {"description", "Get information about the loaded ColecoVision ROM (file path, type, size, etc.)"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -593,7 +633,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "get_vdp_status"},
         {"title", "Get VDP Status"},
-        {"description", "Get VDP status (flags, counters, mode, SG-1000 mode, extended mode 224)"},
+        {"description", "Get VDP status (flags, mode, render line, display state)"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -613,9 +653,9 @@ void McpServer::HandleToolsList(const json& request)
     });
 
     tools.push_back({
-        {"name", "get_ym2413_status"},
-        {"title", "Get YM2413 Status"},
-        {"description", "Get YM2413 FM synth status: 9 channels, instruments, key-on, f-number, block, envelope, rhythm mode, user instrument"},
+        {"name", "get_ay8910_status"},
+        {"title", "Get AY-3-8910 Status"},
+        {"description", "Get AY-3-8910 SGM sound status: 3 channels, mixer, noise, envelope, registers, and mute state"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -626,7 +666,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "get_screenshot"},
         {"title", "Get Screenshot"},
-        {"description", "Capture current Sega Master System / Game Gear / SG-1000 screen frame as base64-encoded PNG image"},
+        {"description", "Capture current ColecoVision screen frame as base64-encoded PNG image"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -638,7 +678,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "load_media"},
         {"title", "Load Media"},
-        {"description", "Load a ROM file (.sms, .gg, .sg, .zip). Automatically loads .sym symbol file if present. Resets emulator on successful load"},
+        {"description", "Load a ROM file (.col, .cv, .rom, .bin, .zip). Automatically loads .sym symbol file if present. Resets emulator on successful load"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", {
@@ -752,11 +792,38 @@ void McpServer::HandleToolsList(const json& request)
         }}
     });
 
+    tools.push_back({
+        {"name", "get_rewind_status"},
+        {"title", "Get Rewind Status"},
+        {"description", "Get the current rewind buffer status (snapshot count, capacity, memory usage)"},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "rewind_seek"},
+        {"title", "Rewind Seek"},
+        {"description", "Seek to a specific rewind snapshot by index (0 = most recent)"},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"snapshot", {
+                    {"type", "integer"},
+                    {"description", "Snapshot index to seek to (0 = most recent)"},
+                    {"minimum", 0}
+                }}
+            }},
+            {"required", json::array({"snapshot"})}
+        }}
+    });
+
     // Controller input tools
     tools.push_back({
         {"name", "controller_button"},
         {"title", "Controller Button"},
-        {"description", "Control a button on a controller (player 1-2). Use action 'press' to hold the button down, 'release' to let it go, or 'press_and_release' to simulate a quick button tap. Buttons: up, down, left, right, 1, 2, start"},
+        {"description", "Control a button on a controller (player 1-2). Use action 'press' to hold the button down, 'release' to let it go, or 'press_and_release' to simulate a quick button tap. Buttons: up, down, left, right, 0-9, asterisk, hash, left_button, right_button, blue, purple"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", {
@@ -768,8 +835,8 @@ void McpServer::HandleToolsList(const json& request)
                 }},
                 {"button", {
                     {"type", "string"},
-                    {"description", "Button name: up, down, left, right, 1, 2, start"},
-                    {"enum", json::array({"up", "down", "left", "right", "1", "2", "start"})}
+                    {"description", "Button name: up, down, left, right, 0-9, asterisk, hash, left_button, right_button, blue, purple"},
+                    {"enum", json::array({"up", "down", "left", "right", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "asterisk", "*", "hash", "#", "left_button", "right_button", "blue", "purple"})}
                 }},
                 {"action", {
                     {"type", "string"},
@@ -801,7 +868,7 @@ void McpServer::HandleToolsList(const json& request)
             {"properties", {
                 {"sprite_index", {
                     {"type", "integer"},
-                    {"description", "Sprite index (0-63)"}
+                    {"description", "Sprite index (0-31)"}
                 }}
             }},
             {"required", json::array({"sprite_index"})}
@@ -1195,6 +1262,51 @@ void McpServer::HandleToolsList(const json& request)
         }}
     });
 
+    // Tracing tools
+    tools.push_back({
+        {"name", "get_trace_log"},
+        {"title", "Get Trace Log"},
+        {"description", "Get trace log entries. Trace types: cpu, cpu_irq, vdp_write, vdp_status, psg, ay8910, io_port, sgm"},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"start", {
+                    {"type", "integer"},
+                    {"description", "Start index (0 = oldest). Default: 0"},
+                    {"minimum", 0}
+                }},
+                {"count", {
+                    {"type", "integer"},
+                    {"description", "Number of entries to return (max 1000). Default: 100"},
+                    {"minimum", 1},
+                    {"maximum", 1000}
+                }}
+            }}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "set_trace_log"},
+        {"title", "Set Trace Log"},
+        {"description", "Enable or disable trace logging with specific flags. Flags: bit 0=cpu, 1=cpu_irq, 2=vdp_write, 3=vdp_status, 4=psg, 5=ay8910, 6=io_port, 7=sgm. Use 0xFF for all"},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"enabled", {
+                    {"type", "boolean"},
+                    {"description", "true to enable tracing, false to disable"}
+                }},
+                {"flags", {
+                    {"type", "integer"},
+                    {"description", "Bitmask of trace types to enable (default: 0xFF for all)"},
+                    {"minimum", 0},
+                    {"maximum", 255}
+                }}
+            }},
+            {"required", json::array({"enabled"})}
+        }}
+    });
+
     json response;
     response["jsonrpc"] = "2.0";
     response["id"] = id;
@@ -1234,11 +1346,15 @@ void McpServer::HandleToolsCall(const json& request)
 
 static int GetBreakpointTypeFromString(const std::string& memory_area)
 {
-    if (memory_area == "rom_ram") return Processor::GS_BREAKPOINT_TYPE_ROMRAM;
-    if (memory_area == "vram") return Processor::GS_BREAKPOINT_TYPE_VRAM;
-    if (memory_area == "vdp_reg") return Processor::GS_BREAKPOINT_TYPE_VDP_REGISTER;
-    if (memory_area == "cram") return Processor::GS_BREAKPOINT_TYPE_CRAM;
-    return Processor::GS_BREAKPOINT_TYPE_ROMRAM; // default
+    if (memory_area == "rom_ram") return Processor::GC_BREAKPOINT_TYPE_ROMRAM;
+    if (memory_area == "vram") return Processor::GC_BREAKPOINT_TYPE_VRAM;
+    if (memory_area == "vdp_reg") return Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER;
+    return Processor::GC_BREAKPOINT_TYPE_ROMRAM; // default
+}
+
+static bool IsBreakpointMemoryAreaValid(const std::string& memory_area)
+{
+    return memory_area == "rom_ram" || memory_area == "vram" || memory_area == "vdp_reg";
 }
 
 json McpServer::ExecuteCommand(const std::string& toolName, const json& arguments)
@@ -1296,10 +1412,12 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     {
         std::string addrStr = arguments["address"];
         u16 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
 
         std::string memory_area = arguments.value("memory_area", "rom_ram");
+        if (!IsBreakpointMemoryAreaValid(memory_area))
+            return {{"error", "Invalid memory_area (must be: rom_ram, vram, vdp_reg)"}};
         int breakpoint_type = GetBreakpointTypeFromString(memory_area);
 
         bool read = arguments.value("read", false);
@@ -1313,13 +1431,10 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
             return {{"error", "At least one of read, write, or execute must be true"}};
 
         u16 max_address = 0xFFFF;
-        if (breakpoint_type == Processor::GS_BREAKPOINT_TYPE_VRAM)
+        if (breakpoint_type == Processor::GC_BREAKPOINT_TYPE_VRAM)
             max_address = 0x3FFF;
-        else if (breakpoint_type == Processor::GS_BREAKPOINT_TYPE_VDP_REGISTER)
-            max_address = 0x000A;
-        else if (breakpoint_type == Processor::GS_BREAKPOINT_TYPE_CRAM)
-            max_address = 0x003F;
-
+        else if (breakpoint_type == Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER)
+            max_address = 0x0007;
         if (address > max_address)
         {
             char msg[128];
@@ -1336,14 +1451,16 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string endAddrStr = arguments["end_address"];
         u16 start_address, end_address;
 
-        if (!parse_hex_with_prefix(startAddrStr, &start_address))
+        if (!parse_mcp_hex_with_prefix(startAddrStr, &start_address))
             return {{"error", "Invalid start_address format"}};
-        if (!parse_hex_with_prefix(endAddrStr, &end_address))
+        if (!parse_mcp_hex_with_prefix(endAddrStr, &end_address))
             return {{"error", "Invalid end_address format"}};
         if (start_address > end_address)
             return {{"error", "start_address must be <= end_address"}};
 
         std::string memory_area = arguments.value("memory_area", "rom_ram");
+        if (!IsBreakpointMemoryAreaValid(memory_area))
+            return {{"error", "Invalid memory_area (must be: rom_ram, vram, vdp_reg)"}};
         int breakpoint_type = GetBreakpointTypeFromString(memory_area);
 
         bool read = arguments.value("read", false);
@@ -1357,13 +1474,10 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
             return {{"error", "At least one of read, write, or execute must be true"}};
 
         u16 max_address = 0xFFFF;
-        if (breakpoint_type == Processor::GS_BREAKPOINT_TYPE_VRAM)
+        if (breakpoint_type == Processor::GC_BREAKPOINT_TYPE_VRAM)
             max_address = 0x3FFF;
-        else if (breakpoint_type == Processor::GS_BREAKPOINT_TYPE_VDP_REGISTER)
-            max_address = 0x000A;
-        else if (breakpoint_type == Processor::GS_BREAKPOINT_TYPE_CRAM)
-            max_address = 0x003F;
-
+        else if (breakpoint_type == Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER)
+            max_address = 0x0007;
         if (start_address > max_address || end_address > max_address)
         {
             char msg[128];
@@ -1379,10 +1493,12 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     {
         std::string addrStr = arguments["address"];
         u16 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
 
         std::string memory_area = arguments.value("memory_area", "rom_ram");
+        if (!IsBreakpointMemoryAreaValid(memory_area))
+            return {{"error", "Invalid memory_area (must be: rom_ram, vram, vdp_reg)"}};
         int breakpoint_type = GetBreakpointTypeFromString(memory_area);
 
         // Check if end_address is provided for range breakpoints
@@ -1390,7 +1506,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         if (arguments.contains("end_address"))
         {
             std::string endAddrStr = arguments["end_address"];
-            if (!parse_hex_with_prefix(endAddrStr, &end_address))
+            if (!parse_mcp_hex_with_prefix(endAddrStr, &end_address))
                 return {{"error", "Invalid end_address format"}};
         }
 
@@ -1451,7 +1567,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         int area = arguments["area"];
         std::string offsetStr = arguments["offset"];
         u32 offset;
-        if (!parse_hex_with_prefix(offsetStr, &offset))
+        if (!parse_mcp_hex_with_prefix(offsetStr, &offset))
             return {{"error", "Invalid offset format"}};
 
         size_t size = arguments["size"];
@@ -1472,7 +1588,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         int area = arguments["area"];
         std::string offsetStr = arguments["offset"];
         u32 offset;
-        if (!parse_hex_with_prefix(offsetStr, &offset))
+        if (!parse_mcp_hex_with_prefix(offsetStr, &offset))
             return {{"error", "Invalid offset format"}};
 
         std::string bytesStr = arguments["bytes"];
@@ -1484,7 +1600,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         while (iss >> byteStr)
         {
             u8 byte;
-            if (!parse_hex_with_prefix(byteStr, &byte))
+            if (!parse_mcp_hex_with_prefix(byteStr, &byte))
                 return {{"error", "Invalid byte format"}};
             data.push_back(byte);
         }
@@ -1498,7 +1614,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string name = arguments["name"];
         std::string valueStr = arguments["value"];
         u32 value;
-        if (!parse_hex_with_prefix(valueStr, &value))
+        if (!parse_mcp_hex_with_prefix(valueStr, &value))
             return {{"error", "Invalid value format"}};
 
         m_debugAdapter.SetRegister(name, value);
@@ -1516,9 +1632,9 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string endAddrStr = arguments["end_address"];
         u16 start_address, end_address;
 
-        if (!parse_hex_with_prefix(startAddrStr, &start_address))
+        if (!parse_mcp_hex_with_prefix(startAddrStr, &start_address))
             return {{"error", "Invalid start_address format"}};
-        if (!parse_hex_with_prefix(endAddrStr, &end_address))
+        if (!parse_mcp_hex_with_prefix(endAddrStr, &end_address))
             return {{"error", "Invalid end_address format"}};
         if (start_address > end_address)
             return {{"error", "start_address must be <= end_address"}};
@@ -1533,7 +1649,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         {
             std::string bankStr = arguments["bank"];
             u8 bank_value;
-            if (!parse_hex_with_prefix(bankStr, &bank_value))
+            if (!parse_mcp_hex_with_prefix(bankStr, &bank_value))
                 return {{"error", "Invalid bank format (must be 00-FF in hex)"}};
             bank = bank_value;
         }
@@ -1641,9 +1757,9 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     {
         return m_debugAdapter.GetPSGStatus();
     }
-    else if (normalizedTool == "get_ym2413_status")
+    else if (normalizedTool == "get_ay8910_status")
     {
-        return m_debugAdapter.GetYM2413Status();
+        return m_debugAdapter.GetAY8910Status();
     }
     else if (normalizedTool == "get_screenshot")
     {
@@ -1687,6 +1803,15 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         bool enabled = arguments["enabled"];
         return m_debugAdapter.ToggleFastForward(enabled);
     }
+    else if (normalizedTool == "get_rewind_status")
+    {
+        return m_debugAdapter.GetRewindStatus();
+    }
+    else if (normalizedTool == "rewind_seek")
+    {
+        int snapshot = arguments["snapshot"];
+        return m_debugAdapter.RewindSeek(snapshot);
+    }
     else if (normalizedTool == "controller_button")
     {
         int player = arguments["player"];
@@ -1708,7 +1833,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     {
         std::string addrStr = arguments["address"];
         u16 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.RunToAddress(address);
     }
@@ -1716,7 +1841,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     {
         std::string addrStr = arguments["address"];
         u16 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         std::string name = arguments.value("name", "");
         return m_debugAdapter.AddDisassemblerBookmark(address, name);
@@ -1725,7 +1850,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     {
         std::string addrStr = arguments["address"];
         u16 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.RemoveDisassemblerBookmark(address);
     }
@@ -1736,9 +1861,9 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string name = arguments["name"];
         u8 bank;
         u16 address;
-        if (!parse_hex_with_prefix(bankStr, &bank))
+        if (!parse_mcp_hex_with_prefix(bankStr, &bank))
             return {{"error", "Invalid bank format"}};
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.AddSymbol(bank, address, name);
     }
@@ -1748,9 +1873,9 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string addrStr = arguments["address"];
         u8 bank;
         u16 address;
-        if (!parse_hex_with_prefix(bankStr, &bank))
+        if (!parse_mcp_hex_with_prefix(bankStr, &bank))
             return {{"error", "Invalid bank format"}};
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.RemoveSymbol(bank, address);
     }
@@ -1761,9 +1886,9 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string startStr = arguments["start_address"];
         std::string endStr = arguments["end_address"];
         u32 start_address, end_address;
-        if (!parse_hex_with_prefix(startStr, &start_address))
+        if (!parse_mcp_hex_with_prefix(startStr, &start_address))
             return {{"error", "Invalid start_address format"}};
-        if (!parse_hex_with_prefix(endStr, &end_address))
+        if (!parse_mcp_hex_with_prefix(endStr, &end_address))
             return {{"error", "Invalid end_address format"}};
         return m_debugAdapter.SelectMemoryRange(editor, start_address, end_address);
     }
@@ -1772,7 +1897,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         int editor = arguments["area"];
         std::string valueStr = arguments["value"];
         u8 value;
-        if (!parse_hex_with_prefix(valueStr, &value))
+        if (!parse_mcp_hex_with_prefix(valueStr, &value))
             return {{"error", "Invalid value format"}};
         return m_debugAdapter.SetMemorySelectionValue(editor, value);
     }
@@ -1782,7 +1907,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string addrStr = arguments["address"];
         std::string name = arguments.value("name", "");
         u32 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.AddMemoryBookmark(editor, address, name);
     }
@@ -1791,7 +1916,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         int editor = arguments["area"];
         std::string addrStr = arguments["address"];
         u32 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.RemoveMemoryBookmark(editor, address);
     }
@@ -1802,7 +1927,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string notes = arguments.value("notes", "");
         int size = arguments.value("size", 8);
         u32 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.AddMemoryWatch(editor, address, notes, size);
     }
@@ -1811,7 +1936,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         int editor = arguments["area"];
         std::string addrStr = arguments["address"];
         u32 address;
-        if (!parse_hex_with_prefix(addrStr, &address))
+        if (!parse_mcp_hex_with_prefix(addrStr, &address))
             return {{"error", "Invalid address format"}};
         return m_debugAdapter.RemoveMemoryWatch(editor, address);
     }
@@ -1862,6 +1987,18 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string hex_bytes = arguments["hex_bytes"];
         return m_debugAdapter.MemoryFindBytes(area, hex_bytes);
     }
+    else if (normalizedTool == "get_trace_log")
+    {
+        int start = arguments.value("start", 0);
+        int count = arguments.value("count", 100);
+        return m_debugAdapter.GetTraceLog(start, count);
+    }
+    else if (normalizedTool == "set_trace_log")
+    {
+        bool enabled = arguments["enabled"];
+        u32 flags = arguments.value("flags", 0xFF);
+        return m_debugAdapter.SetTraceLog(enabled, flags);
+    }
     else
     {
         return {{"error", "Unknown tool: " + toolName}};
@@ -1905,6 +2042,9 @@ void McpServer::LoadResources()
     std::string base_path = exe_path;
     std::string resourcesPath = base_path + "/mcp/resources";
 
+    if (!file_exists(resourcesPath + "/hardware/toc.json"))
+        resourcesPath = base_path + "/../shared/desktop/mcp/resources";
+
     LoadResourcesFromCategory("hardware", resourcesPath + "/hardware/toc.json");
 }
 
@@ -1947,7 +2087,7 @@ void McpServer::LoadResourcesFromCategory(const std::string& category, const std
             continue;
 
         ResourceInfo resource;
-        resource.uri = "gearsystem://" + category + "/" + item["uri"].get<std::string>();
+        resource.uri = "gearcoleco://" + category + "/" + item["uri"].get<std::string>();
         resource.title = item["title"].get<std::string>();
         resource.description = item.contains("description") ? item["description"].get<std::string>() : "";
         resource.mimeType = item.contains("mimeType") ? item["mimeType"].get<std::string>() : "text/plain";

@@ -23,7 +23,7 @@
 #include <vector>
 #include <string>
 #include "json.hpp"
-#include "gearsystem.h"
+#include "gearcoleco.h"
 #include "../gui_debug_memory.h"
 
 using json = nlohmann::json;
@@ -80,7 +80,7 @@ struct DisasmLine
 class DebugAdapter
 {
 public:
-    DebugAdapter(GearsystemCore* core)
+    DebugAdapter(GearcolecoCore* core)
     {
         m_core = core;
     }
@@ -119,7 +119,7 @@ public:
     json GetVDPRegisters();
     json GetVDPStatus();
     json GetPSGStatus();
-    json GetYM2413Status();
+    json GetAY8910Status();
     json GetScreenshot();
     json ListSprites();
     json GetSpriteImage(int sprite_index);
@@ -133,6 +133,8 @@ public:
     json LoadState();
     json SetFastForwardSpeed(int speed);
     json ToggleFastForward(bool enabled);
+    json GetRewindStatus();
+    json RewindSeek(int snapshot);
 
     // Controller input
     json ControllerButton(int player, const std::string& button, const std::string& action);
@@ -161,11 +163,15 @@ public:
     json MemorySearch(int area, const std::string& op, const std::string& compare_type, int compare_value, const std::string& data_type);
     json MemoryFindBytes(int area, const std::string& hex_bytes);
 
+    // Tracing
+    json GetTraceLog(int start, int count);
+    json SetTraceLog(bool enabled, u32 flags);
+
     // Core access
-    GearsystemCore* GetCore() { return m_core; }
+    GearcolecoCore* GetCore() { return m_core; }
 
 private:
-    GearsystemCore* m_core;
+    GearcolecoCore* m_core;
 
     const char* GetBreakpointTypeName(int type);
     MemoryAreaInfo GetMemoryAreaInfo(int area);

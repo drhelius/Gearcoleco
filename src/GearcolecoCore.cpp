@@ -18,6 +18,7 @@
  */
 
 #include <iomanip>
+#include <string.h>
 #include "GearcolecoCore.h"
 #include "Memory.h"
 #include "Processor.h"
@@ -26,6 +27,9 @@
 #include "Input.h"
 #include "Cartridge.h"
 #include "ColecoVisionIOPorts.h"
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+#include "TraceLogger.h"
+#endif
 #include "no_bios.h"
 #include "common.h"
 #include "memory_stream.h"
@@ -39,14 +43,19 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pInput);
     InitPointer(m_pCartridge);
     InitPointer(m_pColecoVisionIOPorts);
+    InitPointer(m_pTraceLogger);
     InitPointer(m_pFrameBuffer);
     m_bPaused = true;
     m_pixelFormat = GC_PIXEL_RGBA8888;
+    m_MasterClockCycles = 0;
 }
 
 GearcolecoCore::~GearcolecoCore()
 {
     SafeDelete(m_pColecoVisionIOPorts);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    SafeDelete(m_pTraceLogger);
+#endif
     SafeDelete(m_pCartridge);
     SafeDelete(m_pInput);
     SafeDelete(m_pVideo);
@@ -68,6 +77,9 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pVideo = new Video(m_pMemory, m_pProcessor);
     m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pTraceLogger = new TraceLogger();
+#endif
 
     m_pMemory->Init();
     m_pProcessor->Init();
@@ -77,9 +89,14 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pCartridge->Init();
 
     m_pProcessor->SetIOPOrts(m_pColecoVisionIOPorts);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pProcessor->SetTraceLogger(m_pTraceLogger);
+    m_pVideo->SetTraceLogger(m_pTraceLogger);
+    m_pColecoVisionIOPorts->SetTraceLogger(m_pTraceLogger);
+#endif
 }
 
-bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, bool step, bool stopOnBreakpoints)
+bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug)
 {
     m_pFrameBuffer = pFrameBuffer;
 
@@ -89,13 +106,63 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
         return false;
     }
 
-    bool breakpoint = false;
-
     if (!m_bPaused && m_pCartridge->IsReady())
     {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+        bool debug_enable = false;
+        bool instruction_completed = false;
+        if (IsValidPointer(debug))
+        {
+            debug_enable = true;
+            m_pProcessor->EnableBreakpoints(debug->stop_on_breakpoint, debug->stop_on_irq);
+        }
+
         bool vblank = false;
         int totalClocks = 0;
-        while (!vblank)
+
+        do
+        {
+            unsigned int clockCycles = debug_enable && debug->step_debugger ? m_pProcessor->RunInstruction() : m_pProcessor->RunFor(1);
+            instruction_completed = true;
+            vblank = m_pVideo->Tick(clockCycles);
+            m_pAudio->Tick(clockCycles);
+            m_pMemory->Tick(clockCycles);
+            m_MasterClockCycles += clockCycles;
+            totalClocks += clockCycles;
+
+            if (debug_enable)
+            {
+                if (debug->step_debugger)
+                    vblank = instruction_completed;
+
+                if (m_pProcessor->MemoryBreakpointHit())
+                    vblank = true;
+
+                if (instruction_completed)
+                {
+                    if (m_pProcessor->BreakpointHit())
+                        vblank = true;
+
+                    if (debug->stop_on_run_to_breakpoint && m_pProcessor->RunToBreakpointHit())
+                        vblank = true;
+                }
+            }
+
+            if (totalClocks > 702240)
+                vblank = true;
+        }
+        while (!vblank);
+
+        m_pAudio->EndFrame(pSampleBuffer, pSampleCount);
+        RenderFrameBuffer(pFrameBuffer);
+
+        return m_pProcessor->BreakpointHit() || m_pProcessor->RunToBreakpointHit();
+#else
+        UNUSED(debug);
+        bool vblank = false;
+        int totalClocks = 0;
+
+        do
         {
 #ifdef PERFORMANCE
             unsigned int clockCycles = m_pProcessor->RunFor(75);
@@ -105,27 +172,22 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
-
+            m_MasterClockCycles += clockCycles;
             totalClocks += clockCycles;
-
-#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-            if ((step || (stopOnBreakpoints && m_pProcessor->BreakpointHit())) && !m_pProcessor->DuringInputOpcode())
-            {
-                vblank = true;
-                if (m_pProcessor->BreakpointHit())
-                    breakpoint = true;
-            }
-#endif
 
             if (totalClocks > 702240)
                 vblank = true;
         }
+        while (!vblank);
 
         m_pAudio->EndFrame(pSampleBuffer, pSampleCount);
         RenderFrameBuffer(pFrameBuffer);
+
+        return false;
+#endif
     }
 
-    return breakpoint;
+    return false;
 }
 
 bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config)
@@ -139,7 +201,7 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
-        m_pProcessor->DisassembleNextOpcode();
+        m_pProcessor->DisassembleNextOPCode();
 
         return true;
     }
@@ -158,7 +220,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
-        m_pProcessor->DisassembleNextOpcode();
+        m_pProcessor->DisassembleNextOPCode();
 
         return true;
     }
@@ -168,8 +230,8 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
 
 void GearcolecoCore::SaveDisassembledROM()
 {
-    Memory::stDisassembleRecord** biosMap = m_pMemory->GetDisassembledBiosMemoryMap();
-    Memory::stDisassembleRecord** romMap = m_pMemory->GetDisassembledRomMemoryMap();
+    GC_Disassembler_Record** biosMap = m_pMemory->GetDisassemblerBiosMap();
+    GC_Disassembler_Record** romMap = m_pMemory->GetDisassemblerRomMap();
 
     if (m_pCartridge->IsReady() && (strlen(m_pCartridge->GetFilePath()) > 0) && IsValidPointer(romMap))
     {
@@ -194,7 +256,7 @@ void GearcolecoCore::SaveDisassembledROM()
             {
                 if (IsValidPointer(biosMap[i]) && (biosMap[i]->name[0] != 0))
                 {
-                    myfile << "BIOS $" << PAD_ADDR(4) << i << "   " << PAD_MEM(12) << biosMap[i]->bytes << "  " << biosMap[i]->name << "\n";
+                    myfile << "BIOS $" << PAD_ADDR(4) << i << "   " << PAD_MEM(25) << biosMap[i]->bytes << "  " << biosMap[i]->name << "\n";
                 }
             }
 
@@ -202,7 +264,7 @@ void GearcolecoCore::SaveDisassembledROM()
             {
                 if (IsValidPointer(romMap[i]) && (romMap[i]->name[0] != 0))
                 {
-                    myfile << "ROM  $" << PAD_ADDR(4) << i + 0x8000 << "   " << PAD_MEM(12) << romMap[i]->bytes << "  " << romMap[i]->name << "\n";
+                    myfile << "ROM  $" << PAD_ADDR(4) << i + 0x8000 << "   " << PAD_MEM(25) << romMap[i]->bytes << "  " << romMap[i]->name << "\n";
                 }
             }
 
@@ -259,6 +321,16 @@ Video* GearcolecoCore::GetVideo()
     return m_pVideo;
 }
 
+TraceLogger* GearcolecoCore::GetTraceLogger()
+{
+    return m_pTraceLogger;
+}
+
+u64 GearcolecoCore::GetMasterClockCycles()
+{
+    return m_MasterClockCycles;
+}
+
 void GearcolecoCore::KeyPressed(GC_Controllers controller, GC_Keys key)
 {
     m_pInput->KeyPressed(controller, key);
@@ -306,17 +378,43 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        m_pMemory->SetupMapper();
         Reset();
 
-        m_pProcessor->DisassembleNextOpcode();
+        m_pProcessor->DisassembleNextOPCode();
     }
 }
 
 void GearcolecoCore::ResetROMPreservingRAM(Cartridge::ForceConfiguration* config)
 {
-    // TODO
+    if (m_pCartridge->IsReady())
+    {
+        Mapper* pMapper = m_pMemory->GetMapper();
+        u8* pSaveData = IsValidPointer(pMapper) ? pMapper->GetSaveData() : NULL;
+        int saveDataSize = IsValidPointer(pMapper) ? pMapper->GetSaveDataSize() : 0;
 
-    ResetROM(config);
+        if (IsValidPointer(pSaveData) && (saveDataSize > 0))
+        {
+            Debug("Resetting preserving RAM...");
+
+            u8* pSavedData = new u8[saveDataSize];
+            memcpy(pSavedData, pSaveData, saveDataSize);
+
+            ResetROM(config);
+
+            pMapper = m_pMemory->GetMapper();
+            pSaveData = IsValidPointer(pMapper) ? pMapper->GetSaveData() : NULL;
+
+            if (IsValidPointer(pSaveData) && (pMapper->GetSaveDataSize() == saveDataSize))
+                memcpy(pSaveData, pSavedData, saveDataSize);
+
+            SafeDeleteArray(pSavedData);
+        }
+        else
+        {
+            ResetROM(config);
+        }
+    }
 }
 
 void GearcolecoCore::ResetSound()
@@ -686,7 +784,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
 #if !defined(__LIBRETRO__)
                 is_desktop_savestate = true;
 #endif
-                Log("Loading desktop save state");
+                Debug("Loading desktop save state");
             }
         }
 
