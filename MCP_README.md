@@ -180,7 +180,7 @@ The MCP server also exposes hardware reference documents via `resources/list` an
 | `gearcoleco://hardware/colecovision` | Memory map, I/O ports, controllers, SGM RAM windows, breakpoint areas |
 | `gearcoleco://hardware/tms9918a` | VDP registers, status flags, VRAM tables, sprites |
 | `gearcoleco://hardware/sn76489` | Base SN76489 PSG channels and write model |
-| `gearcoleco://hardware/ay8910_sgm` | SGM AY-3-8910 ports, registers, mixer, envelope |
+| `gearcoleco://hardware/super_game_module` | SGM RAM mapping, ADAM compatibility, and AY-3-8910 port summary |
 
 ## How MCP Works in Gearcoleco
 

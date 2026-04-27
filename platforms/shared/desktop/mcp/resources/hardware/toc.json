@@ -1,3 +1,28 @@
 {
-  "toc": []
+  "toc": [
+    {
+      "uri": "colecovision",
+      "title": "ColecoVision Technical Notes",
+      "description": "PRIMARY SYSTEM QUICK REFERENCE. Old online ColecoVision technical note covering cartridge headers at $8000, BIOS title-screen behavior, title string format, built-in title character set, controller mode toggles ($80 keypad/right buttons and $C0 joystick/left buttons), keypad return codes, joystick bits, memory map (BIOS, expansion, RAM mirror, cartridge ROM), I/O decode ranges, SN76489 sound overview, and TMS9918A video basics. Use first for quick system, cartridge, controller, memory-map, and I/O-map questions.",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "tms9918a",
+      "title": "TMS9918A VDP - Sean Young",
+      "description": "PRIMARY VDP REFERENCE. Sean Young's detailed TMS9918A documentation, useful for ColecoVision VDP behavior. Covers colors, registers R0-R7, status register bits, external video, VDP memory access, command/register access quirks, interrupt behavior, all official display modes (Graphic I, Text, Graphic II, Multicolor), undocumented mode combinations, sprite attributes, sprite sizes, illegal sprites, collision behavior, fifth-sprite flag, 4 KB/16 KB VRAM addressing, pinouts, and references. Use first for low-level VDP emulation and graphics debugging.",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "sn76489",
+      "title": "SN76489A PSG - ColecoVision Sound Generation Hardware",
+      "description": "PRIMARY COLECOVISION PSG QUICK REFERENCE. Concise SN76489A programming note for the ColecoVision sound chip. Covers the three tone generators, 10-bit frequency period format, frequency formula f = 3.579 MHz / (32n), attenuation bit weights and silence value, periodic versus white noise feedback, noise shift-rate modes including tone generator 3 source, register address fields, latch/data byte formats, and attenuator/noise control words. Use for SN76489 register writes and sound-emulation questions.",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "super_game_module",
+      "title": "Super Game Module Technical Notes - Opcode",
+      "description": "PRIMARY SGM MEMORY REFERENCE. Opcode Super Game Module technical notes covering the 24 KB upper RAM mapping at $2000-$7FFF, optional 8 KB lower RAM mapping over BIOS at $0000-$1FFF, ADAM compatibility requirements, detection/initialization sequence, port $53 RAM enable, port $7F BIOS/RAM mapping values, warnings about ADAM memory conflicts, and SGM AY-3-8910 sound mapping summary. Use first for SGM RAM, ADAM compatibility, and SGM initialization/debugging questions.",
+      "mimeType": "text/markdown"
+    }
+  ]
 }
