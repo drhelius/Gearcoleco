@@ -316,7 +316,7 @@ static void input_poll_controller(int controller)
     }
 
     SDL_Keymod mods = SDL_GetModState();
-    if (mods & (SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_ALT | SDL_KMOD_GUI))
+    if (mods & SDL_KMOD_CTRL)
         return;
 
     const bool* keyboard_state = SDL_GetKeyboardState(NULL);
