@@ -1,6 +1,6 @@
 # Gearcoleco MCP Server
 
-Gearcoleco includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like GitHub Copilot, Claude, ChatGPT and similar.
+Gearcoleco includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like GitHub Copilot, Claude, Codex and similar.
 
 This server provides tools for ColecoVision game development, rom hacking, reverse engineering, and debugging through standardized MCP protocols.
 
