@@ -33,6 +33,7 @@ struct MemoryAreaInfo
     int id;
     std::string name;
     u32 size;
+    u32 display_base;
     u8* data;
 };
 

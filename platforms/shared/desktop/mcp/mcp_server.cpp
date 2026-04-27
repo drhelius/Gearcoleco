@@ -1558,6 +1558,7 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
             areaObj["id"] = area.id;
             areaObj["name"] = area.name;
             areaObj["size"] = area.size;
+            areaObj["display_base"] = area.display_base;
             areaArray.push_back(areaObj);
         }
         return {{"areas", areaArray}};

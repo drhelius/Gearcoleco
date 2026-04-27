@@ -2020,6 +2020,9 @@ uint32_t MemEditor::ReadWatchValue(const Watch& watch)
     int total_bytes = m_mem_size * m_mem_word;
     uint32_t value = 0;
 
+    if (byte_offset < 0 || byte_offset >= total_bytes)
+        return 0;
+
     for (int i = 0; i < bytes && (byte_offset + i) < total_bytes; i++)
     {
         value |= (uint32_t)m_mem_data[byte_offset + i] << (i * 8);

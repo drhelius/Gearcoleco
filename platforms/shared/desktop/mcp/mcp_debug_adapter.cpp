@@ -42,6 +42,16 @@ struct DisassemblerBookmark
     char name[32];
 };
 
+static int MemoryEditorOffsetToDisplayAddress(const MemoryAreaInfo& info, int offset)
+{
+    return offset + (int)info.display_base;
+}
+
+static int MemoryEditorDisplayAddressToOffset(const MemoryAreaInfo& info, int address)
+{
+    return address - (int)info.display_base;
+}
+
 void DebugAdapter::Pause()
 {
     emu_debug_break();
@@ -460,6 +470,7 @@ MemoryAreaInfo DebugAdapter::GetMemoryAreaInfo(int area)
     info.id = area;
     info.data = NULL;
     info.size = 0;
+    info.display_base = 0;
 
     Memory* memory = m_core->GetMemory();
     Cartridge* cart = m_core->GetCartridge();
@@ -476,6 +487,7 @@ MemoryAreaInfo DebugAdapter::GetMemoryAreaInfo(int area)
             info.name = "RAM";
             info.data = memory->GetRam();
             info.size = 0x400;
+            info.display_base = 0x6000;
             break;
         case MEMORY_EDITOR_SGM_RAM:
             info.name = "SGM RAM";
@@ -1515,7 +1527,9 @@ json DebugAdapter::AddMemoryBookmark(int editor, int address, const std::string&
         return result;
     }
 
-    gui_debug_memory_add_bookmark(editor, address, name.c_str());
+    MemoryAreaInfo info = GetMemoryAreaInfo(editor);
+    int display_address = MemoryEditorOffsetToDisplayAddress(info, address);
+    gui_debug_memory_add_bookmark(editor, display_address, name.c_str());
 
     result["success"] = true;
     result["editor"] = editor;
@@ -1541,7 +1555,9 @@ json DebugAdapter::RemoveMemoryBookmark(int editor, int address)
         return result;
     }
 
-    gui_debug_memory_remove_bookmark(editor, address);
+    MemoryAreaInfo info = GetMemoryAreaInfo(editor);
+    int display_address = MemoryEditorOffsetToDisplayAddress(info, address);
+    gui_debug_memory_remove_bookmark(editor, display_address);
 
     result["success"] = true;
     result["editor"] = editor;
@@ -1566,7 +1582,9 @@ json DebugAdapter::AddMemoryWatch(int editor, int address, const std::string& no
         return result;
     }
 
-    gui_debug_memory_add_watch(editor, address, notes.c_str(), size);
+    MemoryAreaInfo info = GetMemoryAreaInfo(editor);
+    int display_address = MemoryEditorOffsetToDisplayAddress(info, address);
+    gui_debug_memory_add_watch(editor, display_address, notes.c_str(), size);
 
     result["success"] = true;
     result["editor"] = editor;
@@ -1593,7 +1611,9 @@ json DebugAdapter::RemoveMemoryWatch(int editor, int address)
         return result;
     }
 
-    gui_debug_memory_remove_watch(editor, address);
+    MemoryAreaInfo info = GetMemoryAreaInfo(editor);
+    int display_address = MemoryEditorOffsetToDisplayAddress(info, address);
+    gui_debug_memory_remove_watch(editor, display_address);
 
     result["success"] = true;
     result["editor"] = editor;
@@ -1762,6 +1782,7 @@ json DebugAdapter::ListMemoryBookmarks(int area)
 
     void* bookmarks_ptr = NULL;
     int count = gui_debug_memory_get_bookmarks(area, &bookmarks_ptr);
+    MemoryAreaInfo info = GetMemoryAreaInfo(area);
 
     std::vector<MemEditor::Bookmark>* bookmarks = (std::vector<MemEditor::Bookmark>*)bookmarks_ptr;
 
@@ -1772,9 +1793,10 @@ json DebugAdapter::ListMemoryBookmarks(int area)
         for (const MemEditor::Bookmark& bookmark : *bookmarks)
         {
             json bookmark_obj;
+            int offset = MemoryEditorDisplayAddressToOffset(info, bookmark.address);
 
             std::ostringstream addr_ss;
-            addr_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << bookmark.address;
+            addr_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << offset;
             bookmark_obj["address"] = addr_ss.str();
             bookmark_obj["name"] = bookmark.name;
 
@@ -1807,6 +1829,7 @@ json DebugAdapter::ListMemoryWatches(int area)
 
     void* watches_ptr = NULL;
     int count = gui_debug_memory_get_watches(area, &watches_ptr);
+    MemoryAreaInfo info = GetMemoryAreaInfo(area);
 
     std::vector<MemEditor::Watch>* watches = (std::vector<MemEditor::Watch>*)watches_ptr;
 
@@ -1820,9 +1843,10 @@ json DebugAdapter::ListMemoryWatches(int area)
         for (const MemEditor::Watch& watch : *watches)
         {
             json watch_obj;
+            int offset = MemoryEditorDisplayAddressToOffset(info, watch.address);
 
             std::ostringstream addr_ss;
-            addr_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << watch.address;
+            addr_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << offset;
             watch_obj["address"] = addr_ss.str();
             watch_obj["notes"] = watch.notes;
 
