@@ -1212,8 +1212,8 @@ json DebugAdapter::ControllerButton(int player, const std::string& button, const
     else if (button_lower == "down") { key = Key_Down; found = true; }
     else if (button_lower == "left") { key = Key_Left; found = true; }
     else if (button_lower == "right") { key = Key_Right; found = true; }
-    else if (button_lower == "1" || button_lower == "left_button") { key = Key_Left_Button; found = true; }
-    else if (button_lower == "2" || button_lower == "right_button") { key = Key_Right_Button; found = true; }
+    else if (button_lower == "1") { key = Keypad_1; found = true; }
+    else if (button_lower == "2") { key = Keypad_2; found = true; }
     else if (button_lower == "3") { key = Keypad_3; found = true; }
     else if (button_lower == "4") { key = Keypad_4; found = true; }
     else if (button_lower == "5") { key = Keypad_5; found = true; }
@@ -1224,12 +1224,14 @@ json DebugAdapter::ControllerButton(int player, const std::string& button, const
     else if (button_lower == "0") { key = Keypad_0; found = true; }
     else if (button_lower == "asterisk" || button_lower == "*") { key = Keypad_Asterisk; found = true; }
     else if (button_lower == "hash" || button_lower == "#") { key = Keypad_Hash; found = true; }
+    else if (button_lower == "left_button" || button_lower == "yellow" || button_lower == "fire1") { key = Key_Left_Button; found = true; }
+    else if (button_lower == "right_button" || button_lower == "red" || button_lower == "fire2") { key = Key_Right_Button; found = true; }
     else if (button_lower == "blue") { key = Key_Blue; found = true; }
     else if (button_lower == "purple") { key = Key_Purple; found = true; }
 
     if (!found)
     {
-        result["error"] = "Invalid button name (up, down, left, right, 0-9, asterisk, hash, 1/left_button, 2/right_button, blue, purple)";
+        result["error"] = "Invalid button name (up, down, left, right, 0-9, asterisk, hash, left_button, right_button, yellow, red, fire1, fire2, blue, purple)";
         return result;
     }
 

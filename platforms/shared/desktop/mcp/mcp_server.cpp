@@ -823,7 +823,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "controller_button"},
         {"title", "Controller Button"},
-        {"description", "Control a button on a controller (player 1-2). Use action 'press' to hold the button down, 'release' to let it go, or 'press_and_release' to simulate a quick button tap. Buttons: up, down, left, right, 0-9, asterisk, hash, left_button, right_button, blue, purple"},
+        {"description", "Control a button on a controller (player 1-2). Use action 'press' to hold the button down, 'release' to let it go, or 'press_and_release' to simulate a quick button tap. Buttons: up, down, left, right, 0-9, asterisk, hash, left_button, right_button, yellow, red, fire1, fire2, blue, purple"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", {
@@ -835,8 +835,8 @@ void McpServer::HandleToolsList(const json& request)
                 }},
                 {"button", {
                     {"type", "string"},
-                    {"description", "Button name: up, down, left, right, 0-9, asterisk, hash, left_button, right_button, blue, purple"},
-                    {"enum", json::array({"up", "down", "left", "right", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "asterisk", "*", "hash", "#", "left_button", "right_button", "blue", "purple"})}
+                    {"description", "Button name: up, down, left, right, 0-9, asterisk, hash, left_button, right_button, yellow, red, fire1, fire2, blue, purple"},
+                    {"enum", json::array({"up", "down", "left", "right", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "asterisk", "*", "hash", "#", "left_button", "right_button", "yellow", "red", "fire1", "fire2", "blue", "purple"})}
                 }},
                 {"action", {
                     {"type", "string"},
