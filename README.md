@@ -30,11 +30,11 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
     <tr>
       <td rowspan="2"><strong>Windows</strong></td>
       <td>x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-windows-x64.zip">Gearcoleco-1.5.5-windows-x64.zip</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-windows-x64.zip">Gearcoleco-1.5.5-desktop-windows-x64.zip</a></td>
     </tr>
     <tr>
       <td>ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-windows-arm64.zip">Gearcoleco-1.5.5-windows-arm64.zip</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-windows-arm64.zip">Gearcoleco-1.5.5-desktop-windows-arm64.zip</a></td>
     </tr>
     <tr>
       <td rowspan="3"><strong>macOS</strong></td>
@@ -42,12 +42,12 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td><code>brew install --cask drhelius/geardome/gearcoleco</code></td>
     </tr>
     <tr>
-      <td>Apple Silicon</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-arm.zip">Gearcoleco-1.5.5-macos-arm.zip</a></td>
+      <td>Desktop Apple Silicon</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-macos-arm64.zip">Gearcoleco-1.5.5-desktop-macos-arm64.zip</a></td>
     </tr>
     <tr>
-      <td>Intel</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-intel.zip">Gearcoleco-1.5.5-macos-intel.zip</a></td>
+      <td>Desktop Intel</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-macos-intel.zip">Gearcoleco-1.5.5-desktop-macos-intel.zip</a></td>
     </tr>
     <tr>
       <td rowspan="4"><strong>Linux</strong></td>
@@ -55,16 +55,21 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td><a href="https://github.com/drhelius/ppa-geardome">drhelius/ppa-geardome</a></td>
     </tr>
     <tr>
-      <td>Ubuntu 24.04 x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu24.04-x64.zip">Gearcoleco-1.5.5-ubuntu24.04-x64.zip</a></td>
+      <td>Desktop Ubuntu 24.04 x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-ubuntu24.04-x64.zip">Gearcoleco-1.5.5-desktop-ubuntu24.04-x64.zip</a></td>
     </tr>
     <tr>
-      <td>Ubuntu 22.04 x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu22.04-x64.zip">Gearcoleco-1.5.5-ubuntu22.04-x64.zip</a></td>
+      <td>Desktop Ubuntu 22.04 x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-ubuntu22.04-x64.zip">Gearcoleco-1.5.5-desktop-ubuntu22.04-x64.zip</a></td>
     </tr>
     <tr>
-      <td>Ubuntu 24.04 ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu24.04-arm64.zip">Gearcoleco-1.5.5-ubuntu24.04-arm64.zip</a></td>
+      <td>Desktop Ubuntu 24.04 ARM64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-ubuntu24.04-arm64.zip">Gearcoleco-1.5.5-desktop-ubuntu24.04-arm64.zip</a></td>
+    </tr>
+    <tr>
+      <td><strong>MCPB</strong></td>
+      <td>All platforms</td>
+      <td><a href="MCP_README.md">MCP Readme</a></td>
     </tr>
     <tr>
       <td><strong>RetroArch</strong></td>
