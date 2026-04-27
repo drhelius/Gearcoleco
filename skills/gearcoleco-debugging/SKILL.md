@@ -1,0 +1,275 @@
+---
+name: gearcoleco-debugging
+description: >-
+  Debug and trace ColecoVision and Super Game Module games using the Gearcoleco
+  emulator MCP server. Provides workflows for Z80 CPU debugging, breakpoint
+  management, TMS9918A VDP/SN76489/AY-3-8910 hardware inspection, disassembly
+  analysis, execution tracing, and rewind/time-travel debugging. Use when the
+  user wants to debug a ColecoVision or SGM game, trace code execution, inspect
+  Z80 CPU registers or hardware state, set breakpoints, analyze interrupts,
+  step through Z80 instructions, reverse engineer game code, examine VDP
+  registers, view sprites, inspect SN76489 or AY-3-8910 audio, view the call
+  stack, rewind to earlier execution points, or diagnose rendering, audio,
+  controller, SGM RAM, or timing issues. Also use when the user mentions
+  ColecoVision development, Super Game Module homebrew testing, or Z80
+  debugging with Gearcoleco.
+compatibility: >-
+  Requires the Gearcoleco MCP server. Before installing or configuring, call
+  debug_get_status to check if the server is already connected. If it responds,
+  the server is ready - skip setup entirely.
+metadata:
+  author: drhelius
+  version: "1.0"
+---
+
+# ColecoVision / Super Game Module Debugging with Gearcoleco
+
+## Overview
+
+Debug ColecoVision and Super Game Module games using the Gearcoleco emulator as an MCP server. Control execution (pause, step, breakpoints), inspect the Z80 CPU and hardware (TMS9918A VDP, SN76489 PSG, AY-3-8910 SGM PSG), read/write memory across multiple areas (BIOS, RAM, SGM RAM, VRAM, ROM banks), disassemble code, trace instructions, rewind to earlier states, view sprites, and capture screenshots - all through MCP tool calls. Hardware documentation is available in the [references/](references/) directory.
+
+## MCP Server Prerequisite
+
+**IMPORTANT - Check before installing:** Before attempting any installation or configuration, you MUST first verify if the Gearcoleco MCP server is already connected in your current session. Call `debug_get_status` - if it returns a valid response, the server is active and ready.
+
+Only if the tool is not available or the call fails, you need to help install and configure the Gearcoleco MCP server:
+
+### Installing Gearcoleco
+
+Run the bundled install script (macOS/Linux):
+
+```bash
+bash scripts/install.sh
+```
+
+This installs Gearcoleco via Homebrew on macOS or downloads the latest release on Linux. It prints the binary path on completion. You can also set `INSTALL_DIR` to control where the binary goes (default: `~/.local/bin`).
+
+Alternatively, download from [GitHub Releases](https://github.com/drhelius/Gearcoleco/releases/latest) or install with `brew install --cask drhelius/geardome/gearcoleco` on macOS.
+
+### Connecting as MCP Server
+
+Configure your AI client to run Gearcoleco as an MCP server via STDIO transport. Example for Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "gearcoleco": {
+      "command": "/path/to/gearcoleco",
+      "args": ["--mcp-stdio"]
+    }
+  }
+}
+```
+
+Replace `/path/to/gearcoleco` with the actual binary path from the install script. Add `--headless` before `--mcp-stdio` on headless machines.
+
+### Hardware Documentation (References)
+
+ColecoVision and Super Game Module hardware documentation is available in the [references/](references/) directory. Load them into your context when investigating specific hardware or BIOS behavior.
+
+| Reference | File | Quality | Load when... |
+|---|---|---|---|
+| ColecoVision Technical Notes | [references/colecovision.md](references/colecovision.md) | **PRIMARY** - system quick reference | Cartridge headers, title-screen behavior, controller modes, keypad codes, memory map, I/O map, basic SN76489 and VDP context |
+| TMS9918A VDP (Sean Young) | [references/tms9918a.md](references/tms9918a.md) | **PRIMARY** - detailed VDP reference | VDP registers, status flags, VRAM access, display modes, interrupts, sprites, fifth-sprite flag, collisions, undocumented modes |
+| SN76489A PSG | [references/sn76489.md](references/sn76489.md) | **PRIMARY** - ColecoVision PSG quick reference | SN76489 latch/data writes, tone periods, attenuation, noise control, frequency formula, PSG debugging |
+| Super Game Module Notes | [references/super_game_module.md](references/super_game_module.md) | **PRIMARY** - SGM memory reference | SGM RAM mapping, port $53, port $7F, ADAM compatibility, SGM initialization, SGM AY summary |
+
+---
+
+## Debugging Workflow
+
+### 1. Load and Orient
+
+```
+load_media -> get_media_info -> get_z80_status -> get_screenshot
+```
+
+Start every session by loading the ROM, confirming it loaded correctly (file path, type, size, mapper), then checking Z80 CPU state and taking a screenshot to understand the current game state. If a `.sym` file exists alongside the ROM, symbols are loaded automatically. Gearcoleco accepts `.sym` entries using `BANK:ADDRESS LABEL` format.
+
+Load additional symbols with `load_symbols` or add individual labels with `add_symbol`.
+
+### 2. Pause and Inspect
+
+Always call `debug_pause` before inspecting state. While paused:
+
+- **CPU state**: `get_z80_status` - registers AF, BC, DE, HL, AF', BC', DE', HL', IX, IY, SP, PC, WZ, I, R, flags (S, Z, H, P/V, N, C), interrupt state, halt status, interrupt mode (0/1/2)
+- **Disassembly**: `get_disassembly` with a start/end address range. Disassembled records exist for code that has executed during emulation
+- **Call stack**: `get_call_stack` - current subroutine hierarchy
+- **Memory**: `read_memory` with a memory editor area ID and offset. Use `list_memory_areas` first to see available areas and physical offsets
+- **Sprites**: `list_sprites` - all 32 TMS9918A sprites with position, size, pattern index
+
+### 3. Set Breakpoints
+
+Use breakpoints to stop execution at points of interest:
+
+| Breakpoint Type | Tool | Use Case |
+|---|---|---|
+| Execution | `set_breakpoint` (execute: true) | Stop when PC reaches address |
+| Read | `set_breakpoint` (read: true) | Stop when memory address is read |
+| Write | `set_breakpoint` (write: true) | Stop when memory address is written |
+| Range | `set_breakpoint_range` | Cover an address range (exec/read/write) |
+| IRQ | `toggle_irq_breakpoints` | Break on RESET, NMI, or INT interrupts |
+
+Breakpoints support 3 memory areas: `rom_ram`, `vram`, `vdp_reg`. Use `rom_ram` for Z80 address space, `vram` for VDP memory access, and `vdp_reg` for VDP register writes.
+
+**Important**: Read/write breakpoints stop with PC at the instruction *after* the memory access.
+
+Manage breakpoints with `list_breakpoints` and `remove_breakpoint`.
+
+### 4. Step Through Code
+
+After hitting a breakpoint or pausing:
+
+| Action | Tool | Behavior |
+|---|---|---|
+| Step Into | `debug_step_into` | Execute one Z80 instruction, enter subroutines |
+| Step Over | `debug_step_over` | Execute one instruction, skip CALL subroutines |
+| Step Out | `debug_step_out` | Run until RET returns from current subroutine |
+| Step Frame | `debug_step_frame` | Execute until next frame / VBlank |
+| Run To | `debug_run_to_cursor` | Continue until PC reaches target address |
+| Continue | `debug_continue` | Resume normal execution |
+
+After each step, call `get_z80_status` and `get_disassembly` to see where you are.
+
+### 5. Trace Execution
+
+The trace logger records Z80 instructions interleaved with hardware events (VDP writes/status, PSG, AY-3-8910, I/O ports, SGM mapping events).
+
+1. `set_trace_log` with `enabled: true` to start recording (optionally use flags; `0xFF` enables all trace types)
+2. Let the game run or step through code
+3. `set_trace_log` with `enabled: false` to stop (entries are preserved)
+4. `get_trace_log` to read recorded entries
+
+Trace flags: bit 0 = CPU, 1 = CPU IRQ, 2 = VDP write, 3 = VDP status, 4 = PSG, 5 = AY-3-8910, 6 = I/O port, 7 = SGM.
+
+Tracing is essential for understanding timing-sensitive code, interrupt handlers, VDP access sequences, sound register writes, controller reads, and SGM RAM enable behavior.
+
+---
+
+## Rewind (Time Travel Debugging)
+
+- `get_rewind_status` reports whether rewind is enabled, how many snapshots are available, total capacity, and memory usage.
+- `rewind_seek` jumps to a specific buffered snapshot. The emulator must be paused first.
+- Use rewind when you need to compare two nearby execution points without managing manual save states.
+
+Typical flow:
+
+1. `debug_pause`
+2. `get_rewind_status`
+3. `rewind_seek` to an earlier snapshot
+4. `get_z80_status` and `get_disassembly` to inspect the restored point
+5. `debug_continue` or keep stepping from there
+
+---
+
+## Hardware Inspection
+
+### VDP (TMS9918A Video Display Processor)
+
+- `get_vdp_registers` - VDP registers with hex values and descriptions
+- `get_vdp_status` - status flags, current mode, render line, display state
+- `list_sprites` - all 32 sprites with position, size, pattern index
+- `get_sprite_image` - get a specific sprite as base64 PNG
+
+### PSG (SN76489 Sound)
+
+- `get_psg_status` - all 4 channels (3 tone + 1 noise): volume, period, frequency
+
+### AY-3-8910 (Super Game Module Sound)
+
+- `get_ay8910_status` - 3 AY channels, mixer, noise, envelope, registers, mute state
+- SGM AY ports are `$50` register select, `$51` data write, `$52` data read
+
+### Screen Capture
+
+- `get_screenshot` - current rendered frame as PNG
+
+Use screenshots after stepping or continuing to see the visual impact of changes.
+
+---
+
+## Memory Areas
+
+Use `list_memory_areas` to discover all available physical areas. Memory tools use the returned area IDs and 0-based offsets, while breakpoints use logical areas.
+
+| Logical Area | Description |
+|---|---|
+| `rom_ram` | Full Z80 64K address space (BIOS, RAM, SGM RAM windows, cartridge ROM) |
+| `vram` | Video RAM - pattern tables, name table, color table, sprite attribute table |
+| `vdp_reg` | VDP register file |
+
+Additional `read_memory`/`write_memory` areas include physical BIOS, WRAM, SGM RAM, VRAM, ROM banks, and other mapped spaces - use `list_memory_areas` for the complete list.
+
+---
+
+## Common Debugging Scenarios
+
+### Finding the VBlank / NMI Handler
+
+1. `toggle_irq_breakpoints` to enable breaking on interrupts
+2. `debug_continue` to run until the VDP NMI fires
+3. `get_z80_status` + `get_disassembly` to see the handler code
+4. `get_call_stack` to see the call hierarchy
+5. `add_symbol` to label the handler address and any subroutines it calls
+
+Note: The Z80 NMI vector is fixed at `$0066`. ColecoVision games normally receive VBlank through the TMS9918A NMI path.
+
+### Diagnosing Graphics Corruption
+
+1. `debug_pause` -> `get_vdp_registers` - check mode and table base addresses
+2. `get_vdp_status` - verify status flags, render state, and interrupt state
+3. `read_memory` (VRAM area from `list_memory_areas`) - inspect pattern, name, color, and sprite tables
+4. `list_sprites` - verify sprite positions, patterns, and ordering
+5. Set read/write breakpoints (area: `vram`) on display data addresses to catch corruption source
+6. Use [references/tms9918a.md](references/tms9918a.md) and [references/colecovision.md](references/colecovision.md) for VDP, memory-map, and I/O details
+
+### Analyzing a Subroutine
+
+1. `set_breakpoint` at the subroutine entry point
+2. `debug_continue` -> when hit, `get_z80_status`
+3. Step through with `debug_step_into` / `debug_step_over`
+4. After each step: check registers and read relevant memory
+5. `add_symbol` for the routine and any called subroutines
+6. `add_disassembler_bookmark` to mark interesting locations
+
+### Tracking a Variable
+
+1. `list_memory_areas` to identify WRAM or SGM RAM area IDs
+2. `add_memory_watch` on the variable's physical offset - watches are visible in the emulator GUI
+3. Set a write breakpoint with `set_breakpoint` (write: true) on the logical address if the variable is in the Z80 address space
+4. When hit, `get_disassembly` reveals what code is modifying it
+5. `get_call_stack` shows the call chain leading to the write
+
+### Inspecting VDP Timing
+
+1. `toggle_irq_breakpoints` to break on VBlank / NMI
+2. `get_vdp_status` to check flags and current render state
+3. `get_trace_log` to see interleaved Z80 + VDP events
+4. Check VDP register writes and VRAM access patterns in the trace for mid-frame updates
+
+### Debugging Sound
+
+1. `get_psg_status` - check all 4 SN76489 channels (tone frequencies, volumes, noise mode)
+2. `get_ay8910_status` - check SGM AY-3-8910 state (registers, mixer, envelope, channels)
+3. Set write breakpoints on PSG I/O range or trace `psg` events to catch SN76489 writes
+4. Trace `ay8910` and `io_port` events to catch SGM writes to `$50`/`$51` and reads from `$52`
+5. Step through the sound driver code and correlate register writes with audio output
+
+### Debugging SGM RAM Mapping
+
+1. Load [references/super_game_module.md](references/super_game_module.md)
+2. Trace `sgm` and `io_port` events with `set_trace_log`
+3. Watch writes to port `$53` for upper RAM enable and `$7F` for lower BIOS/RAM mapping
+4. Use `list_memory_areas` and `read_memory` to inspect SGM RAM physical areas
+5. Check ADAM compatibility logic before enabling the 24 KB RAM window
+
+---
+
+## Organizing Your Debug Session
+
+- **Symbols**: Use `add_symbol` liberally to label addresses - makes disassembly readable
+- **Bookmarks**: Use `add_disassembler_bookmark` for code locations and `add_memory_bookmark` for data regions
+- **Watches**: Use `add_memory_watch` for variables you're tracking across steps
+- **Save states**: Use `save_state` / `load_state` to snapshot and restore emulator state at interesting points
+- **Screenshots**: Capture visual state with `get_screenshot` after significant changes
+- **Modify registers**: Use `write_z80_register` to change register values live (AF, BC, DE, HL, IX, IY, SP, PC, etc.)
