@@ -103,8 +103,8 @@ void gui_debug_windows(void)
     }
 }
 
-static const char* GSDEBUG_MAGIC = "GSDEBUG1";
-static const int GSDEBUG_MAGIC_LEN = 8;
+static const char* GCDEBUG_MAGIC = "GCDEBUG1";
+static const int GCDEBUG_MAGIC_LEN = 8;
 
 void gui_debug_save_settings(const char* file_path)
 {
@@ -115,7 +115,7 @@ void gui_debug_save_settings(const char* file_path)
         return;
     }
 
-    file.write(GSDEBUG_MAGIC, GSDEBUG_MAGIC_LEN);
+    file.write(GCDEBUG_MAGIC, GCDEBUG_MAGIC_LEN);
 
     GearcolecoCore* core = emu_get_core();
     Processor* processor = core->GetProcessor();
@@ -169,8 +169,8 @@ void gui_debug_load_settings(const char* file_path)
     }
 
     char magic[8];
-    file.read(magic, GSDEBUG_MAGIC_LEN);
-    if (memcmp(magic, GSDEBUG_MAGIC, GSDEBUG_MAGIC_LEN) != 0)
+    file.read(magic, GCDEBUG_MAGIC_LEN);
+    if (memcmp(magic, GCDEBUG_MAGIC, GCDEBUG_MAGIC_LEN) != 0)
     {
         Log("Invalid debug settings file: %s", file_path);
         file.close();
@@ -229,7 +229,7 @@ static std::string get_auto_debug_settings_path(void)
     std::string::size_type dot = filename.find_last_of('.');
     if (dot != std::string::npos)
         filename = filename.substr(0, dot);
-    filename += ".gsdebug";
+    filename += ".gcdebug";
 
     std::string path = config_root_path;
     path += filename;
