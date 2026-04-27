@@ -78,6 +78,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(value, min, max) MIN(MAX(value, min), max)
+#define UNUSED(expr) (void)(expr)
 
 typedef uint8_t u8;
 typedef int8_t s8;
@@ -104,6 +105,7 @@ typedef void (*RamChangedCallback) (void);
 #define GC_RESOLUTION_HEIGHT 192
 
 #define GC_MAX_GAMEPADS 2
+#define GC_MAX_SPRITES 32
 
 #define GC_RESOLUTION_WIDTH_WITH_OVERSCAN 320
 #define GC_RESOLUTION_HEIGHT_WITH_OVERSCAN 288
@@ -125,9 +127,42 @@ typedef void (*RamChangedCallback) (void);
 #define GC_FRAMES_PER_SECOND_PAL 50
 
 #define GC_AUDIO_SAMPLE_RATE 44100
-#define GC_AUDIO_BUFFER_SIZE 8192
+#define GC_AUDIO_BUFFER_SIZE 2048
+#define GC_AUDIO_BUFFER_SIZE_V1 8192
+#define GC_AUDIO_QUEUE_SIZE 1792
 
 #define GC_SAVESTATE_MAGIC 0x09200902
+#define GC_SAVESTATE_VERSION 103
+#define GC_SAVESTATE_MIN_VERSION 100
+#define GC_SAVESTATE_VERSION_V1 1
+
+struct GC_SaveState_Header
+{
+    u32 magic;
+    u32 version;
+    u32 size;
+    s64 timestamp;
+    char rom_name[128];
+    u32 rom_crc;
+    u32 screenshot_size;
+    u16 screenshot_width;
+    u16 screenshot_height;
+    char emu_build[32];
+};
+
+struct GC_SaveState_Header_Libretro
+{
+    u32 magic;
+    u32 version;
+};
+
+struct GC_SaveState_Screenshot
+{
+    u32 width;
+    u32 height;
+    u32 size;
+    u8* data;
+};
 
 struct GC_Color
 {
@@ -140,10 +175,10 @@ enum GC_Color_Format
 {
     GC_PIXEL_RGB565,
     GC_PIXEL_RGB555,
-    GC_PIXEL_RGB888,
+    GC_PIXEL_RGBA8888,
     GC_PIXEL_BGR565,
     GC_PIXEL_BGR555,
-    GC_PIXEL_BGR888
+    GC_PIXEL_BGRA8888
 };
 
 enum GC_Keys
@@ -189,6 +224,25 @@ struct GC_RuntimeInfo
     GC_Region region;
 };
 
+struct GC_Disassembler_Record
+{
+    u32 address;
+    u8 bank;
+    char name[64];
+    char bytes[25];
+    char segment[8];
+    u8 opcodes[7];
+    int size;
+    bool jump;
+    u16 jump_address;
+    u8 jump_bank;
+    bool subroutine;
+    int irq;
+    bool has_operand_address;
+    u16 operand_address;
+    char auto_symbol[64];
+};
+
 inline u8 SetBit(const u8 value, const u8 bit)
 {
     return value | (0x01 << bit);
@@ -221,17 +275,6 @@ inline u8 ReverseBits(const u8 value)
 inline int AsHex(const char c)
 {
    return c >= 'A' ? c - 'A' + 0xA : c - '0';
-}
-
-inline unsigned int Pow2Ceil(u16 n)
-{
-    --n;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    ++n;
-    return n;
 }
 
 #endif	/* DEFINITIONS_H */

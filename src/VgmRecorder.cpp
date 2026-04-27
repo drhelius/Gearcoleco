@@ -101,7 +101,7 @@ void VgmRecorder::Stop()
             header[0x0F] = (psg_clock >> 24) & 0xFF;
         }
 
-        // YM2413 clock (not used, set to 0)
+        // Unused VGM clock field
         header[0x10] = 0x00;
         header[0x11] = 0x00;
         header[0x12] = 0x00;

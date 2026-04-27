@@ -20,13 +20,14 @@
 #ifndef MEMORY_INLINE_H
 #define	MEMORY_INLINE_H
 
+#include "Processor.h"
 #include "Cartridge.h"
 #include "Mapper.h"
 
 inline u8 Memory::Read(u16 address)
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-    CheckBreakpoints(address, false);
+    m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, true);
     #endif
 
     switch (address & 0xE000)
@@ -56,10 +57,31 @@ inline u8 Memory::Read(u16 address)
     }
 }
 
+inline u8 Memory::DebugRetrieve(u16 address)
+{
+    switch (address & 0xE000)
+    {
+        case 0x0000:
+            return m_bSGMLower ? m_pSGMRam[address] : m_pBios[address];
+        case 0x2000:
+        case 0x4000:
+            return m_bSGMUpper ? m_pSGMRam[address] : 0xFF;
+        case 0x6000:
+            return m_bSGMUpper ? m_pSGMRam[address] : m_pRam[address & 0x03FF];
+        case 0x8000:
+        case 0xA000:
+        case 0xC000:
+        case 0xE000:
+            return m_pMapper->Read(address);
+        default:
+            return 0xFF;
+    }
+}
+
 inline void Memory::Write(u16 address, u8 value)
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-    CheckBreakpoints(address, true);
+    m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, false);
     #endif
 
     switch (address & 0xE000)
@@ -96,25 +118,68 @@ inline void Memory::Write(u16 address, u8 value)
     }
 }
 
-inline Memory::stDisassembleRecord** Memory::GetDisassembledRomMemoryMap()
+inline GC_Disassembler_Record** Memory::GetDisassemblerRomMap()
 {
     return m_pDisassembledRomMap;
 }
 
-inline Memory::stDisassembleRecord** Memory::GetDisassembledRamMemoryMap()
+inline GC_Disassembler_Record** Memory::GetDisassemblerRamMap()
 {
     return m_pDisassembledRamMap;
 }
 
-inline Memory::stDisassembleRecord** Memory::GetDisassembledBiosMemoryMap()
+inline GC_Disassembler_Record** Memory::GetDisassemblerBiosMap()
 {
     return m_pDisassembledBiosMap;
 }
 
-inline Memory::stDisassembleRecord** Memory::GetDisassembledSGMRamMemoryMap()
+inline GC_Disassembler_Record** Memory::GetDisassemblerSGMRamMap()
 {
     return m_pDisassembledSGMRamMap;
 }
 
-#endif	/* MEMORY_INLINE_H */
+inline GC_Disassembler_Record* Memory::GetDisassemblerRecord(u16 address, u8 bank)
+{
+#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
+    if (address < 0x8000)
+        return GetDisassemblerRecord(address);
+
+    u32 physical_address = 0;
+
+    switch (m_pCartridge->GetType())
+    {
+        case Cartridge::CartridgeMegaCart:
+        case Cartridge::CartridgeActivisionCart:
+        {
+            physical_address = (u32)(0x4000 * bank) + (address & 0x3FFF);
+            break;
+        }
+        case Cartridge::CartridgeOCM:
+        {
+            physical_address = (u32)(0x2000 * bank) + (address & 0x1FFF);
+            break;
+        }
+        default:
+        {
+            if (bank != 0)
+                return NULL;
+
+            physical_address = (u32)(address - 0x8000);
+            break;
+        }
+    }
+
+    if (physical_address >= MAX_ROM_SIZE)
+        return NULL;
+
+    return m_pDisassembledRomMap[physical_address];
+
+#else
+    UNUSED(address);
+    UNUSED(bank);
+    return NULL;
+#endif
+}
+
+#endif	/* MEMORY_INLINE_H */

@@ -37,6 +37,24 @@ public:
     int EndFrame(s16* pSampleBuffer);
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
+    const u8* GetRegisters() const { return m_Registers; }
+    u8 GetSelectedRegister() const { return m_SelectedRegister; }
+    const u16* GetTonePeriods() const { return m_TonePeriod; }
+    const u8* GetAmplitudes() const { return m_Amplitude; }
+    const bool* GetToneDisable() const { return m_ToneDisable; }
+    const bool* GetNoiseDisable() const { return m_NoiseDisable; }
+    const bool* GetEnvelopeMode() const { return m_EnvelopeMode; }
+    u8 GetNoisePeriod() const { return m_NoisePeriod; }
+    u32 GetNoiseShift() const { return m_NoiseShift; }
+    u16 GetEnvelopePeriod() const { return m_EnvelopePeriod; }
+    u8 GetEnvelopeStep() const { return m_EnvelopeStep; }
+    u8 GetEnvelopeVolume() const { return m_EnvelopeVolume; }
+    int GetClockRate() const { return m_iClockRate; }
+    void EnableDebug(bool enable);
+    bool IsDebugEnabled() const { return m_DebugEnabled; }
+    s16* GetDebugChannelBuffer(int channel);
+    int GetDebugChannelSamples(int channel) const;
+    bool* GetChannelMute(int channel);
 
 private:
     void EnvelopeReset();
@@ -68,6 +86,10 @@ private:
     int m_ElapsedCycles;
     int m_iClockRate;
     s16 m_CurrentSample;
+    s16* m_pDebugChannelBuffer[3];
+    int m_DebugChannelSamples[3];
+    bool m_ChannelMute[3];
+    bool m_DebugEnabled;
 };
 
 const u8 kAY8910RegisterMask[16] = {0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0x1F, 0xFF, 0x1F, 0x1F, 0x1F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF};

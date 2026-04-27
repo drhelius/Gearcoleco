@@ -27,6 +27,8 @@
 #if defined(__LIBRETRO__)
 #include "libretro.h"
 extern retro_log_printf_t log_cb;
+#else
+extern bool g_mcp_stdio_mode;
 #endif
 
 #if defined(DEBUG_GEARCOLECO)
@@ -40,6 +42,7 @@ extern retro_log_printf_t log_cb;
 #endif
 
 #define Log(msg, ...) (Log_func(msg, ##__VA_ARGS__))
+#define Error(msg, ...) (Log_func("ERROR: " msg, ##__VA_ARGS__))
 
 inline void Log_func(const char* const msg, ...)
 {
@@ -55,6 +58,9 @@ inline void Log_func(const char* const msg, ...)
         log_cb(RETRO_LOG_INFO, "%s\n", buffer);
         return;
     }
+#else
+    if (g_mcp_stdio_mode)
+        return;
 #endif
 
 #if defined(DEBUG_GEARCOLECO)

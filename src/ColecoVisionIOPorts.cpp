@@ -27,6 +27,7 @@ ColecoVisionIOPorts::ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pI
     m_pCartridge = pCartridge;
     m_pMemory = pMemory;
     m_pProcessor = pProcessor;
+    m_pTraceLogger = NULL;
 }
 
 ColecoVisionIOPorts::~ColecoVisionIOPorts()

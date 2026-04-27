@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <ctype.h>
 #include "Cartridge.h"
-#include "miniz/miniz.h"
+#include "miniz.h"
 #include "game_db.h"
 #include "common.h"
 
@@ -35,6 +35,7 @@ Cartridge::Cartridge()
     m_bReady = false;
     m_szFilePath[0] = 0;
     m_szFileName[0] = 0;
+    m_szFileDirectory[0] = 0;
     m_iROMBankCount = 0;
     m_bPAL = false;
     m_bSRAM = false;
@@ -62,6 +63,7 @@ void Cartridge::Reset()
     m_bReady = false;
     m_szFilePath[0] = 0;
     m_szFileName[0] = 0;
+    m_szFileDirectory[0] = 0;
     m_iROMBankCount = 0;
     m_bPAL = false;
     m_bSRAM = false;
@@ -157,6 +159,11 @@ const char* Cartridge::GetFilePath() const
 const char* Cartridge::GetFileName() const
 {
     return m_szFileName;
+}
+
+const char* Cartridge::GetFileDirectory() const
+{
+    return m_szFileDirectory;
 }
 
 u8* Cartridge::GetROM() const
@@ -257,6 +264,14 @@ bool Cartridge::LoadFromFile(const char* path)
 
     strcpy(m_szFileName, filename.c_str());
 
+    std::string directory;
+    size_t dir_pos = pathstr.find_last_of("\\/");
+    if (dir_pos != std::string::npos)
+        directory = pathstr.substr(0, dir_pos);
+    else
+        directory = ".";
+    strcpy(m_szFileDirectory, directory.c_str());
+
     ifstream file;
     open_ifstream_utf8(file, path, ios::in | ios::binary | ios::ate);
 
@@ -312,6 +327,12 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
     if (IsValidPointer(buffer))
     {
         Log("Loading from buffer... Size: %d", size);
+
+        if (size <= 0)
+        {
+            Log("Invalid size found. %d bytes", size);
+            return false;
+        }
 
         // Unkown size
         if ((size % 1024) != 0)

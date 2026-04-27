@@ -20,11 +20,13 @@
 #include "Video.h"
 #include "Memory.h"
 #include "Processor.h"
+#include "TraceLogger.h"
 
 Video::Video(Memory* pMemory, Processor* pProcessor)
 {
     m_pMemory = pMemory;
     m_pProcessor = pProcessor;
+    InitPointer(m_pTraceLogger);
     InitPointer(m_pInfoBuffer);
     InitPointer(m_pFrameBuffer);
     InitPointer(m_pVdpVRAM);
@@ -67,6 +69,11 @@ void Video::Init()
     Reset(false);
 }
 
+void Video::SetTraceLogger(TraceLogger* pTraceLogger)
+{
+    m_pTraceLogger = pTraceLogger;
+}
+
 void Video::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
@@ -95,7 +102,7 @@ void Video::Reset(bool bPAL)
     m_iCycleCounter = 0;
     m_iRenderLine = 0;
 
-    for (int i = 0; i < 128; i++)
+    for (int i = 0; i < (GC_MAX_SPRITES * 4); i++)
         m_SpriteAttribLatch[i] = 0;
 
     m_Timing[TIMING_VINT] = 220;
@@ -125,6 +132,17 @@ bool Video::Tick(unsigned int clockCycles)
                 m_pProcessor->RequestNMI();
 
             m_VdpStatus = SetBit(m_VdpStatus, 7);
+
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+            if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_VDP_STATUS))
+            {
+                GC_Trace_Entry e = {};
+                e.type = TRACE_VDP_STATUS;
+                e.vdp_status.event = GC_VDP_EVENT_VINT;
+                e.vdp_status.line = (u16)m_iRenderLine;
+                m_pTraceLogger->TraceLog(e);
+            }
+#endif
         }
     }
 
@@ -164,6 +182,9 @@ u8 Video::GetDataPort()
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpBuffer;
     m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VRAM, m_VdpAddress, true);
+#endif
     m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
     return ret;
 }
@@ -173,12 +194,6 @@ u8 Video::GetStatusFlags()
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpStatus;
     m_VdpStatus &= 0x1F;
-
-    if (IsSetBit(m_VdpRegister[1], 5) && IsSetBit(m_VdpStatus, 7))
-    {
-        m_pProcessor->RequestNMI();
-    }
-
     return ret;
 }
 
@@ -187,6 +202,9 @@ void Video::WriteData(u8 data)
     m_bFirstByteInSequence = true;
     m_VdpBuffer = data;
     m_pVdpVRAM[m_VdpAddress] = data;
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VRAM, m_VdpAddress, false);
+#endif
     m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
 }
 
@@ -217,6 +235,17 @@ void Video::WriteControl(u8 control)
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
                 u8 reg = control & 0x07;
                 m_VdpRegister[reg] = m_VdpBuffer & masks[reg];
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+                m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER, reg, false);
+                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_VDP_WRITE))
+                {
+                    GC_Trace_Entry e = {};
+                    e.type = TRACE_VDP_WRITE;
+                    e.vdp_write.reg = reg;
+                    e.vdp_write.value = m_VdpRegister[reg];
+                    m_pTraceLogger->TraceLog(e);
+                }
+#endif
 
                 if ((reg == 1) && IsSetBit(m_VdpRegister[1], 5) && (!old_nmi) && IsSetBit(m_VdpStatus, 7))
                 {
@@ -302,7 +331,7 @@ void Video::LatchSpriteAttributes()
 {
     u16 sprite_attribute_addr = (m_VdpRegister[5] & 0x7F) << 7;
 
-    for (int i = 0; i < 128; i++)
+    for (int i = 0; i < (GC_MAX_SPRITES * 4); i++)
         m_SpriteAttribLatch[i] = m_pVdpVRAM[sprite_attribute_addr + i];
 }
 
@@ -447,7 +476,7 @@ void Video::RenderSprites(int line)
 
     u16 sprite_pattern_addr = (m_VdpRegister[6] & 0x07) << 11;
 
-    int max_sprite = 31;
+    int max_sprite = GC_MAX_SPRITES - 1;
 
     for (int sprite = 0; sprite <= max_sprite; sprite++)
     {
@@ -538,7 +567,7 @@ void Video::RenderSprites(int line)
 }
 
 
-void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
+void Video::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
 {
     int x = 0;
     int y = 0;
@@ -550,8 +579,8 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     int overscan_total_height = 0;
     bool overscan_enabled = false;
     int overscan_color = (m_VdpRegister[7] & 0x0F) * 3;
-    int buffer_size = size * 3;
-    bool bgr = (pixelFormat == GC_PIXEL_BGR888);
+    int buffer_size = size * 4;
+    bool bgr = (pixelFormat == GC_PIXEL_BGRA8888);
 
     if (overscan && (m_Overscan != OverscanDisabled))
     {
@@ -575,7 +604,7 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
     }
 
-    for (int i = 0, j = 0; j < buffer_size; j += 3)
+    for (int i = 0, j = 0; j < buffer_size; j += 4)
     {
         u16 src_color = 0;
         if (overscan_enabled)
@@ -603,6 +632,7 @@ void Video::Render24bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         dstFrameBuffer[j + 0] = bgr ? m_pCurrentPalette[src_color + 2] : m_pCurrentPalette[src_color];
         dstFrameBuffer[j + 1] = m_pCurrentPalette[src_color + 1];
         dstFrameBuffer[j + 2] = bgr ? m_pCurrentPalette[src_color] : m_pCurrentPalette[src_color + 2];
+        dstFrameBuffer[j + 3] = 0xFF;
     }
 }
 

@@ -21,6 +21,7 @@
 #define	MEMORY_H
 
 #include "definitions.h"
+#include "log.h"
 #include <vector>
 
 class Processor;
@@ -29,29 +30,6 @@ class Mapper;
 
 class Memory
 {
-public:
-    struct stDisassembleRecord
-    {
-        u16 address;
-        char segment[5];
-        char name[32];
-        char bytes[16];
-        int size;
-        int bank;
-        u8 opcodes[4];
-        bool jump;
-        u16 jump_address;
-    };
-
-    struct stMemoryBreakpoint
-    {
-        u16 address1;
-        u16 address2;
-        bool read;
-        bool write;
-        bool range;
-    };
-
 public:
     Memory(Cartridge* pCartridge);
     ~Memory();
@@ -71,15 +49,18 @@ public:
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
     void ResetRomDisassembledMemory();
-    stDisassembleRecord* GetDisassembleRecord(u16 address, bool createIfNotFound);
-    stDisassembleRecord** GetDisassembledRomMemoryMap();
-    stDisassembleRecord** GetDisassembledRamMemoryMap();
-    stDisassembleRecord** GetDisassembledBiosMemoryMap();
-    stDisassembleRecord** GetDisassembledSGMRamMemoryMap();
-    std::vector<stDisassembleRecord*>* GetBreakpointsCPU();
-    std::vector<stMemoryBreakpoint>* GetBreakpointsMem();
-    stDisassembleRecord* GetRunToBreakpoint();
-    void SetRunToBreakpoint(stDisassembleRecord* pBreakpoint);
+    u8 DebugRetrieve(u16 address);
+    GC_Disassembler_Record* GetOrCreateDisassemblerRecord(u16 address);
+    GC_Disassembler_Record* GetDisassemblerRecord(u16 address);
+    GC_Disassembler_Record* GetDisassemblerRecord(u16 address, u8 bank);
+    GC_Disassembler_Record** GetDisassemblerRomMap();
+    GC_Disassembler_Record** GetDisassemblerRamMap();
+    GC_Disassembler_Record** GetDisassemblerBiosMap();
+    GC_Disassembler_Record** GetDisassemblerSGMRamMap();
+    u32 GetPhysicalAddress(u16 address);
+    u8 GetBank(u16 address);
+    bool IsSGMUpperEnabled() { return m_bSGMUpper; }
+    bool IsSGMLowerEnabled() { return m_bSGMLower; }
     void EnableSGMUpper(bool enable);
     void EnableSGMLower(bool enable);
     Mapper* GetMapper();
@@ -87,19 +68,13 @@ public:
     u64 GetTotalCycles() const { return m_iTotalCycles; }
 
 private:
-    void CheckBreakpoints(u16 address, bool write);
-
-private:
     Processor* m_pProcessor;
     Cartridge* m_pCartridge;
     Mapper* m_pMapper;
-    stDisassembleRecord** m_pDisassembledRomMap;
-    stDisassembleRecord** m_pDisassembledRamMap;
-    stDisassembleRecord** m_pDisassembledBiosMap;
-    stDisassembleRecord** m_pDisassembledSGMRamMap;
-    std::vector<stDisassembleRecord*> m_BreakpointsCPU;
-    std::vector<stMemoryBreakpoint> m_BreakpointsMem;
-    stDisassembleRecord* m_pRunToBreakpoint;
+    GC_Disassembler_Record** m_pDisassembledRomMap;
+    GC_Disassembler_Record** m_pDisassembledRamMap;
+    GC_Disassembler_Record** m_pDisassembledBiosMap;
+    GC_Disassembler_Record** m_pDisassembledSGMRamMap;
     bool m_bBiosLoaded;
     bool m_bSGMUpper;
     bool m_bSGMLower;

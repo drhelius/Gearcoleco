@@ -30,11 +30,11 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
     <tr>
       <td rowspan="2"><strong>Windows</strong></td>
       <td>x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-windows-x64.zip">Gearcoleco-1.5.5-windows-x64.zip</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-windows-x64.zip">Gearcoleco-1.5.5-desktop-windows-x64.zip</a></td>
     </tr>
     <tr>
       <td>ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-windows-arm64.zip">Gearcoleco-1.5.5-windows-arm64.zip</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-windows-arm64.zip">Gearcoleco-1.5.5-desktop-windows-arm64.zip</a></td>
     </tr>
     <tr>
       <td rowspan="3"><strong>macOS</strong></td>
@@ -42,25 +42,34 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
       <td><code>brew install --cask drhelius/geardome/gearcoleco</code></td>
     </tr>
     <tr>
-      <td>Apple Silicon</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-arm.zip">Gearcoleco-1.5.5-macos-arm.zip</a></td>
+      <td>Desktop Apple Silicon</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-macos-arm64.zip">Gearcoleco-1.5.5-desktop-macos-arm64.zip</a></td>
     </tr>
     <tr>
-      <td>Intel</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-macos-intel.zip">Gearcoleco-1.5.5-macos-intel.zip</a></td>
+      <td>Desktop Intel</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-macos-intel.zip">Gearcoleco-1.5.5-desktop-macos-intel.zip</a></td>
     </tr>
     <tr>
-      <td rowspan="3"><strong>Linux</strong></td>
-      <td>Ubuntu 24.04 x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu24.04-x64.zip">Gearcoleco-1.5.5-ubuntu24.04-x64.zip</a></td>
+      <td rowspan="4"><strong>Linux</strong></td>
+      <td>Ubuntu PPA</td>
+      <td><a href="https://github.com/drhelius/ppa-geardome">drhelius/ppa-geardome</a></td>
     </tr>
     <tr>
-      <td>Ubuntu 22.04 x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu22.04-x64.zip">Gearcoleco-1.5.5-ubuntu22.04-x64.zip</a></td>
+      <td>Desktop Ubuntu 24.04 x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-ubuntu24.04-x64.zip">Gearcoleco-1.5.5-desktop-ubuntu24.04-x64.zip</a></td>
     </tr>
     <tr>
-      <td>Ubuntu 24.04 ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-ubuntu24.04-arm64.zip">Gearcoleco-1.5.5-ubuntu24.04-arm64.zip</a></td>
+      <td>Desktop Ubuntu 22.04 x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-ubuntu22.04-x64.zip">Gearcoleco-1.5.5-desktop-ubuntu22.04-x64.zip</a></td>
+    </tr>
+    <tr>
+      <td>Desktop Ubuntu 24.04 ARM64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-desktop-ubuntu24.04-arm64.zip">Gearcoleco-1.5.5-desktop-ubuntu24.04-arm64.zip</a></td>
+    </tr>
+    <tr>
+      <td><strong>MCPB</strong></td>
+      <td>All platforms</td>
+      <td><a href="MCP_README.md">MCP Readme</a></td>
     </tr>
     <tr>
       <td><strong>RetroArch</strong></td>
@@ -77,7 +86,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 
 **Notes:**
 - **Windows**: May need [Visual C++ Redistributable](https://go.microsoft.com/fwlink/?LinkId=746572) and [OpenGL Compatibility Pack](https://apps.microsoft.com/detail/9nqpsl29bfff)
-- **Linux**: May need `libsdl2`
+- **Linux**: May need `libsdl3`
 
 ## Features
 
@@ -86,11 +95,13 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states.
+- Hold-to-rewind support in the desktop app.
 - Compressed rom support (ZIP).
 - VGM recorder.
 - Supported platforms (standalone): Windows, Linux, BSD and macOS.
 - Supported platforms (libretro): Windows, Linux, macOS, Raspberry Pi, Android, iOS, tvOS, PlayStation Vita, PlayStation 3, Nintendo 3DS, Nintendo GameCube, Nintendo Wii, Nintendo WiiU, Nintendo Switch, Emscripten, Classic Mini systems (NES, SNES, C64, ...), OpenDingux, RetroFW and QNX.
 - Full debugger with just-in-time disassembler, CPU breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, memory editor, IO inspector and VRAM viewer including registries, tiles, sprites and backgrounds.
+- MCP server for AI-assisted debugging with GitHub Copilot, Claude, ChatGPT and similar, exposing tools for execution control, memory inspection, hardware status, rewind and more.
 - Windows and Linux *Portable Mode*.
 - ROM loading from the command line by adding the ROM path as an argument.
 - ROM loading using drag & drop.
@@ -101,6 +112,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 ### Basic Usage
 - **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 ```2c66f5911e5b42b8ebe113403548eee7``` is recommended.
 - **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing ```F12```. It is also recommended to disable spinners for software that don't use them.
+- **Rewind**: Hold the configured rewind hotkey (```Backspace``` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, using Overscan Top+Bottom and 4:3 Display Aspect Ratio is recommended.
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
 - **Portable Mode**: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
@@ -109,17 +121,41 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **Docking Windows**: In debug mode, you can dock windows together by pressing SHIFT and dragging a window onto another.
 - **Multi-viewport**: In Windows or macOS, you can enable "multi-viewport" in the debug menu. You must restart the emulator for the change to take effect. Once enabled, you can drag debugger windows outside the main window.
 - **Debug Symbols**: The emulator automatically tries to load a symbol file when loading a ROM. For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. You can also load a symbol file using the GUI or the CLI.
+- **Rewind Scrubbing**: In debug mode, pause emulation and open the Rewind window to scrub through captured snapshots.
 
 ### Command Line Usage
 ```
 gearcoleco [options] [rom_file] [symbol_file]
 
+Arguments:
+  [rom_file]               ROM file: accepts ROMs (.col, .cv, .rom, .bin) or ZIP (.zip)
+  [symbol_file]            Optional symbol file for debugging
+
 Options:
-  -f, --fullscreen    Start in fullscreen mode
-  -w, --windowed      Start in windowed mode with menu visible
-  -v, --version       Display version information
-  -h, --help          Display this help message
+  -f, --fullscreen         Start in fullscreen mode
+  -w, --windowed           Start in windowed mode with menu visible
+      --mcp-stdio          Auto-start MCP server with stdio transport
+      --mcp-http           Auto-start MCP server with HTTP transport
+      --mcp-http-port N    HTTP port for MCP server (default: 7777)
+      --headless           Run without GUI (requires --mcp-stdio or --mcp-http)
+  -v, --version            Display version information
+  -h, --help               Display this help message
 ```
+
+### MCP Server
+
+Gearcoleco includes a [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like GitHub Copilot, Claude, ChatGPT and similar. The server provides tools for execution control, memory inspection, breakpoints, disassembly, hardware status, and more.
+
+For complete setup instructions and tool documentation, see [MCP_README.md](MCP_README.md).
+
+### Agent Skills
+
+Gearcoleco provides [Agent Skills](https://agentskills.io/) that teach AI assistants how to effectively use the emulator for specific tasks:
+
+- **[gearcoleco-debugging](skills/gearcoleco-debugging/SKILL.md)** — Game debugging, code tracing, breakpoint management, hardware inspection, and reverse engineering.
+- **[gearcoleco-romhacking](skills/gearcoleco-romhacking/SKILL.md)** — Cheat creation, memory searching, ROM data modification, text translation, and game patching.
+
+Install with `npx skills add drhelius/gearcoleco`. See the [skills README](skills/README.md) for details.
   
 ## Build Instructions
 
@@ -134,7 +170,7 @@ Options:
 - Run these commands to generate a Mac *app* bundle:
 
 ``` shell
-brew install sdl2
+brew install sdl3
 cd platforms/macos
 make dist
 ```
@@ -144,7 +180,7 @@ make dist
 - Ubuntu / Debian / Raspberry Pi (Raspbian):
 
 ``` shell
-sudo apt install build-essential libsdl2-dev libgtk-3-dev
+sudo apt install build-essential libsdl3-dev
 cd platforms/linux
 make
 ```
@@ -152,7 +188,7 @@ make
 - Fedora:
 
 ``` shell
-sudo dnf install @development-tools gcc-c++ SDL2-devel gtk3-devel
+sudo dnf install @development-tools gcc-c++ SDL3-devel
 cd platforms/linux
 make
 ```
@@ -160,7 +196,7 @@ make
 - Arch Linux:
 
 ``` shell
-sudo pacman -S base-devel sdl2 gtk3
+sudo pacman -S base-devel sdl3
 cd platforms/linux
 make
 ```
@@ -170,17 +206,25 @@ make
 - FreeBSD:
 
 ``` shell
-su root -c "pkg install -y git gmake pkgconf SDL2 lang/gcc gtk3"
+su root -c "pkg install -y git gmake pkgconf sdl3"
 cd platforms/bsd
-gmake
+USE_CLANG=1 gmake
 ```
 
 - NetBSD:
 
 ``` shell
-su root -c "pkgin install gmake pkgconf SDL2 lang/gcc gtk3"
+su root -c "pkgin install gmake pkgconf SDL3"
 cd platforms/bsd
 gmake
+```
+
+- OpenBSD
+
+``` shell
+doas pkg_add gmake sdl3
+cd platforms/bsd
+LDFLAGS=-L/usr/X11R6/lib/ USE_CLANG=1 gmake
 ```
 
 ### Libretro

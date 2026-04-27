@@ -18,6 +18,7 @@
  */
 
 #include <iomanip>
+#include <string.h>
 #include "GearcolecoCore.h"
 #include "Memory.h"
 #include "Processor.h"
@@ -26,8 +27,12 @@
 #include "Input.h"
 #include "Cartridge.h"
 #include "ColecoVisionIOPorts.h"
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+#include "TraceLogger.h"
+#endif
 #include "no_bios.h"
 #include "common.h"
+#include "memory_stream.h"
 
 GearcolecoCore::GearcolecoCore()
 {
@@ -38,13 +43,19 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pInput);
     InitPointer(m_pCartridge);
     InitPointer(m_pColecoVisionIOPorts);
+    InitPointer(m_pTraceLogger);
+    InitPointer(m_pFrameBuffer);
     m_bPaused = true;
-    m_pixelFormat = GC_PIXEL_RGB888;
+    m_pixelFormat = GC_PIXEL_RGBA8888;
+    m_MasterClockCycles = 0;
 }
 
 GearcolecoCore::~GearcolecoCore()
 {
     SafeDelete(m_pColecoVisionIOPorts);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    SafeDelete(m_pTraceLogger);
+#endif
     SafeDelete(m_pCartridge);
     SafeDelete(m_pInput);
     SafeDelete(m_pVideo);
@@ -66,6 +77,9 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pVideo = new Video(m_pMemory, m_pProcessor);
     m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pTraceLogger = new TraceLogger();
+#endif
 
     m_pMemory->Init();
     m_pProcessor->Init();
@@ -75,23 +89,80 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pCartridge->Init();
 
     m_pProcessor->SetIOPOrts(m_pColecoVisionIOPorts);
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pProcessor->SetTraceLogger(m_pTraceLogger);
+    m_pVideo->SetTraceLogger(m_pTraceLogger);
+    m_pColecoVisionIOPorts->SetTraceLogger(m_pTraceLogger);
+#endif
 }
 
-bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, bool step, bool stopOnBreakpoints)
+bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug)
 {
+    m_pFrameBuffer = pFrameBuffer;
+
     if (!m_pMemory->IsBiosLoaded())
     {
         RenderFrameBuffer(pFrameBuffer);
         return false;
     }
 
-    bool breakpoint = false;
-
     if (!m_bPaused && m_pCartridge->IsReady())
     {
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+        bool debug_enable = false;
+        bool instruction_completed = false;
+        if (IsValidPointer(debug))
+        {
+            debug_enable = true;
+            m_pProcessor->EnableBreakpoints(debug->stop_on_breakpoint, debug->stop_on_irq);
+        }
+
         bool vblank = false;
         int totalClocks = 0;
-        while (!vblank)
+
+        do
+        {
+            unsigned int clockCycles = debug_enable && debug->step_debugger ? m_pProcessor->RunInstruction() : m_pProcessor->RunFor(1);
+            instruction_completed = true;
+            vblank = m_pVideo->Tick(clockCycles);
+            m_pAudio->Tick(clockCycles);
+            m_pMemory->Tick(clockCycles);
+            m_MasterClockCycles += clockCycles;
+            totalClocks += clockCycles;
+
+            if (debug_enable)
+            {
+                if (debug->step_debugger)
+                    vblank = instruction_completed;
+
+                if (m_pProcessor->MemoryBreakpointHit())
+                    vblank = true;
+
+                if (instruction_completed)
+                {
+                    if (m_pProcessor->BreakpointHit())
+                        vblank = true;
+
+                    if (debug->stop_on_run_to_breakpoint && m_pProcessor->RunToBreakpointHit())
+                        vblank = true;
+                }
+            }
+
+            if (totalClocks > 702240)
+                vblank = true;
+        }
+        while (!vblank);
+
+        m_pAudio->EndFrame(pSampleBuffer, pSampleCount);
+        RenderFrameBuffer(pFrameBuffer);
+
+        return m_pProcessor->BreakpointHit() || m_pProcessor->RunToBreakpointHit();
+#else
+        UNUSED(debug);
+        bool vblank = false;
+        int totalClocks = 0;
+
+        do
         {
 #ifdef PERFORMANCE
             unsigned int clockCycles = m_pProcessor->RunFor(75);
@@ -101,27 +172,22 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
-
+            m_MasterClockCycles += clockCycles;
             totalClocks += clockCycles;
-
-#ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-            if ((step || (stopOnBreakpoints && m_pProcessor->BreakpointHit())) && !m_pProcessor->DuringInputOpcode())
-            {
-                vblank = true;
-                if (m_pProcessor->BreakpointHit())
-                    breakpoint = true;
-            }
-#endif
 
             if (totalClocks > 702240)
                 vblank = true;
         }
+        while (!vblank);
 
         m_pAudio->EndFrame(pSampleBuffer, pSampleCount);
         RenderFrameBuffer(pFrameBuffer);
+
+        return false;
+#endif
     }
 
-    return breakpoint;
+    return false;
 }
 
 bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config)
@@ -135,7 +201,7 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
-        m_pProcessor->DisassembleNextOpcode();
+        m_pProcessor->DisassembleNextOPCode();
 
         return true;
     }
@@ -154,7 +220,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
-        m_pProcessor->DisassembleNextOpcode();
+        m_pProcessor->DisassembleNextOPCode();
 
         return true;
     }
@@ -164,8 +230,8 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
 
 void GearcolecoCore::SaveDisassembledROM()
 {
-    Memory::stDisassembleRecord** biosMap = m_pMemory->GetDisassembledBiosMemoryMap();
-    Memory::stDisassembleRecord** romMap = m_pMemory->GetDisassembledRomMemoryMap();
+    GC_Disassembler_Record** biosMap = m_pMemory->GetDisassemblerBiosMap();
+    GC_Disassembler_Record** romMap = m_pMemory->GetDisassemblerRomMap();
 
     if (m_pCartridge->IsReady() && (strlen(m_pCartridge->GetFilePath()) > 0) && IsValidPointer(romMap))
     {
@@ -190,7 +256,7 @@ void GearcolecoCore::SaveDisassembledROM()
             {
                 if (IsValidPointer(biosMap[i]) && (biosMap[i]->name[0] != 0))
                 {
-                    myfile << "BIOS $" << PAD_ADDR(4) << i << "   " << PAD_MEM(12) << biosMap[i]->bytes << "  " << biosMap[i]->name << "\n";
+                    myfile << "BIOS $" << PAD_ADDR(4) << i << "   " << PAD_MEM(25) << biosMap[i]->bytes << "  " << biosMap[i]->name << "\n";
                 }
             }
 
@@ -198,7 +264,7 @@ void GearcolecoCore::SaveDisassembledROM()
             {
                 if (IsValidPointer(romMap[i]) && (romMap[i]->name[0] != 0))
                 {
-                    myfile << "ROM  $" << PAD_ADDR(4) << i + 0x8000 << "   " << PAD_MEM(12) << romMap[i]->bytes << "  " << romMap[i]->name << "\n";
+                    myfile << "ROM  $" << PAD_ADDR(4) << i + 0x8000 << "   " << PAD_MEM(25) << romMap[i]->bytes << "  " << romMap[i]->name << "\n";
                 }
             }
 
@@ -255,6 +321,16 @@ Video* GearcolecoCore::GetVideo()
     return m_pVideo;
 }
 
+TraceLogger* GearcolecoCore::GetTraceLogger()
+{
+    return m_pTraceLogger;
+}
+
+u64 GearcolecoCore::GetMasterClockCycles()
+{
+    return m_MasterClockCycles;
+}
+
 void GearcolecoCore::KeyPressed(GC_Controllers controller, GC_Keys key)
 {
     m_pInput->KeyPressed(controller, key);
@@ -302,17 +378,43 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        m_pMemory->SetupMapper();
         Reset();
 
-        m_pProcessor->DisassembleNextOpcode();
+        m_pProcessor->DisassembleNextOPCode();
     }
 }
 
 void GearcolecoCore::ResetROMPreservingRAM(Cartridge::ForceConfiguration* config)
 {
-    // TODO
+    if (m_pCartridge->IsReady())
+    {
+        Mapper* pMapper = m_pMemory->GetMapper();
+        u8* pSaveData = IsValidPointer(pMapper) ? pMapper->GetSaveData() : NULL;
+        int saveDataSize = IsValidPointer(pMapper) ? pMapper->GetSaveDataSize() : 0;
 
-    ResetROM(config);
+        if (IsValidPointer(pSaveData) && (saveDataSize > 0))
+        {
+            Debug("Resetting preserving RAM...");
+
+            u8* pSavedData = new u8[saveDataSize];
+            memcpy(pSavedData, pSaveData, saveDataSize);
+
+            ResetROM(config);
+
+            pMapper = m_pMemory->GetMapper();
+            pSaveData = IsValidPointer(pMapper) ? pMapper->GetSaveData() : NULL;
+
+            if (IsValidPointer(pSaveData) && (pMapper->GetSaveDataSize() == saveDataSize))
+                memcpy(pSaveData, pSavedData, saveDataSize);
+
+            SafeDeleteArray(pSavedData);
+        }
+        else
+        {
+            ResetROM(config);
+        }
+    }
 }
 
 void GearcolecoCore::ResetSound()
@@ -440,94 +542,98 @@ void GearcolecoCore::LoadRam(const char* szPath, bool fullPath)
     }
 }
 
-void GearcolecoCore::SaveState(int index)
+std::string GearcolecoCore::GetSaveStatePath(const char* path, int index)
 {
-    Log("Creating save state %d...", index);
-
-    SaveState(NULL, index);
-
-    Debug("Save state %d created", index);
-}
-
-void GearcolecoCore::SaveState(const char* szPath, int index)
-{
-    Log("Creating save state...");
-
     using namespace std;
 
-    size_t size;
-    SaveState(NULL, size);
+    string sav_path = "";
 
-    u8* buffer = new u8[size];
-    string path = "";
-
-    if (IsValidPointer(szPath))
+    if (IsValidPointer(path))
     {
-        path += szPath;
-        path += "/";
-        path += m_pCartridge->GetFileName();
+        sav_path += path;
+        sav_path += "/";
+        sav_path += m_pCartridge->GetFileName();
     }
     else
     {
-        path = m_pCartridge->GetFilePath();
+        sav_path = m_pCartridge->GetFilePath();
     }
 
-    string::size_type i = path.rfind('.', path.length());
+    string::size_type i = sav_path.rfind('.', sav_path.length());
 
     if (i != string::npos) {
-        path.replace(i + 1, 3, "state");
+        sav_path.replace(i + 1, 3, "state");
     }
 
     std::stringstream sstm;
 
     if (index < 0)
-        sstm << szPath;
+        sstm << path;
     else
-        sstm << path << index;
+        sstm << sav_path << index;
 
-    Log("Save state file: %s", sstm.str().c_str());
+    return sstm.str();
+}
+
+bool GearcolecoCore::SaveState(const char* path, int index, bool screenshot)
+{
+    Log("Creating save state...");
+
+    using namespace std;
+
+    string full_path = GetSaveStatePath(path, index);
+    Log("Save state file: %s", full_path.c_str());
 
     ofstream file;
-    open_ofstream_utf8(file, sstm.str().c_str(), ios::out | ios::binary);
+    open_ofstream_utf8(file, full_path.c_str(), ios::out | ios::binary);
 
-    SaveState(file, size);
-
-    SafeDeleteArray(buffer);
+    size_t size;
+    SaveState(file, size, screenshot);
 
     file.close();
 
     Debug("Save state created");
+    return true;
 }
 
-bool GearcolecoCore::SaveState(u8* buffer, size_t& size)
+bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
 {
-    bool ret = false;
+    using namespace std;
 
-    if (m_pCartridge->IsReady())
+    Debug("Saving state to buffer [%d bytes]...", size);
+
+    if (!m_pCartridge->IsReady())
     {
-        using namespace std;
+        Error("Cartridge is not ready when trying to save state");
+        return false;
+    }
 
+    if (!IsValidPointer(buffer))
+    {
         stringstream stream;
-
-        if (SaveState(stream, size))
-            ret = true;
-
-        if (IsValidPointer(buffer))
+        if (!SaveState(stream, size, screenshot))
         {
-            Log("Saving state to buffer [%d bytes]...", size);
-            memcpy(buffer, stream.str().c_str(), size);
-            ret = true;
+            Error("Failed to save state to stream to calculate size");
+            return false;
         }
+        return true;
     }
     else
     {
-        Log("Invalid rom.");
-    }
+        memory_stream direct_stream(reinterpret_cast<char*>(buffer), size);
 
-    return ret;
+        if (!SaveState(direct_stream, size, screenshot))
+        {
+            Error("Failed to save state to buffer");
+            return false;
+        }
+
+        size = direct_stream.size();
+        return true;
+    }
 }
 
-bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size)
+bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screenshot)
 {
     if (m_pCartridge->IsReady())
     {
@@ -539,16 +645,54 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size)
         m_pVideo->SaveState(stream);
         m_pInput->SaveState(stream);
 
+#if defined(__LIBRETRO__)
+        GC_SaveState_Header_Libretro header;
+        memset(&header, 0, sizeof(header));
+        header.magic = GC_SAVESTATE_MAGIC;
+        header.version = GC_SAVESTATE_VERSION;
+        Debug("Save state header magic: 0x%08x", header.magic);
+        Debug("Save state header version: %d", header.version);
+#else
+        GC_SaveState_Header header;
+        memset(&header, 0, sizeof(header));
+        header.magic = GC_SAVESTATE_MAGIC;
+        header.version = GC_SAVESTATE_VERSION;
+        header.timestamp = time(NULL);
+        strncpy_fit(header.rom_name, m_pCartridge->GetFileName(), sizeof(header.rom_name));
+        header.rom_crc = m_pCartridge->GetCRC();
+        strncpy_fit(header.emu_build, GEARCOLECO_VERSION, sizeof(header.emu_build));
+
+        Debug("Save state header magic: 0x%08x", header.magic);
+        Debug("Save state header version: %d", header.version);
+
+        if (screenshot && IsValidPointer(m_pFrameBuffer))
+        {
+            GC_RuntimeInfo runtime_info;
+            GetRuntimeInfo(runtime_info);
+            header.screenshot_width = runtime_info.screen_width;
+            header.screenshot_height = runtime_info.screen_height;
+
+            int bytes_per_pixel = (m_pixelFormat == GC_PIXEL_RGBA8888 || m_pixelFormat == GC_PIXEL_BGRA8888) ? 4 : 2;
+            header.screenshot_size = header.screenshot_width * header.screenshot_height * bytes_per_pixel;
+            stream.write(reinterpret_cast<const char*>(m_pFrameBuffer), header.screenshot_size);
+        }
+        else
+        {
+            header.screenshot_size = 0;
+            header.screenshot_width = 0;
+            header.screenshot_height = 0;
+        }
+#endif
+
         size = static_cast<size_t>(stream.tellp());
-        size += (sizeof(u32) * 2);
+        size += sizeof(header);
 
-        u32 header_magic = GC_SAVESTATE_MAGIC;
-        u32 header_size = static_cast<u32>(size);
+#if !defined(__LIBRETRO__)
+        header.size = static_cast<u32>(size);
+        Debug("Save state header size: %d", header.size);
+#endif
 
-        stream.write(reinterpret_cast<const char*> (&header_magic), sizeof(header_magic));
-        stream.write(reinterpret_cast<const char*> (&header_size), sizeof(header_size));
-
-        Debug("Save state size: %d", static_cast<size_t>(stream.tellp()));
+        stream.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
         return true;
     }
@@ -558,60 +702,25 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size)
     return false;
 }
 
-void GearcolecoCore::LoadState(int index)
-{
-    Log("Loading save state %d...", index);
-
-    LoadState(NULL, index);
-
-    Debug("State %d file loaded", index);
-}
-
-void GearcolecoCore::LoadState(const char* szPath, int index)
+bool GearcolecoCore::LoadState(const char* path, int index)
 {
     Log("Loading save state...");
 
     using namespace std;
 
-    string sav_path = "";
-
-    if (IsValidPointer(szPath))
-    {
-        sav_path += szPath;
-        sav_path += "/";
-        sav_path += m_pCartridge->GetFileName();
-    }
-    else
-    {
-        sav_path = m_pCartridge->GetFilePath();
-    }
-
-    string rom_path = sav_path;
-
-    string::size_type i = sav_path.rfind('.', sav_path.length());
-
-    if (i != string::npos) {
-        sav_path.replace(i + 1, 3, "state");
-    }
-
-    std::stringstream sstm;
-
-    if (index < 0)
-        sstm << szPath;
-    else
-        sstm << sav_path << index;
-
-    Log("Opening save file: %s", sstm.str().c_str());
+    string full_path = GetSaveStatePath(path, index);
+    Log("Opening save file: %s", full_path.c_str());
 
     ifstream file;
-
-    open_ifstream_utf8(file, sstm.str().c_str(), ios::in | ios::binary);
+    open_ifstream_utf8(file, full_path.c_str(), ios::in | ios::binary);
 
     if (!file.fail())
     {
         if (LoadState(file))
         {
             Debug("Save state loaded");
+            file.close();
+            return true;
         }
     }
     else
@@ -620,26 +729,29 @@ void GearcolecoCore::LoadState(const char* szPath, int index)
     }
 
     file.close();
+    return false;
 }
 
 bool GearcolecoCore::LoadState(const u8* buffer, size_t size)
 {
-    if (m_pCartridge->IsReady() && (size > 0) && IsValidPointer(buffer))
+    using namespace std;
+
+    Debug("Loading state from buffer [%d bytes]...", size);
+
+    if (!m_pCartridge->IsReady())
     {
-        Debug("Gathering load state data [%d bytes]...", size);
-
-        using namespace std;
-
-        stringstream stream;
-
-        stream.write(reinterpret_cast<const char*> (buffer), size);
-
-        return LoadState(stream);
+        Error("Cartridge is not ready when trying to load state");
+        return false;
     }
 
-    Log("Invalid rom or memory.");
+    if (!IsValidPointer(buffer) || (size == 0))
+    {
+        Error("Invalid load state buffer");
+        return false;
+    }
 
-    return false;
+    memory_input_stream direct_stream(reinterpret_cast<const char*>(buffer), size);
+    return LoadState(direct_stream);
 }
 
 bool GearcolecoCore::LoadState(std::istream& stream)
@@ -648,39 +760,114 @@ bool GearcolecoCore::LoadState(std::istream& stream)
     {
         using namespace std;
 
-        u32 header_magic = 0;
-        u32 header_size = 0;
-
         stream.seekg(0, ios::end);
         size_t size = static_cast<size_t>(stream.tellg());
-        stream.seekg(0, ios::beg);
 
         Debug("Load state stream size: %d", size);
 
-        stream.seekg(size - (2 * sizeof(u32)), ios::beg);
-        stream.read(reinterpret_cast<char*> (&header_magic), sizeof(header_magic));
-        stream.read(reinterpret_cast<char*> (&header_size), sizeof(header_size));
+        GC_SaveState_Header_Libretro header;
+#if !defined(__LIBRETRO__)
+        bool is_desktop_savestate = false;
+#endif
+
+        // Try desktop header first (larger, contains all info)
+        GC_SaveState_Header desktop_header;
+        if (size >= sizeof(desktop_header))
+        {
+            stream.seekg(size - sizeof(desktop_header), ios::beg);
+            stream.read(reinterpret_cast<char*>(&desktop_header), sizeof(desktop_header));
+
+            if (desktop_header.magic == GC_SAVESTATE_MAGIC)
+            {
+                header.magic = desktop_header.magic;
+                header.version = desktop_header.version;
+#if !defined(__LIBRETRO__)
+                is_desktop_savestate = true;
+#endif
+                Debug("Loading desktop save state");
+            }
+        }
+
+        // Fallback to libretro header
+        if (header.magic != GC_SAVESTATE_MAGIC)
+        {
+            stream.seekg(size - sizeof(header), ios::beg);
+            stream.read(reinterpret_cast<char*>(&header), sizeof(header));
+        }
+
         stream.seekg(0, ios::beg);
 
-        Debug("Load state magic: 0x%08x", header_magic);
-        Debug("Load state size: %d", header_size);
+        Debug("Load state header magic: 0x%08x", header.magic);
+        Debug("Load state header version: %d", header.version);
 
-        if ((header_size == size) && (header_magic == GC_SAVESTATE_MAGIC))
+        if (header.magic == GC_SAVESTATE_MAGIC && header.version >= GC_SAVESTATE_MIN_VERSION && header.version <= GC_SAVESTATE_VERSION)
         {
-            Log("Loading state...");
+#if !defined(__LIBRETRO__)
+            if (is_desktop_savestate)
+            {
+                Debug("Load state header size: %d", desktop_header.size);
+                Debug("Load state header timestamp: %d", desktop_header.timestamp);
+                Debug("Load state header rom name: %s", desktop_header.rom_name);
+                Debug("Load state header rom crc: 0x%08x", desktop_header.rom_crc);
+                Debug("Load state header screenshot size: %d", desktop_header.screenshot_size);
+                Debug("Load state header screenshot width: %d", desktop_header.screenshot_width);
+                Debug("Load state header screenshot height: %d", desktop_header.screenshot_height);
+                Debug("Load state header emu build: %s", desktop_header.emu_build);
+
+                if (desktop_header.size != size)
+                {
+                    Error("Invalid save state size: %d", desktop_header.size);
+                    return false;
+                }
+            }
+#endif
+
+            Log("Loading state (v%d)...", header.version);
 
             m_pMemory->LoadState(stream);
             m_pProcessor->LoadState(stream);
-            m_pAudio->LoadState(stream);
+
+            if (header.version <= 102)
+                m_pAudio->LoadStateV1(stream);
+            else
+                m_pAudio->LoadState(stream);
+
             m_pVideo->LoadState(stream);
-            m_pInput->LoadState(stream);
+            m_pInput->LoadState(stream, header.version);
 
             return true;
         }
-        else
+
+        // Try legacy V1 format (8-byte trailer: magic + size)
+        if (size >= (2 * sizeof(u32)))
         {
-            Log("Invalid save state size or header");
+            u32 v1_magic = 0;
+            u32 v1_size = 0;
+
+            stream.clear();
+            stream.seekg(size - (2 * sizeof(u32)), ios::beg);
+            stream.read(reinterpret_cast<char*>(&v1_magic), sizeof(v1_magic));
+            stream.read(reinterpret_cast<char*>(&v1_size), sizeof(v1_size));
+            stream.seekg(0, ios::beg);
+
+            Debug("Load state V1 magic: 0x%08x", v1_magic);
+            Debug("Load state V1 size: %d", v1_size);
+
+            if ((v1_size == size) && (v1_magic == GC_SAVESTATE_MAGIC))
+            {
+                Log("Loading legacy state...");
+
+                m_pMemory->LoadState(stream);
+                m_pProcessor->LoadState(stream);
+                m_pAudio->LoadStateV1(stream);
+                m_pVideo->LoadState(stream);
+                m_pInput->LoadState(stream, GC_SAVESTATE_VERSION_V1);
+
+                return true;
+            }
         }
+
+        Log("Invalid save state");
     }
     else
     {
@@ -688,6 +875,121 @@ bool GearcolecoCore::LoadState(std::istream& stream)
     }
 
     return false;
+}
+
+bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveState_Header* header)
+{
+    using namespace std;
+
+    string full_path = GetSaveStatePath(path, index);
+    Debug("Loading state header from %s...", full_path.c_str());
+
+    ifstream stream;
+    open_ifstream_utf8(stream, full_path.c_str(), ios::in | ios::binary);
+
+    if (stream.fail())
+    {
+        Debug("Savestate file doesn't exist %s", full_path.c_str());
+        stream.close();
+        return false;
+    }
+
+    stream.seekg(0, ios::end);
+    size_t savestate_size = static_cast<size_t>(stream.tellg());
+    stream.seekg(0, ios::beg);
+
+    if (savestate_size >= sizeof(GC_SaveState_Header))
+    {
+        stream.seekg(savestate_size - sizeof(GC_SaveState_Header), ios::beg);
+        stream.read(reinterpret_cast<char*>(header), sizeof(GC_SaveState_Header));
+        stream.close();
+
+        if ((header->magic == GC_SAVESTATE_MAGIC) && (header->size == savestate_size))
+            return true;
+    }
+
+    // Try legacy V1 format
+    if (savestate_size >= (2 * sizeof(u32)))
+    {
+        u32 v1_magic = 0;
+        u32 v1_size = 0;
+
+        stream.clear();
+        stream.seekg(savestate_size - (2 * sizeof(u32)), ios::beg);
+        stream.read(reinterpret_cast<char*>(&v1_magic), sizeof(v1_magic));
+        stream.read(reinterpret_cast<char*>(&v1_size), sizeof(v1_size));
+        stream.close();
+
+        if ((v1_magic == GC_SAVESTATE_MAGIC) && (v1_size == savestate_size))
+        {
+            memset(header, 0, sizeof(GC_SaveState_Header));
+            header->magic = v1_magic;
+            header->version = GC_SAVESTATE_VERSION_V1;
+            header->size = v1_size;
+            strncpy_fit(header->rom_name, m_pCartridge->GetFileName(), sizeof(header->rom_name));
+            return true;
+        }
+    }
+
+    stream.close();
+    return false;
+}
+
+bool GearcolecoCore::GetSaveStateScreenshot(int index, const char* path, GC_SaveState_Screenshot* screenshot)
+{
+    using namespace std;
+
+    if (!IsValidPointer(screenshot->data) || (screenshot->size == 0))
+    {
+        Error("Invalid save state screenshot buffer");
+        return false;
+    }
+
+    GC_SaveState_Header header;
+    if (!GetSaveStateHeader(index, path, &header))
+        return false;
+
+    if (header.screenshot_size == 0)
+    {
+        Debug("No screenshot data");
+        return false;
+    }
+
+    if (screenshot->size < header.screenshot_size)
+    {
+        Error("Invalid screenshot buffer size %d < %d", screenshot->size, header.screenshot_size);
+        return false;
+    }
+
+    string full_path = GetSaveStatePath(path, index);
+    Debug("Loading state screenshot from %s...", full_path.c_str());
+
+    ifstream stream;
+    open_ifstream_utf8(stream, full_path.c_str(), ios::in | ios::binary);
+
+    if (stream.fail())
+    {
+        Error("Savestate file doesn't exist %s", full_path.c_str());
+        stream.close();
+        return false;
+    }
+
+    screenshot->size = header.screenshot_size;
+    screenshot->width = header.screenshot_width;
+    screenshot->height = header.screenshot_height;
+
+    if (header.size < sizeof(header) + screenshot->size)
+    {
+        Error("Invalid screenshot offset");
+        stream.close();
+        return false;
+    }
+
+    stream.seekg(header.size - sizeof(header) - screenshot->size, ios::beg);
+    stream.read(reinterpret_cast<char*>(screenshot->data), screenshot->size);
+    stream.close();
+
+    return true;
 }
 
 void GearcolecoCore::Reset()
@@ -716,10 +1018,10 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
             m_pVideo->Render16bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
-        case GC_PIXEL_RGB888:
-        case GC_PIXEL_BGR888:
+        case GC_PIXEL_RGBA8888:
+        case GC_PIXEL_BGRA8888:
         {
-            m_pVideo->Render24bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
+            m_pVideo->Render32bit(srcBuffer, finalFrameBuffer, m_pixelFormat, size, true);
             break;
         }
     }
