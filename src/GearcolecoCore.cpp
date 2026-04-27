@@ -800,7 +800,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
         Debug("Load state header magic: 0x%08x", header.magic);
         Debug("Load state header version: %d", header.version);
 
-        if (header.magic == GC_SAVESTATE_MAGIC && header.version >= GC_SAVESTATE_MIN_VERSION)
+        if (header.magic == GC_SAVESTATE_MAGIC && header.version >= GC_SAVESTATE_MIN_VERSION && header.version <= GC_SAVESTATE_VERSION)
         {
 #if !defined(__LIBRETRO__)
             if (is_desktop_savestate)
