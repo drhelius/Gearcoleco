@@ -1343,7 +1343,7 @@ json DebugAdapter::GetSpriteImage(int sprite_index)
     Video* video = m_core->GetVideo();
     u8* regs = video->GetRegisters();
     bool sprite_16x16 = (regs[1] & 0x02) != 0;
-    int width = 8;
+    int width = sprite_16x16 ? 16 : 8;
     int height = sprite_16x16 ? 16 : 8;
 
     std::string base64_png = base64_encode(png_buffer, png_size);
