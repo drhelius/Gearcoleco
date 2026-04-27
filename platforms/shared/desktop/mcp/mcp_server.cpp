@@ -622,7 +622,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "get_vdp_registers"},
         {"title", "Get VDP Registers"},
-        {"description", "Get all 11 VDP registers (R0-R10) with hex values and descriptions"},
+        {"description", "Get all 8 VDP registers (R0-R7) with hex values and descriptions"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
@@ -644,7 +644,7 @@ void McpServer::HandleToolsList(const json& request)
     tools.push_back({
         {"name", "get_psg_status"},
         {"title", "Get PSG Status"},
-        {"description", "Get SN76489 PSG status for all 4 channels (3 tone + 1 noise): volume, period, frequency, GG stereo"},
+        {"description", "Get SN76489 PSG status for all 4 channels (3 tone + 1 noise): volume, period, and frequency"},
         {"inputSchema", {
             {"type", "object"},
             {"properties", json::object()},
