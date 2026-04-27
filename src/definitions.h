@@ -277,16 +277,4 @@ inline int AsHex(const char c)
    return c >= 'A' ? c - 'A' + 0xA : c - '0';
 }
 
-inline unsigned int Pow2Ceil(u16 n)
-{
-    --n;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    ++n;
-    return n;
-}
-
 #endif	/* DEFINITIONS_H */
