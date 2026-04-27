@@ -2,6 +2,49 @@
 
 Gearcoleco includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like GitHub Copilot, Claude, ChatGPT and similar.
 
+This server provides tools for ColecoVision game development, rom hacking, reverse engineering, and debugging through standardized MCP protocols.
+
+## Downloads
+
+<table>
+  <thead>
+    <tr>
+      <th>Platform</th>
+      <th>Architecture</th>
+      <th>Download Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="2"><strong>Windows</strong></td>
+      <td>x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-mcpb-windows-x64.mcpb">Gearcoleco-1.5.5-mcpb-windows-x64.mcpb</a></td>
+    </tr>
+    <tr>
+      <td>ARM64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-mcpb-windows-arm64.mcpb">Gearcoleco-1.5.5-mcpb-windows-arm64.mcpb</a></td>
+    </tr>
+    <tr>
+      <td rowspan="2"><strong>macOS</strong></td>
+      <td>x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-mcpb-macos-x64.mcpb">Gearcoleco-1.5.5-mcpb-macos-x64.mcpb</a></td>
+    </tr>
+    <tr>
+      <td>ARM64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-mcpb-macos-arm64.mcpb">Gearcoleco-1.5.5-mcpb-macos-arm64.mcpb</a></td>
+    </tr>
+    <tr>
+      <td rowspan="2"><strong>Linux</strong></td>
+      <td>x64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-mcpb-linux-x64.mcpb">Gearcoleco-1.5.5-mcpb-linux-x64.mcpb</a></td>
+    </tr>
+    <tr>
+      <td>ARM64</td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.5.5/Gearcoleco-1.5.5-mcpb-linux-arm64.mcpb">Gearcoleco-1.5.5-mcpb-linux-arm64.mcpb</a></td>
+    </tr>
+  </tbody>
+</table>
+
 ## Features
 
 - Full debugger access: pause, continue, step into/over/out, step frame, reset
@@ -35,24 +78,51 @@ Run the emulator without a GUI, using only the MCP server for control. Ideal for
 
 ## Quick Start
 
-### STDIO with VS Code (GitHub Copilot)
+### STDIO Mode with VS Code
 
-Add to `.vscode/mcp.json`:
-```json
-{
-  "servers": {
-    "gearcoleco": {
-      "type": "stdio",
-      "command": "/path/to/gearcoleco",
-      "args": ["--mcp-stdio"]
-    }
-  }
-}
-```
+1. Install the [GitHub Copilot extension](https://code.visualstudio.com/docs/copilot/overview) in VS Code.
 
-### STDIO with Claude Desktop
+2. Add `.vscode/mcp.json` to your workspace:
 
-Add to Claude Desktop MCP settings:
+   ```json
+   {
+     "servers": {
+       "gearcoleco": {
+         "command": "/path/to/gearcoleco",
+         "args": ["--mcp-stdio"]
+       }
+     }
+   }
+   ```
+
+   Update the `command` path to match your build or release binary:
+   - macOS: `/path/to/gearcoleco`
+   - Linux: `/path/to/gearcoleco`
+   - Windows: `C:/path/to/Gearcoleco.exe`
+
+3. Restart VS Code if the MCP server is not discovered immediately.
+
+### STDIO Mode with Claude Desktop
+
+#### Option 1: Desktop Extension (Recommended)
+
+The easiest way to install the Gearcoleco MCP server on Claude Desktop is with the MCPB package:
+
+1. Download the latest MCPB package for your platform from the [releases page](https://github.com/drhelius/Gearcoleco/releases).
+
+2. Install the extension:
+   - Open Claude Desktop
+   - Navigate to **Settings > Extensions**
+   - Click **Advanced settings**
+   - In the Extension Developer section, click **Install Extension...**
+   - Select the downloaded `.mcpb` file
+
+3. Start debugging. The extension is available in conversations and launches Gearcoleco when the tool is enabled.
+
+#### Option 2: Manual Configuration
+
+If you prefer to build from source or configure manually, edit Claude Desktop's MCP settings:
+
 ```json
 {
   "mcpServers": {
@@ -64,17 +134,99 @@ Add to Claude Desktop MCP settings:
 }
 ```
 
-### STDIO with Claude Code
+Config file locations:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
 
-```bash
-claude mcp add gearcoleco /path/to/gearcoleco --args --mcp-stdio
-```
+Restart Claude Desktop after saving the configuration.
+
+### STDIO Mode with Claude Code
+
+1. Add the Gearcoleco MCP server using the CLI:
+
+   ```bash
+   claude mcp add --transport stdio gearcoleco -- /path/to/gearcoleco --mcp-stdio
+   ```
+
+2. Verify the server was added:
+
+   ```bash
+   claude mcp list
+   ```
 
 ### HTTP Mode
 
-```bash
-gearcoleco --mcp-http --mcp-http-port 7777
-```
+1. Start Gearcoleco manually with HTTP transport:
+
+   ```bash
+   ./gearcoleco --mcp-http
+   # Server starts on http://localhost:7777/mcp
+
+   ./gearcoleco --mcp-http --mcp-http-port 3000
+   # Server starts on http://localhost:3000/mcp
+   ```
+
+   You can also start the HTTP server from the debugger's MCP Server menu.
+
+2. Configure VS Code `.vscode/mcp.json`:
+
+   ```json
+   {
+     "servers": {
+       "gearcoleco": {
+         "type": "http",
+         "url": "http://localhost:7777/mcp",
+         "headers": {}
+       }
+     }
+   }
+   ```
+
+3. Or configure Claude Desktop:
+
+   ```json
+   {
+     "mcpServers": {
+       "gearcoleco": {
+         "type": "http",
+         "url": "http://localhost:7777/mcp"
+       }
+     }
+   }
+   ```
+
+4. Or configure Claude Code:
+
+   ```bash
+   claude mcp add --transport http gearcoleco http://localhost:7777/mcp
+   ```
+
+> **Note:** The MCP HTTP server must be running before connecting the AI client.
+
+## Usage Examples
+
+Once configured, you can ask your AI assistant:
+
+### Basic Commands
+
+- "What game is currently loaded?"
+- "Load the ROM at /path/to/game.col"
+- "Show me the current CPU registers"
+- "Read 16 bytes from RAM starting at offset 0x0000"
+- "Set a breakpoint at address 0x0038"
+- "Pause execution and show me all sprites"
+- "Step through the next 5 instructions"
+- "Capture a screenshot of the current frame"
+- "Tap keypad 1 on player 1 controller"
+
+### Advanced Debugging Workflows
+
+- "Find the interrupt handler, analyze what it does, and add symbols for the subroutines it calls"
+- "Inspect the TMS9918 sprite attribute table, list active sprites, and capture the sprite images"
+- "Locate the routine that updates score digits in RAM and add memory watches for those addresses"
+- "Trace CPU instructions and VDP writes for one frame, then summarize the rendering flow"
+- "Compare SGM RAM before and after this routine runs and identify what data structure changed"
 
 ## Available MCP Tools
 
@@ -127,7 +279,7 @@ gearcoleco --mcp-http --mcp-http-port 7777
 ### Hardware Status
 | Tool | Description |
 |------|-------------|
-| `get_vdp_registers` | Get TMS9918 VDP register values and decoded fields |
+| `get_vdp_registers` | Get all 8 TMS9918 VDP register values and decoded fields |
 | `get_vdp_status` | Get VDP status flags, mode, render state |
 | `get_psg_status` | Get SN76489 PSG channel state |
 | `get_ay8910_status` | Get AY-3-8910 SGM sound chip state |
@@ -161,7 +313,7 @@ gearcoleco --mcp-http --mcp-http-port 7777
 ### Controller Input
 | Tool | Description |
 |------|-------------|
-| `controller_button` | Press/release controller buttons (directional, keypad, blue, purple) |
+| `controller_button` | Press/release controller buttons (directional, keypad, yellow/red, blue/purple) |
 
 ### Memory Editor
 | Tool | Description |
@@ -184,31 +336,46 @@ The MCP server also exposes hardware reference documents via `resources/list` an
 
 ## How MCP Works in Gearcoleco
 
-The MCP server runs as part of the emulator process and communicates with AI clients using JSON-RPC 2.0 over either STDIO or HTTP.
+The MCP server runs alongside the emulator GUI in a background thread.
 
+- The emulator GUI remains fully functional while MCP tools are connected.
+- Commands from the AI client are queued and executed on the emulator thread.
+- Both GUI and MCP share the same emulator state.
+- Changes made through MCP are reflected in the debugger UI and vice versa.
+
+## Architecture
+
+### STDIO Transport
+
+```text
++-----------------+                    +------------------+
+| VS Code /       |       stdio        | Gearcoleco       |
+| Claude Desktop  |<------------------>| MCP Server       |
+| (AI Client)     |       pipes        | (background)     |
++-----------------+                    +------------------+
+  |                                      |
+  +---- launches ---------------------->|
+                 | shared state
+                 v
+              +------------------+
+              | Emulator Core    |
+              | + GUI Window     |
+              +------------------+
 ```
-┌─────────────────────────────────────────────────┐
-│                 Gearcoleco                       │
-│  ┌───────────┐   ┌──────────────┐               │
-│  │  Z80 CPU  │   │  TMS9918 VDP │               │
-│  └───────────┘   └──────────────┘               │
-│  ┌───────────┐   ┌──────────────┐               │
-│  │ SN76489   │   │  AY-3-8910   │               │
-│  │ PSG       │   │  (SGM)       │               │
-│  └───────────┘   └──────────────┘               │
-│                                                  │
-│  ┌───────────────────────────────────────────┐  │
-│  │             MCP Server                     │  │
-│  │  ┌─────────────┐  ┌────────────────────┐  │  │
-│  │  │  Transport   │  │  Debug Adapter     │  │  │
-│  │  │ (STDIO/HTTP) │  │  (Core Interface)  │  │  │
-│  │  └─────────────┘  └────────────────────┘  │  │
-│  └───────────────────────────────────────────┘  │
-└──────────────────────┬──────────────────────────┘
-                       │ JSON-RPC 2.0
-              ┌────────┴────────┐
-              │   AI Client     │
-              │  (Copilot /     │
-              │   Claude / etc) │
-              └─────────────────┘
+
+### HTTP Transport
+
+```text
++-----------------+                    +------------------+
+| VS Code /       |  HTTP port 7777    | Gearcoleco       |
+| Claude Desktop  |<------------------>| MCP HTTP Server  |
+| (AI Client)     |                    | (listener)       |
++-----------------+                    +------------------+
+                 |
+                 | shared state
+                 v
+              +------------------+
+              | Emulator Core    |
+              | + GUI Window     |
+              +------------------+
 ```
