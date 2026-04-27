@@ -49,15 +49,22 @@ struct DisassemblerBookmark
     char name[32];
 };
 
+enum eSymbolType
+{
+    SymbolTypePrebuilt = 0,
+    SymbolTypeManual,
+    SymbolTypeAuto,
+};
+
 struct SymbolEntry
 {
     DebugSymbol* symbol;
-    bool is_manual;
+    int type;
     int bank;
 };
 
 static bool symbols_dirty = true;
-static bool show_auto_symbols = false;
+static bool show_prebuilt_auto_symbols = false;
 static DebugSymbol*** fixed_symbols = NULL;
 static DebugSymbol*** dynamic_symbols = NULL;
 static std::vector<SymbolEntry> fixed_symbol_list;
@@ -601,17 +608,17 @@ static void prepare_drawable_lines(void)
 
                     SymbolEntry entry;
                     entry.symbol = existing;
-                    entry.is_manual = false;
+                    entry.type = SymbolTypeAuto;
                     entry.bank = record->bank;
                     dynamic_symbol_list.push_back(entry);
 
-                    if (show_auto_symbols)
+                    if (show_prebuilt_auto_symbols)
                         symbols_dirty = true;
                 }
                 else if (strcmp(existing->text, record->auto_symbol) != 0)
                 {
                     snprintf(existing->text, 64, "%s", record->auto_symbol);
-                    if (show_auto_symbols)
+                    if (show_prebuilt_auto_symbols)
                         symbols_dirty = true;
                 }
             }
@@ -903,7 +910,7 @@ static void add_debug_symbols()
         u16 address = k_debug_symbols[i].address;
         u8 bank = 0;
 
-        DebugSymbol* existing = dynamic_symbols[bank][address];
+        DebugSymbol* existing = fixed_symbols[bank][address];
         if (!IsValidPointer(existing))
         {
             DebugSymbol* new_symbol = new DebugSymbol;
@@ -911,13 +918,13 @@ static void add_debug_symbols()
             new_symbol->bank = bank;
             snprintf(new_symbol->text, 64, "%s", k_debug_symbols[i].label);
 
-            dynamic_symbols[bank][address] = new_symbol;
+            fixed_symbols[bank][address] = new_symbol;
 
             SymbolEntry entry;
             entry.symbol = new_symbol;
-            entry.is_manual = false;
+            entry.type = SymbolTypePrebuilt;
             entry.bank = bank;
-            dynamic_symbol_list.push_back(entry);
+            fixed_symbol_list.push_back(entry);
         }
     }
     symbols_dirty = true;
@@ -1084,7 +1091,7 @@ static void add_symbol(const char* line)
 
             SymbolEntry entry;
             entry.symbol = new_symbol;
-            entry.is_manual = true;
+            entry.type = SymbolTypeManual;
             entry.bank = s.bank;
             fixed_symbol_list.push_back(entry);
             symbols_dirty = true;
@@ -1237,22 +1244,31 @@ bool gui_debug_resolve_label(GC_Disassembler_Record* record, std::string& instr,
 
     if (is_in || is_out)
     {
-        u16 port = record->opcodes[1];
+        u8 port = record->opcodes[1];
         int dir = is_in ? IO_IN : IO_OUT;
+        const char* label = NULL;
 
-        for (int i = 0; i < k_debug_io_label_count; i++)
+        for (int i = 0; i < k_debug_port_label_count; i++)
         {
-            if (k_debug_io_labels[i].address == port && (k_debug_io_labels[i].direction & dir))
+            if (((port & k_debug_port_labels[i].mask) == k_debug_port_labels[i].port) && (k_debug_port_labels[i].direction & dir))
             {
-                char label_address[4];
-                snprintf(label_address, 4, "$%02X", port);
-                std::string replacement = std::string(color) + k_debug_io_labels[i].label + "_" + label_address + original_color;
-                if (replace_address_in_string(instr, port, true, replacement.c_str()))
-                {
-                    if (out_name) *out_name = k_debug_io_labels[i].label;
-                    if (out_address) *out_address = port;
-                    return true;
-                }
+                label = k_debug_port_labels[i].label;
+                break;
+            }
+        }
+
+        if (label != NULL)
+        {
+            char label_address[4];
+            snprintf(label_address, 4, "$%02X", port);
+            std::string replacement = std::string(color) + label + "_" + label_address + original_color;
+            if (replace_address_in_string(instr, port, true, replacement.c_str()))
+            {
+                if (out_name)
+                    *out_name = label;
+                if (out_address)
+                    *out_address = port;
+                return true;
             }
         }
     }
@@ -1601,13 +1617,13 @@ static void disassembler_menu(void)
         ImGui::MenuItem("Symbols Window", NULL, &config_debug.show_symbols);
 
         ImGui::Separator();
-        ImGui::MenuItem("Hardware Labels", NULL, &config_debug.dis_replace_labels);
 
-        ImGui::MenuItem("Automatic Symbols", NULL, &config_debug.dis_show_auto_symbols);
+        ImGui::MenuItem("Replace Addresses With Symbols", NULL, &config_debug.dis_replace_symbols);
+        ImGui::MenuItem("Replace I/O Port Labels", NULL, &config_debug.dis_replace_labels);
+        ImGui::MenuItem("Show Automatic Jump Symbols", NULL, &config_debug.dis_show_auto_symbols);
         if (!config_debug.dis_show_auto_symbols) ImGui::BeginDisabled();
-        ImGui::MenuItem("Dim Automatic Symbols", NULL, &config_debug.dis_dim_auto_symbols);
+        ImGui::MenuItem("Dim Automatic Jump Symbols", NULL, &config_debug.dis_dim_auto_symbols);
         if (!config_debug.dis_show_auto_symbols) ImGui::EndDisabled();
-        ImGui::MenuItem("Replace Address With Symbol", NULL, &config_debug.dis_replace_symbols);
 
         ImGui::Separator();
 
@@ -1890,9 +1906,9 @@ void gui_debug_window_symbols(void)
     static int last_sort_column = -1;
     static int last_sort_direction = -1;
 
-    bool prev_auto = show_auto_symbols;
-    ImGui::Checkbox("Automatic Symbols", &show_auto_symbols);
-    if (show_auto_symbols != prev_auto)
+    bool prev_prebuilt_auto = show_prebuilt_auto_symbols;
+    ImGui::Checkbox("Show Prebuilt / Auto", &show_prebuilt_auto_symbols);
+    if (show_prebuilt_auto_symbols != prev_prebuilt_auto)
         symbols_dirty = true;
     ImGui::SameLine();
     ImGui::PushItemWidth(-1);
@@ -1910,7 +1926,7 @@ void gui_debug_window_symbols(void)
         ImGui::TableSetupColumn("Bank", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort, 44.0f);
         ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, 66.0f);
         ImGui::TableSetupColumn("Symbol", ImGuiTableColumnFlags_WidthStretch, 2.0f);
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 44.0f);
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 58.0f);
         ImGui::TableHeadersRow();
 
         if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
@@ -1937,6 +1953,9 @@ void gui_debug_window_symbols(void)
             {
                 SymbolEntry& e = fixed_symbol_list[i];
 
+                if ((e.type == SymbolTypePrebuilt) && !show_prebuilt_auto_symbols)
+                    continue;
+
                 if (symbol_filter[0] != 0)
                 {
                     char addr_str[8];
@@ -1954,7 +1973,7 @@ void gui_debug_window_symbols(void)
                 sorted_symbols.push_back(e);
             }
 
-            if (show_auto_symbols)
+            if (show_prebuilt_auto_symbols)
             {
                 for (size_t i = 0; i < dynamic_symbol_list.size(); i++)
                 {
@@ -2009,7 +2028,8 @@ void gui_debug_window_symbols(void)
             for (int idx = clipper.DisplayStart; idx < clipper.DisplayEnd; idx++)
             {
                 DebugSymbol* symbol = sorted_symbols[idx].symbol;
-                bool is_manual = sorted_symbols[idx].is_manual;
+                int symbol_type = sorted_symbols[idx].type;
+                bool is_manual = (symbol_type == SymbolTypeManual);
                 int b = sorted_symbols[idx].bank;
 
                 ImGui::TableNextRow();
@@ -2050,11 +2070,13 @@ void gui_debug_window_symbols(void)
                 ImGui::TextColored(cyan, " %04X", symbol->address);
 
                 ImGui::TableNextColumn();
-                ImGui::TextColored(is_manual ? green : yellow, "%s", symbol->text);
+                ImGui::TextColored(is_manual ? green : (symbol_type == SymbolTypePrebuilt ? gray : brown), "%s", symbol->text);
 
                 ImGui::TableNextColumn();
                 if (is_manual)
                     ImGui::TextColored(orange, "Manual");
+                else if (symbol_type == SymbolTypePrebuilt)
+                    ImGui::TextColored(gray, "Prebuilt");
                 else
                     ImGui::TextColored(brown, "Auto");
             }
