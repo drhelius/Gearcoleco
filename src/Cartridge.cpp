@@ -341,13 +341,15 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
             //return false;
         }
 
-        m_iROMSize = size;
+        int crcSize = size;
+        m_iROMSize = MAX(size, 0x4000);
         m_pROM = new u8[m_iROMSize];
-        memcpy(m_pROM, buffer, m_iROMSize);
+        memset(m_pROM, 0xFF, m_iROMSize);
+        memcpy(m_pROM, buffer, size);
 
         m_bReady = true;
 
-        m_iCRC = CalculateCRC32(0, m_pROM, m_iROMSize);
+        m_iCRC = CalculateCRC32(0, m_pROM, crcSize);
 
         GatherMetadata(m_iCRC);
 
