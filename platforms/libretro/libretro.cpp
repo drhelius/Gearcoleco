@@ -656,7 +656,7 @@ bool retro_load_game(const struct retro_game_info *info)
     // CART
     descs[4].ptr   = core->GetCartridge()->GetROM();
     descs[4].start = 0x8000;
-    descs[4].len   = 0x8000;
+    descs[4].len   = core->GetCartridge()->GetROMSize();
     // SGM LOWER
     descs[5].ptr   = core->GetMemory()->GetSGMRam();
     descs[5].start = 0x010000;
