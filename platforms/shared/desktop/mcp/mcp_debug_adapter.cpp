@@ -516,6 +516,8 @@ json DebugAdapter::GetMediaInfo()
     json info;
     Cartridge* cart = m_core->GetCartridge();
 
+    info["emulator"] = GEARCOLECO_TITLE;
+    info["emulator_version"] = GEARCOLECO_VERSION;
     info["ready"] = cart->IsReady();
     info["file_path"] = cart->GetFilePath();
     info["file_name"] = cart->GetFileName();
