@@ -97,7 +97,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - Very accurate Z80 core, TMS9918 VDP, SN76489 PSG and AY-3-8910 SGM emulation.
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
-- Save states with preview and hold-to-rewind support in the desktop app.
+- Save states with preview and rewind support.
 - Compressed ROM support (ZIP).
 - VGM recorder.
 - Supported platforms (standalone): Windows, Linux, BSD and macOS.
@@ -112,9 +112,9 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 ## Tips
 
 ### Basic Usage
-- **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 ```2c66f5911e5b42b8ebe113403548eee7``` is recommended.
-- **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing ```F12```. It is also recommended to disable spinners for software that don't use them.
-- **Rewind**: Hold the configured rewind hotkey (```Backspace``` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
+- **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 `2c66f5911e5b42b8ebe113403548eee7` is recommended.
+- **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing `F12`. It is also recommended to disable spinners for software that don't use them.
+- **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
 - **Portable Mode**: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
@@ -122,8 +122,8 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 ### Debugging Features
 - **Docking Windows**: In debug mode, you can dock windows together by pressing SHIFT and dragging a window onto another.
 - **Multi-viewport**: In Windows or macOS, you can enable "multi-viewport" in the debug menu. You must restart the emulator for the change to take effect. Once enabled, you can drag debugger windows outside the main window.
-- **Single Instance**: You can enable "Single Instance" in the ```Emulator``` menu. When enabled, opening a ROM while another instance is running will send the ROM to the running instance instead of starting a new one.
-- **Debug Symbols**: The emulator automatically tries to load a symbol file when loading a ROM (.sym, .noi). For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. You can also load a symbol file using the GUI or the CLI. It supports SDCC/NoICE (.noi), wla-dx and vasm/generic file formats.
+- **Single Instance**: You can enable "Single Instance" in the `Emulator` menu. When enabled, opening a ROM while another instance is running will send the ROM to the running instance instead of starting a new one.
+- **Debug Symbols**: The emulator automatically tries to load a symbol file when loading a ROM (.sym, .noi). For example, for `path_to_rom_file.rom` it tries to load `path_to_rom_file.sym`. You can also load a symbol file using the GUI or the CLI. It supports SDCC/NoICE (.noi), wla-dx and vasm/generic file formats.
 - **Rewind Scrubbing**: In debug mode, pause emulation and open the Rewind window to scrub through captured snapshots.
 
 ### Command Line Usage
@@ -159,7 +159,7 @@ Gearcoleco provides [Agent Skills](https://agentskills.io/) that teach AI assist
 - **[gearcoleco-romhacking](skills/gearcoleco-romhacking/SKILL.md)** — Cheat creation, memory searching, ROM data modification, text translation, and game patching.
 
 Install with `npx skills add drhelius/gearcoleco`. See the [skills README](skills/README.md) for details.
-  
+
 ## Build Instructions
 
 ### Windows
