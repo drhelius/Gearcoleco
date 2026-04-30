@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/blob/main/LICENSE)
 [![Twitter Follow](https://img.shields.io/twitter/follow/drhelius)](https://x.com/drhelius)
 
-Gearcoleco is a very accurate cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD and RetroArch.
+Gearcoleco is a very accurate, cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD and RetroArch, with an embedded MCP server for debugging and tooling.
 
 This is an open source project with its ongoing development made possible thanks to the support by these awesome [backers](backers.md). If you find it useful, please consider [sponsoring](https://github.com/sponsors/drhelius).
 
@@ -29,11 +29,11 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
   <tbody>
     <tr>
       <td rowspan="2"><strong>Windows</strong></td>
-      <td>x64</td>
+      <td>Desktop x64</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.0/Gearcoleco-1.6.0-desktop-windows-x64.zip">Gearcoleco-1.6.0-desktop-windows-x64.zip</a></td>
     </tr>
     <tr>
-      <td>ARM64</td>
+      <td>Desktop ARM64</td>
       <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.0/Gearcoleco-1.6.0-desktop-windows-arm64.zip">Gearcoleco-1.6.0-desktop-windows-arm64.zip</a></td>
     </tr>
     <tr>
@@ -94,17 +94,15 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 
 ## Features
 
-- Accurate Z80 core, including undocumented opcodes and behavior like R and [MEMPTR](https://gist.github.com/drhelius/8497817) registers.
-- Accurate TMS9918 emulation.
+- Very accurate Z80 core, TMS9918 VDP, SN76489 PSG and AY-3-8910 SGM emulation.
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
-- Save states.
-- Hold-to-rewind support in the desktop app.
-- Compressed rom support (ZIP).
+- Save states with preview and hold-to-rewind support in the desktop app.
+- Compressed ROM support (ZIP).
 - VGM recorder.
 - Supported platforms (standalone): Windows, Linux, BSD and macOS.
-- Supported platforms (libretro): Windows, Linux, macOS, Raspberry Pi, Android, iOS, tvOS, PlayStation Vita, PlayStation 3, Nintendo 3DS, Nintendo GameCube, Nintendo Wii, Nintendo WiiU, Nintendo Switch, Emscripten, Classic Mini systems (NES, SNES, C64, ...), OpenDingux, RetroFW and QNX.
-- Full debugger with just-in-time disassembler, CPU breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, memory editor, IO inspector and VRAM viewer including registries, tiles, sprites and backgrounds.
+- Supported platforms (libretro): Windows, Linux, macOS, Raspberry Pi, Android, iOS, tvOS, webOS, PlayStation Vita, PlayStation 3, Nintendo 3DS, Nintendo GameCube, Nintendo Wii, Nintendo WiiU, Nintendo Switch, Emscripten, Classic Mini systems (NES, SNES, C64, ...), OpenDingux, RetroFW and QNX.
+- Full debugger with just-in-time disassembler, CPU breakpoints, memory access breakpoints, code navigation (goto address, JP JR and CALL double clicking), debug symbols, automatic labels, memory editor, trace logger, IO inspector and VRAM viewer including registers, tiles, sprites and backgrounds.
 - MCP server for AI-assisted debugging with GitHub Copilot, Claude, Codex and similar, exposing tools for execution control, memory inspection, hardware status, rewind and more.
 - Windows and Linux *Portable Mode*.
 - ROM loading from the command line by adding the ROM path as an argument.
@@ -117,14 +115,15 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 ```2c66f5911e5b42b8ebe113403548eee7``` is recommended.
 - **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing ```F12```. It is also recommended to disable spinners for software that don't use them.
 - **Rewind**: Hold the configured rewind hotkey (```Backspace``` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
-- **Overscan**: For a precise representation of the original image, using Overscan Top+Bottom and 4:3 Display Aspect Ratio is recommended.
+- **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
 - **Portable Mode**: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
 
 ### Debugging Features
 - **Docking Windows**: In debug mode, you can dock windows together by pressing SHIFT and dragging a window onto another.
 - **Multi-viewport**: In Windows or macOS, you can enable "multi-viewport" in the debug menu. You must restart the emulator for the change to take effect. Once enabled, you can drag debugger windows outside the main window.
-- **Debug Symbols**: The emulator automatically tries to load a symbol file when loading a ROM. For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. You can also load a symbol file using the GUI or the CLI.
+- **Single Instance**: You can enable "Single Instance" in the ```Emulator``` menu. When enabled, opening a ROM while another instance is running will send the ROM to the running instance instead of starting a new one.
+- **Debug Symbols**: The emulator automatically tries to load a symbol file when loading a ROM (.sym, .noi). For example, for ```path_to_rom_file.rom``` it tries to load ```path_to_rom_file.sym```. You can also load a symbol file using the GUI or the CLI. It supports SDCC/NoICE (.noi), wla-dx and vasm/generic file formats.
 - **Rewind Scrubbing**: In debug mode, pause emulation and open the Rewind window to scrub through captured snapshots.
 
 ### Command Line Usage
@@ -166,6 +165,9 @@ Install with `npx skills add drhelius/gearcoleco`. See the [skills README](skill
 ### Windows
 
 - Install Microsoft Visual Studio Community 2022 or later.
+- Download the latest SDL3 VC development libraries from [SDL3 Releases](https://github.com/libsdl-org/SDL/releases) (the file named `SDL3-devel-x.y.z-VC.zip`).
+- Extract the archive and rename the resulting folder (e.g. `SDL3-x.y.z`) to `SDL3`.
+- Place the `SDL3` folder inside `platforms/windows/dependencies/` so that the include path is `platforms/windows/dependencies/SDL3/include/SDL3/`.
 - Open the Gearcoleco Visual Studio solution `platforms/windows/Gearcoleco.sln` and build.
 
 ### macOS
@@ -183,8 +185,26 @@ make dist
 
 - Ubuntu / Debian / Raspberry Pi (Raspbian):
 
+If you are using Ubuntu 25.04 or later, you can install SDL3 directly. Use the following commands to build:
+
 ``` shell
 sudo apt install build-essential libsdl3-dev
+cd platforms/linux
+make
+```
+
+For older Ubuntu versions (22.04, 24.04), you need to build SDL3 from source first. Use the following commands to build both SDL3 and Gearcoleco:
+
+``` shell
+sudo apt install build-essential cmake git curl jq pkg-config \
+  libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+  libxi-dev libxss-dev libxkbcommon-dev libwayland-dev libdecor-0-dev \
+  libdrm-dev libgbm-dev libgl1-mesa-dev libegl1-mesa-dev libdbus-1-dev libudev-dev libxtst-dev
+SDL3_TAG=$(curl -s https://api.github.com/repos/libsdl-org/SDL/releases/latest | jq -r '.tag_name')
+git clone --depth 1 --branch "$SDL3_TAG" https://github.com/libsdl-org/SDL.git /tmp/SDL3
+cmake -S /tmp/SDL3 -B /tmp/SDL3/build -DCMAKE_INSTALL_PREFIX=/usr -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+cmake --build /tmp/SDL3/build -j$(nproc)
+sudo cmake --install /tmp/SDL3/build
 cd platforms/linux
 make
 ```
