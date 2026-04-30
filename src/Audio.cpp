@@ -30,6 +30,7 @@ Audio::Audio()
     InitPointer(m_pAY8910);
     InitPointer(m_pSGMBuffer);
     m_bMute = false;
+    m_master_volume = 1.0f;
     m_bVgmRecordingEnabled = false;
     m_AY8910Register = 0;
     for (int i = 0; i < 4; i++)
@@ -117,10 +118,19 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
 
         for (int i=0; i<count; i++)
         {
-            if (m_bMute)
+            if (m_bMute || (m_master_volume <= 0.0f))
+            {
                 pSampleBuffer[i] = 0;
+            }
             else
-                pSampleBuffer[i] = m_pSampleBuffer[i] + m_pSGMBuffer[i];
+            {
+                s32 mix = m_pSampleBuffer[i] + m_pSGMBuffer[i];
+                mix = (s32)((float)mix * m_master_volume);
+
+                mix = CLAMP(mix, -32768, 32767);
+
+                pSampleBuffer[i] = (s16)mix;
+            }
         }
     }
 

@@ -80,6 +80,7 @@ EXTERN bool emu_is_bios_loaded(void);
 EXTERN void emu_reset(Cartridge::ForceConfiguration config);
 EXTERN void emu_dissasemble_rom(void);
 EXTERN void emu_audio_mute(bool mute);
+EXTERN void emu_audio_set_master_volume(float volume);
 EXTERN void emu_audio_reset(void);
 EXTERN bool emu_is_audio_enabled(void);
 EXTERN bool emu_is_audio_open(void);

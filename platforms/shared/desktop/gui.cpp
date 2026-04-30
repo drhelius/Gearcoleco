@@ -109,6 +109,7 @@ bool gui_init(void)
     set_style();
 
     emu_audio_mute(!config_audio.enable);
+    emu_audio_set_master_volume(config_audio.master_volume);
 
     emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
 
@@ -188,6 +189,10 @@ void gui_shortcut(gui_ShortCutEvent event)
     case gui_ShortcutFFWD:
         config_emulator.ffwd = !config_emulator.ffwd;
         gui_action_ffwd();
+        break;
+    case gui_ShortcutMute:
+        config_audio.enable = !config_audio.enable;
+        emu_audio_mute(!config_audio.enable);
         break;
     case gui_ShortcutSaveState:
     {

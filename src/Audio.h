@@ -34,6 +34,7 @@ public:
     void Init();
     void Reset(bool bPAL);
     void Mute(bool mute);
+    void SetMasterVolume(float volume);
     void WriteAudioRegister(u8 value);
     void SGMWrite(u8 value);
     u8 SGMRead();
@@ -67,6 +68,7 @@ private:
     bool m_bPAL;
     s16* m_pSGMBuffer;
     bool m_bMute;
+    float m_master_volume;
     VgmRecorder m_VgmRecorder;
     bool m_bVgmRecordingEnabled;
     u8 m_AY8910Register;
@@ -159,6 +161,11 @@ inline s16* Audio::GetAY8910DebugChannelBuffer(int channel)
 inline int Audio::GetAY8910DebugChannelSamples(int channel)
 {
     return m_pAY8910->GetDebugChannelSamples(channel);
+}
+
+inline void Audio::SetMasterVolume(float volume)
+{
+    m_master_volume = CLAMP(volume, 0.0f, 2.0f);
 }
 
 #endif	/* AUDIO_H */
