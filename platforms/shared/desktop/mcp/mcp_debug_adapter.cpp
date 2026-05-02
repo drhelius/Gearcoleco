@@ -26,6 +26,7 @@
 #include "../gui_debug_disassembler.h"
 #include "../gui_debug_memory.h"
 #include "../gui_debug_memeditor.h"
+#include "../gui_debug_rewind.h"
 #include "../config.h"
 #include "../rewind.h"
 #include <cstring>
@@ -1192,7 +1193,7 @@ json DebugAdapter::RewindSeek(int snapshot)
         return result;
     }
 
-    bool success = rewind_seek(snapshot);
+    bool success = gui_debug_rewind_seek(snapshot);
     result["success"] = success;
     result["snapshot"] = snapshot;
     result["total_snapshots"] = count;

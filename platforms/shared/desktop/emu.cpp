@@ -313,10 +313,9 @@ void emu_update(void)
     }
     else
     {
-        rewind_commit_seek();
-
         if (!gearcoleco->IsPaused())
         {
+            rewind_commit_seek();
             gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &sampleCount);
             frame_executed = true;
         }
