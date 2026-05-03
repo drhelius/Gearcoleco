@@ -570,7 +570,7 @@ static void finish_loading_rom(void)
     {
         emu_pause();
 
-        for (int i = 0; i < (GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN * 3); i++)
+        for (int i = 0; i < EMU_FRAME_BUFFER_SIZE; i++)
         {
             emu_frame_buffer[i] = 0;
         }

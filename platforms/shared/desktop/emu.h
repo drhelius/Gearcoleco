@@ -43,6 +43,10 @@ enum Directory_Location
     Directory_Location_Custom = 2
 };
 
+#define EMU_FRAME_BUFFER_WIDTH 512
+#define EMU_FRAME_BUFFER_HEIGHT 512
+#define EMU_FRAME_BUFFER_SIZE (EMU_FRAME_BUFFER_WIDTH * EMU_FRAME_BUFFER_HEIGHT * 4)
+
 EXTERN u8* emu_frame_buffer;
 EXTERN GC_SaveState_Header emu_savestates[5];
 EXTERN GC_SaveState_Screenshot emu_savestates_screenshots[5];

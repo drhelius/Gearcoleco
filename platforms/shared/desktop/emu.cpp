@@ -81,9 +81,7 @@ static int get_rewind_pop_budget(void);
 
 bool emu_init(void)
 {
-    int screen_size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
-
-    emu_frame_buffer = new u8[screen_size * 4];
+    emu_frame_buffer = new u8[EMU_FRAME_BUFFER_SIZE];
     audio_buffer = new s16[GC_AUDIO_BUFFER_SIZE];
 
     init_debug();
@@ -844,8 +842,7 @@ static void load_ram(void)
 
 static void reset_buffers(void)
 {
-    int screen_size = GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN;
-    for (int i = 0; i < screen_size * 4; i++)
+    for (int i = 0; i < EMU_FRAME_BUFFER_SIZE; i++)
         emu_frame_buffer[i] = 0;
 
     for (int i = 0; i < GC_AUDIO_BUFFER_SIZE; i++)
