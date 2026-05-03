@@ -30,9 +30,10 @@ class Mapper
 public:
     Mapper(Cartridge* pCartridge) : m_pCartridge(pCartridge) { }
     virtual ~Mapper() { }
-    
+
     virtual void Reset() = 0;
     virtual u8 Read(u16 address) = 0;
+    virtual u8 Peek(u16 address) { return Read(address); }
     virtual void Write(u16 address, u8 value) = 0;
     virtual void SaveState(std::ostream& stream) = 0;
     virtual void LoadState(std::istream& stream) = 0;

@@ -28,9 +28,10 @@ class MegaCartMapper : public Mapper
 public:
     MegaCartMapper(Cartridge* pCartridge);
     virtual ~MegaCartMapper();
-    
+
     virtual void Reset();
     virtual u8 Read(u16 address);
+    virtual u8 Peek(u16 address);
     virtual void Write(u16 address, u8 value);
     virtual void SaveState(std::ostream& stream);
     virtual void LoadState(std::istream& stream);
@@ -74,6 +75,27 @@ inline u8 MegaCartMapper::Read(u16 address)
             m_RomBankAddress = m_RomBank << 14;
         }
         return pRom[(address & 0x3FFF) + m_RomBankAddress];
+    }
+}
+
+inline u8 MegaCartMapper::Peek(u16 address)
+{
+    u8* pRom = m_pCartridge->GetROM();
+    int romSize = m_pCartridge->GetROMSize();
+
+    if (address < 0xC000)
+    {
+        return pRom[(address & 0x3FFF) + (romSize - 0x4000)];
+    }
+    else
+    {
+        u32 romBankAddress = m_RomBankAddress;
+        if (address >= 0xFFC0)
+        {
+            u8 romBank = address & (m_pCartridge->GetROMBankCount() - 1);
+            romBankAddress = romBank << 14;
+        }
+        return pRom[(address & 0x3FFF) + romBankAddress];
     }
 }
 

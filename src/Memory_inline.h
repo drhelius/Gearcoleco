@@ -13,8 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/ 
- * 
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
 #ifndef MEMORY_INLINE_H
@@ -72,7 +72,7 @@ inline u8 Memory::DebugRetrieve(u16 address)
         case 0xA000:
         case 0xC000:
         case 0xE000:
-            return m_pMapper->Read(address);
+            return m_pMapper->Peek(address);
         default:
             return 0xFF;
     }
