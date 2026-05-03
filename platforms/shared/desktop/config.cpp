@@ -400,6 +400,7 @@ void config_read(void)
     config_input[0].key_asterisk = (SDL_Scancode)read_int("InputA", "KeyAsterisk", SDL_SCANCODE_KP_MULTIPLY);
     config_input[0].key_hash = (SDL_Scancode)read_int("InputA", "KeyHash", SDL_SCANCODE_KP_DIVIDE);
 
+    config_input[0].allow_up_down = read_bool("InputA", "AllowUpDown", false);
     config_input[0].gamepad = read_bool("InputA", "Gamepad", true);
     config_input[0].gamepad_directional = read_int("InputA", "GamepadDirectional", 0);
     config_input[0].gamepad_invert_x_axis = read_bool("InputA", "GamepadInvertX", false);
@@ -444,6 +445,7 @@ void config_read(void)
     config_input[1].key_asterisk = (SDL_Scancode)read_int("InputB", "KeyAsterisk", SDL_SCANCODE_SLASH);
     config_input[1].key_hash = (SDL_Scancode)read_int("InputB", "KeyHash", SDL_SCANCODE_RSHIFT);
 
+    config_input[1].allow_up_down = read_bool("InputB", "AllowUpDown", false);
     config_input[1].gamepad = read_bool("InputB", "Gamepad", true);
     config_input[1].gamepad_directional = read_int("InputB", "GamepadDirectional", 0);
     config_input[1].gamepad_invert_x_axis = read_bool("InputB", "GamepadInvertX", false);
@@ -674,6 +676,7 @@ void config_write(void)
     write_int("InputA", "KeyAsterisk", config_input[0].key_asterisk);
     write_int("InputA", "KeyHash", config_input[0].key_hash);
 
+    write_bool("InputA", "AllowUpDown", config_input[0].allow_up_down);
     write_bool("InputA", "Gamepad", config_input[0].gamepad);
     write_int("InputA", "GamepadDirectional", config_input[0].gamepad_directional);
     write_bool("InputA", "GamepadInvertX", config_input[0].gamepad_invert_x_axis);
@@ -718,6 +721,7 @@ void config_write(void)
     write_int("InputB", "KeyAsterisk", config_input[1].key_asterisk);
     write_int("InputB", "KeyHash", config_input[1].key_hash);
 
+    write_bool("InputB", "AllowUpDown", config_input[1].allow_up_down);
     write_bool("InputB", "Gamepad", config_input[1].gamepad);
     write_int("InputB", "GamepadDirectional", config_input[1].gamepad_directional);
     write_bool("InputB", "GamepadInvertX", config_input[1].gamepad_invert_x_axis);

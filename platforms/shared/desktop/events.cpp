@@ -44,6 +44,7 @@ static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hot
 static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
 static void input_force_key(int controller, int index, GC_Keys key, bool pressed);
 static void input_poll_controller(int controller);
+static void input_filter_opposing_directions(int controller, bool* left, bool* right, bool* up, bool* down);
 static void input_send_key(int controller, int index, GC_Keys key, bool pressed);
 
 void events_shortcuts(const SDL_Event* event)
@@ -304,6 +305,28 @@ static void input_send_key(int controller, int index, GC_Keys key, bool pressed)
     }
 }
 
+static void input_filter_opposing_directions(int controller, bool* left, bool* right, bool* up, bool* down)
+{
+    if (config_input[controller].allow_up_down)
+        return;
+
+    if (*up && *down)
+    {
+        if (!input_last_state[controller][2].pressed)
+            *up = false;
+        if (!input_last_state[controller][3].pressed)
+            *down = false;
+    }
+
+    if (*left && *right)
+    {
+        if (!input_last_state[controller][0].pressed)
+            *left = false;
+        if (!input_last_state[controller][1].pressed)
+            *right = false;
+    }
+}
+
 static void input_poll_controller(int controller)
 {
     if (controller < 0 || controller >= 2)
@@ -371,6 +394,8 @@ static void input_poll_controller(int controller)
             else if (y > STICK_DEAD_ZONE) dir_down = true;
         }
     }
+
+    input_filter_opposing_directions(controller, &dir_left, &dir_right, &dir_up, &dir_down);
 
     input_send_key(controller, 0, Key_Left, dir_left);
     input_send_key(controller, 1, Key_Right, dir_right);

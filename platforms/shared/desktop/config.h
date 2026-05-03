@@ -132,6 +132,7 @@ struct config_Input
     SDL_Scancode key_9;
     SDL_Scancode key_asterisk;
     SDL_Scancode key_hash;
+    bool allow_up_down;
     bool gamepad;
     int gamepad_directional;
     bool gamepad_invert_x_axis;
