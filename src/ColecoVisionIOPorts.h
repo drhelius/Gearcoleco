@@ -218,7 +218,6 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
                 }
 #endif
                 m_pMemory->EnableSGMLower((~value & 0x02) != 0);
-                m_pMemory->EnableSGMUpper((value & 0x01) != 0);
             }
             else
             {

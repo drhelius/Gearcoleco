@@ -162,7 +162,7 @@ void Memory::SetupMapper()
 void Memory::Reset()
 {
     m_iTotalCycles = 0;
-    m_bSGMUpper = false;
+    m_bSGMUpper = (m_pCartridge->GetType() == Cartridge::CartridgeOCM);
     m_bSGMLower = false;
 
     for (int i = 0; i < 0x400; i++)
