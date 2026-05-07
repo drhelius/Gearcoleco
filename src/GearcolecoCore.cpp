@@ -646,7 +646,7 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
         m_pInput->SaveState(stream);
 
 #if defined(__LIBRETRO__)
-        GC_SaveState_Header_Libretro header;
+        GC_SaveState_Header_Libretro header = {};
         memset(&header, 0, sizeof(header));
         header.magic = GC_SAVESTATE_MAGIC;
         header.version = GC_SAVESTATE_VERSION;
@@ -789,7 +789,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
         }
 
         // Fallback to libretro header
-        if (header.magic != GC_SAVESTATE_MAGIC)
+        if ((header.magic != GC_SAVESTATE_MAGIC) && (size >= sizeof(header)))
         {
             stream.seekg(size - sizeof(header), ios::beg);
             stream.read(reinterpret_cast<char*>(&header), sizeof(header));
