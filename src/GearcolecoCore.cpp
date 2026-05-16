@@ -450,8 +450,7 @@ void GearcolecoCore::SaveRam(const char* szPath, bool fullPath)
     else if (IsValidPointer(szPath))
     {
         path += szPath;
-        path += "/";
-        path += m_pCartridge->GetFileName();
+        append_path_component(path, m_pCartridge->GetFileName());
     }
     else
     {
@@ -510,8 +509,7 @@ void GearcolecoCore::LoadRam(const char* szPath, bool fullPath)
     else if (IsValidPointer(szPath))
     {
         path += szPath;
-        path += "/";
-        path += m_pCartridge->GetFileName();
+        append_path_component(path, m_pCartridge->GetFileName());
     }
     else
     {
@@ -551,8 +549,7 @@ std::string GearcolecoCore::GetSaveStatePath(const char* path, int index)
     if (IsValidPointer(path))
     {
         sav_path += path;
-        sav_path += "/";
-        sav_path += m_pCartridge->GetFileName();
+        append_path_component(sav_path, m_pCartridge->GetFileName());
     }
     else
     {
