@@ -118,6 +118,7 @@ static void menu_gearcoleco(void)
     if (ImGui::BeginMenu(GEARCOLECO_TITLE))
     {
         gui_in_use = true;
+        bool media_actions_enabled = !emu_is_empty();
 
         if (ImGui::MenuItem("Open ROM...", config_hotkeys[config_HotkeyIndex_OpenROM].str))
         {
@@ -152,19 +153,19 @@ static void menu_gearcoleco(void)
 
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Reset", config_hotkeys[config_HotkeyIndex_Reset].str))
+        if (ImGui::MenuItem("Reset", config_hotkeys[config_HotkeyIndex_Reset].str, false, media_actions_enabled))
         {
             gui_action_reset();
         }
 
-        if (ImGui::MenuItem("Pause", config_hotkeys[config_HotkeyIndex_Pause].str, &config_emulator.paused))
+        if (ImGui::MenuItem("Pause", config_hotkeys[config_HotkeyIndex_Pause].str, &config_emulator.paused, media_actions_enabled))
         {
             gui_action_pause();
         }
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Fast Forward", config_hotkeys[config_HotkeyIndex_FFWD].str, &config_emulator.ffwd))
+        if (ImGui::MenuItem("Fast Forward", config_hotkeys[config_HotkeyIndex_FFWD].str, &config_emulator.ffwd, media_actions_enabled))
         {
             gui_action_ffwd();
         }
@@ -191,7 +192,7 @@ static void menu_gearcoleco(void)
 
         ImGui::Separator();
 
-        bool has_save_data = !emu_is_empty() && emu_get_core()->GetMemory()->GetMapper() && emu_get_core()->GetMemory()->GetMapper()->GetSaveDataSize() > 0;
+        bool has_save_data = media_actions_enabled && emu_get_core()->GetMemory()->GetMapper() && emu_get_core()->GetMemory()->GetMapper()->GetSaveDataSize() > 0;
 
         if (ImGui::MenuItem("Save RAM As...", NULL, false, has_save_data))
         {
@@ -205,12 +206,12 @@ static void menu_gearcoleco(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Save State As...")) 
+        if (ImGui::MenuItem("Save State As...", "", false, media_actions_enabled))
         {
             save_state = true;
         }
 
-        if (ImGui::MenuItem("Load State From..."))
+        if (ImGui::MenuItem("Load State From...", "", false, media_actions_enabled))
         {
             open_state = true;
         }
@@ -229,7 +230,7 @@ static void menu_gearcoleco(void)
             ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Save State", config_hotkeys[config_HotkeyIndex_SaveState].str))
+        if (ImGui::MenuItem("Save State", config_hotkeys[config_HotkeyIndex_SaveState].str, false, media_actions_enabled))
         {
             std::string message("Saving state to slot ");
             message += std::to_string(config_emulator.save_slot + 1);
@@ -237,7 +238,7 @@ static void menu_gearcoleco(void)
             emu_save_state_slot(config_emulator.save_slot + 1);
         }
 
-        if (ImGui::MenuItem("Load State", config_hotkeys[config_HotkeyIndex_LoadState].str))
+        if (ImGui::MenuItem("Load State", config_hotkeys[config_HotkeyIndex_LoadState].str, false, media_actions_enabled))
         {
             std::string message("Loading state from slot ");
             message += std::to_string(config_emulator.save_slot + 1);
@@ -255,12 +256,12 @@ static void menu_gearcoleco(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Save Screenshot As..."))
+        if (ImGui::MenuItem("Save Screenshot As...", "", false, media_actions_enabled))
         {
             save_screenshot = true;
         }
 
-        if (ImGui::MenuItem("Save Screenshot", config_hotkeys[config_HotkeyIndex_Screenshot].str))
+        if (ImGui::MenuItem("Save Screenshot", config_hotkeys[config_HotkeyIndex_Screenshot].str, false, media_actions_enabled))
         {
             gui_action_save_screenshot(NULL);
         }
