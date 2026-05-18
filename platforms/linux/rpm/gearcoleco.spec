@@ -42,6 +42,12 @@ install -Dm644 platforms/shared/gamecontrollerdb.txt %{buildroot}%{_prefix}/lib/
 install -dm755 %{buildroot}%{_prefix}/lib/%{name}/mcp/resources/hardware
 install -Dm644 platforms/shared/desktop/mcp/resources/hardware/toc.json %{buildroot}%{_prefix}/lib/%{name}/mcp/resources/hardware/toc.json
 
+# Shader resources
+install -dm755 %{buildroot}%{_prefix}/lib/%{name}/shaders
+install -Dm644 platforms/shared/desktop/shaders/*.gshader %{buildroot}%{_prefix}/lib/%{name}/shaders/
+install -Dm644 platforms/shared/desktop/shaders/*.glsl %{buildroot}%{_prefix}/lib/%{name}/shaders/
+install -Dm644 platforms/shared/desktop/shaders/README.md %{buildroot}%{_prefix}/lib/%{name}/shaders/
+
 install -Dm644 platforms/linux/debian/%{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 sed -i 's|/usr/games/gearcoleco|gearcoleco|g' %{buildroot}%{_datadir}/applications/%{name}.desktop
 

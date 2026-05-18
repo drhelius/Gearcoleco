@@ -25,6 +25,13 @@ override_dh_install:
 	install -dm755 debian/gearcoleco/usr/lib/gearcoleco/mcp/resources/hardware
 	install -m644 platforms/shared/desktop/mcp/resources/hardware/toc.json \
 		debian/gearcoleco/usr/lib/gearcoleco/mcp/resources/hardware/toc.json
+	install -dm755 debian/gearcoleco/usr/lib/gearcoleco/shaders
+	install -m644 platforms/shared/desktop/shaders/*.gshader \
+		debian/gearcoleco/usr/lib/gearcoleco/shaders/
+	install -m644 platforms/shared/desktop/shaders/*.glsl \
+		debian/gearcoleco/usr/lib/gearcoleco/shaders/
+	install -m644 platforms/shared/desktop/shaders/README.md \
+		debian/gearcoleco/usr/lib/gearcoleco/shaders/
 	install -dm755 debian/gearcoleco/usr/games
 	ln -s ../lib/gearcoleco/gearcoleco debian/gearcoleco/usr/games/gearcoleco
 
