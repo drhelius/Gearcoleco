@@ -1257,6 +1257,8 @@ static void update_debug_sprite_buffers(void)
 
 void update_savestates_data(void)
 {
+    emu_savestates_generation++;
+
     if (emu_is_empty())
         return;
 

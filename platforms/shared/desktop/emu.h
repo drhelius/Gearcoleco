@@ -50,6 +50,7 @@ enum Directory_Location
 EXTERN u8* emu_frame_buffer;
 EXTERN GC_SaveState_Header emu_savestates[5];
 EXTERN GC_SaveState_Screenshot emu_savestates_screenshots[5];
+EXTERN u32 emu_savestates_generation;
 EXTERN u8* emu_debug_background_buffer;
 EXTERN u8* emu_debug_tile_buffer;
 EXTERN u8* emu_debug_sprite_buffers[GC_MAX_SPRITES];
