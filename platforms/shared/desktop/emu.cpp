@@ -547,12 +547,13 @@ void emu_get_info(char* info, int buffer_size)
         gearcoleco->GetRuntimeInfo(runtime);
 
         const char* filename = cart->GetFileName();
+        const char* is_in_database = cart->IsInGameDatabase() ? "YES" : "NO";
         const char* pal = cart->IsPAL() ? "PAL" : "NTSC";
         const char* checksum = cart->IsValidROM() ? "VALID" : "FAILED";
         int rom_banks = cart->GetROMBankCount();
         const char* mapper = get_mapper(cart->GetType());
 
-        snprintf(info, buffer_size, "File Name: %s\nMapper: %s\nRefresh Rate: %s\nCartridge Header: %s\nROM Banks: %d\nScreen Resolution: %dx%d", filename, mapper, pal, checksum, rom_banks, runtime.screen_width, runtime.screen_height);
+        snprintf(info, buffer_size, "File Name: %s\nInternal DB: %s\nMapper: %s\nRefresh Rate: %s\nCartridge Header: %s\nROM Banks: %d\nScreen Resolution: %dx%d", filename, is_in_database, mapper, pal, checksum, rom_banks, runtime.screen_width, runtime.screen_height);
     }
     else
     {

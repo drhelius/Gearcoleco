@@ -61,6 +61,7 @@ public:
     bool HasSRAM() const;
     bool IsValidROM() const;
     bool IsReady() const;
+    bool IsInGameDatabase() const;
     CartridgeTypes GetType() const;
     void ForceConfig(ForceConfiguration config);
     int GetROMSize() const;
@@ -83,6 +84,7 @@ private:
     CartridgeTypes m_Type;
     bool m_bValidROM;
     bool m_bReady;
+    bool m_bInGameDatabase;
     char m_szFilePath[512];
     char m_szFileName[512];
     char m_szFileDirectory[512];
