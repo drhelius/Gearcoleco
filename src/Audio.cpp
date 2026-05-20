@@ -148,18 +148,29 @@ void Audio::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
     stream.write(reinterpret_cast<const char*> (m_pSGMBuffer), sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
     m_pAY8910->SaveState(stream);
+    m_pApu->SaveState(stream);
+    m_pBuffer->SaveState(stream);
 }
 
-void Audio::LoadState(std::istream& stream)
+void Audio::LoadState(std::istream& stream, int version)
 {
     stream.read(reinterpret_cast<char*> (&m_ElapsedCycles), sizeof(m_ElapsedCycles));
     stream.read(reinterpret_cast<char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
     stream.read(reinterpret_cast<char*> (m_pSGMBuffer), sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
     m_pAY8910->LoadState(stream);
 
-    m_pApu->reset();
+    if (version >= 104)
+    {
+        m_pApu->LoadState(stream);
+        m_pBuffer->LoadState(stream);
+    }
+    else
+    {
+        m_pApu->reset();
+        m_pBuffer->clear();
+    }
+
     m_pApu->volume(0.6);
-    m_pBuffer->clear();
 }
 
 void Audio::LoadStateV1(std::istream& stream)

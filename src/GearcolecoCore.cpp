@@ -827,7 +827,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             if (header.version <= 102)
                 m_pAudio->LoadStateV1(stream);
             else
-                m_pAudio->LoadState(stream);
+                m_pAudio->LoadState(stream, header.version);
 
             m_pVideo->LoadState(stream);
             m_pInput->LoadState(stream, header.version);

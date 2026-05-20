@@ -42,7 +42,7 @@ public:
     void Tick(unsigned int clockCycles);
     void EndFrame(s16* pSampleBuffer, int* pSampleCount);
     void SaveState(std::ostream& stream);
-    void LoadState(std::istream& stream);
+    void LoadState(std::istream& stream, int version);
     void LoadStateV1(std::istream& stream);
     bool StartVgmRecording(const char* file_path, int clock_rate, bool is_pal);
     void StopVgmRecording();
