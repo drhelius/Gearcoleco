@@ -57,7 +57,7 @@ void gui_debug_window_ay8910(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(500, 45), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(360, 430), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(282, 360), ImGuiCond_FirstUseEver);
     ImGui::Begin("AY-3-8910 (SGM)", &config_debug.show_ay8910);
 
     GearcolecoCore* core = emu_get_core();

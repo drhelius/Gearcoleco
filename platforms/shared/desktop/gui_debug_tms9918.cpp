@@ -40,8 +40,8 @@ static void draw_context_menu_tiles(const char* popup_id);
 void gui_debug_window_vram_nametable(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
-    ImGui::SetNextWindowPos(ImVec2(896, 31), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(580, 490), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(124, 81), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(544, 362), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Name Table", &config_debug.show_video_nametable);
 
@@ -224,7 +224,7 @@ void gui_debug_window_vram_tiles(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(580, 530), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(540, 456), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Pattern Table", &config_debug.show_video_tiles);
 
@@ -392,7 +392,7 @@ void gui_debug_window_vram_sprites(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(200, 200), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(480, 336), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(480, 346), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Sprites", &config_debug.show_video_sprites);
 
@@ -563,7 +563,7 @@ void gui_debug_window_vram_palettes(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(350, 350), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(400, 210), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(290, 190), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Palettes", &config_debug.show_video_palettes);
 
@@ -668,8 +668,8 @@ void gui_debug_window_vram_palettes(void)
 void gui_debug_window_vram_regs(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
-    ImGui::SetNextWindowPos(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(460, 370), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(339, 69), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(268, 578), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("VDP Registers", &config_debug.show_video_regs);
 
