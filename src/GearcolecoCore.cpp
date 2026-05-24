@@ -211,6 +211,8 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
 
 bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config)
 {
+    m_pCartridge->Reset();
+
     if (m_pCartridge->LoadFromBuffer(buffer, size))
     {
         if (IsValidPointer(config))
