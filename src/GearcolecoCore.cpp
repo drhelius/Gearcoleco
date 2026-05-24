@@ -565,7 +565,12 @@ std::string GearcolecoCore::GetSaveStatePath(const char* path, int index)
     std::stringstream sstm;
 
     if (index < 0)
-        sstm << path;
+    {
+        if (IsValidPointer(path))
+            sstm << path;
+        else
+            sstm << sav_path;
+    }
     else
         sstm << sav_path << index;
 
