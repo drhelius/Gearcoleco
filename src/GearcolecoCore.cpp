@@ -591,10 +591,27 @@ bool GearcolecoCore::SaveState(const char* path, int index, bool screenshot)
     ofstream file;
     open_ofstream_utf8(file, full_path.c_str(), ios::out | ios::binary);
 
-    size_t size;
-    SaveState(file, size, screenshot);
+    if (!file.is_open())
+    {
+        Error("Failed to open save state file for writing: %s", full_path.c_str());
+        return false;
+    }
+
+    size_t size = 0;
+    if (!SaveState(file, size, screenshot))
+    {
+        file.close();
+        Error("Failed to save state to file: %s", full_path.c_str());
+        return false;
+    }
 
     file.close();
+
+    if (!file.good())
+    {
+        Error("Failed to write save state file: %s", full_path.c_str());
+        return false;
+    }
 
     Debug("Save state created");
     return true;
