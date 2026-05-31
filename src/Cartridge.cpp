@@ -246,7 +246,7 @@ bool Cartridge::LoadFromFile(const char* path)
 
     Reset();
 
-    strcpy(m_szFilePath, path);
+    strncpy_fit(m_szFilePath, path, sizeof(m_szFilePath));
 
     std::string pathstr(path);
     std::string filename;
@@ -269,7 +269,7 @@ bool Cartridge::LoadFromFile(const char* path)
         }
     }
 
-    strcpy(m_szFileName, filename.c_str());
+    strncpy_fit(m_szFileName, filename.c_str(), sizeof(m_szFileName));
 
     std::string directory;
     size_t dir_pos = pathstr.find_last_of("\\/");
@@ -277,7 +277,7 @@ bool Cartridge::LoadFromFile(const char* path)
         directory = pathstr.substr(0, dir_pos);
     else
         directory = ".";
-    strcpy(m_szFileDirectory, directory.c_str());
+    strncpy_fit(m_szFileDirectory, directory.c_str(), sizeof(m_szFileDirectory));
 
     ifstream file;
     open_ifstream_utf8(file, path, ios::in | ios::binary | ios::ate);
