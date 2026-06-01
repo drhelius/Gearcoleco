@@ -151,7 +151,7 @@ static void menu_gearcoleco(void)
                         if (emu_is_bios_loaded())
                         {
                             char rom_path[4096];
-                            strcpy(rom_path, config_emulator.recent_roms[i].c_str());
+                            strncpy_fit(rom_path, config_emulator.recent_roms[i].c_str(), sizeof(rom_path));
                             gui_load_rom(rom_path);
                         }
                         else
