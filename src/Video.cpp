@@ -47,6 +47,7 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
     m_bNoSpriteLimit = false;
+    m_Overscan = OverscanDisabled;
 
     for (int i = 0; i < 48; i++)
         m_CustomPalette[i] = 0;
