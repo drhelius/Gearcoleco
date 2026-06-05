@@ -18,6 +18,7 @@
  */
 
 #include <iomanip>
+#include <string>
 #include <string.h>
 #include "GearcolecoCore.h"
 #include "Memory.h"
@@ -239,15 +240,12 @@ void GearcolecoCore::SaveDisassembledROM()
     {
         using namespace std;
 
-        char path[512];
+        string path = string(m_pCartridge->GetFilePath()) + ".dis";
 
-        strcpy(path, m_pCartridge->GetFilePath());
-        strcat(path, ".dis");
-
-        Log("Saving Disassembled ROM %s...", path);
+        Log("Saving Disassembled ROM %s...", path.c_str());
 
         ofstream myfile;
-        open_ofstream_utf8(myfile, path, ios::out | ios::trunc);
+        open_ofstream_utf8(myfile, path.c_str(), ios::out | ios::trunc);
 
         if (myfile.is_open())
         {
