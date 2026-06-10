@@ -360,9 +360,9 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
 
         m_iCRC = CalculateCRC32(0, m_pROM, crcSize);
 
-        GatherMetadata(m_iCRC);
+        m_bReady = GatherMetadata(m_iCRC);
 
-        return true;
+        return m_bReady;
     }
     else
         return false;
