@@ -651,9 +651,9 @@ void emu_mcp_stop(void)
     mcp_manager->Stop();
 }
 
-void emu_mcp_set_transport(int mode, int port)
+void emu_mcp_set_transport(int mode, int port, const char* address)
 {
-    mcp_manager->SetTransportMode((McpTransportMode)mode, port);
+    mcp_manager->SetTransportMode((McpTransportMode)mode, port, address);
 }
 
 bool emu_mcp_is_running(void)

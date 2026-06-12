@@ -109,7 +109,7 @@ EXTERN void emu_debug_continue(void);
 EXTERN bool emu_debug_halt_step_active(void);
 EXTERN void emu_mcp_start(void);
 EXTERN void emu_mcp_stop(void);
-EXTERN void emu_mcp_set_transport(int mode, int port);
+EXTERN void emu_mcp_set_transport(int mode, int port, const char* address);
 EXTERN bool emu_mcp_is_running(void);
 EXTERN int emu_mcp_get_transport_mode(void);
 EXTERN void emu_mcp_pump_commands(void);
