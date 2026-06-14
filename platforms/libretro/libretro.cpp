@@ -53,7 +53,7 @@ static int current_screen_width = 0;
 static int current_screen_height = 0;
 static float current_aspect_ratio = 0;
 static bool allow_up_down = false;
-static bool libretro_supports_bitmasks;
+static bool libretro_supports_bitmasks = false;
 static int spinner_support = 0;
 static int spinner_sensitivity = 1;
 static float aspect_ratio = 0.0f;
@@ -67,7 +67,10 @@ static int joypad[MAX_PADS][JOYPAD_BUTTONS];
 static int joypre[MAX_PADS][JOYPAD_BUTTONS];
 static int joypad_ext[MAX_PADS][4];
 static int joypre_ext[MAX_PADS][4];
-static unsigned input_device[MAX_PADS];
+static unsigned input_device[MAX_PADS] = {
+    RETRO_DEVICE_COLECOVISION,
+    RETRO_DEVICE_COLECOVISION
+};
 static bool mouse[2];
 static bool mousepre[2];
 
@@ -110,6 +113,10 @@ static bool IsJoypadDevice(unsigned device)
     return ((device == RETRO_DEVICE_JOYPAD) || (device == RETRO_DEVICE_COLECOVISION));
 }
 
+static void clear_input_state(void);
+static void reset_controller_devices(void);
+static void apply_controller_device(unsigned port, unsigned device, bool log_device);
+
 void retro_init(void)
 {
     if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
@@ -143,8 +150,10 @@ void retro_init(void)
     config.region = Cartridge::CartridgeUnknownRegion;
     config.type = Cartridge::CartridgeNotSupported;
 
+    clear_input_state();
+
     for (int i = 0; i < MAX_PADS; i++)
-        input_device[i] = RETRO_DEVICE_COLECOVISION;
+        apply_controller_device(i, input_device[i], false);
 
     libretro_supports_bitmasks = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 }
@@ -153,6 +162,16 @@ void retro_deinit(void)
 {
     SafeDeleteArray(frame_buffer);
     SafeDelete(core);
+
+    audio_sample_count = 0;
+    current_screen_width = 0;
+    current_screen_height = 0;
+    current_aspect_ratio = 0.0f;
+    aspect_ratio = 0.0f;
+    libretro_supports_bitmasks = false;
+
+    reset_controller_devices();
+    clear_input_state();
 }
 
 unsigned retro_api_version(void)
@@ -164,12 +183,47 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
 {
     if (port >= MAX_PADS)
     {
-        log_cb(RETRO_LOG_DEBUG, "retro_set_controller_port_device invalid port number: %u\n", port);
+        if (log_cb)
+            log_cb(RETRO_LOG_DEBUG, "retro_set_controller_port_device invalid port number: %u\n", port);
         return;
     }
 
-    log_cb(RETRO_LOG_DEBUG, "Plugging device %u into port %u.\n", device, port);
     input_device[port] = device;
+
+    apply_controller_device(port, device, true);
+}
+
+static void clear_input_state(void)
+{
+    for (int i = 0; i < MAX_PADS; i++)
+    {
+        for (int j = 0; j < JOYPAD_BUTTONS; j++)
+        {
+            joypad[i][j] = 0;
+            joypre[i][j] = 0;
+        }
+
+        for (int j = 0; j < 4; j++)
+        {
+            joypad_ext[i][j] = 0;
+            joypre_ext[i][j] = 0;
+        }
+
+        mouse[i] = false;
+        mousepre[i] = false;
+    }
+}
+
+static void reset_controller_devices(void)
+{
+    for (int i = 0; i < MAX_PADS; i++)
+        input_device[i] = RETRO_DEVICE_COLECOVISION;
+}
+
+static void apply_controller_device(unsigned port, unsigned device, bool log_device)
+{
+    if (log_device && log_cb)
+        log_cb(RETRO_LOG_DEBUG, "Plugging device %u into port %u.\n", device, port);
 
     struct retro_input_descriptor joypad[] = {
 
@@ -221,6 +275,9 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
     struct retro_input_descriptor desc[] = {
         { 0, 0, 0, 0, NULL }
     };
+
+    if (!environ_cb)
+        return;
 
     if (IsJoypadDevice(device))
         environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, joypad);
