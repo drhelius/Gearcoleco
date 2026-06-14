@@ -157,20 +157,33 @@ Restart Claude Desktop after saving the configuration.
 
 ### HTTP Mode
 
-1. Start Gearcoleco manually with HTTP transport:
+1. **Start the emulator manually** with HTTP transport:
 
    ```bash
    ./gearcoleco --mcp-http
-  # Server starts on http://127.0.0.1:7777/mcp
+  ```
 
+  The default endpoint is `http://127.0.0.1:7777/mcp`.
+
+  To use a custom port:
+
+  ```bash
    ./gearcoleco --mcp-http --mcp-http-port 3000
-  # Server starts on http://127.0.0.1:3000/mcp
+  ```
 
+  To bind to a custom address:
+
+  ```bash
   ./gearcoleco --mcp-http --mcp-http-address 192.168.1.50 --mcp-http-port 3000
-  # Server starts on http://192.168.1.50:3000/mcp
    ```
 
-  To require bearer-token authentication, set `GEARCOLECO_MCP_HTTP_TOKEN` before starting HTTP mode:
+  You can also start the server using the "MCP" menu in the GUI.
+
+2. **Optional: require bearer-token authentication**:
+
+  Set `GEARCOLECO_MCP_HTTP_TOKEN` before starting HTTP mode.
+
+  macOS and Linux:
 
   ```bash
   GEARCOLECO_MCP_HTTP_TOKEN="change-this-token" ./gearcoleco --mcp-http
@@ -190,9 +203,7 @@ Restart Claude Desktop after saving the configuration.
   gearcoleco.exe --mcp-http
   ```
 
-   You can also start the HTTP server from the debugger's MCP Server menu.
-
-2. Configure VS Code `.vscode/mcp.json`:
+3. **Configure VS Code** `.vscode/mcp.json`:
 
    ```json
    {
@@ -208,7 +219,7 @@ Restart Claude Desktop after saving the configuration.
    }
    ```
 
-3. Or configure Claude Desktop:
+4. **Or configure Claude Desktop**:
 
    ```json
    {
@@ -224,13 +235,15 @@ Restart Claude Desktop after saving the configuration.
    }
    ```
 
-4. Or configure Claude Code:
+5. **Or configure Claude Code**:
 
    ```bash
   claude mcp add --transport http gearcoleco http://127.0.0.1:7777/mcp
    ```
 
-> **Note:** The MCP HTTP server must be running before connecting the AI client.
+6. **Restart your AI client** and start debugging
+
+> **Note:** The MCP HTTP Server must be running standalone before connecting the AI client.
 > **Security:** If `GEARCOLECO_MCP_HTTP_TOKEN` is unset, HTTP mode accepts unauthenticated requests from clients that pass the configured `Host` and `Origin` checks. The default bind address is local-only; use a non-loopback address only on trusted networks or with bearer-token authentication enabled.
 
 ## Usage Examples
