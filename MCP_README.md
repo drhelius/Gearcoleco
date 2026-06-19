@@ -280,7 +280,7 @@ Once configured, you can ask your AI assistant:
 | `debug_step_into` | Step one instruction |
 | `debug_step_over` | Step over calls |
 | `debug_step_out` | Step out of current call |
-| `debug_step_frame` | Step one full frame |
+| `debug_step_frame` | Step one or more frames |
 | `debug_reset` | Reset the ColecoVision system |
 | `debug_get_status` | Get current debug state |
 
@@ -357,6 +357,7 @@ Once configured, you can ask your AI assistant:
 | Tool | Description |
 |------|-------------|
 | `controller_button` | Press/release controller buttons (directional, keypad, yellow/red, blue/purple) |
+| `controller_macro` | Run ordered `tap`, `press`, `release`, and `wait` input commands |
 
 ### Memory Editor
 | Tool | Description |
