@@ -55,6 +55,7 @@
     <ClCompile Include="..\shared\desktop\single_instance.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\sound_queue.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\mcp\mcp_debug_adapter.cpp"><Filter>desktop\mcp</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\mcp\mcp_tool_registry.cpp"><Filter>desktop\mcp</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\mcp\mcp_server.cpp"><Filter>desktop\mcp</Filter></ClCompile>
     <ClCompile Include="..\..\src\Audio.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\AY8910.cpp"><Filter>core</Filter></ClCompile>

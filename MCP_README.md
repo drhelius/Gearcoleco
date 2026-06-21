@@ -76,6 +76,30 @@ The server listens for HTTP POST requests on a configurable port (default: 7777)
 ### Headless Mode
 Run the emulator without a GUI, using only the MCP server for control. Ideal for automated testing and CI/CD.
 
+## MCP Tool Router
+
+By default, Gearcoleco exposes a compact set of high-frequency tools directly and routes advanced debugger tools through four discovery tools. This keeps MCP context small while preserving access to the full debugger surface.
+
+Direct tools: `load_media`, `get_media_info`, `debug_pause`, `debug_continue`, `debug_step_into`, `get_z80_status`, `read_memory`, `write_memory`, `get_disassembly`, `set_breakpoint`, `get_screenshot`, and `controller_button`.
+
+Router tools:
+
+- `list_tool_categories` lists routed tool categories with descriptions and tool counts.
+- `get_category_tools` lists routed tools in a category with descriptions and real input schemas.
+- `search_tools` searches direct and routed tools by keyword, category, title, description, and aliases.
+- `execute_tool` executes a routed tool by name with arguments. Use `get_category_tools` or `search_tools` first to discover the tool name and input schema.
+
+Example routed call:
+
+```json
+{
+  "name": "get_vdp_status",
+  "arguments": {}
+}
+```
+
+Add `--mcp-no-router` to expose every MCP tool directly.
+
 ## Quick Start
 
 ### STDIO Mode with VS Code
@@ -271,6 +295,8 @@ Once configured, you can ask your AI assistant:
 - "Compare SGM RAM before and after this routine runs and identify what data structure changed"
 
 ## Available MCP Tools
+
+This is the full tool catalog. By default, advanced tools are discoverable through `list_tool_categories`, `get_category_tools`, and `search_tools`, then invoked with `execute_tool`.
 
 ### Execution Control
 | Tool | Description |
