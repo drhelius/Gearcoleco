@@ -443,10 +443,57 @@ static void update_input(void)
         }
         else
         {
-            joypad[j][0] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) && ((joypre[j][0] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))    ? 1 : 0;
-            joypad[j][1] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) && ((joypre[j][1] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))    ? 1 : 0;
-            joypad[j][2] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) && ((joypre[j][2] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))) ? 1 : 0;
-            joypad[j][3] = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) && ((joypre[j][3] == 1) || !(joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))) ? 1 : 0;
+            bool raw_up = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) != 0;
+            bool raw_down = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) != 0;
+            bool raw_left = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) != 0;
+            bool raw_right = (joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) != 0;
+            bool up = raw_up;
+            bool down = raw_down;
+            bool left = raw_left;
+            bool right = raw_right;
+
+            if (raw_up && raw_down)
+            {
+                if (joypre[j][0] == 1)
+                {
+                    up = true;
+                    down = false;
+                }
+                else if (joypre[j][1] == 1)
+                {
+                    up = false;
+                    down = true;
+                }
+                else
+                {
+                    up = true;
+                    down = false;
+                }
+            }
+
+            if (raw_left && raw_right)
+            {
+                if (joypre[j][2] == 1)
+                {
+                    left = true;
+                    right = false;
+                }
+                else if (joypre[j][3] == 1)
+                {
+                    left = false;
+                    right = true;
+                }
+                else
+                {
+                    left = true;
+                    right = false;
+                }
+            }
+
+            joypad[j][0] = up ? 1 : 0;
+            joypad[j][1] = down ? 1 : 0;
+            joypad[j][2] = left ? 1 : 0;
+            joypad[j][3] = right ? 1 : 0;
         }
         joypad[j][4] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_A)      ? 1 : 0;
         joypad[j][5] = joypad_bits[j] & (1 << RETRO_DEVICE_ID_JOYPAD_B)      ? 1 : 0;

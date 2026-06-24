@@ -289,17 +289,21 @@ static void input_filter_opposing_directions(int controller, bool* left, bool* r
 
     if (*up && *down)
     {
-        if (!input_last_state[controller][2].pressed)
+        if (input_last_state[controller][2].pressed)
+            *down = false;
+        else if (input_last_state[controller][3].pressed)
             *up = false;
-        if (!input_last_state[controller][3].pressed)
+        else
             *down = false;
     }
 
     if (*left && *right)
     {
-        if (!input_last_state[controller][0].pressed)
+        if (input_last_state[controller][0].pressed)
+            *right = false;
+        else if (input_last_state[controller][1].pressed)
             *left = false;
-        if (!input_last_state[controller][1].pressed)
+        else
             *right = false;
     }
 }
