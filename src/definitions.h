@@ -224,6 +224,15 @@ struct GC_RuntimeInfo
     GC_Region region;
 };
 
+enum GC_Disassembler_Syntax
+{
+    GC_Disassembler_Syntax_Gearcoleco = 0,
+    GC_Disassembler_Syntax_WLADX,
+    GC_Disassembler_Syntax_TNIASM,
+    GC_Disassembler_Syntax_Z88DK,
+    GC_Disassembler_Syntax_Count
+};
+
 struct GC_Disassembler_Record
 {
     u32 address;
@@ -240,6 +249,9 @@ struct GC_Disassembler_Record
     int irq;
     bool has_operand_address;
     u16 operand_address;
+    bool operand_is_zp;
+    int operand_offset;
+    int operand_length;
     char auto_symbol[64];
 };
 

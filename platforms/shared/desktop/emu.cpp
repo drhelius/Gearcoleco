@@ -660,6 +660,16 @@ bool emu_debug_halt_step_active(void)
     return emu_debug_halt_step_frames_pending > 0;
 }
 
+void emu_set_disassembler_syntax(int syntax)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    if (IsValidPointer(gearcoleco))
+        gearcoleco->GetProcessor()->SetDisassemblerSyntax((GC_Disassembler_Syntax)syntax);
+#else
+    UNUSED(syntax);
+#endif
+}
+
 void emu_mcp_start(void)
 {
     mcp_manager->Start();

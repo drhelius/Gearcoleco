@@ -120,6 +120,7 @@ bool gui_init(void)
         emu_load_bios(gui_bios_path);
 
     emu_video_no_sprite_limit(config_video.sprite_limit);
+    emu_set_disassembler_syntax(config_debug.dis_syntax);
 
     for (int i = 0; i < 16; i++)
         gui_custom_palette[i] = color_int_to_float(config_video.color[i]);

@@ -20,12 +20,27 @@
 #ifndef OPCODE_NAMES_H
 #define	OPCODE_NAMES_H
 
+enum GC_OPCode_Type
+{
+    GC_OPCode_Type_Implied = 0,
+    GC_OPCode_Type_Index,
+    GC_OPCode_Type_1b,
+    GC_OPCode_Type_2b,
+    GC_OPCode_Type_Indexed,
+    GC_OPCode_Type_Relative,
+    GC_OPCode_Type_Indexed_1b,
+    GC_OPCode_Type_Data
+};
+
 struct stOPCodeInfo
 {
-    const char* name;
+    const char* name[GC_Disassembler_Syntax_Count];
     int size;
     int type;
 };
+
+#define GC_OPCODE(name, size, type) { { name, name, name, name }, size, type }
+#define GC_OPCODE_SYNTAX(gearcoleco, wladx, tniasm, z88dk, size, type) { { gearcoleco, wladx, tniasm, z88dk }, size, type }
 
 #include "opcodexx_names.h"
 #include "opcodecb_names.h"

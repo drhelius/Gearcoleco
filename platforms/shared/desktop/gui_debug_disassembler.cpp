@@ -63,6 +63,13 @@ struct SymbolEntry
     int bank;
 };
 
+struct AssemblerLabelDefinition
+{
+    char name[64];
+    u16 address;
+    bool low_byte;
+};
+
 static bool symbols_dirty = true;
 static bool show_prebuilt_auto_symbols = false;
 static DebugSymbol*** fixed_symbols = NULL;
@@ -100,8 +107,11 @@ static void add_symbol(const char* line);
 static void add_breakpoint(int type);
 static void request_goto_address(u16 addr);
 static bool is_return_instruction(GC_Disassembler_Record* record);
+static bool get_record_operand(GC_Disassembler_Record* record, u16* out_address, bool* out_is_zp);
 static void replace_symbols(DisassemblerLine* line, const char* jump_color, const char* operand_color, const char* auto_color, const char* original_color);
 static void replace_labels(DisassemblerLine* line, const char* color, const char* original_color);
+static bool collect_assembler_symbol_definition(DisassemblerLine* line, std::vector<AssemblerLabelDefinition>& definitions);
+static bool collect_assembler_label_definition(DisassemblerLine* line, std::vector<AssemblerLabelDefinition>& definitions);
 static void draw_instruction_name(DisassemblerLine* line, bool is_pc);
 static void disassembler_menu(void);
 static void add_bookmark_popup(void);
@@ -109,6 +119,7 @@ static void add_symbol_popup(void);
 static void save_full_disassembler(FILE* file);
 static void save_full_disassembler_map(FILE* file, const char* map_name, GC_Disassembler_Record** records, int size);
 static void save_current_disassembler(FILE* file);
+static bool disassembler_uses_assembler_syntax(void);
 static bool symbol_sort_address_asc(const SymbolEntry& a, const SymbolEntry& b);
 static bool symbol_sort_address_desc(const SymbolEntry& a, const SymbolEntry& b);
 static bool symbol_sort_addr_only_asc(const SymbolEntry& a, const SymbolEntry& b);
@@ -1167,32 +1178,126 @@ static bool is_return_instruction(GC_Disassembler_Record* record)
     }
 }
 
-static bool replace_address_in_string(std::string& instr, u16 address, bool is_zp, const char* replacement_text)
+static bool replace_operand_in_string(GC_Disassembler_Record* record, std::string& instr, const char* replacement_text)
 {
-    const char* format = is_zp ? "$%02X" : "$%04X";
-    const char* indirect_format = is_zp ? "$(%02X" : "$(%04X";
-    int replace_len = is_zp ? 3 : 5;
-    int indirect_replace_len = is_zp ? 4 : 6;
+    if (record->operand_length <= 0)
+        return false;
 
-    char address_str[8];
-    snprintf(address_str, 8, format, address);
-    size_t pos = instr.find(address_str);
-    if (pos != std::string::npos)
+    if ((record->operand_offset < 0) || ((record->operand_offset + record->operand_length) > (int)instr.length()))
+        return false;
+
+    instr.replace(record->operand_offset, record->operand_length, replacement_text);
+    return true;
+}
+
+static void add_assembler_definition(std::vector<AssemblerLabelDefinition>& definitions, const char* name, u16 address, bool low_byte)
+{
+    if (name == NULL)
+        return;
+
+    for (size_t i = 0; i < definitions.size(); i++)
     {
-        instr.replace(pos, replace_len, replacement_text);
-        return true;
+        if (definitions[i].address == address && definitions[i].low_byte == low_byte && strcmp(definitions[i].name, name) == 0)
+            return;
     }
 
-    snprintf(address_str, 8, indirect_format, address);
-    pos = instr.find(address_str);
-    if (pos != std::string::npos)
+    AssemblerLabelDefinition definition;
+    strncpy_fit(definition.name, name, sizeof(definition.name));
+    definition.address = address;
+    definition.low_byte = low_byte;
+    definitions.push_back(definition);
+}
+
+static void add_assembler_label_definition(std::vector<AssemblerLabelDefinition>& definitions, const char* label, u16 address, bool low_byte)
+{
+    if (label == NULL)
+        return;
+
+    char name[64];
+    if (low_byte)
+        snprintf(name, sizeof(name), "%s_%02X", label, address & 0x00FF);
+    else
+        snprintf(name, sizeof(name), "%s_%04X", label, address);
+    add_assembler_definition(definitions, name, address, low_byte);
+}
+
+static bool symbol_label_is_exported(const char* name, u16 address, u8 bank)
+{
+    if (name == NULL)
+        return false;
+
+    for (size_t i = 0; i < disassembler_lines.size(); i++)
     {
-        std::string indirect_replacement = std::string("(") + replacement_text;
-        instr.replace(pos, indirect_replace_len, indirect_replacement);
-        return true;
+        DisassemblerLine& line = disassembler_lines[i];
+        if (line.symbol && line.address == address && line.symbol->bank == bank && strcmp(line.symbol->text, name) == 0)
+            return true;
     }
 
     return false;
+}
+
+static bool is_relative_jump_record(GC_Disassembler_Record* record)
+{
+    if (!IsValidPointer(record))
+        return false;
+
+    switch (record->opcodes[0])
+    {
+        case 0x10:
+        case 0x18:
+        case 0x20:
+        case 0x28:
+        case 0x30:
+        case 0x38:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool can_replace_relative_jump_in_export(GC_Disassembler_Record* record)
+{
+    if (!disassembler_uses_assembler_syntax())
+        return true;
+
+    if (!is_relative_jump_record(record))
+        return true;
+
+    u16 lookup_address = 0;
+    bool is_zp = false;
+
+    if (!get_record_operand(record, &lookup_address, &is_zp))
+        return false;
+
+    u8 bank = record->jump_bank;
+    DebugSymbol* fixed_symbol = fixed_symbols[bank][lookup_address];
+    if (IsValidPointer(fixed_symbol) && symbol_label_is_exported(fixed_symbol->text, lookup_address, bank))
+        return true;
+
+    if (!config_debug.dis_show_auto_symbols)
+        return false;
+
+    DebugSymbol* dynamic_symbol = dynamic_symbols[bank][lookup_address];
+    if (IsValidPointer(dynamic_symbol) && symbol_label_is_exported(dynamic_symbol->text, lookup_address, bank))
+        return true;
+
+    GC_Disassembler_Record* target = emu_get_core()->GetMemory()->GetDisassemblerRecord(lookup_address, bank);
+    return IsValidPointer(target) && target->auto_symbol[0] != 0 && symbol_label_is_exported(target->auto_symbol, lookup_address, bank);
+}
+
+static void write_assembler_label_definitions(FILE* file, const std::vector<AssemblerLabelDefinition>& definitions)
+{
+    for (size_t i = 0; i < definitions.size(); i++)
+    {
+        u16 address = definitions[i].low_byte ? (definitions[i].address & 0x00FF) : definitions[i].address;
+        if (config_debug.dis_syntax == GC_Disassembler_Syntax_TNIASM)
+            fprintf(file, "%s: EQU $%04X\n", definitions[i].name, address);
+        else
+            fprintf(file, "%s = $%04X\n", definitions[i].name, address);
+    }
+
+    if (!definitions.empty())
+        fprintf(file, "\n");
 }
 
 static bool get_record_operand(GC_Disassembler_Record* record, u16* out_address, bool* out_is_zp)
@@ -1206,7 +1311,7 @@ static bool get_record_operand(GC_Disassembler_Record* record, u16* out_address,
     else if (record->has_operand_address)
     {
         *out_address = record->operand_address;
-        *out_is_zp = false;
+        *out_is_zp = record->operand_is_zp;
         return true;
     }
 
@@ -1226,7 +1331,7 @@ bool gui_debug_resolve_symbol(GC_Disassembler_Record* record, std::string& instr
     if (IsValidPointer(symbol))
     {
         std::string replacement = std::string(color) + symbol->text + original_color;
-        if (replace_address_in_string(instr, lookup_address, is_zp, replacement.c_str()))
+        if (replace_operand_in_string(record, instr, replacement.c_str()))
         {
             if (out_name) *out_name = symbol->text;
             if (out_address) *out_address = lookup_address;
@@ -1260,10 +1365,10 @@ bool gui_debug_resolve_label(GC_Disassembler_Record* record, std::string& instr,
 
         if (label != NULL)
         {
-            char label_address[4];
-            snprintf(label_address, 4, "$%02X", port);
+            char label_address[3];
+            snprintf(label_address, 3, "%02X", port);
             std::string replacement = std::string(color) + label + "_" + label_address + original_color;
-            if (replace_address_in_string(instr, port, true, replacement.c_str()))
+            if (replace_operand_in_string(record, instr, replacement.c_str()))
             {
                 if (out_name)
                     *out_name = label;
@@ -1320,12 +1425,82 @@ static void replace_symbols(DisassemblerLine* line, const char* jump_color, cons
     if (auto_symbol_text != NULL)
     {
         std::string replacement = std::string(auto_color) + auto_symbol_text + original_color;
-        if (replace_address_in_string(instr, lookup_address, is_zp, replacement.c_str()))
+        if (replace_operand_in_string(line->record, instr, replacement.c_str()))
         {
             snprintf(line->name_enhanced, 64, "%s", instr.c_str());
             snprintf(line->tooltip, 128, "%s%s%s = %s$%04X", auto_color, auto_symbol_text, c_white.c_str(), c_cyan.c_str(), lookup_address);
         }
     }
+}
+
+static bool collect_assembler_symbol_definition(DisassemblerLine* line, std::vector<AssemblerLabelDefinition>& definitions)
+{
+    std::string instr = line->record->name;
+    const char* resolved_name = NULL;
+    u16 resolved_address = 0;
+
+    if (gui_debug_resolve_symbol(line->record, instr, "", "", &resolved_name, &resolved_address))
+    {
+        if (is_relative_jump_record(line->record))
+            return true;
+        u8 bank = line->record->jump ? line->record->jump_bank : emu_get_core()->GetMemory()->GetBank(resolved_address);
+        if (!symbol_label_is_exported(resolved_name, resolved_address, bank))
+            add_assembler_definition(definitions, resolved_name, resolved_address, false);
+        return true;
+    }
+
+    if (!config_debug.dis_show_auto_symbols)
+        return false;
+
+    if (!line->record->jump || is_relative_jump_record(line->record))
+        return false;
+
+    u16 lookup_address = 0;
+    bool is_zp = false;
+
+    if (!get_record_operand(line->record, &lookup_address, &is_zp))
+        return false;
+
+    DebugSymbol* dynamic_symbol = dynamic_symbols[line->record->jump_bank][lookup_address];
+    const char* auto_symbol_text = NULL;
+
+    if (IsValidPointer(dynamic_symbol))
+    {
+        auto_symbol_text = dynamic_symbol->text;
+    }
+    else
+    {
+        GC_Disassembler_Record* target = emu_get_core()->GetMemory()->GetDisassemblerRecord(lookup_address, line->record->jump_bank);
+        if (IsValidPointer(target) && target->auto_symbol[0] != 0)
+            auto_symbol_text = target->auto_symbol;
+    }
+
+    if (auto_symbol_text != NULL)
+    {
+        if (replace_operand_in_string(line->record, instr, auto_symbol_text))
+        {
+            if (!symbol_label_is_exported(auto_symbol_text, lookup_address, line->record->jump_bank))
+                add_assembler_definition(definitions, auto_symbol_text, lookup_address, false);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool collect_assembler_label_definition(DisassemblerLine* line, std::vector<AssemblerLabelDefinition>& definitions)
+{
+    std::string instr = line->record->name;
+    const char* resolved_name = NULL;
+    u16 resolved_address = 0;
+
+    if (gui_debug_resolve_label(line->record, instr, "", "", &resolved_name, &resolved_address))
+    {
+        add_assembler_label_definition(definitions, resolved_name, resolved_address, true);
+        return true;
+    }
+
+    return false;
 }
 
 static void replace_labels(DisassemblerLine* line, const char* color, const char* original_color)
@@ -1427,6 +1602,26 @@ static void disassembler_menu(void)
         ImGui::MenuItem("Symbols", NULL, &config_debug.dis_show_symbols);
         ImGui::MenuItem("Segment", NULL, &config_debug.dis_show_segment);
         ImGui::MenuItem("Bank", NULL, &config_debug.dis_show_bank);
+
+        ImGui::Separator();
+
+        if (ImGui::BeginMenu("Syntax"))
+        {
+            static const char* syntax_names[GC_Disassembler_Syntax_Count] = { "Gearcoleco", "WLA-DX", "tniASM", "Z88DK" };
+
+            for (int i = 0; i < GC_Disassembler_Syntax_Count; i++)
+            {
+                if (ImGui::MenuItem(syntax_names[i], NULL, config_debug.dis_syntax == i))
+                {
+                    config_debug.dis_syntax = i;
+                    emu_set_disassembler_syntax(i);
+                }
+            }
+
+            ImGui::Separator();
+            ImGui::TextDisabled("Reload ROM to apply");
+            ImGui::EndMenu();
+        }
 
         ImGui::Separator();
 
@@ -2180,11 +2375,12 @@ int gui_debug_get_symbols(void** symbols_ptr)
 static void save_full_disassembler(FILE* file)
 {
     Memory* memory = emu_get_core()->GetMemory();
+    bool assembler_syntax = disassembler_uses_assembler_syntax();
 
-    save_full_disassembler_map(file, "BIOS", memory->GetDisassemblerBiosMap(), 0x2000);
-    save_full_disassembler_map(file, "RAM", memory->GetDisassemblerRamMap(), 0x400);
-    save_full_disassembler_map(file, "SGM", memory->GetDisassemblerSGMRamMap(), 0x8000);
-    save_full_disassembler_map(file, "ROM", memory->GetDisassemblerRomMap(), MAX_ROM_SIZE);
+    save_full_disassembler_map(file, assembler_syntax ? "" : "BIOS", memory->GetDisassemblerBiosMap(), 0x2000);
+    save_full_disassembler_map(file, assembler_syntax ? "" : "RAM", memory->GetDisassemblerRamMap(), 0x400);
+    save_full_disassembler_map(file, assembler_syntax ? "" : "SGM", memory->GetDisassemblerSGMRamMap(), 0x8000);
+    save_full_disassembler_map(file, assembler_syntax ? "" : "ROM", memory->GetDisassemblerRomMap(), MAX_ROM_SIZE);
 }
 
 static void save_full_disassembler_map(FILE* file, const char* map_name, GC_Disassembler_Record** records, int size)
@@ -2214,7 +2410,10 @@ static void save_full_disassembler_map(FILE* file, const char* map_name, GC_Disa
                 spaces[i] = ' ';
             spaces[offset] = 0;
 
-            fprintf(file, "%-4s %06X-%02X:    %s%s;%s\n", map_name, i, record->bank, name, spaces, record->bytes);
+            if (disassembler_uses_assembler_syntax())
+                fprintf(file, "    %s%s; %06X-%02X: %s\n", name, spaces, i, record->bank, record->bytes);
+            else
+                fprintf(file, "%-4s %06X-%02X:    %s%s;%s\n", map_name, i, record->bank, name, spaces, record->bytes);
 
             if (is_return_instruction(record))
                 fprintf(file, "\n");
@@ -2225,6 +2424,25 @@ static void save_full_disassembler_map(FILE* file, const char* map_name, GC_Disa
 static void save_current_disassembler(FILE* file)
 {
     int total_lines = (int)disassembler_lines.size();
+    bool assembler_syntax = disassembler_uses_assembler_syntax();
+    std::vector<AssemblerLabelDefinition> definitions;
+
+    if (assembler_syntax && (config_debug.dis_replace_symbols || config_debug.dis_replace_labels))
+    {
+        for (int i = 0; i < total_lines; i++)
+        {
+            DisassemblerLine line = disassembler_lines[i];
+            if (!line.symbol)
+            {
+                if (config_debug.dis_replace_symbols)
+                    collect_assembler_symbol_definition(&line, definitions);
+                if (config_debug.dis_replace_labels)
+                    collect_assembler_label_definition(&line, definitions);
+            }
+        }
+
+        write_assembler_label_definitions(file, definitions);
+    }
 
     for (int i = 0; i < total_lines; i++)
     {
@@ -2236,16 +2454,19 @@ static void save_current_disassembler(FILE* file)
             continue;
         }
 
-        fprintf(file, "  ");
+        if (!assembler_syntax)
+        {
+            fprintf(file, "  ");
 
-        if (config_debug.dis_show_segment)
-            fprintf(file, "%s ", line.record->segment);
-        if (config_debug.dis_show_bank)
-            fprintf(file, "%02X ", line.record->bank);
+            if (config_debug.dis_show_segment)
+                fprintf(file, "%s ", line.record->segment);
+            if (config_debug.dis_show_bank)
+                fprintf(file, "%02X ", line.record->bank);
 
-        fprintf(file, " %04X ", line.address);
+            fprintf(file, " %04X ", line.address);
+        }
 
-        if (config_debug.dis_replace_symbols)
+        if (config_debug.dis_replace_symbols && (!assembler_syntax || can_replace_relative_jump_in_export(line.record)))
         {
             replace_symbols(&line, "", "", "", "");
         }
@@ -2259,9 +2480,7 @@ static void save_current_disassembler(FILE* file)
         snprintf(instr, sizeof(instr), "%s", line.name_enhanced);
         RemoveColorFromString(instr);
 
-        fprintf(file, "   %s ", instr);
-
-        if (config_debug.dis_show_mem)
+        if (assembler_syntax)
         {
             int len = (int)strlen(instr);
             char spaces[39];
@@ -2272,7 +2491,35 @@ static void save_current_disassembler(FILE* file)
                 spaces[i] = ' ';
             spaces[offset] = 0;
 
-            fprintf(file, "%s;%s", spaces, line.record->bytes);
+            fprintf(file, "    %s%s", instr, spaces);
+
+            if (config_debug.dis_show_mem)
+            {
+                fprintf(file, "; ");
+                if (config_debug.dis_show_segment)
+                    fprintf(file, "%s ", line.record->segment);
+                if (config_debug.dis_show_bank)
+                    fprintf(file, "%02X ", line.record->bank);
+                fprintf(file, "%04X %s", line.address, line.record->bytes);
+            }
+        }
+        else
+        {
+            fprintf(file, "   %s ", instr);
+
+            if (config_debug.dis_show_mem)
+            {
+                int len = (int)strlen(instr);
+                char spaces[39];
+                int offset = 38 - len;
+                if (offset < 0)
+                    offset = 0;
+                for (int i = 0; (i < offset) && (i < 38); i++)
+                    spaces[i] = ' ';
+                spaces[offset] = 0;
+
+                fprintf(file, "%s;%s", spaces, line.record->bytes);
+            }
         }
 
         fprintf(file, "\n");
@@ -2282,6 +2529,13 @@ static void save_current_disassembler(FILE* file)
             fprintf(file, "\n\n");
         }
     }
+}
+
+static bool disassembler_uses_assembler_syntax(void)
+{
+    return config_debug.dis_syntax == GC_Disassembler_Syntax_WLADX ||
+        config_debug.dis_syntax == GC_Disassembler_Syntax_TNIASM ||
+        config_debug.dis_syntax == GC_Disassembler_Syntax_Z88DK;
 }
 
 static bool symbol_sort_address_asc(const SymbolEntry& a, const SymbolEntry& b)

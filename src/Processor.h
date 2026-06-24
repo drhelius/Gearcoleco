@@ -100,6 +100,8 @@ public:
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
     ProcessorState* GetState();
+    void SetDisassemblerSyntax(GC_Disassembler_Syntax syntax);
+    GC_Disassembler_Syntax GetDisassemblerSyntax() const;
     void DisassembleNextOPCode();
     void PopulateDisassemblerRecord(GC_Disassembler_Record* record, u16 address);
     void InvalidateOverlappingRecords(u16 address, u8 opcode_size);
@@ -171,6 +173,7 @@ private:
     GC_Breakpoint m_run_to_breakpoint;
     bool m_run_to_breakpoint_requested;
     std::stack<GC_CallStackEntry> m_disassembler_call_stack;
+    GC_Disassembler_Syntax m_disassembler_syntax;
     s32 m_debug_next_irq;
     ProcessorState m_ProcessorState;
 
@@ -199,6 +202,9 @@ private:
     void CheckBreakpoints();
     void PushCallStack(u16 src, u16 dest, u16 back, u8 bank);
     void PopCallStack();
+    void FormatDisassemblerDataBytes(char* text, size_t text_size, const u8* bytes, int size);
+    void SetDisassemblerOperandText(GC_Disassembler_Record* record, const char* text);
+    void SetDisassemblerOperand(GC_Disassembler_Record* record, u16 address, bool is_zp, const char* text);
     SixteenBitRegister* GetPrefixedRegister();
     u16 GetEffectiveAddress();
     bool IsPrefixedInstruction();

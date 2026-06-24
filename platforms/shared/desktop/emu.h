@@ -109,6 +109,7 @@ EXTERN void emu_debug_step_frames(int frames);
 EXTERN void emu_debug_break(void);
 EXTERN void emu_debug_continue(void);
 EXTERN bool emu_debug_halt_step_active(void);
+EXTERN void emu_set_disassembler_syntax(int syntax);
 EXTERN void emu_mcp_start(void);
 EXTERN void emu_mcp_stop(void);
 EXTERN void emu_mcp_set_transport(int mode, int port, const char* address);
