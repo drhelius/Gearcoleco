@@ -99,6 +99,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states with preview and rewind support.
+- Run-ahead support to reduce input latency.
 - Compressed ROM support (ZIP).
 - VGM recorder.
 - Supported platforms (standalone): Windows, Linux, BSD and macOS.
