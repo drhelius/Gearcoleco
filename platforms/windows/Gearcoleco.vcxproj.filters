@@ -52,6 +52,7 @@
     <ClCompile Include="..\shared\desktop\ogl_shader_chain.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\shader_preset.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\rewind.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\runahead.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\single_instance.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\sound_queue.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\mcp\mcp_debug_adapter.cpp"><Filter>desktop\mcp</Filter></ClCompile>
@@ -122,6 +123,7 @@
     <ClInclude Include="..\shared\desktop\ogl_shader_chain.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\shader_preset.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\rewind.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\runahead.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\single_instance.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\sound_queue.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\utils.h"><Filter>desktop</Filter></ClInclude>

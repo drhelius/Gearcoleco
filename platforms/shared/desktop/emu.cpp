@@ -27,6 +27,7 @@
 #include "sound_queue.h"
 #include "config.h"
 #include "rewind.h"
+#include "runahead.h"
 #include "events.h"
 #include "no_bios.h"
 #include "mcp/mcp_manager.h"
@@ -95,6 +96,7 @@ bool emu_init(void)
 
     sound_queue_init();
     rewind_init();
+    runahead_init();
 
     audio_enabled = true;
     emu_audio_sync = true;
@@ -132,6 +134,7 @@ void emu_destroy(void)
     save_ram();
     SafeDelete(mcp_manager);
     rewind_destroy();
+    runahead_destroy();
     SafeDeleteArray(audio_buffer);
     sound_queue_destroy();
     SafeDelete(gearcoleco);
@@ -320,7 +323,13 @@ void emu_update(void)
         if (!gearcoleco->IsPaused())
         {
             rewind_commit_seek();
-            gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &sampleCount);
+
+            int runahead = runahead_get_frames();
+            if (runahead > 0)
+                runahead_run(runahead, emu_frame_buffer, audio_buffer, &sampleCount);
+            else
+                gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &sampleCount);
+
             frame_executed = true;
             frame_completed = true;
         }

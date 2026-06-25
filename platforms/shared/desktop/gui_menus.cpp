@@ -202,6 +202,24 @@ static void menu_gearcoleco(void)
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Run-Ahead"))
+        {
+            ImGui::PushItemWidth(140.0f);
+            ImGui::Combo("##runahead", &config_emulator.runahead, "Disabled\0" "1 Frame\0" "2 Frames\0" "3 Frames\0\0");
+            ImGui::PopItemWidth();
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("Reduces input lag by speculatively running extra frames each update.");
+                ImGui::Text("Every frame multiplies CPU cost, so use the lowest value that feels right.");
+                ImGui::Text("Ignored while fast-forwarding.");
+                ImGui::EndTooltip();
+            }
+
+            ImGui::EndMenu();
+        }
+
         ImGui::Separator();
 
         bool has_save_data = media_actions_enabled && emu_get_core()->GetMemory()->GetMapper() && emu_get_core()->GetMemory()->GetMapper()->GetSaveDataSize() > 0;
