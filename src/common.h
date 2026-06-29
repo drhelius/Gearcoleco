@@ -269,42 +269,4 @@ inline void open_ofstream_utf8(std::ofstream& stream, const char* path, std::ios
 }
 #endif
 
-#include <sys/stat.h>
-#if !defined(_WIN32)
-#include <dirent.h>
-#include <unistd.h>
-#endif
-
-inline void create_directory_if_not_exists(const char* path)
-{
-#if defined(_WIN32)
-    _mkdir(path);
-#else
-    mkdir(path, 0755);
-#endif
-}
-
-inline void remove_directory_and_contents(const char* path)
-{
-#if defined(_WIN32)
-    _rmdir(path);
-#else
-    DIR* dir = opendir(path);
-    if (dir)
-    {
-        struct dirent* entry;
-        char filepath[1024];
-        while ((entry = readdir(dir)) != NULL)
-        {
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-                continue;
-            snprintf(filepath, sizeof(filepath), "%s/%s", path, entry->d_name);
-            unlink(filepath);
-        }
-        closedir(dir);
-        rmdir(path);
-    }
-#endif
-}
-
 #endif /* COMMON_H */
