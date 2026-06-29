@@ -16,6 +16,7 @@ BuildRequires:  SDL3-devel
 
 Requires:       mesa-libGL
 Requires:       SDL3
+Requires:       shared-mime-info
 
 %description
 Gearcoleco is a very accurate cross-platform ColecoVision emulator
@@ -50,6 +51,7 @@ install -Dm644 platforms/shared/desktop/shaders/README.md %{buildroot}%{_prefix}
 
 install -Dm644 platforms/linux/debian/%{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 sed -i 's|/usr/games/gearcoleco|gearcoleco|g' %{buildroot}%{_datadir}/applications/%{name}.desktop
+install -Dm644 platforms/linux/debian/%{name}.xml %{buildroot}%{_datadir}/mime/packages/%{name}.xml
 
 install -Dm644 platforms/shared/desktop/mcp/icon.png %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/%{name}.png
 
@@ -61,6 +63,7 @@ install -Dm644 platforms/linux/debian/%{name}.6 %{buildroot}%{_mandir}/man6/%{na
 %{_bindir}/%{name}
 %{_prefix}/lib/%{name}/
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/mime/packages/%{name}.xml
 %{_datadir}/icons/hicolor/128x128/apps/%{name}.png
 %{_mandir}/man6/%{name}.6*
 

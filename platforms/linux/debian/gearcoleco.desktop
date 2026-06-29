@@ -7,6 +7,7 @@ Exec=/usr/games/gearcoleco %f
 TryExec=/usr/games/gearcoleco
 Icon=gearcoleco
 Terminal=false
+MimeType=application/x-colecovision-rom;
 Categories=Game;Emulator;
 Keywords=ColecoVision;Coleco;
 StartupNotify=true

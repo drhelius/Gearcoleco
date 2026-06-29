@@ -1,3 +1,4 @@
 platforms/linux/gearcoleco usr/lib/gearcoleco/
 platforms/shared/gamecontrollerdb.txt usr/lib/gearcoleco/
 debian/gearcoleco.desktop usr/share/applications/
+debian/gearcoleco.xml usr/share/mime/packages/
