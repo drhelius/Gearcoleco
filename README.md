@@ -120,7 +120,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
-- **Portable Mode**: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode.
+- **Portable Mode**: Create an empty file named `portable.ini` in the same directory as the application binary to enable portable mode. On macOS, place the file next to the `.app` bundle.
 
 ### Debugging Features
 - **Docking Windows**: In debug mode, you can dock windows together by pressing SHIFT and dragging a window onto another.
