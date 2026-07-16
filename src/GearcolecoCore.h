@@ -76,6 +76,7 @@ public:
     Processor* GetProcessor();
     Audio* GetAudio();
     Video* GetVideo();
+    Input* GetInput();
     TraceLogger* GetTraceLogger();
     u64 GetMasterClockCycles();
 

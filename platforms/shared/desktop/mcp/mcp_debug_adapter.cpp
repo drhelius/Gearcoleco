@@ -18,6 +18,7 @@
  */
 
 #include "mcp_debug_adapter.h"
+#include "Input.h"
 #include "log.h"
 #include "../utils.h"
 #include "../emu.h"
@@ -1409,6 +1410,38 @@ json DebugAdapter::ControllerButton(int player, const std::string& button, const
     result["action"] = action;
 
     return result;
+}
+
+json DebugAdapter::GetInputState()
+{
+    static const char* button_names[] = {
+        "up", "down", "left", "right", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        "asterisk", "hash", "left_button", "right_button", "blue", "purple"
+    };
+    static const GC_Keys button_keys[] = {
+        Key_Up, Key_Down, Key_Left, Key_Right, Keypad_0, Keypad_1, Keypad_2, Keypad_3, Keypad_4, Keypad_5,
+        Keypad_6, Keypad_7, Keypad_8, Keypad_9, Keypad_Asterisk, Keypad_Hash, Key_Left_Button, Key_Right_Button,
+        Key_Blue, Key_Purple
+    };
+
+    json players = json::array();
+    Input* input = m_core->GetInput();
+
+    for (int player = 0; player < 2; player++)
+    {
+        json pressed = json::array();
+        GC_Controllers controller = static_cast<GC_Controllers>(player);
+
+        for (size_t i = 0; i < sizeof(button_keys) / sizeof(button_keys[0]); i++)
+        {
+            if (input->IsKeyPressed(controller, button_keys[i]))
+                pressed.push_back(button_names[i]);
+        }
+
+        players.push_back({{"player", player + 1}, {"pressed", pressed}});
+    }
+
+    return {{"players", players}};
 }
 
 json DebugAdapter::ListSprites()

@@ -53,7 +53,7 @@ This server provides tools for ColecoVision game development, rom hacking, rever
 - Z80 CPU register read/write
 - Hardware state inspection: TMS9918 VDP registers/status, SN76489 PSG, AY-3-8910 (SGM)
 - Sprite listing and PNG image capture
-- Debug symbols management (load, add, remove, list)
+- Debug symbols management (load, add, remove, list, look up)
 - Disassembler bookmarks and call stack inspection
 - Memory editor: bookmarks, watches, memory search, byte finding
 - Trace logger: CPU instructions, IRQs, VDP writes/status, PSG, AY-3-8910, I/O ports, SGM
@@ -61,6 +61,7 @@ This server provides tools for ColecoVision game development, rom hacking, rever
 - Screenshot capture as base64-encoded PNG
 - Save state management (5 slots)
 - Controller input (directional, keypad 0-9, *, #, blue, purple, left/right buttons)
+- Effective input state inspection, including pending tap releases
 - Fast forward control
 - GUI integration (works with or without the GUI running)
 - Two transport modes: STDIO (for AI tool integration) and HTTP (for remote access)
@@ -336,6 +337,8 @@ This is the full tool catalog. By default, advanced tools are discoverable throu
 | `add_symbol` / `remove_symbol` | Manage debug symbols |
 | `load_symbols` | Load symbols from file |
 | `list_symbols` | List all symbols |
+| `lookup_symbol_by_name` | Find all exact-name symbol matches |
+| `lookup_symbol_at_address` | Find symbol at bank/address |
 | `get_call_stack` | Get current call stack |
 
 ### Breakpoints
@@ -371,6 +374,7 @@ This is the full tool catalog. By default, advanced tools are discoverable throu
 | `list_save_state_slots` | List save state slots |
 | `select_save_state_slot` | Select active slot |
 | `save_state` / `load_state` | Save/load state |
+| `save_state_file` / `load_state_file` | Save/load state at an explicit file path |
 | `set_fast_forward_speed` | Set fast forward multiplier |
 | `toggle_fast_forward` | Toggle fast forward |
 | `get_rewind_status` | Get rewind buffer status |
@@ -387,6 +391,7 @@ This is the full tool catalog. By default, advanced tools are discoverable throu
 |------|-------------|
 | `controller_button` | Press/release controller buttons (directional, keypad, yellow/red, blue/purple) |
 | `controller_macro` | Run ordered `tap`, `press`, `release`, and `wait` input commands |
+| `get_input_state` | Get effective pressed buttons and pending tap releases |
 
 ### Memory Editor
 | Tool | Description |

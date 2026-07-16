@@ -39,6 +39,7 @@ public:
     void Reset();
     void KeyPressed(GC_Controllers controller, GC_Keys key);
     void KeyReleased(GC_Controllers controller, GC_Keys key);
+    bool IsKeyPressed(GC_Controllers controller, GC_Keys key) const;
     void Spinner1(int movement);
     void Spinner2(int movement);
     void SaveState(std::ostream& stream);

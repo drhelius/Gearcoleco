@@ -101,6 +101,12 @@ void Input::KeyReleased(GC_Controllers controller, GC_Keys key)
     }
 }
 
+bool Input::IsKeyPressed(GC_Controllers controller, GC_Keys key) const
+{
+    int bit = key & 0x0F;
+    return key > 0x0F ? !(m_Gamepad[controller] & (1 << bit)) : (m_KeypadState[controller] & (1 << bit)) != 0;
+}
+
 void Input::UpdateKeypadState(GC_Controllers controller)
 {
     m_Keypad[controller] = 0xFF;

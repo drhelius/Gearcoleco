@@ -321,6 +321,11 @@ Video* GearcolecoCore::GetVideo()
     return m_pVideo;
 }
 
+Input* GearcolecoCore::GetInput()
+{
+    return m_pInput;
+}
+
 TraceLogger* GearcolecoCore::GetTraceLogger()
 {
     return m_pTraceLogger;
