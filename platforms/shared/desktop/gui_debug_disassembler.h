@@ -22,6 +22,7 @@
 
 #include "gearcoleco.h"
 #include <string>
+#include <vector>
 
 struct GC_Disassembler_Record;
 
@@ -54,6 +55,8 @@ EXTERN void gui_debug_remove_disassembler_bookmark(u16 address);
 EXTERN int gui_debug_get_disassembler_bookmarks(void** bookmarks_ptr);
 EXTERN void gui_debug_reset_disassembler_bookmarks(void);
 EXTERN int gui_debug_get_symbols(void** symbols_ptr);
+EXTERN DebugSymbol* gui_debug_get_symbol(u8 bank, u16 address);
+EXTERN void gui_debug_find_symbols(const char* name, std::vector<DebugSymbol*>& symbols);
 EXTERN bool gui_debug_resolve_symbol(GC_Disassembler_Record* record, std::string& instr, const char* color, const char* original_color, const char** out_name = NULL, u16* out_address = NULL);
 EXTERN bool gui_debug_resolve_label(GC_Disassembler_Record* record, std::string& instr, const char* color, const char* original_color, const char** out_name = NULL, u16* out_address = NULL);
 EXTERN void gui_debug_runtocursor(void);
