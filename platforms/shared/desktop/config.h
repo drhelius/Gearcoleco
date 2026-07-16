@@ -87,6 +87,7 @@ struct config_Emulator
     int spinner_sensitivity = 4;
     bool capture_mouse = false;
     bool status_messages = false;
+    bool allow_screensaver = false;
     int mcp_tcp_port = 7777;
     std::string mcp_http_address = "127.0.0.1";
 };
