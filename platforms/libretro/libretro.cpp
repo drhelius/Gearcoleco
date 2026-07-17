@@ -279,7 +279,17 @@ static void apply_controller_device(unsigned port, unsigned device, bool log_dev
     if (!environ_cb)
         return;
 
-    if (IsJoypadDevice(device))
+    bool joypad_connected = false;
+    for (int i = 0; i < MAX_PADS; i++)
+    {
+        if (IsJoypadDevice(input_device[i]))
+        {
+            joypad_connected = true;
+            break;
+        }
+    }
+
+    if (joypad_connected)
         environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, joypad);
     else
         environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
