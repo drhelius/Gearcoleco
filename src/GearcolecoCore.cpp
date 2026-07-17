@@ -497,8 +497,10 @@ void GearcolecoCore::LoadRam(const char* szPath, bool fullPath)
         return;
 
     Mapper* pMapper = m_pMemory->GetMapper();
+    u8* pSaveData = IsValidPointer(pMapper) ? pMapper->GetSaveData() : NULL;
+    int saveDataSize = IsValidPointer(pMapper) ? pMapper->GetSaveDataSize() : 0;
 
-    if (!IsValidPointer(pMapper) || pMapper->GetSaveDataSize() <= 0)
+    if (!IsValidPointer(pSaveData) || saveDataSize <= 0)
         return;
 
     Log("Loading RAM...");
@@ -535,9 +537,21 @@ void GearcolecoCore::LoadRam(const char* szPath, bool fullPath)
 
     if (file.is_open())
     {
-        file.read(reinterpret_cast<char*>(pMapper->GetSaveData()), pMapper->GetSaveDataSize());
+        u8* pLoadedData = new u8[saveDataSize];
+        file.read(reinterpret_cast<char*>(pLoadedData), saveDataSize);
+
+        if (file.gcount() == saveDataSize)
+        {
+            memcpy(pSaveData, pLoadedData, saveDataSize);
+            Log("RAM loaded from %s", path.c_str());
+        }
+        else
+        {
+            Error("Unable to read complete RAM file: %s", path.c_str());
+        }
+
         file.close();
-        Log("RAM loaded from %s", path.c_str());
+        SafeDeleteArray(pLoadedData);
     }
     else
     {
