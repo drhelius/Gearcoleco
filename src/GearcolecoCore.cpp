@@ -946,10 +946,12 @@ bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveStat
     {
         stream.seekg(savestate_size - sizeof(GC_SaveState_Header), ios::beg);
         stream.read(reinterpret_cast<char*>(header), sizeof(GC_SaveState_Header));
-        stream.close();
 
         if ((header->magic == GC_SAVESTATE_MAGIC) && (header->size == savestate_size))
+        {
+            stream.close();
             return true;
+        }
     }
 
     // Try legacy V1 format
@@ -962,7 +964,6 @@ bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveStat
         stream.seekg(savestate_size - (2 * sizeof(u32)), ios::beg);
         stream.read(reinterpret_cast<char*>(&v1_magic), sizeof(v1_magic));
         stream.read(reinterpret_cast<char*>(&v1_size), sizeof(v1_size));
-        stream.close();
 
         if ((v1_magic == GC_SAVESTATE_MAGIC) && (v1_size == savestate_size))
         {
@@ -971,6 +972,7 @@ bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveStat
             header->version = GC_SAVESTATE_VERSION_V1;
             header->size = v1_size;
             strncpy_fit(header->rom_name, m_pCartridge->GetFileName(), sizeof(header->rom_name));
+            stream.close();
             return true;
         }
     }
