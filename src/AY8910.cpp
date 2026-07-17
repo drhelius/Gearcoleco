@@ -328,13 +328,10 @@ void AY8910::Sync()
             for (int i = 0; i < 3; i++)
             {
                 // Filter out ultrasonic frequencies
-                if (m_TonePeriod[i] < 8)
-                    continue;
+                bool toneOutput = m_ToneDisable[i] || ((m_TonePeriod[i] >= 8) && m_Sign[i]);
+                bool noiseOutput = m_NoiseDisable[i] || ((m_NoiseShift & 0x01) == 0x01);
 
-                bool toneOutput = !m_ToneDisable[i] && m_Sign[i];
-                bool noiseOutput = !m_NoiseDisable[i] && ((m_NoiseShift & 0x01) == 0x01);
-
-                if (toneOutput || noiseOutput)
+                if (toneOutput && noiseOutput)
                 {
                     channel_sample[i] = m_EnvelopeMode[i] ? kAY8910VolumeTable[m_EnvelopeVolume] : kAY8910VolumeTable[m_Amplitude[i]];
                     if (!m_ChannelMute[i])
