@@ -154,6 +154,8 @@ void McpServer::HandleLine(const std::string& line)
 
     if (!json::accept(line))
     {
+        if (!m_transport->validate_protocol_version(""))
+            return;
         SendError(0, -32700, "Parse error: Invalid JSON");
         return;
     }
@@ -162,9 +164,18 @@ void McpServer::HandleLine(const std::string& line)
 
     if (!request.is_object())
     {
+        if (!m_transport->validate_protocol_version(""))
+            return;
         SendError(0, -32600, "Invalid Request: expected an object");
         return;
     }
+
+    std::string method;
+    if (request.contains("method") && request["method"].is_string())
+        method = request["method"];
+
+    if (!m_transport->validate_protocol_version(method))
+        return;
 
     bool is_notification = !request.contains("id");
 
@@ -184,12 +195,6 @@ void McpServer::HandleLine(const std::string& line)
 
     int64_t request_id = request.contains("id") ? request["id"].get<int64_t>() : 0;
 
-    if (request.contains("params") && !request["params"].is_object())
-    {
-        reject_or_send_error(request_id, -32602, "Invalid params: expected an object");
-        return;
-    }
-
     if (!request.contains("jsonrpc") || request["jsonrpc"] != "2.0")
     {
         reject_or_send_error(0, -32600, "Invalid Request: missing or invalid jsonrpc version");
@@ -202,7 +207,13 @@ void McpServer::HandleLine(const std::string& line)
         return;
     }
 
-    std::string method = request["method"];
+    method = request["method"];
+
+    if (request.contains("params") && !request["params"].is_object())
+    {
+        reject_or_send_error(request_id, -32602, "Invalid params: expected an object");
+        return;
+    }
 
     if (is_notification)
     {
@@ -246,16 +257,14 @@ void McpServer::HandleInitialize(const json& request)
 
     int64_t id = request["id"];
 
-    std::string protocolVersion = "2025-11-25";
-    if (request.contains("params") && request["params"].contains("protocolVersion"))
+    if (!request.contains("params") || !request["params"].contains("protocolVersion") ||
+        !request["params"]["protocolVersion"].is_string())
     {
-        if (!request["params"]["protocolVersion"].is_string())
-        {
-            SendError(id, -32602, "Invalid params: protocolVersion must be a string");
-            return;
-        }
-        protocolVersion = request["params"]["protocolVersion"];
+        SendError(id, -32602, "Invalid params: protocolVersion must be a string");
+        return;
     }
+
+    std::string protocolVersion = MCP_PROTOCOL_VERSION;
 
     json response;
     response["jsonrpc"] = "2.0";
@@ -289,6 +298,7 @@ void McpServer::HandleInitialize(const json& request)
     }
 
     m_initialized = true;
+    m_transport->set_protocol_version(protocolVersion);
     SendResponse(response);
 }
 
