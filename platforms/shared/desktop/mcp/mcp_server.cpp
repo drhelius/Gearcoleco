@@ -88,7 +88,6 @@ void McpServer::ReaderLoop()
         }
         else
         {
-            // EOF or error
             Stop();
             break;
         }
@@ -97,7 +96,6 @@ void McpServer::ReaderLoop()
 
 void McpServer::Run()
 {
-    // Start reader thread for transport input
     std::thread reader_thread(ReaderThreadFunc, this);
     reader_thread.detach();
 
@@ -115,14 +113,11 @@ void McpServer::Run()
         }
         else
         {
-            // Wrap result in MCP response format
             json mcpResult;
             mcpResult["content"] = json::array();
 
-            // Check if this is image data (special marker from GetScreenshot)
             if (resp->result.contains("__mcp_image") && resp->result["__mcp_image"] == true)
             {
-                // Image content type
                 mcpResult["content"].push_back({
                     {"type", "image"},
                     {"data", resp->result["data"]},
@@ -131,7 +126,6 @@ void McpServer::Run()
             }
             else
             {
-                // Text content type (default)
                 std::ostringstream result_ss;
                 result_ss << resp->result.dump(2, ' ', false, json::error_handler_t::replace);
 
@@ -158,7 +152,6 @@ void McpServer::HandleLine(const std::string& line)
 {
     json request;
 
-    // Try to parse JSON
     if (!json::accept(line))
     {
         SendError(0, -32700, "Parse error: Invalid JSON");
@@ -187,7 +180,6 @@ void McpServer::HandleLine(const std::string& line)
         return;
     }
 
-    // Validate JSON-RPC structure
     if (!request.contains("jsonrpc") || request["jsonrpc"] != "2.0")
     {
         SendError(0, -32600, "Invalid Request: missing or invalid jsonrpc version");
@@ -202,7 +194,6 @@ void McpServer::HandleLine(const std::string& line)
 
     std::string method = request["method"];
 
-    // Handle different methods
     if (method == "initialize")
     {
         HandleInitialize(request);
@@ -243,7 +234,6 @@ void McpServer::HandleInitialize(const json& request)
 
     int64_t id = request["id"];
 
-    // Get protocol version from request
     std::string protocolVersion = "2025-11-25";
     if (request.contains("params") && request["params"].contains("protocolVersion"))
     {
@@ -1808,7 +1798,6 @@ void McpServer::HandleToolsCall(const json& request)
         return;
     }
 
-    // Enqueue command for main thread to execute
     DebugCommand* cmd = new DebugCommand();
     cmd->requestId = id;
     cmd->toolName = toolName;
@@ -1978,7 +1967,6 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
             return {{"error", "Invalid memory_area (must be: rom_ram, vram, vdp_reg)"}};
         int breakpoint_type = GetBreakpointTypeFromString(memory_area);
 
-        // Check if end_address is provided for range breakpoints
         u16 end_address = 0;
         if (arguments.contains("end_address"))
         {
@@ -2079,7 +2067,6 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string bytesStr = arguments["bytes"].get<std::string>();
         std::vector<u8> data;
 
-        // Parse hex bytes
         std::istringstream iss(bytesStr);
         std::string byteStr;
         while (iss >> byteStr)
@@ -2583,11 +2570,9 @@ void McpServer::LoadResources()
 
 void McpServer::LoadResourcesFromCategory(const std::string& category, const std::string& tocPath)
 {
-    // Read toc.json file
     std::ifstream file(tocPath);
     if (!file.is_open())
     {
-        // Resources directory not found, silently skip
         Log("[MCP] Warning: Resources TOC file not found: %s", tocPath.c_str());
         return;
     }
@@ -2611,7 +2596,6 @@ void McpServer::LoadResourcesFromCategory(const std::string& category, const std
         return;
     }
 
-    // Get the directory containing toc.json
     std::string tocDir = tocPath.substr(0, tocPath.find_last_of("/\\"));
 
     for (const json& item : toc["toc"])
@@ -2698,7 +2682,6 @@ void McpServer::HandleResourcesRead(const json& request)
 
     std::string uri = request["params"]["uri"];
 
-    // Find resource
     std::map<std::string, ResourceInfo>::const_iterator it = m_resourceMap.find(uri);
     if (it == m_resourceMap.end())
     {
