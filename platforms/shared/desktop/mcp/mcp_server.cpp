@@ -156,7 +156,7 @@ void McpServer::HandleLine(const std::string& line)
     {
         if (!m_transport->validate_protocol_version(""))
             return;
-        SendError(0, -32700, "Parse error: Invalid JSON");
+        SendError(json(), -32700, "Parse error: Invalid JSON");
         return;
     }
 
@@ -166,7 +166,7 @@ void McpServer::HandleLine(const std::string& line)
     {
         if (!m_transport->validate_protocol_version(""))
             return;
-        SendError(0, -32600, "Invalid Request: expected an object");
+        SendError(json(), -32600, "Invalid Request: expected an object");
         return;
     }
 
@@ -179,7 +179,7 @@ void McpServer::HandleLine(const std::string& line)
 
     bool is_notification = !request.contains("id");
 
-    const auto reject_or_send_error = [this, is_notification](int64_t id, int code, const std::string& message)
+    const auto reject_or_send_error = [this, is_notification](const json& id, int code, const std::string& message)
     {
         if (is_notification)
             m_transport->reject_notification();
@@ -187,23 +187,24 @@ void McpServer::HandleLine(const std::string& line)
             SendError(id, code, message);
     };
 
-    if (request.contains("id") && !request["id"].is_number_integer() && !request["id"].is_number_unsigned())
+    if (request.contains("id") && !request["id"].is_string() &&
+        !request["id"].is_number_integer() && !request["id"].is_number_unsigned())
     {
-        reject_or_send_error(0, -32600, "Invalid Request: id must be an integer");
+        reject_or_send_error(json(), -32600, "Invalid Request: id must be a string or integer");
         return;
     }
 
-    int64_t request_id = request.contains("id") ? request["id"].get<int64_t>() : 0;
+    json request_id = request.contains("id") ? request["id"] : json();
 
     if (!request.contains("jsonrpc") || request["jsonrpc"] != "2.0")
     {
-        reject_or_send_error(0, -32600, "Invalid Request: missing or invalid jsonrpc version");
+        reject_or_send_error(json(), -32600, "Invalid Request: missing or invalid jsonrpc version");
         return;
     }
 
     if (!request.contains("method") || !request["method"].is_string())
     {
-        reject_or_send_error(0, -32600, "Invalid Request: missing method");
+        reject_or_send_error(json(), -32600, "Invalid Request: missing method");
         return;
     }
 
@@ -249,13 +250,7 @@ void McpServer::HandleLine(const std::string& line)
 
 void McpServer::HandleInitialize(const json& request)
 {
-    if (!request.contains("id"))
-    {
-        SendError(0, -32600, "Invalid Request: missing id");
-        return;
-    }
-
-    int64_t id = request["id"];
+    const json& id = request["id"];
 
     if (!request.contains("params") || !request["params"].contains("protocolVersion") ||
         !request["params"]["protocolVersion"].is_string())
@@ -1516,13 +1511,7 @@ json McpServer::BuildToolList()
 
 void McpServer::HandleToolsList(const json& request)
 {
-    if (!request.contains("id"))
-    {
-        SendError(0, -32600, "Invalid Request: missing id");
-        return;
-    }
-
-    int64_t id = request["id"];
+    const json& id = request["id"];
 
     json tools = BuildToolList();
 
@@ -1695,7 +1684,7 @@ json McpServer::HandleRouterGetToolInfo(const json& arguments)
     return tool;
 }
 
-void McpServer::SendToolResult(int64_t id, const json& result)
+void McpServer::SendToolResult(const json& id, const json& result)
 {
     json response;
     response["jsonrpc"] = "2.0";
@@ -1715,13 +1704,7 @@ void McpServer::SendToolResult(int64_t id, const json& result)
 
 void McpServer::HandleToolsCall(const json& request)
 {
-    if (!request.contains("id"))
-    {
-        SendError(0, -32600, "Invalid Request: missing id");
-        return;
-    }
-
-    int64_t id = request["id"];
+    const json& id = request["id"];
 
     if (!request.contains("params") || !request["params"].contains("name") || !request["params"]["name"].is_string())
     {
@@ -2553,7 +2536,7 @@ void McpServer::SendResponse(const json& response)
     m_transport->send(line);
 }
 
-void McpServer::SendError(int64_t id, int code, const std::string& message, const json& data)
+void McpServer::SendError(const json& id, int code, const std::string& message, const json& data)
 {
     json error;
     error["jsonrpc"] = "2.0";
@@ -2654,13 +2637,7 @@ std::string McpServer::ReadFileContents(const std::string& filePath)
 
 void McpServer::HandleResourcesList(const json& request)
 {
-    if (!request.contains("id"))
-    {
-        SendError(0, -32600, "Invalid Request: missing id");
-        return;
-    }
-
-    int64_t id = request["id"];
+    const json& id = request["id"];
 
     json resources = json::array();
 
@@ -2688,13 +2665,7 @@ void McpServer::HandleResourcesList(const json& request)
 
 void McpServer::HandleResourcesRead(const json& request)
 {
-    if (!request.contains("id"))
-    {
-        SendError(0, -32600, "Invalid Request: missing id");
-        return;
-    }
-
-    int64_t id = request["id"];
+    const json& id = request["id"];
 
     if (!request.contains("params") || !request["params"].contains("uri") || !request["params"]["uri"].is_string())
     {
