@@ -869,7 +869,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             Log("Loading state (v%d)...", header.version);
 
             m_pMemory->LoadState(stream);
-            m_pProcessor->LoadState(stream);
+            m_pProcessor->LoadState(stream, header.version);
 
             if (header.version <= 102)
                 m_pAudio->LoadStateV1(stream);
@@ -902,7 +902,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
                 Log("Loading legacy state...");
 
                 m_pMemory->LoadState(stream);
-                m_pProcessor->LoadState(stream);
+                m_pProcessor->LoadState(stream, GC_SAVESTATE_VERSION_V1);
                 m_pAudio->LoadStateV1(stream);
                 m_pVideo->LoadState(stream);
                 m_pInput->LoadState(stream, GC_SAVESTATE_VERSION_V1);

@@ -98,7 +98,7 @@ public:
     void SetIOPOrts(IOPorts* pIOPorts);
     IOPorts* GetIOPOrts();
     void SaveState(std::ostream& stream);
-    void LoadState(std::istream& stream);
+    void LoadState(std::istream& stream, int version);
     ProcessorState* GetState();
     void SetDisassemblerSyntax(GC_Disassembler_Syntax syntax);
     GC_Disassembler_Syntax GetDisassemblerSyntax() const;
@@ -149,6 +149,8 @@ private:
     SixteenBitRegister WZ;
     u8 I;
     u8 R;
+    u8 m_Q;
+    u8 m_QTemp;
     bool m_bIFF1;
     bool m_bIFF2;
     bool m_bHalt;

@@ -41,6 +41,8 @@ Processor::Processor(Memory* pMemory)
     m_iTStates = 0;
     m_iInjectedTStates = 0;
     m_bAfterEI = false;
+    m_Q = 0;
+    m_QTemp = 0;
     m_iInterruptMode = 0;
     m_bINTRequested = false;
     m_bNMIRequested = false;
@@ -126,6 +128,8 @@ void Processor::Reset()
     WZ.SetValue(0x0000);
     I = 0x00;
     R = 0x00;
+    m_Q = 0;
+    m_QTemp = 0;
     m_bINTRequested = false;
     m_bNMIRequested = false;
     m_bPrefixedCBOpcode = false;
@@ -980,9 +984,11 @@ void Processor::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*> (&m_bPrefixedCBOpcode), sizeof(m_bPrefixedCBOpcode));
     stream.write(reinterpret_cast<const char*> (&m_PrefixedCBValue), sizeof(m_PrefixedCBValue));
     stream.write(reinterpret_cast<const char*> (&m_bInputLastCycle), sizeof(m_bInputLastCycle));
+    stream.write(reinterpret_cast<const char*> (&m_Q), sizeof(m_Q));
+    stream.write(reinterpret_cast<const char*> (&m_QTemp), sizeof(m_QTemp));
 }
 
-void Processor::LoadState(std::istream& stream)
+void Processor::LoadState(std::istream& stream, int version)
 {
     using namespace std;
 
@@ -1035,6 +1041,17 @@ void Processor::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*> (&m_bPrefixedCBOpcode), sizeof(m_bPrefixedCBOpcode));
     stream.read(reinterpret_cast<char*> (&m_PrefixedCBValue), sizeof(m_PrefixedCBValue));
     stream.read(reinterpret_cast<char*> (&m_bInputLastCycle), sizeof(m_bInputLastCycle));
+
+    if (version >= 105)
+    {
+        stream.read(reinterpret_cast<char*> (&m_Q), sizeof(m_Q));
+        stream.read(reinterpret_cast<char*> (&m_QTemp), sizeof(m_QTemp));
+    }
+    else
+    {
+        m_Q = 0;
+        m_QTemp = 0;
+    }
 }
 
 Processor::ProcessorState* Processor::GetState()
