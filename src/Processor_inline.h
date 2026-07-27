@@ -405,6 +405,7 @@ inline void Processor::OPCodes_RET_Conditional(bool condition)
 
 inline void Processor::OPCodes_IN_C(u8* reg)
 {
+    WZ.SetValue(BC.GetValue() + 1);
     u8 result = m_pIOPorts->In(BC.GetLow());
     if (IsValidPointer(reg))
         *reg = result;
@@ -471,6 +472,7 @@ inline u8 Processor::OPCodes_IND()
 
 inline void Processor::OPCodes_OUT_C(u8* reg)
 {
+    WZ.SetValue(BC.GetValue() + 1);
     m_pIOPorts->Out(BC.GetLow(), *reg);
 }
 
