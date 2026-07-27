@@ -39,6 +39,7 @@ struct KeyState
 
 static KeyState input_last_state[GC_MAX_GAMEPADS][20] = { };
 static bool input_initialized = false;
+static bool roller_mouse_buttons[2] = { };
 
 static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat);
 static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
@@ -117,7 +118,7 @@ void events_shortcuts(const SDL_Event* event)
 
 void events_handle_emu_event(const SDL_Event* event)
 {
-    if (gui_in_use)
+    if (gui_in_use && (event->type != SDL_EVENT_MOUSE_BUTTON_UP))
         return;
 
     switch (event->type)
@@ -191,22 +192,19 @@ void events_handle_emu_event(const SDL_Event* event)
             if ((config_emulator.spinner == 3) && !config_debug.debug && !gui_main_menu_hovered)
             {
                 if (event->button.button == SDL_BUTTON_LEFT)
-                    emu_key_pressed(Controller_1, Key_Left_Button);
+                    roller_mouse_buttons[0] = true;
                 else if (event->button.button == SDL_BUTTON_RIGHT)
-                    emu_key_pressed(Controller_1, Key_Right_Button);
+                    roller_mouse_buttons[1] = true;
             }
             break;
         }
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
             // Roller mouse buttons
-            if ((config_emulator.spinner == 3) && !config_debug.debug)
-            {
-                if (event->button.button == SDL_BUTTON_LEFT)
-                    emu_key_released(Controller_1, Key_Left_Button);
-                else if (event->button.button == SDL_BUTTON_RIGHT)
-                    emu_key_released(Controller_1, Key_Right_Button);
-            }
+            if (event->button.button == SDL_BUTTON_LEFT)
+                roller_mouse_buttons[0] = false;
+            else if (event->button.button == SDL_BUTTON_RIGHT)
+                roller_mouse_buttons[1] = false;
             break;
         }
     }
@@ -389,6 +387,8 @@ static void input_poll_controller(int controller)
         bool pressed = keyboard_state[button_map[i].key];
         if (gp)
             pressed |= gamepad_get_button(gamepad_ctrl, button_map[i].gp_btn_field);
+        if ((controller == 0) && (i < 2) && (config_emulator.spinner == 3) && !config_debug.debug)
+            pressed |= roller_mouse_buttons[i];
         // Left/Right buttons also map from directional for non-keypad
         input_send_key(controller, 4 + i, button_map[i].gc_key, pressed);
     }
