@@ -1436,7 +1436,7 @@ void Processor::ExecuteInputLastCycle()
     u8 port = m_pMemory->Read(PC.GetValue());
     PC.Increment();
     AF.SetHigh(m_pIOPorts->In(port));
-    WZ.SetValue((a << 8) | (port + 1));
+    WZ.SetValue((a << 8) + port + 1);
     m_iTStates += 1;
     m_bInputLastCycle = false;
 }
