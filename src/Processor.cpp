@@ -246,7 +246,10 @@ unsigned int Processor::RunFor(unsigned int tstates)
         u16 prev_pc = PC.GetValue();
 #endif
 
-        ExecuteOPCode();
+        if (m_bInputLastCycle)
+            ExecuteInputLastCycle();
+        else
+            ExecuteOPCode();
         DisassembleNextOPCode();
 
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
