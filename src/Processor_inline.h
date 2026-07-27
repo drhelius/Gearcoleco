@@ -429,10 +429,7 @@ inline void Processor::OPCodes_INI()
         ClearFlag(FLAG_CARRY);
         ClearFlag(FLAG_HALF);
     }
-    if (((result + ((BC.GetLow() + 1) & 0xFF)) & 0x07) ^ BC.GetHigh())
-        ToggleFlag(FLAG_PARITY);
-    else
-        ClearFlag(FLAG_PARITY);
+    ToggleParityFlagFromResult(((result + ((BC.GetLow() + 1) & 0xFF)) & 0x07) ^ BC.GetHigh());
 }
 
 inline void Processor::OPCodes_IND()
@@ -456,10 +453,7 @@ inline void Processor::OPCodes_IND()
         ClearFlag(FLAG_CARRY);
         ClearFlag(FLAG_HALF);
     }
-    if (((result + ((BC.GetLow() - 1) & 0xFF)) & 0x07) ^ BC.GetHigh())
-        ToggleFlag(FLAG_PARITY);
-    else
-        ClearFlag(FLAG_PARITY);
+    ToggleParityFlagFromResult(((result + ((BC.GetLow() - 1) & 0xFF)) & 0x07) ^ BC.GetHigh());
 }
 
 inline void Processor::OPCodes_OUT_C(u8* reg)
@@ -488,10 +482,7 @@ inline void Processor::OPCodes_OUTI()
         ClearFlag(FLAG_CARRY);
         ClearFlag(FLAG_HALF);
     }
-    if (((HL.GetLow() + result) & 0x07) ^ BC.GetHigh())
-        ToggleFlag(FLAG_PARITY);
-    else
-        ClearFlag(FLAG_PARITY);
+    ToggleParityFlagFromResult(((HL.GetLow() + result) & 0x07) ^ BC.GetHigh());
 }
 
 inline void Processor::OPCodes_OUTD()
@@ -515,10 +506,7 @@ inline void Processor::OPCodes_OUTD()
         ClearFlag(FLAG_CARRY);
         ClearFlag(FLAG_HALF);
     }
-    if (((HL.GetLow() + result) & 0x07) ^ BC.GetHigh())
-        ToggleFlag(FLAG_PARITY);
-    else
-        ClearFlag(FLAG_PARITY);
+    ToggleParityFlagFromResult(((HL.GetLow() + result) & 0x07) ^ BC.GetHigh());
 }
 
 inline void Processor::OPCodes_EX(SixteenBitRegister* reg1, SixteenBitRegister* reg2)
