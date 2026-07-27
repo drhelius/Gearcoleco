@@ -110,7 +110,7 @@ void Processor::Reset()
     m_iTStates = 0;
     m_iInjectedTStates = 0;
     m_bAfterEI = false;
-    m_iInterruptMode = 1;
+    m_iInterruptMode = 0;
     PC.SetValue(0x0000);
     SP.SetValue(0xDFF0);
     IX.SetValue(0xFFFF);
@@ -204,20 +204,33 @@ unsigned int Processor::RunFor(unsigned int tstates)
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
                 u16 pc = PC.GetValue();
 #endif
+                // The interrupt acknowledge bus floats high, so IM 0 receives RST 38h.
+                u16 interrupt_vector = 0x0038;
+                unsigned int interrupt_tstates = 13;
+
+                if (m_iInterruptMode == 2)
+                {
+                    u16 vector_address = (I << 8) | 0x00FF;
+                    u8 l = m_pMemory->Read(vector_address);
+                    u8 h = m_pMemory->Read(static_cast<u16> (vector_address + 1));
+                    interrupt_vector = (h << 8) | l;
+                    interrupt_tstates = 19;
+                }
+
                 StackPush(&PC);
-                PC.SetValue(0x0038);
-                m_iTStates += 13;
+                PC.SetValue(interrupt_vector);
+                m_iTStates += interrupt_tstates;
                 IncreaseR();
                 WZ.SetValue(PC.GetValue());
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
                 m_debug_next_irq = 3;
-                PushCallStack(pc, 0x0038, pc, 0);
+                PushCallStack(pc, interrupt_vector, pc, m_pMemory->GetBank(interrupt_vector));
                 if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_CPU_IRQ))
                 {
                     GC_Trace_Entry e = {};
                     e.type = TRACE_CPU_IRQ;
                     e.irq.pc = pc;
-                    e.irq.vector = 0x0038;
+                    e.irq.vector = interrupt_vector;
                     e.irq.type = 3;
                     m_pTraceLogger->TraceLog(e);
                 }
