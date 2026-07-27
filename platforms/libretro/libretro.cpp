@@ -605,13 +605,9 @@ static void update_input(void)
 
         if (mouse[0])
             core->KeyPressed(Controller_1, Key_Left_Button);
-        else
-            core->KeyReleased(Controller_1, Key_Left_Button);
 
         if (mouse[1])
             core->KeyPressed(Controller_1, Key_Right_Button);
-        else
-            core->KeyReleased(Controller_1, Key_Right_Button);
     }
 }
 
