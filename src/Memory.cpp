@@ -219,7 +219,11 @@ void Memory::LoadBios(const char* szFilePath)
         }
 
         file.seekg(0, ios::beg);
-        file.read(reinterpret_cast<char*>(m_pBios), size);
+        if (!file.read(reinterpret_cast<char*>(m_pBios), size))
+        {
+            Log("There was a problem reading the BIOS file %s", szFilePath);
+            return;
+        }
         file.close();
 
         m_bBiosLoaded = true;
