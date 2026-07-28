@@ -203,7 +203,7 @@ void Memory::LoadBios(const char* szFilePath)
 {
     using namespace std;
 
-    m_bBiosLoaded = false;
+    UnloadBios();
 
     ifstream file;
     open_ifstream_utf8(file, szFilePath, ios::in | ios::binary | ios::ate);
@@ -218,15 +218,16 @@ void Memory::LoadBios(const char* szFilePath)
             return;
         }
 
+        u8 bios[0x2000];
         file.seekg(0, ios::beg);
-        if (!file.read(reinterpret_cast<char*>(m_pBios), size))
+        if (!file.read(reinterpret_cast<char*>(bios), size))
         {
             Log("There was a problem reading the BIOS file %s", szFilePath);
             return;
         }
         file.close();
 
-        m_bBiosLoaded = true;
+        LoadBiosFromBuffer(bios, size);
 
         Log("BIOS %s loaded (%d bytes)", szFilePath, size);
     }
@@ -234,6 +235,23 @@ void Memory::LoadBios(const char* szFilePath)
     {
         Log("There was a problem opening the file %s", szFilePath);
     }
+}
+
+bool Memory::LoadBiosFromBuffer(const u8* buffer, int size)
+{
+    UnloadBios();
+
+    if (!IsValidPointer(buffer) || (size != 0x2000))
+        return false;
+
+    memcpy(m_pBios, buffer, size);
+    m_bBiosLoaded = true;
+    return true;
+}
+
+void Memory::UnloadBios()
+{
+    m_bBiosLoaded = false;
 }
 
 u8* Memory::GetRam()

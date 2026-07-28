@@ -45,6 +45,8 @@ public:
     u8 GetRomBank();
     u32 GetRomBankAddress();
     void LoadBios(const char* szFilePath);
+    bool LoadBiosFromBuffer(const u8* buffer, int size);
+    void UnloadBios();
     bool IsBiosLoaded();
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
