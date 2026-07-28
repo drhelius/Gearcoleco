@@ -824,13 +824,62 @@ void retro_reset(void)
     core->ResetROMPreservingRAM(&config);
 }
 
+static bool load_rom(const struct retro_game_info* info)
+{
+    if (!info)
+        return false;
+
+    if (IsValidPointer(info->data) && (info->size > 0))
+        return core->LoadROMFromBuffer(reinterpret_cast<const u8*>(info->data), info->size, &config);
+
+    if (!info->path || !info->path[0])
+        return false;
+
+    if (!vfs_interface)
+        return core->LoadROM(info->path, &config);
+
+    retro_vfs_file_handle* file = vfs_interface->open(info->path, RETRO_VFS_FILE_ACCESS_READ,
+        RETRO_VFS_FILE_ACCESS_HINT_NONE);
+    if (!file)
+        return false;
+
+    s64 size = (s64)vfs_interface->size(file);
+    if ((size <= 0) || (size > 0x7FFFFFFF))
+    {
+        vfs_interface->close(file);
+        return false;
+    }
+
+    u8* buffer = new u8[(int)size];
+    s64 total = 0;
+
+    while (total < size)
+    {
+        s64 read = (s64)vfs_interface->read(file, buffer + total, size - total);
+        if (read <= 0)
+            break;
+
+        total += read;
+    }
+
+    bool loaded = vfs_interface->close(file) == 0 && total == size;
+    if (loaded)
+        loaded = core->LoadROMFromBuffer(buffer, (int)size, &config);
+
+    SafeDeleteArray(buffer);
+    return loaded;
+}
+
 bool retro_load_game(const struct retro_game_info *info)
 {
+    if (!info)
+        return false;
+
     core->GetCartridge()->Reset();
     check_variables();
     load_bootroms();
 
-    if (!core->LoadROMFromBuffer(reinterpret_cast<const u8*>(info->data), info->size, &config))
+    if (!load_rom(info))
     {
         log_cb(RETRO_LOG_ERROR, "Invalid or corrupted ROM.\n");
         return false;
