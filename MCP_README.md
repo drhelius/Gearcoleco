@@ -77,6 +77,18 @@ The server listens for HTTP POST requests on a configurable port (default: 7777)
 ### Headless Mode
 Run the emulator without a GUI, using only the MCP server for control. Ideal for automated testing and CI/CD.
 
+### Concurrent Clients
+
+The HTTP server accepts repeated valid MCP initialization requests. All connected clients control the same Gearcoleco instance. Individual HTTP requests are serialized, but multi-request debugging workflows are not atomic. Concurrent agents can interfere with each other through pauses, resets, breakpoints, memory writes, media loads, and save states.
+
+For independent agent tasks, run one Gearcoleco instance per agent on a unique HTTP port. Use `--headless` and give each instance its own portable application directory so its configuration and runtime files are isolated:
+
+```bash
+./gearcoleco --mcp-http --headless --portable --mcp-http-port 7778
+```
+
+The `--portable` option stores configuration and user data beside the application. Alternatively, create an empty `portable.ini` beside the executable in each application directory. On macOS, place it next to each `.app` bundle.
+
 ## MCP Tool Router
 
 By default, Gearcoleco exposes every MCP tool directly. This avoids nested tool discovery in clients that already defer MCP schemas, including Claude Code.
