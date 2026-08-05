@@ -1,5 +1,7 @@
 # Gearcoleco
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.drhelius%2Fgearcoleco.svg)](https://mcptoplist.com/server/io.github.drhelius%2Fgearcoleco)
+
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/drhelius/Gearcoleco/gearcoleco.yml)](https://github.com/drhelius/Gearcoleco/actions/workflows/gearcoleco.yml)
 [![GitHub Releases)](https://img.shields.io/github/v/tag/drhelius/Gearcoleco?label=version)](https://github.com/drhelius/Gearcoleco/releases)
 [![commits)](https://img.shields.io/github/commit-activity/t/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/commits/main)
