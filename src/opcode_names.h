@@ -42,6 +42,7 @@ struct stOPCodeInfo
 #define GC_OPCODE(name, size, type) { { name, name, name, name }, size, type }
 #define GC_OPCODE_SYNTAX(gearcoleco, wladx, tniasm, z88dk, size, type) { { gearcoleco, wladx, tniasm, z88dk }, size, type }
 
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
 #include "opcodexx_names.h"
 #include "opcodecb_names.h"
 #include "opcodeed_names.h"
@@ -49,6 +50,7 @@ struct stOPCodeInfo
 #include "opcodefd_names.h"
 #include "opcodeddcb_names.h"
 #include "opcodefdcb_names.h"
+#endif
 
 #endif	/* OPCODE_NAMES_H */
 

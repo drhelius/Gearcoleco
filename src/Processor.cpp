@@ -402,6 +402,7 @@ void Processor::InvalidOPCode()
     u8 opcode = m_pMemory->Read(opcode_address);
     u8 prefix = m_pMemory->Read(prefix_address);
 
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     switch (prefix)
     {
         case 0xCB:
@@ -419,6 +420,9 @@ void Processor::InvalidOPCode()
             Debug("--> ** INVALID OP Code (%X) at $%.4X -- %s", opcode, opcode_address, kOPCodeNames[opcode]);
         }
     }
+#else
+    Debug("--> ** INVALID OP Code (%X) at $%.4X", opcode, opcode_address);
+#endif
 #endif
 }
 
@@ -428,7 +432,11 @@ void Processor::UndocumentedOPCode()
     u16 opcode_address = PC.GetValue() - 1;
     u8 opcode = m_pMemory->Read(opcode_address);
 
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     Debug("--> ** UNDOCUMENTED OP Code (%X) at $%.4X -- %s", opcode, opcode_address, kOPCodeNames[opcode]);
+#else
+    Debug("--> ** UNDOCUMENTED OP Code (%X) at $%.4X", opcode, opcode_address);
+#endif
 #endif
 }
 
