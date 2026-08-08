@@ -29,6 +29,7 @@ class Audio;
 class Video;
 class Input;
 class ColecoVisionIOPorts;
+class Random;
 class TraceLogger;
 
 class GearcolecoCore
@@ -95,6 +96,7 @@ private:
     Input* m_pInput;
     Cartridge* m_pCartridge;
     ColecoVisionIOPorts* m_pColecoVisionIOPorts;
+    Random* m_pRandom;
     TraceLogger* m_pTraceLogger;
     bool m_bPaused;
     GC_Color_Format m_pixelFormat;

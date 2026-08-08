@@ -132,6 +132,7 @@
     <ClInclude Include="..\..\src\MegaCartMapper.h" />
     <ClInclude Include="..\..\src\Memory.h" />
     <ClInclude Include="..\..\src\memory_stream.h" />
+    <ClInclude Include="..\..\src\random.h" />
     <ClInclude Include="..\..\src\Memory_inline.h" />
     <ClInclude Include="..\..\src\no_bios.h" />
     <ClInclude Include="..\..\src\OCMMapper.h" />

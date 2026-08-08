@@ -34,6 +34,7 @@
 #include "no_bios.h"
 #include "common.h"
 #include "memory_stream.h"
+#include "random.h"
 
 GearcolecoCore::GearcolecoCore()
 {
@@ -44,6 +45,7 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pInput);
     InitPointer(m_pCartridge);
     InitPointer(m_pColecoVisionIOPorts);
+    InitPointer(m_pRandom);
     InitPointer(m_pTraceLogger);
     InitPointer(m_pFrameBuffer);
     m_bPaused = true;
@@ -63,6 +65,7 @@ GearcolecoCore::~GearcolecoCore()
     SafeDelete(m_pAudio);
     SafeDelete(m_pProcessor);
     SafeDelete(m_pMemory);
+    SafeDelete(m_pRandom);
 }
 
 void GearcolecoCore::Init(GC_Color_Format pixelFormat)
@@ -72,7 +75,9 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pixelFormat = pixelFormat;
 
     m_pCartridge = new Cartridge();
-    m_pMemory = new Memory(m_pCartridge);
+    m_pRandom = new Random();
+    m_pRandom->Seed((u32)time(NULL));
+    m_pMemory = new Memory(m_pCartridge, m_pRandom);
     m_pProcessor = new Processor(m_pMemory);
     m_pAudio = new Audio();
     m_pVideo = new Video(m_pMemory, m_pProcessor);

@@ -148,6 +148,7 @@
     <ClInclude Include="..\..\src\MegaCartMapper.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Memory.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\memory_stream.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\random.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Memory_inline.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\no_bios.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\OCMMapper.h"><Filter>core</Filter></ClInclude>

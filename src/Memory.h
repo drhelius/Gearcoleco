@@ -26,12 +26,13 @@
 
 class Processor;
 class Cartridge;
+class Random;
 class Mapper;
 
 class Memory
 {
 public:
-    Memory(Cartridge* pCartridge);
+    Memory(Cartridge* pCartridge, Random* pRandom);
     ~Memory();
     void SetProcessor(Processor* pProcessor);
     void Init();
@@ -72,6 +73,7 @@ public:
 private:
     Processor* m_pProcessor;
     Cartridge* m_pCartridge;
+    Random* m_pRandom;
     Mapper* m_pMapper;
     GC_Disassembler_Record** m_pDisassembledRomMap;
     GC_Disassembler_Record** m_pDisassembledRamMap;

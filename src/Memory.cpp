@@ -28,15 +28,17 @@
 #include "MegaCartMapper.h"
 #include "ActivisionMapper.h"
 #include "OCMMapper.h"
+#include "random.h"
 
 #include "Memory.h"
 #include "Processor.h"
 #include "Cartridge.h"
 #include "common.h"
 
-Memory::Memory(Cartridge* pCartridge)
+Memory::Memory(Cartridge* pCartridge, Random* pRandom)
 {
     m_pCartridge = pCartridge;
+    m_pRandom = pRandom;
     InitPointer(m_pProcessor);
     InitPointer(m_pMapper);
     InitPointer(m_pDisassembledRomMap);
@@ -165,14 +167,22 @@ void Memory::Reset()
     m_bSGMUpper = (m_pCartridge->GetType() == Cartridge::CartridgeOCM);
     m_bSGMLower = false;
 
-    for (int i = 0; i < 0x400; i++)
+    for (int i = 0; i < 0x400; i += 4)
     {
-        m_pRam[i] = rand() % 256;
+        u32 rnd = m_pRandom->Next();
+        m_pRam[i] = (u8)rnd;
+        m_pRam[i + 1] = (u8)(rnd >> 8);
+        m_pRam[i + 2] = (u8)(rnd >> 16);
+        m_pRam[i + 3] = (u8)(rnd >> 24);
     }
 
-    for (int i = 0; i < 0x8000; i++)
+    for (int i = 0; i < 0x8000; i += 4)
     {
-        m_pSGMRam[i] = rand() % 256;
+        u32 rnd = m_pRandom->Next();
+        m_pSGMRam[i] = (u8)rnd;
+        m_pSGMRam[i + 1] = (u8)(rnd >> 8);
+        m_pSGMRam[i + 2] = (u8)(rnd >> 16);
+        m_pSGMRam[i + 3] = (u8)(rnd >> 24);
     }
 
     if (m_pCartridge->IsPAL())
