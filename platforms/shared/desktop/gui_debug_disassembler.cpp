@@ -1607,7 +1607,7 @@ static void disassembler_menu(void)
 
         if (ImGui::BeginMenu("Syntax"))
         {
-            static const char* syntax_names[GC_Disassembler_Syntax_Count] = { "Gearcoleco", "WLA-DX", "tniASM", "Z88DK" };
+            static const char* syntax_names[GC_Disassembler_Syntax_Count] = { GEARCOLECO_TITLE, "WLA-DX", "tniASM", "Z88DK" };
 
             for (int i = 0; i < GC_Disassembler_Syntax_Count; i++)
             {

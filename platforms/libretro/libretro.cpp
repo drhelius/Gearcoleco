@@ -312,7 +312,7 @@ static void apply_controller_device(unsigned port, unsigned device, bool log_dev
 void retro_get_system_info(struct retro_system_info *info)
 {
     memset(info, 0, sizeof(*info));
-    info->library_name     = "Gearcoleco";
+    info->library_name     = GEARCOLECO_TITLE;
     info->library_version  = GEARCOLECO_VERSION;
     info->need_fullpath    = false;
     info->valid_extensions = "col|cv|bin|rom";

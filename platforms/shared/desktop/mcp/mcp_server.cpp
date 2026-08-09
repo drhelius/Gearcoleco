@@ -352,8 +352,8 @@ void McpServer::HandleInitialize(const json& request)
         }},
         {"serverInfo", {
             {"name", "gearcoleco-mcp-server"},
-            {"title", "Gearcoleco MCP Server"},
-            {"description", "Debug/control Gearcoleco ColecoVision: execution, breakpoints, memory, Z80 CPU, TMS9918 VDP, SN76489 PSG, AY-3-8910 SGM, disassembly, symbols, sprites, save states, rewind, keypad/input, screenshots."},
+            {"title", GEARCOLECO_TITLE " MCP Server"},
+            {"description", "Debug/control " GEARCOLECO_TITLE " ColecoVision: execution, breakpoints, memory, Z80 CPU, TMS9918 VDP, SN76489 PSG, AY-3-8910 SGM, disassembly, symbols, sprites, save states, rewind, keypad/input, screenshots."},
             {"version", GEARCOLECO_VERSION}
         }}
     };

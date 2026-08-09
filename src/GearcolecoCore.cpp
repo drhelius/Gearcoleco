@@ -365,11 +365,11 @@ void GearcolecoCore::Pause(bool paused)
 {
     if (paused)
     {
-        Log("Gearcoleco PAUSED");
+        Log(GEARCOLECO_TITLE " PAUSED");
     }
     else
     {
-        Log("Gearcoleco RESUMED");
+        Log(GEARCOLECO_TITLE " RESUMED");
     }
     m_bPaused = paused;
 }
@@ -383,7 +383,7 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
 {
     if (m_pCartridge->IsReady())
     {
-        Log("Gearcoleco RESET");
+        Log(GEARCOLECO_TITLE " RESET");
 
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
