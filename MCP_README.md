@@ -324,7 +324,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `debug_step_into` | Step one instruction |
 | `debug_step_over` | Step over calls |
 | `debug_step_out` | Step out of current call |
-| `debug_step_frame` | Step one or more frames |
+| `debug_step_frame` | Step one or more frames. Optional `frames` is 1-1000 (default 1). Optional `mode` is `async` (default, returns after scheduling) or `sync` (returns after all requested frames complete at VBlank). Use `mode: "sync"` when issuing dependent tool calls. |
 | `debug_reset` | Reset the ColecoVision system |
 | `debug_get_status` | Get current debug state |
 
