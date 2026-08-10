@@ -45,6 +45,7 @@ const GC_GameDBEntry kGameDatabase[] =
     {0x80586CC5, "Knightmare (Opcode)", GC_GameDBMode_OCM},
     {0x6C8113C1, "Goonies (Opcode)", GC_GameDBMode_OCM},
     {0xCF803DDC, "Time Pilot (Opcode)", GC_GameDBMode_OCM},
+    {0xDE785EE3, "Pacman DX (Opcode)", GC_GameDBMode_OCM},
 
     {0, 0, GC_GameDBMode_None}
 };
