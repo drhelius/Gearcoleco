@@ -203,7 +203,6 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
-        m_pMemory->SetupMapper();
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
@@ -224,7 +223,6 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
-        m_pMemory->SetupMapper();
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
@@ -388,7 +386,6 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
-        m_pMemory->SetupMapper();
         Reset();
 
         m_pProcessor->DisassembleNextOPCode();
@@ -1045,6 +1042,7 @@ bool GearcolecoCore::GetSaveStateScreenshot(int index, const char* path, GC_Save
 
 void GearcolecoCore::Reset()
 {
+    m_pMemory->SetupMapper();
     m_pMemory->Reset();
     m_pProcessor->Reset();
     m_pAudio->Reset(m_pCartridge->IsPAL());
