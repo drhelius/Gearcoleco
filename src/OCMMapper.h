@@ -62,7 +62,7 @@ private:
 
     inline void ArmEepromReadWindow(u8 value)
     {
-        if ((value & 0x0F) == 0x0F)
+        if ((value & m_BankMask) == m_BankMask)
         {
             u64 now = m_pMemory->GetTotalCycles();
             m_EepromReadExpireCycles = now + (OCM_CYCLES_PER_FRAME * 3ULL);
@@ -98,7 +98,6 @@ inline void OCMMapper::Reset()
     m_BankReg[2] = 1;
     m_BankReg[3] = 0;
     m_BankMask = (u8)(((m_pCartridge->GetROMSize() + 0x1FFF) / 0x2000) - 1);
-    Debug("OCMMapper: Reset, ROM size=%d, bank mask=%02X", m_pCartridge->GetROMSize(), m_BankMask);
     m_EepromCmdPos = 0;
     m_EepromState = EEP_NONE;
     m_EepromReadExpireCycles = 0;
@@ -135,8 +134,8 @@ inline u8 OCMMapper::Read(u16 address)
             return 0xFF;
         }
 
-        // EEPROM read window: bank2==0x0F, active timer, E000-E0FF -> EEPROM
-        if (m_BankReg[2] == 0x0F && EepromReadWindowActive() && ((address & 0x0FFF) < 0x0100))
+        // EEPROM read window: last bank selected, active timer, E000-E0FF -> EEPROM
+        if (m_BankReg[2] == m_BankMask && EepromReadWindowActive() && ((address & 0x0FFF) < 0x0100))
         {
             u8* pEEPROM = m_pCartridge->GetEEPROM();
             if (IsValidPointer(pEEPROM))
