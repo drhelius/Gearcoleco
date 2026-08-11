@@ -79,17 +79,32 @@ void Audio::Init()
 void Audio::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
+
+    m_ElapsedCycles = 0;
+    m_AY8910Register = 0;
+
     m_pApu->reset();
     m_pApu->volume(0.6);
-    m_pBuffer->clear();
-    m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
-    m_ElapsedCycles = 0;
-    m_pAY8910->Reset(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
+
     if (m_pApu->is_debug_enabled())
     {
         long clock = m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
         m_pApu->init_debug_buffers(m_iSampleRate, clock);
     }
+
+    m_pBuffer->clear();
+    m_pBuffer->clock_rate(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
+
+    m_pAY8910->Reset(m_bPAL ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC);
+
+    for (int i = 0; i < 4; i++)
+    {
+        memset(m_pDebugChannelBuffer[i], 0, GC_AUDIO_BUFFER_SIZE * sizeof(blip_sample_t));
+        m_iDebugChannelSamples[i] = 0;
+    }
+
+    memset(m_pSampleBuffer, 0, GC_AUDIO_BUFFER_SIZE * sizeof(blip_sample_t));
+    memset(m_pSGMBuffer, 0, GC_AUDIO_BUFFER_SIZE * sizeof(s16));
 }
 
 void Audio::Mute(bool mute)

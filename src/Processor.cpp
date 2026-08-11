@@ -46,6 +46,7 @@ Processor::Processor(Memory* pMemory)
     m_iInterruptMode = 0;
     m_bINTRequested = false;
     m_bNMIRequested = false;
+    m_CurrentPrefix = 0;
     m_bPrefixedCBOpcode = false;
     m_PrefixedCBValue = 0;
     m_bInputLastCycle = false;
@@ -132,6 +133,7 @@ void Processor::Reset()
     m_QTemp = 0;
     m_bINTRequested = false;
     m_bNMIRequested = false;
+    m_CurrentPrefix = 0;
     m_bPrefixedCBOpcode = false;
     m_PrefixedCBValue = 0;
     m_bInputLastCycle = false;

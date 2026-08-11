@@ -1042,6 +1042,7 @@ bool GearcolecoCore::GetSaveStateScreenshot(int index, const char* path, GC_Save
 
 void GearcolecoCore::Reset()
 {
+    m_MasterClockCycles = 0;
     m_pMemory->SetupMapper();
     m_pMemory->Reset();
     m_pProcessor->Reset();

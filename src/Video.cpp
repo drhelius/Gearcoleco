@@ -95,6 +95,7 @@ void Video::Reset(bool bPAL)
 
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
+    m_iMode = 0;
 
     m_LineEvents.vint = false;
     m_LineEvents.display = false;
