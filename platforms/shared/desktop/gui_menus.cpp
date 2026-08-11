@@ -1169,7 +1169,7 @@ static void menu_input(void)
             ImGui::Combo("##spinner", &config_emulator.spinner, "Disabled\0Super Action Controller\0Steering Wheel\0Roller Controller\0\0", 4);
             if (ImGui::IsItemHovered())
             {
-                ImGui::SetTooltip("SAC Spinner for P1 is controlled with mouse movement.\nSAC Spinner for P2 is controlled with mouse wheel.\nSteering Wheel is controlled with mouse movement.\nRoller Controller is controlled with mouse movement and mouse buttons.");
+                ImGui::SetTooltip("MAKE SURE THIS IS DISABLED FOR NORMAL GAMES\n\n - SAC Spinner for P1 is controlled with mouse movement.\n - SAC Spinner for P2 is controlled with mouse wheel.\n - Steering Wheel is controlled with mouse movement.\n - Roller Controller is controlled with mouse movement and mouse buttons.");
             }
             ImGui::SliderInt("##spinner_sensitivity", &config_emulator.spinner_sensitivity, 1, 10, "Sensitivity = %d");
 
