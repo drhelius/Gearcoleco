@@ -225,10 +225,10 @@ void emu_reset_rewind_timing(void)
 
 void emu_update(void)
 {
-    emu_mcp_pump_commands();
-
     if (loading_state.load() != Loading_State_None)
         return;
+
+    emu_mcp_pump_commands();
 
     if (emu_is_empty())
         return;
@@ -446,6 +446,13 @@ bool emu_is_bios_loaded(void)
 
 void emu_reset(Cartridge::ForceConfiguration config)
 {
+    emu_debug_command = Debug_Command_None;
+    emu_debug_halt_step_frames_pending = 0;
+    emu_debug_step_frames_pending = 0;
+    emu_debug_pc_changed = true;
+    emu_frame_counter = 0;
+    reset_buffers();
+    reset_rewind_timing();
     emu_audio_reset();
     save_ram();
     gearcoleco->ResetROM(&config);
@@ -653,8 +660,11 @@ void emu_debug_step_frames(int frames)
 void emu_debug_break(void)
 {
     gearcoleco->Pause(false);
-    if (emu_debug_command == Debug_Command_Continue)
+    if (emu_debug_command == Debug_Command_Continue || emu_debug_command == Debug_Command_StepFrame)
+    {
+        emu_debug_step_frames_pending = 0;
         emu_debug_command = Debug_Command_Step;
+    }
 }
 
 void emu_debug_continue(void)
