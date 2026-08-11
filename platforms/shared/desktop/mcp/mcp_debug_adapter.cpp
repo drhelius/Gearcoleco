@@ -1897,36 +1897,27 @@ json DebugAdapter::ListSymbols()
         return result;
     }
 
-    void* symbols_ptr = NULL;
-    gui_debug_get_symbols(&symbols_ptr);
-
-    DebugSymbol*** fixed_symbols = (DebugSymbol***)symbols_ptr;
-
     json symbols_array = json::array();
 
-    if (fixed_symbols)
+    for (int bank = 0; bank < 0x100; bank++)
     {
-        for (int bank = 0; bank < 0x100; bank++)
+        for (int address = 0; address < 0x10000; address++)
         {
-            if (!fixed_symbols[bank])
-                continue;
+            DebugSymbol* symbol = gui_debug_get_symbol(bank, address);
 
-            for (int address = 0; address < 0x10000; address++)
+            if (IsValidPointer(symbol))
             {
-                if (fixed_symbols[bank][address])
-                {
-                    json symbol_obj;
+                json symbol_obj;
 
-                    std::ostringstream bank_ss, addr_ss;
-                    bank_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << bank;
-                    addr_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address;
+                std::ostringstream bank_ss, addr_ss;
+                bank_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << bank;
+                addr_ss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address;
 
-                    symbol_obj["bank"] = bank_ss.str();
-                    symbol_obj["address"] = addr_ss.str();
-                    symbol_obj["name"] = fixed_symbols[bank][address]->text;
+                symbol_obj["bank"] = bank_ss.str();
+                symbol_obj["address"] = addr_ss.str();
+                symbol_obj["name"] = symbol->text;
 
-                    symbols_array.push_back(symbol_obj);
-                }
+                symbols_array.push_back(symbol_obj);
             }
         }
     }
@@ -2008,10 +1999,6 @@ json DebugAdapter::ListCallStack()
     Processor* processor = m_core->GetProcessor();
     std::stack<Processor::GC_CallStackEntry> temp_stack = *processor->GetDisassemblerCallStack();
 
-    void* symbols_ptr = NULL;
-    gui_debug_get_symbols(&symbols_ptr);
-    DebugSymbol*** fixed_symbols = (DebugSymbol***)symbols_ptr;
-
     json stack_array = json::array();
 
     while (!temp_stack.empty())
@@ -2033,10 +2020,9 @@ json DebugAdapter::ListCallStack()
         GC_Disassembler_Record* record = memory->GetDisassemblerRecord(entry.dest);
         if (IsValidPointer(record) && record->name[0] != 0)
         {
-            if (fixed_symbols && fixed_symbols[record->bank] && fixed_symbols[record->bank][entry.dest])
-            {
-                entry_obj["symbol"] = fixed_symbols[record->bank][entry.dest]->text;
-            }
+            DebugSymbol* symbol = gui_debug_get_symbol(record->bank, entry.dest);
+            if (IsValidPointer(symbol))
+                entry_obj["symbol"] = symbol->text;
         }
 
         stack_array.push_back(entry_obj);

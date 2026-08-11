@@ -126,6 +126,8 @@ static bool symbol_sort_addr_only_asc(const SymbolEntry& a, const SymbolEntry& b
 static bool symbol_sort_addr_only_desc(const SymbolEntry& a, const SymbolEntry& b);
 static bool symbol_sort_name_asc(const SymbolEntry& a, const SymbolEntry& b);
 static bool symbol_sort_name_desc(const SymbolEntry& a, const SymbolEntry& b);
+static bool is_prebuilt_symbol_visible(u16 address);
+static bool is_fixed_symbol_visible(DebugSymbol* symbol);
 
 void gui_debug_disassembler_init(void)
 {
@@ -524,8 +526,13 @@ static void draw_breakpoints_content(void)
         if (!brk->range && (brk->type == Processor::GC_BREAKPOINT_TYPE_ROMRAM) && IsValidPointer(record))
         {
             DebugSymbol* symbol = fixed_symbols[record->bank][brk->address1];
+
+            if (!is_fixed_symbol_visible(symbol))
+                symbol = NULL;
+
             if (!IsValidPointer(symbol))
                 symbol = dynamic_symbols[record->bank][brk->address1];
+
             if (IsValidPointer(symbol))
             {
                 ImGui::SameLine(0, 0);
@@ -638,6 +645,9 @@ static void prepare_drawable_lines(void)
             if (config_debug.dis_show_symbols)
             {
                 DebugSymbol* symbol = fixed_symbols[record->bank][i];
+
+                if (!is_fixed_symbol_visible(symbol))
+                    symbol = NULL;
 
                 if (IsValidPointer(symbol))
                 {
@@ -940,6 +950,33 @@ static void add_debug_symbols()
         }
     }
     symbols_dirty = true;
+}
+
+static bool is_prebuilt_symbol_visible(u16 address)
+{
+    Memory* memory = emu_get_core()->GetMemory();
+
+    if (address < 0x2000 && memory->IsSGMLowerEnabled())
+        return false;
+
+    if ((address & 0xE000) == 0x6000 && memory->IsSGMUpperEnabled())
+        return false;
+
+    return true;
+}
+
+static bool is_fixed_symbol_visible(DebugSymbol* symbol)
+{
+    if (!IsValidPointer(symbol))
+        return false;
+
+    for (size_t i = 0; i < fixed_symbol_list.size(); i++)
+    {
+        if (fixed_symbol_list[i].symbol == symbol)
+            return fixed_symbol_list[i].type != SymbolTypePrebuilt || is_prebuilt_symbol_visible(symbol->address);
+    }
+
+    return true;
 }
 
 static void add_symbol(const char* line)
@@ -1271,6 +1308,10 @@ static bool can_replace_relative_jump_in_export(GC_Disassembler_Record* record)
 
     u8 bank = record->jump_bank;
     DebugSymbol* fixed_symbol = fixed_symbols[bank][lookup_address];
+
+    if (!is_fixed_symbol_visible(fixed_symbol))
+        fixed_symbol = NULL;
+
     if (IsValidPointer(fixed_symbol) && symbol_label_is_exported(fixed_symbol->text, lookup_address, bank))
         return true;
 
@@ -1328,6 +1369,10 @@ bool gui_debug_resolve_symbol(GC_Disassembler_Record* record, std::string& instr
 
     u8 bank = record->jump ? record->jump_bank : emu_get_core()->GetMemory()->GetBank(lookup_address);
     DebugSymbol* symbol = fixed_symbols[bank][lookup_address];
+
+    if (!is_fixed_symbol_visible(symbol))
+        symbol = NULL;
+
     if (IsValidPointer(symbol))
     {
         std::string replacement = std::string(color) + symbol->text + original_color;
@@ -2028,6 +2073,9 @@ void gui_debug_window_call_stack(void)
             {
                 DebugSymbol* symbol = fixed_symbols[entry.bank][entry.dest];
 
+                if (!is_fixed_symbol_visible(symbol))
+                    symbol = NULL;
+
                 if (!IsValidPointer(symbol))
                     symbol = dynamic_symbols[entry.bank][entry.dest];
 
@@ -2101,6 +2149,19 @@ void gui_debug_window_symbols(void)
     static std::vector<SymbolEntry> sorted_symbols;
     static int last_sort_column = -1;
     static int last_sort_direction = -1;
+    static bool last_sgm_upper = false;
+    static bool last_sgm_lower = false;
+
+    Memory* memory = emu_get_core()->GetMemory();
+    bool sgm_upper = memory->IsSGMUpperEnabled();
+    bool sgm_lower = memory->IsSGMLowerEnabled();
+
+    if ((sgm_upper != last_sgm_upper) || (sgm_lower != last_sgm_lower))
+    {
+        last_sgm_upper = sgm_upper;
+        last_sgm_lower = sgm_lower;
+        symbols_dirty = true;
+    }
 
     bool prev_prebuilt_auto = show_prebuilt_auto_symbols;
     ImGui::Checkbox("Show Prebuilt / Auto", &show_prebuilt_auto_symbols);
@@ -2152,6 +2213,9 @@ void gui_debug_window_symbols(void)
                 if ((e.type == SymbolTypePrebuilt) && !show_prebuilt_auto_symbols)
                     continue;
 
+                if ((e.type == SymbolTypePrebuilt) && !is_prebuilt_symbol_visible(e.symbol->address))
+                    continue;
+
                 if (symbol_filter[0] != 0)
                 {
                     char addr_str[8];
@@ -2175,7 +2239,7 @@ void gui_debug_window_symbols(void)
                 {
                     SymbolEntry& e = dynamic_symbol_list[i];
 
-                    if (IsValidPointer(fixed_symbols[e.bank][e.symbol->address]))
+                    if (is_fixed_symbol_visible(fixed_symbols[e.bank][e.symbol->address]))
                         continue;
 
                     if (symbol_filter[0] != 0)
@@ -2366,18 +2430,13 @@ void gui_debug_reset_disassembler_bookmarks(void)
     bookmarks.clear();
 }
 
-int gui_debug_get_symbols(void** symbols_ptr)
-{
-    *symbols_ptr = (void*)fixed_symbols;
-    return 0x100; // 256 banks
-}
-
 DebugSymbol* gui_debug_get_symbol(u8 bank, u16 address)
 {
     if (!IsValidPointer(fixed_symbols) || !IsValidPointer(fixed_symbols[bank]))
         return NULL;
 
-    return fixed_symbols[bank][address];
+    DebugSymbol* symbol = fixed_symbols[bank][address];
+    return is_fixed_symbol_visible(symbol) ? symbol : NULL;
 }
 
 void gui_debug_find_symbols(const char* name, std::vector<DebugSymbol*>& symbols)
@@ -2387,7 +2446,7 @@ void gui_debug_find_symbols(const char* name, std::vector<DebugSymbol*>& symbols
     for (size_t i = 0; i < fixed_symbol_list.size(); i++)
     {
         DebugSymbol* symbol = fixed_symbol_list[i].symbol;
-        if (IsValidPointer(symbol) && strcmp(symbol->text, name) == 0)
+        if (is_fixed_symbol_visible(symbol) && strcmp(symbol->text, name) == 0)
             symbols.push_back(symbol);
     }
 }
