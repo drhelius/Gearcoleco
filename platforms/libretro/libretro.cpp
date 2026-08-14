@@ -894,7 +894,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
     snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path ? info->path : "");
 
-    struct retro_memory_descriptor descs[7];
+    struct retro_memory_descriptor descs[6];
 
     memset(descs, 0, sizeof(descs));
 
@@ -907,25 +907,23 @@ bool retro_load_game(const struct retro_game_info *info)
     descs[1].start = 0x2000;
     descs[1].len   = 0x4000;
     // RAM
-    descs[2].ptr   = core->GetMemory()->GetRam();
-    descs[2].start = 0x6000;
-    descs[2].len   = 0x0400;
-    // RAM MIRROR
-    descs[3].ptr   = core->GetMemory()->GetRam();
-    descs[3].start = 0x7000;
-    descs[3].len   = 0x0400;
+    descs[2].ptr        = core->GetMemory()->GetRam();
+    descs[2].start      = 0x6000;
+    descs[2].select     = 0xE000;
+    descs[2].disconnect = 0x1C00;
+    descs[2].len        = 0x0400;
     // CART
-    descs[4].ptr   = core->GetCartridge()->GetROM();
-    descs[4].start = 0x8000;
-    descs[4].len   = core->GetCartridge()->GetROMSize();
+    descs[3].ptr   = core->GetCartridge()->GetROM();
+    descs[3].start = 0x8000;
+    descs[3].len   = core->GetCartridge()->GetROMSize();
     // SGM LOWER
-    descs[5].ptr   = core->GetMemory()->GetSGMRam();
-    descs[5].start = 0x010000;
-    descs[5].len   = 0x2000;
+    descs[4].ptr   = core->GetMemory()->GetSGMRam();
+    descs[4].start = 0x010000;
+    descs[4].len   = 0x2000;
     // SGM UPPER
-    descs[6].ptr   = core->GetMemory()->GetSGMRam() + 0x2000;
-    descs[6].start = 0x012000;
-    descs[6].len   = 0x6000;
+    descs[5].ptr   = core->GetMemory()->GetSGMRam() + 0x2000;
+    descs[5].start = 0x012000;
+    descs[5].len   = 0x6000;
 
     struct retro_memory_map mmaps;
     mmaps.descriptors = descs;
