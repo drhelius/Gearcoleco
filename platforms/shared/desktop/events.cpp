@@ -361,11 +361,11 @@ static void input_poll_controller(int controller)
         }
         else
         {
-            const Sint16 STICK_DEAD_ZONE = 8000;
-            Sint16 rawx = SDL_GetGamepadAxis(gamepad_ctrl, (SDL_GamepadAxis)config_input[controller].gamepad_x_axis);
-            Sint16 rawy = SDL_GetGamepadAxis(gamepad_ctrl, (SDL_GamepadAxis)config_input[controller].gamepad_y_axis);
-            Sint16 x = config_input[controller].gamepad_invert_x_axis ? -rawx : rawx;
-            Sint16 y = config_input[controller].gamepad_invert_y_axis ? -rawy : rawy;
+            const int STICK_DEAD_ZONE = 8000;
+            int rawx = SDL_GetGamepadAxis(gamepad_ctrl, (SDL_GamepadAxis)config_input[controller].gamepad_x_axis);
+            int rawy = SDL_GetGamepadAxis(gamepad_ctrl, (SDL_GamepadAxis)config_input[controller].gamepad_y_axis);
+            int x = config_input[controller].gamepad_invert_x_axis ? -rawx : rawx;
+            int y = config_input[controller].gamepad_invert_y_axis ? -rawy : rawy;
 
             if (x < -STICK_DEAD_ZONE) dir_left = true;
             else if (x > STICK_DEAD_ZONE) dir_right = true;
