@@ -93,6 +93,9 @@
     <ClInclude Include="..\shared\desktop\application_headless.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\backers.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\config.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\config_data.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\config_definitions.inc.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\config_macros.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\console_utils.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\display.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\emu.h"><Filter>desktop</Filter></ClInclude>
