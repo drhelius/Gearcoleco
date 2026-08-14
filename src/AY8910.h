@@ -80,7 +80,7 @@ private:
     bool m_Sign[3];
     int m_iCycleCounter;
     int m_iSampleCounter;
-    int m_iCyclesPerSample;
+    int m_iSampleRateFactor;
     s16* m_pBuffer;
     int m_iBufferIndex;
     int m_ElapsedCycles;
@@ -94,5 +94,6 @@ private:
 
 const u8 kAY8910RegisterMask[16] = {0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0x1F, 0xFF, 0x1F, 0x1F, 0x1F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF};
 const s16 kAY8910VolumeTable[16] = {0, 40, 60, 86, 124, 186, 264, 440, 518, 840, 1196, 1526, 2016, 2602, 3300, 4096};
+const int kAY8910SampleAccuracy = 16;
 
 #endif	/* AY8910_H */

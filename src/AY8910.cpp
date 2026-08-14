@@ -49,7 +49,7 @@ void AY8910::Init(int clockRate)
 void AY8910::Reset(int clockRate)
 {
     m_iClockRate = clockRate;
-    m_iCyclesPerSample = m_iClockRate / GC_AUDIO_SAMPLE_RATE;
+    m_iSampleRateFactor = (int)(((s64)GC_AUDIO_SAMPLE_RATE * (1 << kAY8910SampleAccuracy) + (m_iClockRate / 2)) / m_iClockRate);
 
     for (int i = 0; i < 16; i++)
     {
@@ -318,10 +318,10 @@ void AY8910::Sync()
             }
         }
 
-        m_iSampleCounter++;
-        if (m_iSampleCounter >= m_iCyclesPerSample)
+        m_iSampleCounter += m_iSampleRateFactor;
+        if (m_iSampleCounter >= (1 << kAY8910SampleAccuracy))
         {
-            m_iSampleCounter -= m_iCyclesPerSample;
+            m_iSampleCounter -= (1 << kAY8910SampleAccuracy);
             m_CurrentSample = 0;
             s16 channel_sample[3] = { 0, 0, 0 };
 
