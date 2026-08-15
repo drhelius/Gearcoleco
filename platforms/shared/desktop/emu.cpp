@@ -714,6 +714,16 @@ int emu_mcp_get_transport_mode(void)
     return mcp_manager ? mcp_manager->GetTransportMode() : -1;
 }
 
+const char* emu_mcp_get_http_address(void)
+{
+    return mcp_manager ? mcp_manager->GetTcpAddress() : "";
+}
+
+int emu_mcp_get_http_port(void)
+{
+    return mcp_manager ? mcp_manager->GetTcpPort() : 0;
+}
+
 void emu_mcp_pump_commands(void)
 {
     mcp_manager->PumpCommands(gearcoleco);
