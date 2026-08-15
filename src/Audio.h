@@ -80,6 +80,10 @@ inline void Audio::Tick(unsigned int clockCycles)
 {
     m_ElapsedCycles += clockCycles;
     m_pAY8910->Tick(clockCycles);
+#ifndef GEARCOLECO_DISABLE_VGMRECORDER
+    if (m_bVgmRecordingEnabled)
+        m_VgmRecorder.UpdateTiming(clockCycles);
+#endif
 }
 
 inline void Audio::WriteAudioRegister(u8 value)

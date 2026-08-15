@@ -37,7 +37,7 @@ public:
 
     void WritePSG(u8 data);
     void WriteAY8910(u8 reg, u8 data);
-    void UpdateTiming(int elapsed_samples);
+    void UpdateTiming(unsigned int elapsed_cycles);
     
 private:
     void WriteCommand(u8 command);
@@ -53,9 +53,22 @@ private:
     int m_PendingWait;
     int m_TotalSamples;
     int m_ClockRate;
+    u64 m_TimingRemainder;
     bool m_bPAL;
     bool m_bPSGUsed;
     bool m_bAY8910Used;
 };
+
+inline void VgmRecorder::UpdateTiming(unsigned int elapsed_cycles)
+{
+    if (!m_bRecording || m_ClockRate <= 0)
+        return;
+
+    m_TimingRemainder += (u64)elapsed_cycles * GC_AUDIO_SAMPLE_RATE;
+    int elapsed_samples = (int)(m_TimingRemainder / (u64)m_ClockRate);
+    m_TimingRemainder %= (u64)m_ClockRate;
+    m_PendingWait += elapsed_samples;
+    m_TotalSamples += elapsed_samples;
+}
 
 #endif /* VGM_RECORDER_H */

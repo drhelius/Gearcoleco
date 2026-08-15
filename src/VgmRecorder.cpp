@@ -27,6 +27,7 @@ VgmRecorder::VgmRecorder()
     m_PendingWait = 0;
     m_TotalSamples = 0;
     m_ClockRate = 0;
+    m_TimingRemainder = 0;
     m_bPAL = false;
     m_bPSGUsed = false;
     m_bAY8910Used = false;
@@ -51,6 +52,7 @@ void VgmRecorder::Start(const char* file_path, int clock_rate, bool is_pal)
     m_bRecording = true;
     m_PendingWait = 0;
     m_TotalSamples = 0;
+    m_TimingRemainder = 0;
     m_bPSGUsed = false;
     m_bAY8910Used = false;
     m_CommandBuffer.clear();
@@ -213,15 +215,6 @@ void VgmRecorder::WriteAY8910(u8 reg, u8 data)
 
     // 0xA0 aa dd - AY8910, write value dd to register aa
     WriteCommand(0xA0, reg, data);
-}
-
-void VgmRecorder::UpdateTiming(int elapsed_samples)
-{
-    if (!m_bRecording)
-        return;
-
-    m_PendingWait += elapsed_samples;
-    m_TotalSamples += elapsed_samples;
 }
 
 void VgmRecorder::WriteCommand(u8 command)
