@@ -391,6 +391,8 @@ bool Cartridge::GatherMetadata(u32 crc)
     m_bPAL = false;
     m_bSRAM = false;
 
+    Log("ROM CRC32: %X", crc);
+
     Log("ROM Size: %d KB", m_iROMSize / 1024);
 
     m_iROMBankCount = (m_iROMSize / 0x4000) + (m_iROMSize % 0x4000 ? 1 : 0);

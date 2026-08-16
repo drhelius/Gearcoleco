@@ -36,16 +36,17 @@ struct GC_GameDBEntry
 
 const GC_GameDBEntry kGameDatabase[] =
 {
-    {0xFEE15196, "Lord of the Dungeon", GC_GameDBMode_SRAM},
-    {0x1053F610, "Lord of the Dungeon", GC_GameDBMode_SRAM},
+    {0xE4676D56, "Amidar (Opcode)", GC_GameDBMode_OCM},
+    {0x6C8113C1, "Goonies (Opcode)", GC_GameDBMode_OCM},
     {0x30D337E4, "Gradius (Opcode)", GC_GameDBMode_OCM},
     {0x2426C300, "Gradius (Opcode) Alt", GC_GameDBMode_OCM},
-    {0x6831AD48, "Penguin Adventure (Opcode)", GC_GameDBMode_OCM},
-    {0xBDAE4248, "Moon Cresta (Opcode)", GC_GameDBMode_OCM},
     {0x80586CC5, "Knightmare (Opcode)", GC_GameDBMode_OCM},
-    {0x6C8113C1, "Goonies (Opcode)", GC_GameDBMode_OCM},
-    {0xCF803DDC, "Time Pilot (Opcode)", GC_GameDBMode_OCM},
+    {0xFEE15196, "Lord of the Dungeon", GC_GameDBMode_SRAM},
+    {0x1053F610, "Lord of the Dungeon", GC_GameDBMode_SRAM},
+    {0xBDAE4248, "Moon Cresta (Opcode)", GC_GameDBMode_OCM},
     {0xDE785EE3, "Pacman DX (Opcode)", GC_GameDBMode_OCM},
+    {0x6831AD48, "Penguin Adventure (Opcode)", GC_GameDBMode_OCM},
+    {0xCF803DDC, "Time Pilot (Opcode)", GC_GameDBMode_OCM},
 
     {0, 0, GC_GameDBMode_None}
 };
