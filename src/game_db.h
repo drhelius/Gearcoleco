@@ -37,6 +37,7 @@ struct GC_GameDBEntry
 const GC_GameDBEntry kGameDatabase[] =
 {
     {0xE4676D56, "Amidar (Opcode)", GC_GameDBMode_OCM},
+    {0x76004C98, "DK Arcade (Opcode)", GC_GameDBMode_OCM},
     {0x6C8113C1, "Goonies (Opcode)", GC_GameDBMode_OCM},
     {0x30D337E4, "Gradius (Opcode)", GC_GameDBMode_OCM},
     {0x2426C300, "Gradius (Opcode) Alt", GC_GameDBMode_OCM},
