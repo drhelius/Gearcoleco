@@ -354,7 +354,7 @@ bool gui_finish_loading_rom(void)
 Cartridge::ForceConfiguration gui_get_force_configuration(void)
 {
     Cartridge::ForceConfiguration config;
-    config.type = get_mapper(0);
+    config.type = get_mapper(config_emulator.mapper);
     config.region = get_region(config_emulator.region);
     return config;
 }
@@ -764,6 +764,8 @@ static Cartridge::CartridgeTypes get_mapper(int index)
             return Cartridge::CartridgeMegaCart;
         case 3:
             return Cartridge::CartridgeActivisionCart;
+        case 4:
+            return Cartridge::CartridgeOCM;
         default:
             return Cartridge::CartridgeNotSupported;
     }

@@ -73,6 +73,23 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         },
         "Auto"
     },
+    {
+        "gearcoleco_mapper",
+        "Mapper (restart)",
+        NULL,
+        "Select which mapper (memory bank controller) is emulated. 'Auto' automatically detects the appropriate mapper based on the loaded content. Only change this if a game does not work correctly with the default setting.",
+        NULL,
+        "system",
+        {
+            { "Auto",       NULL },
+            { "Standard",   NULL },
+            { "MegaCart",   NULL },
+            { "Activision", NULL },
+            { "OCM",        NULL },
+            { NULL, NULL },
+        },
+        "Auto"
+    },
 
     /* Video */
 

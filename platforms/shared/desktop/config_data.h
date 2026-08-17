@@ -64,6 +64,7 @@ struct config_Emulator
     bool ffwd;
     int ffwd_speed;
     int runahead;
+    int mapper;
     int region;
     bool show_info;
     std::string recent_roms[config_max_recent_roms];

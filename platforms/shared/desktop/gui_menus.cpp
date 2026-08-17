@@ -469,6 +469,14 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
+        if (ImGui::BeginMenu("Mapper"))
+        {
+            ImGui::PushItemWidth(160.0f);
+            ImGui::Combo("##emu_mapper", &config_emulator.mapper, "Auto\0Standard\0MegaCart\0Activision\0OCM\0\0");
+            ImGui::PopItemWidth();
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Refresh Rate"))
         {
             ImGui::PushItemWidth(130.0f);

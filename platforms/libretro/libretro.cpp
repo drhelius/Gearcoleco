@@ -705,6 +705,25 @@ static void check_variables(void)
             config.region = Cartridge::CartridgeUnknownRegion;
     }
 
+    var.key = "gearcoleco_mapper";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "Auto") == 0)
+            config.type = Cartridge::CartridgeNotSupported;
+        else if (strcmp(var.value, "Standard") == 0)
+            config.type = Cartridge::CartridgeColecoVision;
+        else if (strcmp(var.value, "MegaCart") == 0)
+            config.type = Cartridge::CartridgeMegaCart;
+        else if (strcmp(var.value, "Activision") == 0)
+            config.type = Cartridge::CartridgeActivisionCart;
+        else if (strcmp(var.value, "OCM") == 0)
+            config.type = Cartridge::CartridgeOCM;
+        else
+            config.type = Cartridge::CartridgeNotSupported;
+    }
+
     var.key = "gearcoleco_aspect_ratio";
     var.value = NULL;
 

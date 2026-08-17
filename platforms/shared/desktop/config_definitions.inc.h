@@ -113,6 +113,7 @@ static inline void process(config_Operation operation)
     CONFIG_INT_RANGE("Emulator", "SaveSlot", config_emulator.save_slot, 0, 0, 4);
     CONFIG_BOOL("Emulator", "StartPaused", config_emulator.start_paused, false);
     CONFIG_BOOL("Emulator", "PauseWhenInactive", config_emulator.pause_when_inactive, true);
+    CONFIG_INT("Emulator", "Mapper", config_emulator.mapper, 0);
     CONFIG_INT("Emulator", "Region", config_emulator.region, 0);
     CONFIG_STRING("Emulator", "BiosPath", config_emulator.bios_path, "");
     CONFIG_INT("Emulator", "Spinner", config_emulator.spinner, 0);
