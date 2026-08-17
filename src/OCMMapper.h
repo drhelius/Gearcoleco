@@ -135,7 +135,7 @@ inline u8 OCMMapper::Read(u16 address)
         }
 
         // EEPROM read window: last bank selected, active timer, E000-E0FF -> EEPROM
-        if (m_BankReg[2] == m_BankMask && EepromReadWindowActive() && ((address & 0x0FFF) < 0x0100))
+        if (m_BankReg[2] == m_BankMask && EepromReadWindowActive() && ((address & 0x0FFF) < 0x0200))
         {
             u8* pEEPROM = m_pCartridge->GetEEPROM();
             if (IsValidPointer(pEEPROM))
