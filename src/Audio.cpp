@@ -199,12 +199,12 @@ void Audio::LoadStateV1(std::istream& stream)
     m_pBuffer->clear();
 }
 
-bool Audio::StartVgmRecording(const char* file_path, int clock_rate, bool is_pal)
+bool Audio::StartVgmRecording(const char* file_path, int clock_rate, bool is_pal, const VgmMetadata& metadata)
 {
     if (m_bVgmRecordingEnabled)
         return false;
 
-    m_VgmRecorder.Start(file_path, clock_rate, is_pal);
+    m_VgmRecorder.Start(file_path, clock_rate, is_pal, metadata);
     m_bVgmRecordingEnabled = m_VgmRecorder.IsRecording();
     return m_bVgmRecordingEnabled;
 }

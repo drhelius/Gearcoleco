@@ -865,8 +865,13 @@ void emu_start_vgm_recording(const char* file_path)
 
     bool is_pal = (runtime.region == Region_PAL);
     int clock_rate = is_pal ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
+    Cartridge* cartridge = gearcoleco->GetCartridge();
+    VgmMetadata metadata;
+    metadata.game_name = cartridge->IsInGameDatabase() ? cartridge->GetGameDatabaseName() : cartridge->GetFileName();
+    metadata.system_name = "ColecoVision";
+    metadata.comment = "Created with " GEARCOLECO_TITLE " " GEARCOLECO_VERSION;
 
-    if (gearcoleco->GetAudio()->StartVgmRecording(file_path, clock_rate, is_pal))
+    if (gearcoleco->GetAudio()->StartVgmRecording(file_path, clock_rate, is_pal, metadata))
         Log("VGM recording started: %s", file_path);
 }
 

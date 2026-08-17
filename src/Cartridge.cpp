@@ -36,6 +36,7 @@ Cartridge::Cartridge()
     m_bValidROM = false;
     m_bReady = false;
     m_bInGameDatabase = false;
+    m_pGameDatabaseName = NULL;
     m_szFilePath[0] = 0;
     m_szFileName[0] = 0;
     m_szFileDirectory[0] = 0;
@@ -65,6 +66,7 @@ void Cartridge::Reset()
     m_bValidROM = false;
     m_bReady = false;
     m_bInGameDatabase = false;
+    m_pGameDatabaseName = NULL;
     m_szFilePath[0] = 0;
     m_szFileName[0] = 0;
     m_szFileDirectory[0] = 0;
@@ -104,6 +106,11 @@ bool Cartridge::IsReady() const
 bool Cartridge::IsInGameDatabase() const
 {
     return m_bInGameDatabase;
+}
+
+const char* Cartridge::GetGameDatabaseName() const
+{
+    return m_pGameDatabaseName;
 }
 
 Cartridge::CartridgeTypes Cartridge::GetType() const
@@ -469,6 +476,7 @@ void Cartridge::GetInfoFromDB(u32 crc)
 {
     int i = 0;
     m_bInGameDatabase = false;
+    m_pGameDatabaseName = NULL;
 
     while(!m_bInGameDatabase && (kGameDatabase[i].title != 0))
     {
@@ -477,6 +485,7 @@ void Cartridge::GetInfoFromDB(u32 crc)
         if (db_crc == crc)
         {
             m_bInGameDatabase = true;
+            m_pGameDatabaseName = kGameDatabase[i].title;
 
             Log("ROM found in database: %s. CRC: %X", kGameDatabase[i].title, crc);
 
