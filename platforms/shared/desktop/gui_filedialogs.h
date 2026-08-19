@@ -47,6 +47,7 @@ EXTERN void gui_file_dialog_save_log(void);
 EXTERN void gui_file_dialog_save_debug_settings(void);
 EXTERN void gui_file_dialog_load_debug_settings(void);
 EXTERN void gui_file_dialog_choose_saves_path(void);
+EXTERN void gui_file_dialog_choose_trace_path(void);
 EXTERN void gui_file_dialog_load_bios(void);
 EXTERN void gui_file_dialog_process_results(void);
 EXTERN bool gui_file_dialog_is_active(void);

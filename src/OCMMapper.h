@@ -33,10 +33,12 @@ public:
 
     virtual void Reset();
     virtual u8 Read(u16 address);
+    virtual u8 Peek(u16 address);
     virtual void Write(u16 address, u8 value);
     virtual void SaveState(std::ostream& stream);
     virtual void LoadState(std::istream& stream);
     virtual u8 GetBankReg(int index) { return (index >= 0 && index < 4) ? m_BankReg[index] : 0; }
+    virtual u8 GetLastBank() { return m_LastBank; }
     virtual u8* GetSaveData();
     virtual int GetSaveDataSize();
 
@@ -152,6 +154,7 @@ inline u8 OCMMapper::Read(u16 address)
         // If STATUS mode, reading E000 returns 0xFF (status OK)
         if (((address & 0x0FFF) == 0x0000) && (m_EepromState == EEP_STATUS))
         {
+            TraceMapperEvent(TRACE_MAPPER_EEPROM, address, 0xFF, m_EepromState, 0);
             return 0xFF;
         }
 
@@ -160,7 +163,9 @@ inline u8 OCMMapper::Read(u16 address)
         {
             if (IsValidPointer(m_pEEPROM))
             {
-                return m_pEEPROM[address & 0x03FF];
+                u8 value = m_pEEPROM[address & 0x03FF];
+                TraceMapperEvent(TRACE_MAPPER_EEPROM, address, value, m_EepromState, address & 0x03FF);
+                return value;
             }
             return 0xFF;
         }
@@ -169,6 +174,24 @@ inline u8 OCMMapper::Read(u16 address)
         u32 bankOffset = (u32)(address - 0xE000) + ((u32)m_BankReg[2] * 0x2000);
         return ReadROM(bankOffset);
     }
+}
+
+inline u8 OCMMapper::Peek(u16 address)
+{
+    if (address < 0xA000)
+        return ReadROM((u32)(address - 0x8000) + ((u32)m_BankReg[3] * 0x2000));
+    if (address < 0xC000)
+        return ReadROM((u32)(address - 0xA000) + ((u32)m_BankReg[0] * 0x2000));
+    if (address < 0xE000)
+        return ReadROM((u32)(address - 0xC000) + ((u32)m_BankReg[1] * 0x2000));
+    if (((address & 0x0FFF) == 0x0000) && (m_EepromState == EEP_STATUS))
+        return 0xFF;
+    if (m_BankReg[2] == m_LastBank && ((address & 0x0FFF) < 0x0200) &&
+        EepromReadWindowActive() && IsValidPointer(m_pEEPROM))
+    {
+        return m_pEEPROM[address & 0x03FF];
+    }
+    return ReadROM((u32)(address - 0xE000) + ((u32)m_BankReg[2] * 0x2000));
 }
 
 inline void OCMMapper::Write(u16 address, u8 value)
@@ -186,11 +209,13 @@ inline void OCMMapper::Write(u16 address, u8 value)
         if (value == 0xAA && m_EepromCmdPos == 0)
         {
             m_EepromCmdPos = 1;
+            TraceMapperEvent(TRACE_MAPPER_EEPROM, address, value, m_EepromState, m_EepromCmdPos);
             return;
         }
         else if (value == 0x55 && m_EepromCmdPos == 1)
         {
             m_EepromCmdPos = 2;
+            TraceMapperEvent(TRACE_MAPPER_EEPROM, address, value, m_EepromState, m_EepromCmdPos);
             return;
         }
         else if (m_EepromCmdPos == 2)
@@ -217,6 +242,7 @@ inline void OCMMapper::Write(u16 address, u8 value)
             }
 
             m_EepromCmdPos = 0;
+            TraceMapperEvent(TRACE_MAPPER_EEPROM, address, value, m_EepromState, m_EepromCmdPos);
             return;
         }
         else if (m_EepromState == EEP_WRITE)
@@ -227,6 +253,7 @@ inline void OCMMapper::Write(u16 address, u8 value)
                 m_pEEPROM[address & 0x03FF] = value;
             }
             m_EepromState = EEP_NONE;
+            TraceMapperEvent(TRACE_MAPPER_EEPROM, address, value, m_EepromState, address & 0x03FF);
             return;
         }
 
@@ -238,13 +265,23 @@ inline void OCMMapper::Write(u16 address, u8 value)
     // FFFC -> bank 0, FFFD -> bank 1, FFFE -> bank 2 (also arms read-window), FFFF -> bank 3
     if (address >= 0xFFFC)
     {
+        int bank_index = address & 0x0003;
+        u8 old_bank = m_BankReg[bank_index];
         if (address == 0xFFFE)
         {
             // Arm or clear the 3-frame EEPROM read window
             ArmEepromReadWindow(value);
         }
 
-        m_BankReg[address & 0x0003] = NormalizeBank(value);
+        m_BankReg[bank_index] = NormalizeBank(value);
+
+        if (address == 0xFFFE)
+        {
+            TraceMapperEvent(TRACE_MAPPER_EEPROM, address, value, m_BankReg[bank_index], m_EepromState);
+        }
+
+        if (old_bank != m_BankReg[bank_index])
+            TraceMapperEvent(TRACE_MAPPER_BANK, address, value, (u8)bank_index, old_bank);
 
         // Debug("--> OCM Bank[%d] = %d (addr=%04X, val=%02X)", (address & 3), m_BankReg[address & 3], address, value);
         return;

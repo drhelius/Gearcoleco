@@ -47,6 +47,7 @@ SOURCES_CXX := \
     $(DESKTOP_SRC_DIR)/gui_debug_psg.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_ay8910.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_tms9918.cpp \
+    $(DESKTOP_SRC_DIR)/trace_logger_formatter.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_debug_adapter.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_tool_registry.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_server.cpp \
@@ -56,6 +57,7 @@ SOURCES_CXX := \
     $(SRC_DIR)/ColecoVisionIOPorts.cpp \
     $(SRC_DIR)/GearcolecoCore.cpp \
     $(SRC_DIR)/Input.cpp \
+    $(SRC_DIR)/Mapper.cpp \
     $(SRC_DIR)/Memory.cpp \
     $(SRC_DIR)/opcodes.cpp \
     $(SRC_DIR)/opcodes_cb.cpp \

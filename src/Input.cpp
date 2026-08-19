@@ -19,10 +19,12 @@
 
 #include "Input.h"
 #include "Processor.h"
+#include "TraceLogger.h"
 
 Input::Input(Processor* pProcessor)
 {
     m_pProcessor = pProcessor;
+    InitPointer(m_pTraceLogger);
 }
 
 void Input::Init()
@@ -41,6 +43,7 @@ void Input::Reset()
 
 void Input::SetInputSegment(InputSegments segment)
 {
+    TraceInputWriteEvent(segment);
     m_Segment = segment;
 }
 
@@ -51,6 +54,7 @@ u8 Input::ReadInput(u8 port)
 
     int rel = m_iSpinnerRel[c] / 4;
     m_iSpinnerRel[c] -= rel;
+    bool int_asserted = false;
 
     if (m_Segment == SegmentKeypadRightButtons)
     {
@@ -64,19 +68,24 @@ u8 Input::ReadInput(u8 port)
         {
             ret &= c ? 0xEF : 0xCF;
             m_pProcessor->RequestINT(true);
+            int_asserted = true;
         }
         else if (rel < 0)
         {
             ret &= c ? 0xCF : 0xEF;
             m_pProcessor->RequestINT(true);
+            int_asserted = true;
         }
     }
+
+    TraceInputReadEvent(port, ret, rel, int_asserted);
 
     return ret;
 }
 
 void Input::KeyPressed(GC_Controllers controller, GC_Keys key)
 {
+    TraceInputChangeEvent(controller, key, true);
     if (key > 0x0F)
     {
         m_Gamepad[controller] = UnsetBit(m_Gamepad[controller], key & 0x0F);
@@ -90,6 +99,7 @@ void Input::KeyPressed(GC_Controllers controller, GC_Keys key)
 
 void Input::KeyReleased(GC_Controllers controller, GC_Keys key)
 {
+    TraceInputChangeEvent(controller, key, false);
     if (key > 0x0F)
     {
         m_Gamepad[controller] = SetBit(m_Gamepad[controller], key & 0x0F);
@@ -99,6 +109,91 @@ void Input::KeyReleased(GC_Controllers controller, GC_Keys key)
         m_KeypadState[controller] &= ~(1 << (key & 0x0F));
         UpdateKeypadState(controller);
     }
+}
+
+void Input::SetTraceLogger(TraceLogger* pTraceLogger)
+{
+    m_pTraceLogger = pTraceLogger;
+}
+
+void Input::LogInputChangeEvent(GC_Controllers controller, GC_Keys key, bool pressed)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    u8 previous = key > 0x0F ? m_Gamepad[controller] : m_Keypad[controller];
+    u8 effective;
+    if (key > 0x0F)
+        effective = pressed ? UnsetBit(previous, key & 0x0F) : SetBit(previous, key & 0x0F);
+    else
+    {
+        u16 keypad_state = m_KeypadState[controller];
+        if (pressed)
+            keypad_state |= (1 << (key & 0x0F));
+        else
+            keypad_state &= ~(1 << (key & 0x0F));
+        effective = 0xFF;
+        for (int i = 0; i < 16; i++)
+        {
+            if (keypad_state & (1 << i))
+                effective &= i;
+        }
+    }
+    if (previous == effective)
+        return;
+    GC_Trace_Entry e = {};
+    e.type = TRACE_INPUT;
+    e.input.event = TRACE_INPUT_CHANGE;
+    e.input.port = (u8)key;
+    e.input.player = (u8)controller + 1;
+    e.input.segment = (u8)m_Segment;
+    e.input.previous_value = previous;
+    e.input.effective_value = effective;
+    m_pTraceLogger->TraceLog(e);
+#else
+    UNUSED(controller);
+    UNUSED(key);
+    UNUSED(pressed);
+#endif
+}
+
+void Input::LogInputReadEvent(u8 port, u8 result, int spinner_consumed, bool int_asserted)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    u8 controller = (port & 0x02) >> 1;
+    GC_Trace_Entry e = {};
+    e.type = TRACE_INPUT;
+    e.input.event = TRACE_INPUT_READ;
+    e.input.port = port;
+    e.input.player = controller + 1;
+    e.input.segment = (u8)m_Segment;
+    e.input.gamepad = m_Gamepad[controller];
+    e.input.keypad = m_Keypad[controller];
+    e.input.result = result;
+    e.input.spinner_before = (s16)(m_iSpinnerRel[controller] + spinner_consumed);
+    e.input.spinner_consumed = (s16)spinner_consumed;
+    e.input.int_asserted = int_asserted;
+    m_pTraceLogger->TraceLog(e);
+#else
+    UNUSED(port);
+    UNUSED(result);
+    UNUSED(spinner_consumed);
+    UNUSED(int_asserted);
+#endif
+}
+
+void Input::LogInputWriteEvent(InputSegments effective)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    if (m_Segment == effective)
+        return;
+    GC_Trace_Entry e = {};
+    e.type = TRACE_INPUT;
+    e.input.event = TRACE_INPUT_WRITE;
+    e.input.segment = (u8)effective;
+    e.input.previous_segment = (u8)m_Segment;
+    m_pTraceLogger->TraceLog(e);
+#else
+    UNUSED(effective);
+#endif
 }
 
 bool Input::IsKeyPressed(GC_Controllers controller, GC_Keys key) const

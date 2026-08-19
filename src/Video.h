@@ -70,6 +70,9 @@ public:
     void SetTraceLogger(TraceLogger* pTraceLogger);
 
 private:
+    INLINE void TraceVDPEvent(u8 event, u8 reg = 0xFF, u8 raw = 0,
+        int sprite = 0xFF, int auxiliary = 0);
+    void LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary);
     void ScanLine(int line);
     void LatchSpriteAttributes();
     void RenderBackground(int line);
@@ -125,6 +128,14 @@ private:
     u8 m_CustomPalette[48];
     u8* m_pCurrentPalette;
 };
+
+#include "TraceLogger.h"
+
+INLINE void Video::TraceVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_VDP, event))
+        LogVDPEvent(event, reg, raw, sprite, auxiliary);
+}
 
 inline u8* Video::GetVRAM()
 {

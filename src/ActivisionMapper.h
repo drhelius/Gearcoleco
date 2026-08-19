@@ -84,8 +84,11 @@ inline void ActivisionMapper::Write(u16 address, u8 value)
     {
         if ((address == 0xFF90) || (address == 0xFFA0) || (address == 0xFFB0))
         {
+            u8 old_bank = m_RomBank;
             m_RomBank = (address >> 4) & (m_pCartridge->GetROMBankCount() - 1);
             m_RomBankAddress = m_RomBank << 14;
+            if (old_bank != m_RomBank)
+                TraceMapperEvent(TRACE_MAPPER_BANK, address, value, 0, old_bank);
         }
     }
     else

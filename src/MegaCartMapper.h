@@ -71,8 +71,12 @@ inline u8 MegaCartMapper::Read(u16 address)
     {
         if (address >= 0xFFC0)
         {
+            u8 old_bank = m_RomBank;
             m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
             m_RomBankAddress = m_RomBank << 14;
+            if (old_bank != m_RomBank)
+                TraceMapperEvent(TRACE_MAPPER_BANK, address, (u8)address,
+                    0, old_bank);
         }
         return pRom[(address & 0x3FFF) + m_RomBankAddress];
     }
@@ -104,8 +108,11 @@ inline void MegaCartMapper::Write(u16 address, u8 value)
     UNUSED(value);
     if (address >= 0xFFC0)
     {
+        u8 old_bank = m_RomBank;
         m_RomBank = address & (m_pCartridge->GetROMBankCount() - 1);
         m_RomBankAddress = m_RomBank << 14;
+        if (old_bank != m_RomBank)
+            TraceMapperEvent(TRACE_MAPPER_BANK, address, value, 0, old_bank);
     }
     else
     {

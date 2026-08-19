@@ -211,6 +211,10 @@ private:
     SixteenBitRegister* GetPrefixedRegister();
     u16 GetEffectiveAddress();
     bool IsPrefixedInstruction();
+    INLINE void TraceInstructionEvent(u16 pc);
+    INLINE void TraceIRQEvent(u16 pc, u16 vector, u8 irq_type);
+    void LogInstructionEvent(u16 pc);
+    void LogIRQEvent(u16 pc, u16 vector, u8 irq_type);
     void OPCodes_LD(u8* reg1, u8 value);
     void OPCodes_LD(u8* reg, u16 address);
     void OPCodes_LD(u16 address, u8 reg);

@@ -24,6 +24,19 @@
 #include "SixteenBitRegister.h"
 #include "Processor.h"
 #include "IOPorts.h"
+#include "TraceLogger.h"
+
+INLINE void Processor::TraceInstructionEvent(u16 pc)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_CPU))
+        LogInstructionEvent(pc);
+}
+
+INLINE void Processor::TraceIRQEvent(u16 pc, u16 vector, u8 irq_type)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_CPU_IRQ))
+        LogIRQEvent(pc, vector, irq_type);
+}
 
 inline u8 Processor::FetchOPCode()
 {
@@ -1315,4 +1328,3 @@ inline std::stack<Processor::GC_CallStackEntry>* Processor::GetDisassemblerCallS
 }
 
 #endif	/* PROCESSOR_INLINE_H */
-

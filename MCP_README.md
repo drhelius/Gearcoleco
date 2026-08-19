@@ -56,7 +56,7 @@ This server provides tools for ColecoVision game development, rom hacking, rever
 - Debug symbols management (load, add, remove, list, look up)
 - Disassembler bookmarks and call stack inspection
 - Memory editor: bookmarks, watches, memory search, byte finding
-- Trace logger: CPU instructions, IRQs, VDP writes/status, PSG, AY-3-8910, I/O ports, SGM
+- Trace logger: CPU instructions, VDP, PSG, AY-3-8910, I/O, input, SGM, mapper, EEPROM, and SRAM events
 - Rewind (time travel debugging)
 - Screenshot capture as base64-encoded PNG
 - Save state management (5 slots)
@@ -397,8 +397,14 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 ### Tracing
 | Tool | Description |
 |------|-------------|
-| `get_trace_log` | Get trace log entries |
-| `set_trace_log` | Enable/disable trace logging with type flags |
+| `get_trace_log` | Read formatted trace lines using absolute sequence pagination |
+| `set_trace_log` | Configure shared memory or disk capture with exact event filters |
+
+`get_trace_log` returns `total_entries`, monotonic `total_logged`, `oldest_sequence`, actual `start`, `next_sequence`, `count`, `overrun`, and `lines`. Omit `start` for the latest 100 retained entries, or use a negative value to start that many entries from the retained tail. An expired start clamps to the oldest retained entry with `overrun=true`; a current or future start returns an empty page without changing its identity.
+
+`set_trace_log` accepts `output` (`memory` or `disk`), `memory_size` (`100K`, `500K`, `1M`, `2M`, `5M`), `disk_size` (`10MB`, `50MB`, `100MB`, `250MB`, `500MB`, `1GB`, `unbounded`), and an `output_path` directory. Omitting `filters` selects CPU instructions and interrupts. Disk capture uses a 100K staging ring, flushes continuously, stops on staging overflow or the configured complete-line size limit, and reports write/flush/close failures.
+
+Exact filters are `cpu.instructions`, `cpu.interrupts`, `vdp.registers`, `vdp.interrupts`, `vdp.status`, `vdp.sprites`, `vdp.timing`, `vdp.vram`, `psg.tone`, `psg.volume`, `psg.noise`, `ay8910.registers`, `ay8910.tone`, `ay8910.noise_mixer`, `ay8910.volume`, `ay8910.envelope`, `ay8910.io`, `io.reads`, `io.writes`, `input.reads`, `input.writes`, `sgm.control`, `mapper.banks`, `mapper.eeprom`, and `mapper.sram`. Filters must be non-empty, unique, and exact. Cycle values use the core master clock; `RESET` denotes a clock discontinuity while absolute sequence identity remains monotonic.
 
 ### Controller Input
 | Tool | Description |

@@ -145,8 +145,25 @@ inline GC_Disassembler_Record* Memory::GetDisassemblerRecord(u16 address, u8 ban
     if (address < 0x8000)
         return GetDisassemblerRecord(address);
 
-    u32 physical_address = 0;
+    u32 physical_address = GetTracePhysicalAddress(address, bank);
+    if (physical_address >= MAX_ROM_SIZE)
+        return NULL;
 
+    return m_pDisassembledRomMap[physical_address];
+
+#else
+    UNUSED(address);
+    UNUSED(bank);
+    return NULL;
+#endif
+}
+
+inline u32 Memory::GetTracePhysicalAddress(u16 address, u8 bank)
+{
+    if (address < 0x8000)
+        return address;
+
+    u32 physical_address = MAX_ROM_SIZE;
     switch (m_pCartridge->GetType())
     {
         case Cartridge::CartridgeMegaCart:
@@ -163,23 +180,13 @@ inline GC_Disassembler_Record* Memory::GetDisassemblerRecord(u16 address, u8 ban
         default:
         {
             if (bank != 0)
-                return NULL;
+                return MAX_ROM_SIZE;
 
             physical_address = (u32)(address - 0x8000);
             break;
         }
     }
-
-    if (physical_address >= MAX_ROM_SIZE)
-        return NULL;
-
-    return m_pDisassembledRomMap[physical_address];
-
-#else
-    UNUSED(address);
-    UNUSED(bank);
-    return NULL;
-#endif
+    return physical_address;
 }
 
 #endif	/* MEMORY_INLINE_H */

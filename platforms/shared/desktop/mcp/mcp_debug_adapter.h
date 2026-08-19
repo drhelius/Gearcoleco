@@ -173,8 +173,8 @@ public:
     json MemoryFindBytes(int area, const std::string& hex_bytes);
 
     // Tracing
-    json GetTraceLog(int start, int count);
-    json SetTraceLog(bool enabled, u32 flags);
+    json GetTraceLog(s64 start, int count);
+    json SetTraceLog(const json& arguments);
 
     // Core access
     GearcolecoCore* GetCore() { return m_core; }

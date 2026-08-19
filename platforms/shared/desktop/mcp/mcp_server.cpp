@@ -1606,30 +1606,30 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "get_trace_log"},
         {"title", "Get Trace Log"},
-        {"description", "Read trace log entries: CPU, IRQ, VDP, PSG, AY-3-8910, I/O port, SGM events."},
+        {"description", "Read formatted trace lines using absolute sequence pagination."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
             {"properties", {
                 {"start", {
                     {"type", "integer"},
-                    {"description", "Start index; 0 oldest, default 0."},
-                    {"minimum", 0}
+                    {"description", "Absolute trace sequence, or a negative value to read that many entries from the retained tail (omit for latest 100)"}
                 }},
                 {"count", {
                     {"type", "integer"},
-                    {"description", "Entry count; default 100, max 1000."},
+                    {"description", "Entries to return (default 100, max 1000)"},
                     {"minimum", 1},
                     {"maximum", 1000}
                 }}
-            }}
+            }},
+            {"additionalProperties", false}
         }}
     });
 
     tools.push_back({
         {"name", "set_trace_log"},
         {"title", "Set Trace Log"},
-        {"description", "Enable/disable trace log with flags bitmask: 0 cpu, 1 irq, 2 vdp_write, 3 vdp_status, 4 psg, 5 ay8910, 6 io_port, 7 sgm; 0xFF all."},
+        {"description", "Configure memory or disk trace capture with exact event filters."},
         {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -1638,11 +1638,37 @@ json McpServer::BuildToolList()
                     {"type", "boolean"},
                     {"description", "true starts tracing, false stops."}
                 }},
-                {"flags", {
-                    {"type", "integer"},
-                    {"description", "Trace type bitmask; default 0xFF all."},
-                    {"minimum", 0},
-                    {"maximum", 255}
+                {"output", {
+                    {"type", "string"},
+                    {"enum", json::array({"memory", "disk"})}
+                }},
+                {"memory_size", {
+                    {"type", "string"},
+                    {"enum", json::array({"100K", "500K", "1M", "2M", "5M"})}
+                }},
+                {"disk_size", {
+                    {"type", "string"},
+                    {"enum", json::array({"10MB", "50MB", "100MB", "250MB", "500MB", "1GB", "unbounded"})}
+                }},
+                {"output_path", {
+                    {"type", "string"},
+                    {"description", "Output directory for disk capture."}
+                }},
+                {"filters", {
+                    {"type", "array"},
+                    {"minItems", 1},
+                    {"uniqueItems", true},
+                    {"items", {
+                        {"type", "string"},
+                        {"enum", json::array({
+                            "cpu.instructions", "cpu.interrupts",
+                            "vdp.registers", "vdp.interrupts", "vdp.status", "vdp.sprites", "vdp.timing", "vdp.vram",
+                            "psg.tone", "psg.volume", "psg.noise",
+                            "ay8910.registers", "ay8910.tone", "ay8910.noise_mixer", "ay8910.volume", "ay8910.envelope", "ay8910.io",
+                            "io.reads", "io.writes", "input.reads", "input.writes", "sgm.control",
+                            "mapper.banks", "mapper.eeprom", "mapper.sram"
+                        })}
+                    }}
                 }}
             }},
             {"required", json::array({"enabled"})}
@@ -2676,15 +2702,13 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     }
     else if (normalizedTool == "get_trace_log")
     {
-        int start = arguments.value("start", 0);
+        s64 start = arguments.value("start", (s64)-100);
         int count = arguments.value("count", 100);
         return m_debugAdapter.GetTraceLog(start, count);
     }
     else if (normalizedTool == "set_trace_log")
     {
-        bool enabled = arguments["enabled"];
-        u32 flags = arguments.value("flags", 0xFF);
-        return m_debugAdapter.SetTraceLog(enabled, flags);
+        return m_debugAdapter.SetTraceLog(arguments);
     }
     else
     {
@@ -2937,4 +2961,3 @@ void McpServer::HandleResourcesRead(const json& request)
 
     SendResponse(response);
 }
-

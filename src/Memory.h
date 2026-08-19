@@ -28,6 +28,7 @@ class Processor;
 class Cartridge;
 class Random;
 class Mapper;
+class TraceLogger;
 
 class Memory
 {
@@ -35,6 +36,7 @@ public:
     Memory(Cartridge* pCartridge, Random* pRandom);
     ~Memory();
     void SetProcessor(Processor* pProcessor);
+    void SetTraceLogger(TraceLogger* pTraceLogger);
     void Init();
     void Reset();
     void SetupMapper();
@@ -56,6 +58,7 @@ public:
     GC_Disassembler_Record* GetOrCreateDisassemblerRecord(u16 address);
     GC_Disassembler_Record* GetDisassemblerRecord(u16 address);
     GC_Disassembler_Record* GetDisassemblerRecord(u16 address, u8 bank);
+    u32 GetTracePhysicalAddress(u16 address, u8 bank);
     GC_Disassembler_Record** GetDisassemblerRomMap();
     GC_Disassembler_Record** GetDisassemblerRamMap();
     GC_Disassembler_Record** GetDisassemblerBiosMap();
@@ -75,6 +78,7 @@ private:
     Cartridge* m_pCartridge;
     Random* m_pRandom;
     Mapper* m_pMapper;
+    TraceLogger* m_pTraceLogger;
     GC_Disassembler_Record** m_pDisassembledRomMap;
     GC_Disassembler_Record** m_pDisassembledRamMap;
     GC_Disassembler_Record** m_pDisassembledBiosMap;

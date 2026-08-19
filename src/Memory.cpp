@@ -41,6 +41,7 @@ Memory::Memory(Cartridge* pCartridge, Random* pRandom)
     m_pRandom = pRandom;
     InitPointer(m_pProcessor);
     InitPointer(m_pMapper);
+    InitPointer(m_pTraceLogger);
     InitPointer(m_pDisassembledRomMap);
     InitPointer(m_pDisassembledRamMap);
     InitPointer(m_pDisassembledBiosMap);
@@ -103,6 +104,17 @@ void Memory::SetProcessor(Processor* pProcessor)
     m_pProcessor = pProcessor;
 }
 
+void Memory::SetTraceLogger(TraceLogger* pTraceLogger)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pTraceLogger = pTraceLogger;
+    if (IsValidPointer(m_pMapper))
+        m_pMapper->SetTraceLogger(pTraceLogger);
+#else
+    UNUSED(pTraceLogger);
+#endif
+}
+
 void Memory::Init()
 {
     m_pRam = new u8[0x0400];
@@ -158,6 +170,9 @@ void Memory::SetupMapper()
             break;
     }
 
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pMapper->SetTraceLogger(m_pTraceLogger);
+#endif
     m_pMapper->Reset();
 }
 

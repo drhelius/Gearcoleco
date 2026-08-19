@@ -80,6 +80,14 @@
 #define CLAMP(value, min, max) MIN(MAX(value, min), max)
 #define UNUSED(expr) (void)(expr)
 
+#if defined(__GNUC__) || defined(__clang__)
+    #define likely(x)   __builtin_expect(!!(x), 1)
+    #define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+    #define likely(x)   (x)
+    #define unlikely(x) (x)
+#endif
+
 typedef uint8_t u8;
 typedef int8_t s8;
 typedef uint16_t u16;
@@ -288,5 +296,16 @@ inline int AsHex(const char c)
 {
    return c >= 'A' ? c - 'A' + 0xA : c - '0';
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+    #define INLINE inline __attribute__((always_inline))
+    #define NO_INLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+    #define INLINE __forceinline
+    #define NO_INLINE __declspec(noinline)
+#else
+    #define INLINE inline
+    #define NO_INLINE
+#endif
 
 #endif	/* DEFINITIONS_H */

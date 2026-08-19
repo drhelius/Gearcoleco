@@ -80,6 +80,7 @@ inline void StandardMapper::Write(u16 address, u8 value)
     if (m_pCartridge->HasSRAM() && (address >= 0xE000))
     {
         m_SRAM[address & 0x7FF] = value;
+        TraceMapperEvent(TRACE_MAPPER_SRAM, address, value, 0, address & 0x07FF);
     }
     else
     {

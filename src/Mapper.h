@@ -24,11 +24,12 @@
 #include <iostream>
 
 class Cartridge;
+class TraceLogger;
 
 class Mapper
 {
 public:
-    Mapper(Cartridge* pCartridge) : m_pCartridge(pCartridge) { }
+    Mapper(Cartridge* pCartridge) : m_pCartridge(pCartridge), m_pTraceLogger(NULL) { }
     virtual ~Mapper() { }
 
     virtual void Reset() = 0;
@@ -40,11 +41,27 @@ public:
     virtual u8 GetRomBank() { return 0; }
     virtual u32 GetRomBankAddress() { return 0; }
     virtual u8 GetBankReg(int) { return 0; }
+    virtual u8 GetLastBank() { return 0; }
     virtual u8* GetSaveData() { return NULL; }
     virtual int GetSaveDataSize() { return 0; }
+    void SetTraceLogger(TraceLogger* pTraceLogger);
 
 protected:
+    INLINE void TraceMapperEvent(u8 event, u16 address, u8 value,
+        u8 state = 0, u16 auxiliary = 0);
+    void LogMapperEvent(u8 event, u16 address, u8 value,
+        u8 state, u16 auxiliary);
     Cartridge* m_pCartridge;
+    TraceLogger* m_pTraceLogger;
 };
+
+#include "TraceLogger.h"
+
+INLINE void Mapper::TraceMapperEvent(u8 event, u16 address, u8 value,
+    u8 state, u16 auxiliary)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_MAPPER, event))
+        LogMapperEvent(event, address, value, state, auxiliary);
+}
 
 #endif /* MAPPER_H */

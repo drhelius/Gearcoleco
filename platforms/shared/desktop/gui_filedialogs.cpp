@@ -46,6 +46,7 @@ enum FileDialogID
     FileDialog_ChooseSavestatePath,
     FileDialog_ChooseScreenshotPath,
     FileDialog_ChooseSavesPath,
+    FileDialog_ChooseTracePath,
     FileDialog_LoadSymbols,
     FileDialog_SaveScreenshot,
     FileDialog_SaveVGM,
@@ -292,6 +293,15 @@ void gui_file_dialog_choose_saves_path(void)
     SDL_ShowOpenFolderDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_ChooseSavesPath, application_sdl_window, default_path, false);
 }
 
+void gui_file_dialog_choose_trace_path(void)
+{
+    if (!begin_dialog())
+        return;
+
+    const char* default_path = config_debug.trace_disk_path.empty() ? NULL : config_debug.trace_disk_path.c_str();
+    SDL_ShowOpenFolderDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_ChooseTracePath, application_sdl_window, default_path, false);
+}
+
 void gui_file_dialog_load_bios(void)
 {
     if (!begin_dialog())
@@ -483,6 +493,11 @@ static void process_dialog_result(FileDialogID id, const char* path)
         {
             strncpy_fit(gui_savefiles_path, path, sizeof(gui_savefiles_path));
             config_emulator.savefiles_path.assign(path);
+            break;
+        }
+        case FileDialog_ChooseTracePath:
+        {
+            gui_debug_trace_logger_set_output_directory(path);
             break;
         }
         case FileDialog_LoadBios:

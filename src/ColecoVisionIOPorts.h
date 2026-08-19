@@ -40,6 +40,20 @@ public:
     u8 In(u8 port);
     void Out(u8 port, u8 value);
 private:
+    INLINE void TraceIOEvent(u8 event, u8 port, u8 value);
+    INLINE void TracePSGEvent(u8 value);
+    INLINE void TraceAY8910SelectEvent(u8 raw);
+    INLINE void TraceAY8910ReadEvent(u8 raw);
+    INLINE void TraceAY8910WriteEvent(u8 raw);
+    INLINE void TraceSGMEvent(u8 port, u8 raw);
+    void LogIOEvent(u8 event, u8 port, u8 value);
+    void LogPSGEvent(u8 value);
+    void LogAY8910SelectEvent(u8 raw);
+    void LogAY8910ReadEvent(u8 raw);
+    void LogAY8910WriteEvent(u8 raw);
+    void LogSGMEvent(u8 port, u8 raw);
+    u8 GetIOTarget(u8 port, bool write) const;
+    u8 GetAY8910WriteEvent(u8 reg) const;
     Audio* m_pAudio;
     Video* m_pVideo;
     Input* m_pInput;
@@ -55,13 +69,47 @@ private:
 #include "Cartridge.h"
 #include "Memory.h"
 #include "Processor.h"
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
 #include "TraceLogger.h"
-#endif
 
 inline void ColecoVisionIOPorts::SetTraceLogger(TraceLogger* pTraceLogger)
 {
     m_pTraceLogger = pTraceLogger;
+}
+
+INLINE void ColecoVisionIOPorts::TraceIOEvent(u8 event, u8 port, u8 value)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_IO, event))
+        LogIOEvent(event, port, value);
+}
+
+INLINE void ColecoVisionIOPorts::TracePSGEvent(u8 value)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_PSG))
+        LogPSGEvent(value);
+}
+
+INLINE void ColecoVisionIOPorts::TraceAY8910SelectEvent(u8 raw)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_AY8910, TRACE_AY8910_SELECT))
+        LogAY8910SelectEvent(raw);
+}
+
+INLINE void ColecoVisionIOPorts::TraceAY8910ReadEvent(u8 raw)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_AY8910))
+        LogAY8910ReadEvent(raw);
+}
+
+INLINE void ColecoVisionIOPorts::TraceAY8910WriteEvent(u8 raw)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_AY8910))
+        LogAY8910WriteEvent(raw);
+}
+
+INLINE void ColecoVisionIOPorts::TraceSGMEvent(u8 port, u8 raw)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_SGM, TRACE_SGM_CONTROL))
+        LogSGMEvent(port, raw);
 }
 
 inline u8 ColecoVisionIOPorts::In(u8 port)
@@ -85,39 +133,22 @@ inline u8 ColecoVisionIOPorts::In(u8 port)
         default:
         {
             if (port == 0x52)
+            {
                 ret = m_pAudio->SGMRead();
+                TraceAY8910ReadEvent(ret);
+            }
             break;
         }
     }
 
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_IO_PORT))
-    {
-        GC_Trace_Entry e = {};
-        e.type = TRACE_IO_PORT;
-        e.io_port.port = port;
-        e.io_port.value = ret;
-        e.io_port.is_write = false;
-        m_pTraceLogger->TraceLog(e);
-    }
-#endif
+    TraceIOEvent(TRACE_IO_READ, port, ret);
 
     return ret;
 }
 
 inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
 {
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_IO_PORT))
-    {
-        GC_Trace_Entry e = {};
-        e.type = TRACE_IO_PORT;
-        e.io_port.port = port;
-        e.io_port.value = value;
-        e.io_port.is_write = true;
-        m_pTraceLogger->TraceLog(e);
-    }
-#endif
+    TraceIOEvent(TRACE_IO_WRITE, port, value);
 
     switch(port & 0xE0) {
         case 0x80:
@@ -144,16 +175,8 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         }
         case 0xE0:
         {
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-            if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_PSG))
-            {
-                GC_Trace_Entry e = {};
-                e.type = TRACE_PSG;
-                e.psg.value = value;
-                m_pTraceLogger->TraceLog(e);
-            }
-#endif
             m_pAudio->WriteAudioRegister(value);
+            TracePSGEvent(value);
             m_pProcessor->InjectTStates(32);
             break;
         }
@@ -161,62 +184,24 @@ inline void ColecoVisionIOPorts::Out(u8 port, u8 value)
         {
             if (port == 0x50)
             {
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_AY8910))
-                {
-                    GC_Trace_Entry e = {};
-                    e.type = TRACE_AY8910;
-                    e.ay8910.reg = value;
-                    e.ay8910.value = 0;
-                    e.ay8910.is_write = false;
-                    m_pTraceLogger->TraceLog(e);
-                }
-#endif
                 m_pAudio->SGMRegister(value);
+                TraceAY8910SelectEvent(value);
                 break;
             }
             else if (port == 0x51)
             {
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_AY8910))
-                {
-                    GC_Trace_Entry e = {};
-                    e.type = TRACE_AY8910;
-                    e.ay8910.reg = 0xFF;
-                    e.ay8910.value = value;
-                    e.ay8910.is_write = true;
-                    m_pTraceLogger->TraceLog(e);
-                }
-#endif
                 m_pAudio->SGMWrite(value);
+                TraceAY8910WriteEvent(value);
                 break;
             }
             else if (port == 0x53)
             {
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_SGM))
-                {
-                    GC_Trace_Entry e = {};
-                    e.type = TRACE_SGM;
-                    e.sgm.port = port;
-                    e.sgm.value = value;
-                    m_pTraceLogger->TraceLog(e);
-                }
-#endif
+                TraceSGMEvent(port, value);
                 m_pMemory->EnableSGMUpper((value & 0x01) != 0);
             }
             else if (port == 0x7F)
             {
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                if (m_pTraceLogger && m_pTraceLogger->IsEnabled(TRACE_SGM))
-                {
-                    GC_Trace_Entry e = {};
-                    e.type = TRACE_SGM;
-                    e.sgm.port = port;
-                    e.sgm.value = value;
-                    m_pTraceLogger->TraceLog(e);
-                }
-#endif
+                TraceSGMEvent(port, value);
                 m_pMemory->EnableSGMLower((~value & 0x02) != 0);
             }
             else

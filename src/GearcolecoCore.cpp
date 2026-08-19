@@ -83,9 +83,6 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pVideo = new Video(m_pMemory, m_pProcessor);
     m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    m_pTraceLogger = new TraceLogger();
-#endif
 
     m_pMemory->Init();
     m_pProcessor->Init();
@@ -95,9 +92,13 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pCartridge->Init();
 
     m_pProcessor->SetIOPOrts(m_pColecoVisionIOPorts);
+
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    m_pTraceLogger = new TraceLogger(&m_MasterClockCycles);
     m_pProcessor->SetTraceLogger(m_pTraceLogger);
+    m_pMemory->SetTraceLogger(m_pTraceLogger);
     m_pVideo->SetTraceLogger(m_pTraceLogger);
+    m_pInput->SetTraceLogger(m_pTraceLogger);
     m_pColecoVisionIOPorts->SetTraceLogger(m_pTraceLogger);
 #endif
 }
@@ -130,10 +131,10 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
         {
             unsigned int clockCycles = debug_enable && debug->step_debugger ? m_pProcessor->RunInstruction() : m_pProcessor->RunFor(1);
             instruction_completed = true;
+            m_MasterClockCycles += clockCycles;
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
-            m_MasterClockCycles += clockCycles;
             totalClocks += clockCycles;
 
             if (debug_enable)
@@ -175,10 +176,10 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
 #else
             unsigned int clockCycles = m_pProcessor->RunFor(1);
 #endif
+            m_MasterClockCycles += clockCycles;
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
-            m_MasterClockCycles += clockCycles;
             totalClocks += clockCycles;
 
             if (totalClocks > 702240)

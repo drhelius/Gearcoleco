@@ -33,6 +33,7 @@
 void gui_action_reset(void)
 {
     gui_set_status_message("Resetting...", 3000);
+
     gui_debug_trace_logger_clear();
 
     emu_resume();

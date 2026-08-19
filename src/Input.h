@@ -23,6 +23,7 @@
 #include "definitions.h"
 
 class Processor;
+class TraceLogger;
 
 class Input
 {
@@ -44,19 +45,47 @@ public:
     void Spinner2(int movement);
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream, u32 version);
+    void SetTraceLogger(TraceLogger* pTraceLogger);
     void SetInputSegment(InputSegments segment);
     u8 ReadInput(u8 port);
 
 private:
     void UpdateKeypadState(GC_Controllers controller);
+    INLINE void TraceInputChangeEvent(GC_Controllers controller, GC_Keys key, bool pressed);
+    INLINE void TraceInputReadEvent(u8 port, u8 result, int spinner_consumed, bool int_asserted);
+    INLINE void TraceInputWriteEvent(InputSegments effective);
+    void LogInputChangeEvent(GC_Controllers controller, GC_Keys key, bool pressed);
+    void LogInputReadEvent(u8 port, u8 result, int spinner_consumed, bool int_asserted);
+    void LogInputWriteEvent(InputSegments effective);
 
 private:
     Processor* m_pProcessor;
+    TraceLogger* m_pTraceLogger;
     u8 m_Gamepad[2];
     u8 m_Keypad[2];
     u16 m_KeypadState[2];
     InputSegments m_Segment;
     int m_iSpinnerRel[2];
 };
+
+#include "TraceLogger.h"
+
+INLINE void Input::TraceInputChangeEvent(GC_Controllers controller, GC_Keys key, bool pressed)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_INPUT, TRACE_INPUT_CHANGE))
+        LogInputChangeEvent(controller, key, pressed);
+}
+
+INLINE void Input::TraceInputReadEvent(u8 port, u8 result, int spinner_consumed, bool int_asserted)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_INPUT, TRACE_INPUT_READ))
+        LogInputReadEvent(port, result, spinner_consumed, int_asserted);
+}
+
+INLINE void Input::TraceInputWriteEvent(InputSegments effective)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_INPUT, TRACE_INPUT_WRITE))
+        LogInputWriteEvent(effective);
+}
 
 #endif	/* INPUT_H */
