@@ -15,12 +15,10 @@ struct GC_Trace_Format_Options
     const GC_Trace_Entry* previous;
 };
 
-GC_Disassembler_Record* trace_log_get_cpu_record(Memory* memory, const GC_Trace_Entry& entry);
 void trace_log_format_cpu_bytes(const GC_Trace_Entry& entry, char* buffer, size_t buffer_size);
 void trace_log_format_cycle_prefix(const GC_Trace_Entry& entry, const GC_Trace_Entry* previous,
                                    char* buffer, size_t buffer_size);
-void trace_logger_format_entry(const GC_Trace_Entry& entry, Memory* memory,
-                               const GC_Trace_Format_Options& options,
-                               char* buffer, size_t buffer_size);
+void trace_logger_format_entry(const GC_Trace_Entry& entry,
+    const GC_Trace_Format_Options& options, char* buffer, size_t buffer_size);
 
 #endif

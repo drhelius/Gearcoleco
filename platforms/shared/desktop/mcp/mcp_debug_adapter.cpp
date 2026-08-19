@@ -2367,8 +2367,6 @@ json DebugAdapter::GetTraceLog(s64 start, int count)
         actual_count = (u32)(total - actual_start);
     u32 buffer_start = (u32)(actual_start - oldest);
 
-    Memory* memory = m_core->GetMemory();
-
     json lines = json::array();
     for (u32 i = 0; i < actual_count; i++)
     {
@@ -2383,7 +2381,7 @@ json DebugAdapter::GetTraceLog(s64 start, int count)
         options.cycles = true;
         if (buffer_start + i > 0)
             options.previous = &tl->GetEntry(buffer_start + i - 1);
-        trace_logger_format_entry(entry, memory, options, buf, sizeof(buf));
+        trace_logger_format_entry(entry, options, buf, sizeof(buf));
         lines.push_back(buf);
     }
 

@@ -38,7 +38,7 @@ static const GC_Trace_Entry* trace_previous = NULL;
 static GC_Trace_Entry trace_disk_previous = {};
 static bool trace_disk_previous_valid = false;
 static const u32 trace_capacities[] = {100000, 500000, 1000000, 2000000, 5000000};
-static const char* const trace_capacity_labels[] = {"100K (5 MB)", "500K (25 MB)", "1M (50 MB)", "2M (100 MB)", "5M (250 MB)"};
+static const char* const trace_capacity_labels[] = {"100K (10 MB)", "500K (50 MB)", "1M (100 MB)", "2M (200 MB)", "5M (500 MB)"};
 static const u64 trace_limits[] = {10ULL << 20, 50ULL << 20, 100ULL << 20,
     250ULL << 20, 500ULL << 20, 1024ULL << 20, 0};
 
@@ -268,8 +268,7 @@ static bool trace_logger_flush_disk_entries(void)
             (trace_disk_previous_valid ? &trace_disk_previous : NULL)};
         char text[GC_TRACE_FORMAT_BUFFER_SIZE];
         char line[GC_TRACE_FORMAT_BUFFER_SIZE + 64];
-        trace_logger_format_entry(entry, emu_get_core()->GetMemory(), options,
-            text, sizeof(text));
+        trace_logger_format_entry(entry, options, text, sizeof(text));
         int length;
         if (config_debug.trace_counter)
             length = snprintf(line, sizeof(line), "%012llu %s\n",
@@ -474,7 +473,7 @@ static void format_entry_text(const GC_Trace_Entry& entry, bool cycles,
     GC_Trace_Format_Options options = {config_debug.trace_bank,
         config_debug.trace_registers, config_debug.trace_flags,
         config_debug.trace_bytes, cycles, previous};
-    trace_logger_format_entry(entry, emu_get_core()->GetMemory(), options, buffer, size);
+    trace_logger_format_entry(entry, options, buffer, size);
 }
 
 static void format_entry_text(const GC_Trace_Entry& entry, char* buffer, size_t size)
@@ -732,8 +731,6 @@ static bool trace_logger_apply_capacity(void)
 
 static void render_cpu_entry_colored(const GC_Trace_Entry& entry, int prefix_length)
 {
-    GC_Disassembler_Record* record = trace_log_get_cpu_record(emu_get_core()->GetMemory(), entry);
-
     if (config_debug.trace_bank)
     {
         ImGui::TextColored(violet, "%03X:", entry.cpu.bank);
@@ -801,9 +798,9 @@ static void render_cpu_entry_colored(const GC_Trace_Entry& entry, int prefix_len
                  (f & FLAG_CARRY) ? 'C' : 'c');
     }
 
-    if (IsValidPointer(record))
+    if (entry.cpu.name[0] != 0)
     {
-        std::string instr = record->name;
+        std::string instr = entry.cpu.name;
         size_t pos;
         pos = instr.find("{n}");
         if (pos != std::string::npos)

@@ -33,28 +33,6 @@ void trace_log_format_cycle_prefix(const GC_Trace_Entry& entry, const GC_Trace_E
                  (unsigned long long)(entry.cycle - previous->cycle));
 }
 
-GC_Disassembler_Record* trace_log_get_cpu_record(Memory* memory, const GC_Trace_Entry& entry)
-{
-    GC_Disassembler_Record* record = entry.cpu.bank <= 0xFF ?
-        memory->GetDisassemblerRecord(entry.cpu.pc, (u8)entry.cpu.bank) : NULL;
-    bool valid = IsValidPointer(record) &&
-                 record->address == memory->GetTracePhysicalAddress(entry.cpu.pc, (u8)entry.cpu.bank) &&
-                 record->bank == entry.cpu.bank && record->size == entry.cpu.size &&
-                 entry.cpu.size <= sizeof(entry.cpu.opcodes);
-    if (valid)
-    {
-        for (u8 i = 0; i < entry.cpu.size; i++)
-        {
-            if (record->opcodes[i] != entry.cpu.opcodes[i])
-            {
-                valid = false;
-                break;
-            }
-        }
-    }
-    return valid ? record : NULL;
-}
-
 void trace_log_format_cpu_bytes(const GC_Trace_Entry& entry, char* buffer, size_t buffer_size)
 {
     size_t offset = 0;
@@ -64,14 +42,13 @@ void trace_log_format_cpu_bytes(const GC_Trace_Entry& entry, char* buffer, size_
                                   "%02X ", entry.cpu.opcodes[i]);
 }
 
-static void format_cpu(const GC_Trace_Entry& entry, Memory* memory,
+static void format_cpu(const GC_Trace_Entry& entry,
                        const GC_Trace_Format_Options& options,
                        char* buffer, size_t size)
 {
     char mnemonic[80] = "???";
-    GC_Disassembler_Record* record = trace_log_get_cpu_record(memory, entry);
-    if (IsValidPointer(record))
-        strip_tags(record->name, mnemonic, sizeof(mnemonic));
+    if (entry.cpu.name[0] != 0)
+        strip_tags(entry.cpu.name, mnemonic, sizeof(mnemonic));
 
     char bank[16] = "";
     if (options.bank)
@@ -119,9 +96,8 @@ static const char* mapper_name(u8 mapper)
     return mapper < sizeof(names) / sizeof(names[0]) ? names[mapper] : "UNKNOWN";
 }
 
-void trace_logger_format_entry(const GC_Trace_Entry& entry, Memory* memory,
-                               const GC_Trace_Format_Options& options,
-                               char* buffer, size_t buffer_size)
+void trace_logger_format_entry(const GC_Trace_Entry& entry,
+    const GC_Trace_Format_Options& options, char* buffer, size_t buffer_size)
 {
     char cycles[48];
     char text[GC_TRACE_FORMAT_BUFFER_SIZE];
@@ -132,7 +108,7 @@ void trace_logger_format_entry(const GC_Trace_Entry& entry, Memory* memory,
     switch (entry.type)
     {
         case TRACE_CPU:
-            format_cpu(entry, memory, options, text, sizeof(text));
+            format_cpu(entry, options, text, sizeof(text));
             break;
         case TRACE_CPU_IRQ:
             snprintf(text, sizeof(text), "[CPU] %s PC:$%04X Vector:$%04X",
