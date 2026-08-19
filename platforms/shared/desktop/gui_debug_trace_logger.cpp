@@ -185,11 +185,6 @@ bool gui_debug_trace_logger_start(u32 flags)
 
 static bool trace_logger_start(u32 flags, bool update_config)
 {
-    if (flags == 0)
-    {
-        flags = TRACE_FLAG_CPU | TRACE_FLAG_CPU_IRQ;
-        update_config = true;
-    }
     if (update_config)
         trace_logger_set_config_flags(flags);
 
@@ -644,13 +639,6 @@ static void trace_logger_menu(void)
 static void trace_logger_sync_flags(void)
 {
     u32 flags = trace_logger_get_config_flags();
-    if (flags == 0)
-    {
-        config_debug.trace_cpu_enabled = true;
-        config_debug.trace_cpu = true;
-        config_debug.trace_cpu_irq = true;
-        flags = TRACE_FLAG_CPU | TRACE_FLAG_CPU_IRQ;
-    }
     TraceLogger* logger = emu_get_core()->GetTraceLogger();
     for (int i = 0; i < TRACE_TYPE_COUNT; i++)
         logger->SetEventFilter((GC_Trace_Type)i, trace_logger_get_config_event_filter((GC_Trace_Type)i));
@@ -869,9 +857,11 @@ static void render_entry_colored(const GC_Trace_Entry& entry, u64 index)
     ImVec4 color = white;
     if (entry.type == TRACE_CPU_IRQ) color = red;
     else if (entry.type == TRACE_VDP) color = green;
-    else if (entry.type == TRACE_INPUT || entry.type == TRACE_IO) color = yellow;
+    else if (entry.type == TRACE_IO) color = yellow;
+    else if (entry.type == TRACE_INPUT) color = orange;
     else if (entry.type == TRACE_PSG) color = blue;
-    else if (entry.type == TRACE_AY8910 || entry.type == TRACE_SGM) color = violet;
+    else if (entry.type == TRACE_AY8910) color = violet;
+    else if (entry.type == TRACE_SGM) color = cyan;
     else if (entry.type == TRACE_MAPPER) color = magenta;
     ImGui::TextColored(color, "%s", buffer);
 }
