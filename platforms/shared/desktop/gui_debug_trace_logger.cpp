@@ -38,7 +38,6 @@ static const GC_Trace_Entry* trace_previous = NULL;
 static GC_Trace_Entry trace_disk_previous = {};
 static bool trace_disk_previous_valid = false;
 static const u32 trace_capacities[] = {100000, 500000, 1000000, 2000000, 5000000};
-static const char* const trace_capacity_names[] = {"100K", "500K", "1M", "2M", "5M"};
 static const char* const trace_capacity_labels[] = {"100K (5 MB)", "500K (25 MB)", "1M (50 MB)", "2M (100 MB)", "5M (250 MB)"};
 static const u64 trace_limits[] = {10ULL << 20, 50ULL << 20, 100ULL << 20,
     250ULL << 20, 500ULL << 20, 1024ULL << 20, 0};
