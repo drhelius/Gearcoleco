@@ -58,6 +58,7 @@ desktop.ini
 *.sav
 *.tmp
 *.state*
+docs/
 
 #Xcode
 *.xcuserstate
