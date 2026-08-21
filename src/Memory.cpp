@@ -41,6 +41,7 @@ Memory::Memory(Cartridge* pCartridge, Random* pRandom)
     m_pRandom = pRandom;
     InitPointer(m_pProcessor);
     InitPointer(m_pMapper);
+    InitPointer(m_pStandardMapper);
     InitPointer(m_pTraceLogger);
     InitPointer(m_pDisassembledRomMap);
     InitPointer(m_pDisassembledRamMap);
@@ -153,6 +154,7 @@ void Memory::Init()
 void Memory::SetupMapper()
 {
     SafeDelete(m_pMapper);
+    InitPointer(m_pStandardMapper);
 
     switch (m_pCartridge->GetType())
     {
@@ -166,7 +168,8 @@ void Memory::SetupMapper()
             m_pMapper = new OCMMapper(m_pCartridge, this);
             break;
         default:
-            m_pMapper = new StandardMapper(m_pCartridge);
+            m_pStandardMapper = new StandardMapper(m_pCartridge);
+            m_pMapper = m_pStandardMapper;
             break;
     }
 

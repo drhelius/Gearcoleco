@@ -58,19 +58,31 @@ public:
     void Reset();
     u32 GetCRC() const;
     bool IsPAL() const;
-    bool HasSRAM() const;
+    bool HasSRAM() const
+    {
+        return m_bSRAM;
+    }
     bool IsValidROM() const;
     bool IsReady() const;
     bool IsInGameDatabase() const;
     const char* GetGameDatabaseName() const;
     CartridgeTypes GetType() const;
     void ForceConfig(ForceConfiguration config);
-    int GetROMSize() const;
-    int GetROMBankCount() const;
+    int GetROMSize() const
+    {
+        return m_iROMSize;
+    }
+    int GetROMBankCount() const
+    {
+        return m_iROMBankCount;
+    }
     const char* GetFilePath() const;
     const char* GetFileName() const;
     const char* GetFileDirectory() const;
-    u8* GetROM() const;
+    u8* GetROM() const
+    {
+        return m_pROM;
+    }
     bool LoadFromFile(const char* path);
     bool LoadFromBuffer(const u8* buffer, int size);
 

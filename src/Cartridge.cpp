@@ -88,11 +88,6 @@ bool Cartridge::IsPAL() const
     return m_bPAL;
 }
 
-bool Cartridge::HasSRAM() const
-{
-    return m_bSRAM;
-}
-
 bool Cartridge::IsValidROM() const
 {
     return m_bValidROM;
@@ -157,16 +152,6 @@ void Cartridge::ForceConfig(Cartridge::ForceConfiguration config)
     }
 }
 
-int Cartridge::GetROMSize() const
-{
-    return m_iROMSize;
-}
-
-int Cartridge::GetROMBankCount() const
-{
-    return m_iROMBankCount;
-}
-
 const char* Cartridge::GetFilePath() const
 {
     return m_szFilePath;
@@ -180,11 +165,6 @@ const char* Cartridge::GetFileName() const
 const char* Cartridge::GetFileDirectory() const
 {
     return m_szFileDirectory;
-}
-
-u8* Cartridge::GetROM() const
-{
-    return m_pROM;
 }
 
 u8* Cartridge::GetEEPROM() const

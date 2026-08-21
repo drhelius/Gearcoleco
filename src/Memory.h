@@ -28,6 +28,7 @@ class Processor;
 class Cartridge;
 class Random;
 class Mapper;
+class StandardMapper;
 class TraceLogger;
 
 class Memory
@@ -78,6 +79,7 @@ private:
     Cartridge* m_pCartridge;
     Random* m_pRandom;
     Mapper* m_pMapper;
+    StandardMapper* m_pStandardMapper;
     TraceLogger* m_pTraceLogger;
     GC_Disassembler_Record** m_pDisassembledRomMap;
     GC_Disassembler_Record** m_pDisassembledRamMap;

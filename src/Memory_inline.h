@@ -23,6 +23,7 @@
 #include "Processor.h"
 #include "Cartridge.h"
 #include "Mapper.h"
+#include "StandardMapper.h"
 
 inline u8 Memory::Read(u16 address)
 {
@@ -50,6 +51,8 @@ inline u8 Memory::Read(u16 address)
         case 0xC000:
         case 0xE000:
         {
+            if (IsValidPointer(m_pStandardMapper))
+                return m_pStandardMapper->ReadDirect(address);
             return m_pMapper->Read(address);
         }
         default:
@@ -112,7 +115,10 @@ inline void Memory::Write(u16 address, u8 value)
         case 0xC000:
         case 0xE000:
         {
-            m_pMapper->Write(address, value);
+            if (IsValidPointer(m_pStandardMapper))
+                m_pStandardMapper->WriteDirect(address, value);
+            else
+                m_pMapper->Write(address, value);
             break;
         }
     }
