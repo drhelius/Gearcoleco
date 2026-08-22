@@ -48,7 +48,7 @@ public:
     GearcolecoCore();
     ~GearcolecoCore();
     void Init(GC_Color_Format pixelFormat = GC_PIXEL_RGBA8888);
-    bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug = NULL);
+    bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug = NULL, bool render = true);
     bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL);
     bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
     void SaveDisassembledROM();
@@ -80,10 +80,10 @@ public:
     Input* GetInput();
     TraceLogger* GetTraceLogger();
     u64 GetMasterClockCycles();
+    void RenderFrameBuffer(u8* finalFrameBuffer);
 
 private:
     void Reset();
-    void RenderFrameBuffer(u8* finalFrameBuffer);
     bool SaveState(std::ostream& stream, size_t& size, bool screenshot);
     bool LoadState(std::istream& stream);
     std::string GetSaveStatePath(const char* path, int index);

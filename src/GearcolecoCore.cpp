@@ -103,13 +103,14 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
 #endif
 }
 
-bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug)
+bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug, bool render)
 {
     m_pFrameBuffer = pFrameBuffer;
 
     if (!m_pMemory->IsBiosLoaded())
     {
-        RenderFrameBuffer(pFrameBuffer);
+        if (render)
+            RenderFrameBuffer(pFrameBuffer);
         return false;
     }
 
@@ -161,7 +162,8 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
         while (!vblank);
 
         m_pAudio->EndFrame(pSampleBuffer, pSampleCount);
-        RenderFrameBuffer(pFrameBuffer);
+        if (render)
+            RenderFrameBuffer(pFrameBuffer);
 
         return m_pProcessor->BreakpointHit() || m_pProcessor->RunToBreakpointHit();
 #else
@@ -188,7 +190,8 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
         while (!vblank);
 
         m_pAudio->EndFrame(pSampleBuffer, pSampleCount);
-        RenderFrameBuffer(pFrameBuffer);
+        if (render)
+            RenderFrameBuffer(pFrameBuffer);
 
         return false;
 #endif
