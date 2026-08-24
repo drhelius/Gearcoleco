@@ -39,6 +39,9 @@ EXTERN uint32_t ogl_renderer_emu_texture;
 EXTERN uint32_t ogl_renderer_emu_debug_vram_background;
 EXTERN uint32_t ogl_renderer_emu_debug_vram_sprites[GC_MAX_SPRITES];
 EXTERN uint32_t ogl_renderer_emu_debug_vram_tiles;
+EXTERN uint32_t ogl_renderer_emu_debug_f18a_nametable;
+EXTERN uint32_t ogl_renderer_emu_debug_f18a_sprites[GC_MAX_SPRITES];
+EXTERN uint32_t ogl_renderer_emu_debug_f18a_patterns;
 EXTERN uint32_t ogl_renderer_emu_savestates;
 EXTERN const char* ogl_renderer_opengl_version;
 

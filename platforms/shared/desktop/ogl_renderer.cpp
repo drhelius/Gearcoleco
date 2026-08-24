@@ -125,6 +125,9 @@ void ogl_renderer_destroy(void)
     glDeleteTextures(1, &ogl_renderer_emu_debug_vram_background);
     glDeleteTextures(GC_MAX_SPRITES, ogl_renderer_emu_debug_vram_sprites);
     glDeleteTextures(1, &ogl_renderer_emu_debug_vram_tiles);
+    glDeleteTextures(1, &ogl_renderer_emu_debug_f18a_nametable);
+    glDeleteTextures(GC_MAX_SPRITES, ogl_renderer_emu_debug_f18a_sprites);
+    glDeleteTextures(1, &ogl_renderer_emu_debug_f18a_patterns);
     glDeleteTextures(1, &ogl_renderer_emu_savestates);
 
     if (quad_shader_program)
@@ -316,6 +319,19 @@ static void init_ogl_debug(void)
     }
 
     create_texture_2d(&ogl_renderer_emu_debug_vram_tiles, 32 * 8, 32 * 8, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)emu_debug_tile_buffer, false);
+
+    create_texture_2d(&ogl_renderer_emu_debug_f18a_nametable, GC_VIDEO_MAX_WIDTH,
+        GC_VIDEO_MAX_HEIGHT, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE,
+        (GLvoid*)emu_debug_f18a_nametable_buffer, false);
+
+    for (int s = 0; s < GC_MAX_SPRITES; s++)
+    {
+        create_texture_2d(&ogl_renderer_emu_debug_f18a_sprites[s], 16, 16, GL_RGBA8,
+            GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)emu_debug_f18a_sprite_buffers[s], false);
+    }
+
+    create_texture_2d(&ogl_renderer_emu_debug_f18a_patterns, 256, 256, GL_RGBA8,
+        GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)emu_debug_f18a_pattern_buffer, false);
 }
 
 static void init_ogl_savestates(void)
@@ -476,14 +492,16 @@ static void update_system_texture(void)
 
 static void update_debug_textures(void)
 {
-    if (config_debug.show_video_nametable)
+    bool f18a_active = emu_get_core()->GetVideoChip() == GC_VIDEO_CHIP_F18A;
+
+    if (!f18a_active && config_debug.show_tms9918a_nametable)
     {
         glBindTexture(GL_TEXTURE_2D, ogl_renderer_emu_debug_vram_background);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256,
             GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*) emu_debug_background_buffer);
     }
 
-    if (config_debug.show_video_sprites)
+    if (!f18a_active && config_debug.show_tms9918a_sprites)
     {
         for (int s = 0; s < GC_MAX_SPRITES; s++)
         {
@@ -493,11 +511,35 @@ static void update_debug_textures(void)
         }
     }
 
-    if (config_debug.show_video_tiles)
+    if (!f18a_active && config_debug.show_tms9918a_patterns)
     {
         glBindTexture(GL_TEXTURE_2D, ogl_renderer_emu_debug_vram_tiles);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 32 * 8, 32 * 8,
             GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*) emu_debug_tile_buffer);
+    }
+
+    if (f18a_active && config_debug.show_f18a_nametables)
+    {
+        glBindTexture(GL_TEXTURE_2D, ogl_renderer_emu_debug_f18a_nametable);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GC_VIDEO_MAX_WIDTH, GC_VIDEO_MAX_HEIGHT,
+            GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)emu_debug_f18a_nametable_buffer);
+    }
+
+    if (f18a_active && config_debug.show_f18a_sprites)
+    {
+        for (int s = 0; s < GC_MAX_SPRITES; s++)
+        {
+            glBindTexture(GL_TEXTURE_2D, ogl_renderer_emu_debug_f18a_sprites[s]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 16, 16,
+                GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)emu_debug_f18a_sprite_buffers[s]);
+        }
+    }
+
+    if (f18a_active && config_debug.show_f18a_patterns)
+    {
+        glBindTexture(GL_TEXTURE_2D, ogl_renderer_emu_debug_f18a_patterns);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256,
+            GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)emu_debug_f18a_pattern_buffer);
     }
 }
 

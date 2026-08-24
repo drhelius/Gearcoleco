@@ -25,6 +25,8 @@ enum GC_GameDBMode
     GC_GameDBMode_None = 0,
     GC_GameDBMode_SRAM = 1,
     GC_GameDBMode_OCM = 2,
+    GC_GameDBMode_F18A = 4,
+    GC_GameDBMode_OCM_F18A = GC_GameDBMode_OCM | GC_GameDBMode_F18A,
 };
 
 struct GC_GameDBEntry
@@ -36,19 +38,31 @@ struct GC_GameDBEntry
 
 const GC_GameDBEntry kGameDatabase[] =
 {
-    {0xE4676D56, "Amidar (Opcode)", GC_GameDBMode_OCM},
-    {0x76004C98, "DK Arcade (Opcode)", GC_GameDBMode_OCM},
+    {0xE4676D56, "Amidar (Opcode)", GC_GameDBMode_OCM_F18A},
+    {0x76004C98, "DK Arcade (Opcode)", GC_GameDBMode_OCM_F18A},
     {0xC4EA9601, "DK Jr. Arcade (Opcode)", GC_GameDBMode_OCM},
-    {0x6C8113C1, "Goonies (Opcode)", GC_GameDBMode_OCM},
+    {0x6C8113C1, "Goonies (Opcode)", GC_GameDBMode_OCM_F18A},
     {0x30D337E4, "Gradius (Opcode)", GC_GameDBMode_OCM},
     {0x2426C300, "Gradius (Opcode) Alt", GC_GameDBMode_OCM},
-    {0x80586CC5, "Knightmare (Opcode)", GC_GameDBMode_OCM},
+    {0x80586CC5, "Knightmare (Opcode)", GC_GameDBMode_OCM_F18A},
     {0xFEE15196, "Lord of the Dungeon", GC_GameDBMode_SRAM},
     {0x1053F610, "Lord of the Dungeon", GC_GameDBMode_SRAM},
-    {0xBDAE4248, "Moon Cresta (Opcode)", GC_GameDBMode_OCM},
+    {0xBDAE4248, "Moon Cresta (Opcode)", GC_GameDBMode_OCM_F18A},
     {0xDE785EE3, "Pacman DX (Opcode)", GC_GameDBMode_OCM},
     {0x6831AD48, "Penguin Adventure (Opcode)", GC_GameDBMode_OCM},
     {0xCF803DDC, "Time Pilot (Opcode)", GC_GameDBMode_OCM},
+    {0x91326103, "Bosconian (Opcode)", GC_GameDBMode_F18A},
+    {0x3E4F3045, "Tank Battalion (Opcode)", GC_GameDBMode_F18A},
+    {0xD0F37969, "Tank Mission (CollectorVision)", GC_GameDBMode_F18A},
+    {0xB90C2062, "Warp & Warp (Opcode)", GC_GameDBMode_F18A},
+    {0xB5BE3448, "Sudoku (Team Pixelboy)", GC_GameDBMode_F18A},
+    {0xFD298C7E, "Super Space Acer", GC_GameDBMode_F18A},
+    {0xAD7BB5B0, "F18A Test (PVColLib)", GC_GameDBMode_F18A},
+    {0x6411055C, "F18A Palette (PVColLib)", GC_GameDBMode_F18A},
+    {0x1AA1E72A, "F18A ECM3 (PVColLib)", GC_GameDBMode_F18A},
+    {0x0BEAFDED, "F18A Scroll (PVColLib)", GC_GameDBMode_F18A},
+    {0x8D6F8E5F, "F18A Bitmap (PVColLib)", GC_GameDBMode_F18A},
+    {0xB57F5412, "F18A Mandelbrot GPU", GC_GameDBMode_F18A},
 
     {0, 0, GC_GameDBMode_None}
 };
@@ -114,4 +128,3 @@ u32 CalculateCRC32(u32 crc, const u8 *buf, int size)
 }
 
 #endif	/* GAME_DB_H */
-

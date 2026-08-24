@@ -4,7 +4,10 @@ SOURCES_CXX := $(CORE_DIR)/libretro.cpp \
                $(SOURCE_DIR)/GearcolecoCore.cpp \
                $(SOURCE_DIR)/Memory.cpp \
                $(SOURCE_DIR)/Processor.cpp \
-               $(SOURCE_DIR)/Video.cpp \
+               $(SOURCE_DIR)/TMS9918A.cpp \
+               $(SOURCE_DIR)/F18A.cpp \
+               $(SOURCE_DIR)/F18A_enhancements.cpp \
+               $(SOURCE_DIR)/F18AGPU.cpp \
                $(SOURCE_DIR)/Audio.cpp \
                $(SOURCE_DIR)/AY8910.cpp \
                $(SOURCE_DIR)/Input.cpp \

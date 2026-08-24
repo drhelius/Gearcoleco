@@ -17,12 +17,12 @@
  *
  */
 
-#include "Video.h"
+#include "F18A.h"
 #include "Memory.h"
 #include "Processor.h"
 #include "TraceLogger.h"
 
-Video::Video(Memory* pMemory, Processor* pProcessor)
+F18A::F18A(Memory* pMemory, Processor* pProcessor)
 {
     m_pMemory = pMemory;
     m_pProcessor = pProcessor;
@@ -31,7 +31,7 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     InitPointer(m_pFrameBuffer);
     InitPointer(m_pVdpVRAM);
     m_bFirstByteInSequence = true;
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 64; i++)
         m_VdpRegister[i] = 0;
     m_VdpBuffer = 0;
     m_VdpAddress = 0;
@@ -48,34 +48,57 @@ Video::Video(Memory* pMemory, Processor* pProcessor)
     m_bSpriteOvrRequest = false;
     m_bNoSpriteLimit = false;
     m_Overscan = OverscanDisabled;
+    m_f18a_unlocked = false;
+    m_f18a_unlock_sequence = 0;
+    m_f18a_data_port_mode = false;
+    m_f18a_palette_index = 0;
+    m_f18a_palette_latch = 0;
+    m_f18a_register_read = 0;
+    m_f18a_palette_second_byte = false;
+    m_f18a_line_interrupt_pending = false;
+    m_f18a_irq_line = false;
+    m_screen_width = GC_RESOLUTION_WIDTH;
+    m_screen_height = GC_RESOLUTION_HEIGHT;
+    m_pending_screen_width = GC_RESOLUTION_WIDTH;
+    m_pending_screen_height = GC_RESOLUTION_HEIGHT;
+    m_f18a_mode_dirty = true;
+    m_f18a_gpu_clock_accumulator = 0;
+    m_f18a_counter_nano = 0;
+    m_f18a_counter_micro = 0;
+    m_f18a_counter_milli = 0;
+    m_f18a_counter_seconds = 0;
+    m_f18a_counter_snapshot_nano = 0;
+    m_f18a_counter_snapshot_micro = 0;
+    m_f18a_counter_snapshot_milli = 0;
+    m_f18a_counter_snapshot_seconds = 0;
 
     for (int i = 0; i < 48; i++)
         m_CustomPalette[i] = 0;
     m_pCurrentPalette = const_cast<u8*>(kPalette_888_coleco);
 }
 
-Video::~Video()
+F18A::~F18A()
 {
     SafeDeleteArray(m_pInfoBuffer);
     SafeDeleteArray(m_pFrameBuffer);
     SafeDeleteArray(m_pVdpVRAM);
 }
 
-void Video::Init()
+void F18A::Init()
 {
-    m_pFrameBuffer = new u16[GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN];
-    m_pInfoBuffer = new u8[GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL];
+    m_pFrameBuffer = new u16[GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT];
+    m_pInfoBuffer = new u8[GC_VIDEO_MAX_WIDTH * GC_LINES_PER_FRAME_PAL];
     m_pVdpVRAM = new u8[0x4000];
     InitPalettes();
     Reset(false);
 }
 
-void Video::SetTraceLogger(TraceLogger* pTraceLogger)
+void F18A::SetTraceLogger(TraceLogger* pTraceLogger)
 {
     m_pTraceLogger = pTraceLogger;
 }
 
-void Video::LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
+void F18A::LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     GC_Trace_Entry e = {};
@@ -156,7 +179,7 @@ void Video::LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
 #endif
 }
 
-void Video::Reset(bool bPAL)
+void F18A::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
     m_iLinesPerFrame = bPAL ? GC_LINES_PER_FRAME_PAL : GC_LINES_PER_FRAME_NTSC;
@@ -165,14 +188,16 @@ void Video::Reset(bool bPAL)
     m_VdpAddress = 0;
     m_VdpStatus = 0;
 
-    for (int i = 0; i < (GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN); i++)
+    for (int i = 0; i < (GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT); i++)
         m_pFrameBuffer[i] = 1;
-    for (int i = 0; i < (GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
+    for (int i = 0; i < (GC_VIDEO_MAX_WIDTH * GC_LINES_PER_FRAME_PAL); i++)
         m_pInfoBuffer[i] = 0;
     for (int i = 0; i < 0x4000; i++)
         m_pVdpVRAM[i] = 0;
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 64; i++)
         m_VdpRegister[i] = 0;
+
+    ResetF18A();
 
     m_bDisplayEnabled = false;
     m_bSpriteOvrRequest = false;
@@ -193,33 +218,40 @@ void Video::Reset(bool bPAL)
     m_Timing[TIMING_DISPLAY] = 37;
 }
 
-void Video::SetNoSpriteLimit(bool noSpriteLimit)
+void F18A::SetNoSpriteLimit(bool noSpriteLimit)
 {
     m_bNoSpriteLimit = noSpriteLimit;
 }
 
-bool Video::Tick(unsigned int clockCycles)
+bool F18A::Tick(unsigned int clockCycles)
 {
     bool return_vblank = false;
+
+    RunF18AGPU(clockCycles);
+
+    if ((m_iRenderLine == 0) &&
+        ((m_screen_width != m_pending_screen_width) || (m_screen_height != m_pending_screen_height)))
+    {
+        m_screen_width = m_pending_screen_width;
+        m_screen_height = m_pending_screen_height;
+    }
 
     m_iCycleCounter += clockCycles;
 
     ///// VINT /////
-    if (m_iRenderLine == GC_RESOLUTION_HEIGHT)
+    if (m_iRenderLine == m_screen_height)
     {
         if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
         {
             m_LineEvents.vint = true;
 
-            if (IsSetBit(m_VdpRegister[1], 5) && !IsSetBit(m_VdpStatus, 7))
-            {
-                m_pProcessor->RequestNMI();
-                TraceVDPEvent(TRACE_VDP_NMI_REQUEST, 1);
-            }
-
             TraceVDPEvent(TRACE_VDP_VINT_FLAG);
             TraceVDPEvent(TRACE_VDP_VBLANK);
             m_VdpStatus = SetBit(m_VdpStatus, 7);
+
+            if (IsSetBit(m_VdpRegister[50], 5))
+                m_f18a_gpu.Trigger();
+            UpdateIRQLine();
         }
     }
 
@@ -242,10 +274,17 @@ bool Video::Tick(unsigned int clockCycles)
     if (m_iCycleCounter >= GC_CYCLES_PER_LINE)
     {
         LatchSpriteAttributes();
-        if (m_iRenderLine == GC_RESOLUTION_HEIGHT)
+        if (IsSetBit(m_VdpRegister[50], 6))
+            m_f18a_gpu.Trigger();
+        if (m_iRenderLine == m_screen_height)
             return_vblank = true;
         m_iRenderLine++;
         m_iRenderLine %= m_iLinesPerFrame;
+        if ((m_VdpRegister[19] != 0) && (m_iRenderLine == m_VdpRegister[19]))
+        {
+            m_f18a_line_interrupt_pending = true;
+            UpdateIRQLine();
+        }
         if (m_iRenderLine == 0)
             TraceVDPEvent(TRACE_VDP_FRAME);
         m_iCycleCounter -= GC_CYCLES_PER_LINE;
@@ -257,7 +296,7 @@ bool Video::Tick(unsigned int clockCycles)
     return return_vblank;
 }
 
-u8 Video::GetDataPort()
+u8 F18A::GetDataPort()
 {
     m_bFirstByteInSequence = true;
     u8 ret = m_VdpBuffer;
@@ -266,32 +305,48 @@ u8 Video::GetDataPort()
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VRAM, m_VdpAddress, true);
 #endif
-    m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
+    AdvanceF18ADataPortAddress();
     return ret;
 }
 
-u8 Video::GetStatusFlags()
+u8 F18A::GetStatusFlags()
 {
     m_bFirstByteInSequence = true;
-    u8 ret = m_VdpStatus;
+    int selected = m_VdpRegister[15] & 0x0F;
+    u8 ret = GetF18AStatusRegister(selected);
     TraceVDPEvent(TRACE_VDP_STATUS_READ);
-    m_VdpStatus &= 0x1F;
+    if (selected == 0)
+        m_VdpStatus &= 0x1F;
+    else if (selected == 1)
+        m_f18a_line_interrupt_pending = false;
+
+    m_f18a_palette_second_byte = false;
+    m_f18a_data_port_mode = false;
+    UpdateIRQLine();
+
     return ret;
 }
 
-void Video::WriteData(u8 data)
+void F18A::WriteData(u8 data)
 {
     m_bFirstByteInSequence = true;
     TraceVDPEvent(TRACE_VDP_DATA_WRITE, 0xFF, data);
+
+    if (m_f18a_data_port_mode)
+    {
+        WriteF18APaletteData(data);
+        return;
+    }
+
     m_VdpBuffer = data;
     m_pVdpVRAM[m_VdpAddress] = data;
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VRAM, m_VdpAddress, false);
 #endif
-    m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
+    AdvanceF18ADataPortAddress();
 }
 
-void Video::WriteControl(u8 control)
+void F18A::WriteControl(u8 control)
 {
     if (m_bFirstByteInSequence)
     {
@@ -304,79 +359,68 @@ void Video::WriteControl(u8 control)
         m_bFirstByteInSequence = true;
         m_VdpAddress = ((control & 0x3F) << 8) | m_VdpBuffer;
 
-        switch (control & 0xC0)
+        if ((control & 0xC0) == 0x00)
         {
-            case 0x00:
-            {
-                m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
-                m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
-                break;
-            }
-            case 0x80:
-            {
-                bool old_nmi = IsSetBit(m_VdpRegister[1], 5);
-                u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
-                u8 reg = control & 0x07;
-                m_VdpRegister[reg] = m_VdpBuffer & masks[reg];
-                if (reg < 2)
-                {
-                    m_iMode = ((m_VdpRegister[1] & 0x08) >> 1) | (m_VdpRegister[0] & 0x02) |
-                        ((m_VdpRegister[1] & 0x10) >> 4);
-                }
+            m_VdpBuffer = m_pVdpVRAM[m_VdpAddress];
+            m_f18a_register_read = ReadF18ARegister((m_VdpAddress >> 8) & 0x3F);
+            AdvanceF18ADataPortAddress();
+        }
+        else if ((control & 0x80) != 0)
+        {
+            u8 reg = control & 0x3F;
+            WriteVDPRegister(reg, m_VdpBuffer);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER, reg, false);
+            m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER, reg, false);
 #endif
-                TraceVDPEvent(TRACE_VDP_REG_WRITE, reg, m_VdpBuffer);
-
-                if ((reg == 1) && IsSetBit(m_VdpRegister[1], 5) && (!old_nmi) && IsSetBit(m_VdpStatus, 7))
-                {
-                    m_pProcessor->RequestNMI();
-                    TraceVDPEvent(TRACE_VDP_NMI_REQUEST, reg, m_VdpBuffer, 0xFF, 1);
-                }
-
-                break;
-            }
+            TraceVDPEvent(TRACE_VDP_REG_WRITE, reg, m_VdpBuffer);
         }
     }
 }
 
-bool Video::IsPAL()
+bool F18A::IsPAL()
 {
     return m_bPAL;
 }
 
-u8 Video::GetBufferReg()
+u8 F18A::GetBufferReg()
 {
     return m_VdpBuffer;
 }
 
-u16 Video::GetAddressReg()
+u16 F18A::GetAddressReg()
 {
     return m_VdpAddress;
 }
 
-u8 Video::GetStatusReg()
+u8 F18A::GetStatusReg()
 {
     return m_VdpStatus;
 }
 
-int Video::GetRenderLine()
+int F18A::GetRenderLine()
 {
     return m_iRenderLine;
 }
 
-int Video::GetCycleCounter()
+int F18A::GetCycleCounter()
 {
     return m_iCycleCounter;
 }
 
-bool Video::GetLatch()
+bool F18A::GetLatch()
 {
     return m_bFirstByteInSequence;
 }
 
-void Video::ScanLine(int line)
+void F18A::ScanLine(int line)
 {
+    if (UseF18ARenderer())
+    {
+        if (line < m_screen_height)
+            RenderF18AScanline(line);
+        return;
+    }
+
     if (m_bDisplayEnabled)
     {
         if (line < GC_RESOLUTION_HEIGHT)
@@ -404,7 +448,7 @@ void Video::ScanLine(int line)
     }
 }
 
-void Video::LatchSpriteAttributes()
+void F18A::LatchSpriteAttributes()
 {
     u16 sprite_attribute_addr = (m_VdpRegister[5] & 0x7F) << 7;
 
@@ -412,7 +456,7 @@ void Video::LatchSpriteAttributes()
         m_SpriteAttribLatch[i] = m_pVdpVRAM[sprite_attribute_addr + i];
 }
 
-void Video::RenderBackground(int line)
+void F18A::RenderBackground(int line)
 {
     int line_offset = line * GC_RESOLUTION_WIDTH;
 
@@ -541,9 +585,10 @@ void Video::RenderBackground(int line)
     }
 }
 
-void Video::RenderSprites(int line)
+void F18A::RenderSprites(int line)
 {
     int sprite_count = 0;
+    int sprite_limit = m_VdpRegister[30] & 0x1F;
     int line_width = line * GC_RESOLUTION_WIDTH;
     int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
     bool sprite_zoom = IsSetBit(m_VdpRegister[1], 0);
@@ -579,7 +624,7 @@ void Video::RenderSprites(int line)
 
         sprite_count++;
 
-        if (!IsSetBit(m_VdpStatus, 6) && (sprite_count > 4))
+        if (!IsSetBit(m_VdpStatus, 6) && (sprite_limit != 31) && (sprite_count > sprite_limit))
         {
             TraceVDPEvent(TRACE_VDP_SPRITE_OVERFLOW, 0xFF, 0, sprite);
             m_VdpStatus = SetBit(m_VdpStatus, 6);
@@ -623,7 +668,8 @@ void Video::RenderSprites(int line)
             else
                 sprite_pixel = IsSetBit(m_pVdpVRAM[sprite_line_addr + 16], 15 - tile_x_adjusted);
 
-            if (sprite_pixel && ((sprite_count < 5) || m_bNoSpriteLimit))
+            if (sprite_pixel && ((sprite_limit == 31) || (sprite_count <= sprite_limit) ||
+                m_bNoSpriteLimit))
             {
                 if (!IsSetBit(m_pInfoBuffer[pixel], 0) && (sprite_color > 0))
                 {
@@ -650,7 +696,7 @@ void Video::RenderSprites(int line)
 }
 
 
-void Video::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
+void F18A::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
 {
     int x = 0;
     int y = 0;
@@ -664,6 +710,8 @@ void Video::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     int overscan_color = (m_VdpRegister[7] & 0x0F) * 3;
     int buffer_size = size * 4;
     bool bgr = (pixelFormat == GC_PIXEL_BGRA8888);
+
+    overscan = false;
 
     if (overscan && (m_Overscan != OverscanDisabled))
     {
@@ -712,14 +760,15 @@ void Video::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
         else
             src_color = srcFrameBuffer[i++] * 3;
 
-        dstFrameBuffer[j + 0] = bgr ? m_pCurrentPalette[src_color + 2] : m_pCurrentPalette[src_color];
-        dstFrameBuffer[j + 1] = m_pCurrentPalette[src_color + 1];
-        dstFrameBuffer[j + 2] = bgr ? m_pCurrentPalette[src_color] : m_pCurrentPalette[src_color + 2];
+        const u8* palette = m_f18a_palette_888_rgb;
+        dstFrameBuffer[j + 0] = bgr ? palette[src_color + 2] : palette[src_color];
+        dstFrameBuffer[j + 1] = palette[src_color + 1];
+        dstFrameBuffer[j + 2] = bgr ? palette[src_color] : palette[src_color + 2];
         dstFrameBuffer[j + 3] = 0xFF;
     }
 }
 
-void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
+void F18A::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan)
 {
     int x = 0;
     int y = 0;
@@ -737,9 +786,11 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     const u16* pal;
 
     if (bgr)
-        pal = green_6bit ? m_palette_565_bgr : m_palette_555_bgr;
+        pal = green_6bit ? m_f18a_palette_565_bgr : m_f18a_palette_555_bgr;
     else
-        pal = green_6bit ? m_palette_565_rgb : m_palette_555_rgb;
+        pal = green_6bit ? m_f18a_palette_565_rgb : m_f18a_palette_555_rgb;
+
+    overscan = false;
 
     if (overscan && (m_Overscan != OverscanDisabled))
     {
@@ -792,7 +843,7 @@ void Video::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format
     }
 }
 
-void Video::SetCustomPalette(GC_Color* palette)
+void F18A::SetCustomPalette(GC_Color* palette)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -806,7 +857,7 @@ void Video::SetCustomPalette(GC_Color* palette)
     InitPalettes();
 }
 
-void Video::SetPredefinedPalette(int palette)
+void F18A::SetPredefinedPalette(int palette)
 {
     const u8* predefined;
 
@@ -829,7 +880,7 @@ void Video::SetPredefinedPalette(int palette)
     }
 }
 
-void Video::InitPalettes()
+void F18A::InitPalettes()
 {
     for (int i=0,j=0; i<16; i++,j+=3)
     {
@@ -849,52 +900,114 @@ void Video::InitPalettes()
     }
 }
 
-void Video::SetOverscan(Overscan overscan)
+void F18A::SetOverscan(Overscan overscan)
 {
     m_Overscan = overscan;
 }
 
-Video::Overscan Video::GetOverscan()
+F18A::Overscan F18A::GetOverscan()
 {
     return m_Overscan;
 }
 
-void Video::SaveState(std::ostream& stream)
+void F18A::SaveState(std::ostream& stream)
 {
-    stream.write(reinterpret_cast<const char*> (m_pInfoBuffer), GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL);
-    stream.write(reinterpret_cast<const char*> (m_pVdpVRAM), 0x4000);
-    stream.write(reinterpret_cast<const char*> (&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
-    stream.write(reinterpret_cast<const char*> (m_VdpRegister), sizeof(m_VdpRegister));
-    stream.write(reinterpret_cast<const char*> (&m_VdpBuffer), sizeof(m_VdpBuffer));
-    stream.write(reinterpret_cast<const char*> (&m_VdpAddress), sizeof(m_VdpAddress));
-    stream.write(reinterpret_cast<const char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
-    stream.write(reinterpret_cast<const char*> (&m_VdpStatus), sizeof(m_VdpStatus));
-    stream.write(reinterpret_cast<const char*> (&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
-    stream.write(reinterpret_cast<const char*> (&m_LineEvents), sizeof(m_LineEvents));
-    stream.write(reinterpret_cast<const char*> (&m_iRenderLine), sizeof(m_iRenderLine));
-    stream.write(reinterpret_cast<const char*> (&m_bPAL), sizeof(m_bPAL));
-    stream.write(reinterpret_cast<const char*> (&m_iMode), sizeof(m_iMode));
-    stream.write(reinterpret_cast<const char*> (&m_Timing), sizeof(m_Timing));
-    stream.write(reinterpret_cast<const char*> (&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
-    stream.write(reinterpret_cast<const char*> (&m_bSpriteOvrRequest), sizeof(m_bSpriteOvrRequest));
+    stream.write(reinterpret_cast<const char*>(m_pInfoBuffer), GC_VIDEO_MAX_WIDTH * GC_LINES_PER_FRAME_PAL);
+    stream.write(reinterpret_cast<const char*>(m_pVdpVRAM), 0x4000);
+    stream.write(reinterpret_cast<const char*>(&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
+    stream.write(reinterpret_cast<const char*>(m_VdpRegister), sizeof(m_VdpRegister));
+    stream.write(reinterpret_cast<const char*>(&m_VdpBuffer), sizeof(m_VdpBuffer));
+    stream.write(reinterpret_cast<const char*>(&m_VdpAddress), sizeof(m_VdpAddress));
+    stream.write(reinterpret_cast<const char*>(&m_iCycleCounter), sizeof(m_iCycleCounter));
+    stream.write(reinterpret_cast<const char*>(&m_VdpStatus), sizeof(m_VdpStatus));
+    stream.write(reinterpret_cast<const char*>(&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
+    stream.write(reinterpret_cast<const char*>(&m_LineEvents.vint), sizeof(m_LineEvents.vint));
+    stream.write(reinterpret_cast<const char*>(&m_LineEvents.render), sizeof(m_LineEvents.render));
+    stream.write(reinterpret_cast<const char*>(&m_LineEvents.display), sizeof(m_LineEvents.display));
+    stream.write(reinterpret_cast<const char*>(&m_iRenderLine), sizeof(m_iRenderLine));
+    stream.write(reinterpret_cast<const char*>(&m_bPAL), sizeof(m_bPAL));
+    stream.write(reinterpret_cast<const char*>(&m_iMode), sizeof(m_iMode));
+    stream.write(reinterpret_cast<const char*>(m_Timing), sizeof(m_Timing));
+    stream.write(reinterpret_cast<const char*>(&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
+    stream.write(reinterpret_cast<const char*>(&m_bSpriteOvrRequest), sizeof(m_bSpriteOvrRequest));
+    stream.write(reinterpret_cast<const char*>(m_SpriteAttribLatch), sizeof(m_SpriteAttribLatch));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_unlocked), sizeof(m_f18a_unlocked));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_unlock_sequence), sizeof(m_f18a_unlock_sequence));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_data_port_mode), sizeof(m_f18a_data_port_mode));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_palette_index), sizeof(m_f18a_palette_index));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_palette_latch), sizeof(m_f18a_palette_latch));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_register_read), sizeof(m_f18a_register_read));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_palette_second_byte), sizeof(m_f18a_palette_second_byte));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_line_interrupt_pending), sizeof(m_f18a_line_interrupt_pending));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_irq_line), sizeof(m_f18a_irq_line));
+    stream.write(reinterpret_cast<const char*>(&m_screen_width), sizeof(m_screen_width));
+    stream.write(reinterpret_cast<const char*>(&m_screen_height), sizeof(m_screen_height));
+    stream.write(reinterpret_cast<const char*>(&m_pending_screen_width), sizeof(m_pending_screen_width));
+    stream.write(reinterpret_cast<const char*>(&m_pending_screen_height), sizeof(m_pending_screen_height));
+    stream.write(reinterpret_cast<const char*>(m_f18a_palette), sizeof(m_f18a_palette));
+    stream.write(reinterpret_cast<const char*>(m_f18a_gpu_ram), sizeof(m_f18a_gpu_ram));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_gpu_clock_accumulator), sizeof(m_f18a_gpu_clock_accumulator));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_nano), sizeof(m_f18a_counter_nano));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_micro), sizeof(m_f18a_counter_micro));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_milli), sizeof(m_f18a_counter_milli));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_seconds), sizeof(m_f18a_counter_seconds));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_snapshot_nano), sizeof(m_f18a_counter_snapshot_nano));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_snapshot_micro), sizeof(m_f18a_counter_snapshot_micro));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_snapshot_milli), sizeof(m_f18a_counter_snapshot_milli));
+    stream.write(reinterpret_cast<const char*>(&m_f18a_counter_snapshot_seconds), sizeof(m_f18a_counter_snapshot_seconds));
+    m_f18a_gpu.SaveState(stream);
 }
 
-void Video::LoadState(std::istream& stream)
+void F18A::LoadState(std::istream& stream, u32 version)
 {
-    stream.read(reinterpret_cast<char*> (m_pInfoBuffer), GC_RESOLUTION_WIDTH * GC_LINES_PER_FRAME_PAL);
-    stream.read(reinterpret_cast<char*> (m_pVdpVRAM), 0x4000);
-    stream.read(reinterpret_cast<char*> (&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
-    stream.read(reinterpret_cast<char*> (m_VdpRegister), sizeof(m_VdpRegister));
-    stream.read(reinterpret_cast<char*> (&m_VdpBuffer), sizeof(m_VdpBuffer));
-    stream.read(reinterpret_cast<char*> (&m_VdpAddress), sizeof(m_VdpAddress));
-    stream.read(reinterpret_cast<char*> (&m_iCycleCounter), sizeof(m_iCycleCounter));
-    stream.read(reinterpret_cast<char*> (&m_VdpStatus), sizeof(m_VdpStatus));
-    stream.read(reinterpret_cast<char*> (&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
-    stream.read(reinterpret_cast<char*> (&m_LineEvents), sizeof(m_LineEvents));
-    stream.read(reinterpret_cast<char*> (&m_iRenderLine), sizeof(m_iRenderLine));
-    stream.read(reinterpret_cast<char*> (&m_bPAL), sizeof(m_bPAL));
-    stream.read(reinterpret_cast<char*> (&m_iMode), sizeof(m_iMode));
-    stream.read(reinterpret_cast<char*> (&m_Timing), sizeof(m_Timing));
-    stream.read(reinterpret_cast<char*> (&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
-    stream.read(reinterpret_cast<char*> (&m_bSpriteOvrRequest), sizeof(m_bSpriteOvrRequest));
+    UNUSED(version);
+    stream.read(reinterpret_cast<char*>(m_pInfoBuffer), GC_VIDEO_MAX_WIDTH * GC_LINES_PER_FRAME_PAL);
+    stream.read(reinterpret_cast<char*>(m_pVdpVRAM), 0x4000);
+    stream.read(reinterpret_cast<char*>(&m_bFirstByteInSequence), sizeof(m_bFirstByteInSequence));
+    stream.read(reinterpret_cast<char*>(m_VdpRegister), sizeof(m_VdpRegister));
+    stream.read(reinterpret_cast<char*>(&m_VdpBuffer), sizeof(m_VdpBuffer));
+    stream.read(reinterpret_cast<char*>(&m_VdpAddress), sizeof(m_VdpAddress));
+    stream.read(reinterpret_cast<char*>(&m_iCycleCounter), sizeof(m_iCycleCounter));
+    stream.read(reinterpret_cast<char*>(&m_VdpStatus), sizeof(m_VdpStatus));
+    stream.read(reinterpret_cast<char*>(&m_iLinesPerFrame), sizeof(m_iLinesPerFrame));
+    stream.read(reinterpret_cast<char*>(&m_LineEvents.vint), sizeof(m_LineEvents.vint));
+    stream.read(reinterpret_cast<char*>(&m_LineEvents.render), sizeof(m_LineEvents.render));
+    stream.read(reinterpret_cast<char*>(&m_LineEvents.display), sizeof(m_LineEvents.display));
+    stream.read(reinterpret_cast<char*>(&m_iRenderLine), sizeof(m_iRenderLine));
+    stream.read(reinterpret_cast<char*>(&m_bPAL), sizeof(m_bPAL));
+    stream.read(reinterpret_cast<char*>(&m_iMode), sizeof(m_iMode));
+    stream.read(reinterpret_cast<char*>(m_Timing), sizeof(m_Timing));
+    stream.read(reinterpret_cast<char*>(&m_bDisplayEnabled), sizeof(m_bDisplayEnabled));
+    stream.read(reinterpret_cast<char*>(&m_bSpriteOvrRequest), sizeof(m_bSpriteOvrRequest));
+    stream.read(reinterpret_cast<char*>(m_SpriteAttribLatch), sizeof(m_SpriteAttribLatch));
+    stream.read(reinterpret_cast<char*>(&m_f18a_unlocked), sizeof(m_f18a_unlocked));
+    stream.read(reinterpret_cast<char*>(&m_f18a_unlock_sequence), sizeof(m_f18a_unlock_sequence));
+    stream.read(reinterpret_cast<char*>(&m_f18a_data_port_mode), sizeof(m_f18a_data_port_mode));
+    stream.read(reinterpret_cast<char*>(&m_f18a_palette_index), sizeof(m_f18a_palette_index));
+    stream.read(reinterpret_cast<char*>(&m_f18a_palette_latch), sizeof(m_f18a_palette_latch));
+    stream.read(reinterpret_cast<char*>(&m_f18a_register_read), sizeof(m_f18a_register_read));
+    stream.read(reinterpret_cast<char*>(&m_f18a_palette_second_byte), sizeof(m_f18a_palette_second_byte));
+    stream.read(reinterpret_cast<char*>(&m_f18a_line_interrupt_pending), sizeof(m_f18a_line_interrupt_pending));
+    stream.read(reinterpret_cast<char*>(&m_f18a_irq_line), sizeof(m_f18a_irq_line));
+    stream.read(reinterpret_cast<char*>(&m_screen_width), sizeof(m_screen_width));
+    stream.read(reinterpret_cast<char*>(&m_screen_height), sizeof(m_screen_height));
+    stream.read(reinterpret_cast<char*>(&m_pending_screen_width), sizeof(m_pending_screen_width));
+    stream.read(reinterpret_cast<char*>(&m_pending_screen_height), sizeof(m_pending_screen_height));
+    stream.read(reinterpret_cast<char*>(m_f18a_palette), sizeof(m_f18a_palette));
+    stream.read(reinterpret_cast<char*>(m_f18a_gpu_ram), sizeof(m_f18a_gpu_ram));
+    stream.read(reinterpret_cast<char*>(&m_f18a_gpu_clock_accumulator), sizeof(m_f18a_gpu_clock_accumulator));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_nano), sizeof(m_f18a_counter_nano));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_micro), sizeof(m_f18a_counter_micro));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_milli), sizeof(m_f18a_counter_milli));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_seconds), sizeof(m_f18a_counter_seconds));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_snapshot_nano), sizeof(m_f18a_counter_snapshot_nano));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_snapshot_micro), sizeof(m_f18a_counter_snapshot_micro));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_snapshot_milli), sizeof(m_f18a_counter_snapshot_milli));
+    stream.read(reinterpret_cast<char*>(&m_f18a_counter_snapshot_seconds), sizeof(m_f18a_counter_snapshot_seconds));
+    m_f18a_gpu.LoadState(stream);
+
+    for (int i = 0; i < 64; i++)
+        UpdateF18APalettePixel(i);
+    m_f18a_mode_dirty = true;
+    UpdateIRQLine();
 }

@@ -25,6 +25,8 @@
 #include "Processor.h"
 #include "Audio.h"
 #include "Video.h"
+#include "TMS9918A.h"
+#include "F18A.h"
 #include "Input.h"
 #include "Cartridge.h"
 #include "ColecoVisionIOPorts.h"
@@ -41,6 +43,8 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pMemory);
     InitPointer(m_pProcessor);
     InitPointer(m_pAudio);
+    InitPointer(m_pTMS9918A);
+    InitPointer(m_pF18A);
     InitPointer(m_pVideo);
     InitPointer(m_pInput);
     InitPointer(m_pCartridge);
@@ -51,6 +55,8 @@ GearcolecoCore::GearcolecoCore()
     m_bPaused = true;
     m_pixelFormat = GC_PIXEL_RGBA8888;
     m_MasterClockCycles = 0;
+    m_requested_video_chip = GC_VIDEO_CHIP_AUTO;
+    m_video_chip = GC_VIDEO_CHIP_TMS9918A;
 }
 
 GearcolecoCore::~GearcolecoCore()
@@ -61,7 +67,8 @@ GearcolecoCore::~GearcolecoCore()
 #endif
     SafeDelete(m_pCartridge);
     SafeDelete(m_pInput);
-    SafeDelete(m_pVideo);
+    SafeDelete(m_pF18A);
+    SafeDelete(m_pTMS9918A);
     SafeDelete(m_pAudio);
     SafeDelete(m_pProcessor);
     SafeDelete(m_pMemory);
@@ -80,14 +87,17 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pMemory = new Memory(m_pCartridge, m_pRandom);
     m_pProcessor = new Processor(m_pMemory);
     m_pAudio = new Audio();
-    m_pVideo = new Video(m_pMemory, m_pProcessor);
+    m_pTMS9918A = new TMS9918A(m_pMemory, m_pProcessor);
+    m_pF18A = new F18A(m_pMemory, m_pProcessor);
+    m_pVideo = m_pTMS9918A;
     m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
 
     m_pMemory->Init();
     m_pProcessor->Init();
     m_pAudio->Init();
-    m_pVideo->Init();
+    m_pTMS9918A->Init();
+    m_pF18A->Init();
     m_pInput->Init();
     m_pCartridge->Init();
 
@@ -97,10 +107,55 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pTraceLogger = new TraceLogger(&m_MasterClockCycles);
     m_pProcessor->SetTraceLogger(m_pTraceLogger);
     m_pMemory->SetTraceLogger(m_pTraceLogger);
-    m_pVideo->SetTraceLogger(m_pTraceLogger);
+    m_pTMS9918A->SetTraceLogger(m_pTraceLogger);
+    m_pF18A->SetTraceLogger(m_pTraceLogger);
     m_pInput->SetTraceLogger(m_pTraceLogger);
     m_pColecoVisionIOPorts->SetTraceLogger(m_pTraceLogger);
 #endif
+}
+
+void GearcolecoCore::SetVideoChip(GC_VideoChip video_chip)
+{
+    if ((video_chip == GC_VIDEO_CHIP_AUTO) || (video_chip == GC_VIDEO_CHIP_TMS9918A) ||
+        (video_chip == GC_VIDEO_CHIP_F18A))
+    {
+        m_requested_video_chip = video_chip;
+    }
+}
+
+GC_VideoChip GearcolecoCore::GetVideoChip() const
+{
+    return m_video_chip;
+}
+
+void GearcolecoCore::SelectVideoChip(GC_VideoChip video_chip)
+{
+    if (video_chip == GC_VIDEO_CHIP_F18A)
+    {
+        m_pVideo = m_pF18A;
+        m_video_chip = GC_VIDEO_CHIP_F18A;
+    }
+    else
+    {
+        m_pVideo = m_pTMS9918A;
+        m_video_chip = GC_VIDEO_CHIP_TMS9918A;
+    }
+
+    if (IsValidPointer(m_pColecoVisionIOPorts))
+        m_pColecoVisionIOPorts->SetVideo(m_pVideo);
+}
+
+void GearcolecoCore::SelectVideoChipForCartridge()
+{
+    GC_VideoChip video_chip = m_requested_video_chip;
+
+    if (video_chip == GC_VIDEO_CHIP_AUTO)
+    {
+        video_chip = m_pCartridge->IsF18ARequired() ? GC_VIDEO_CHIP_F18A : GC_VIDEO_CHIP_TMS9918A;
+    }
+
+    SelectVideoChip(video_chip);
+    Log("Video chip: %s", m_video_chip == GC_VIDEO_CHIP_F18A ? "F18A" : "TMS9918A");
 }
 
 bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug, bool render)
@@ -207,6 +262,7 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        SelectVideoChipForCartridge();
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
@@ -227,6 +283,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        SelectVideoChipForCartridge();
         Reset();
 
         m_pMemory->ResetRomDisassembledMemory();
@@ -284,17 +341,17 @@ void GearcolecoCore::SaveDisassembledROM()
 
 bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
-    runtime_info.screen_width = GC_RESOLUTION_WIDTH;
-    runtime_info.screen_height = GC_RESOLUTION_HEIGHT;
+    runtime_info.screen_width = m_pVideo->GetScreenWidth();
+    runtime_info.screen_height = m_pVideo->GetScreenHeight();
     runtime_info.region = Region_NTSC;
 
     if (m_pCartridge->IsReady() && m_pMemory->IsBiosLoaded())
     {
-        if (m_pVideo->GetOverscan() == Video::OverscanFull284)
+        if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull284))
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
-        if (m_pVideo->GetOverscan() == Video::OverscanFull320)
+        if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull320))
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_320_L + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
-        if (m_pVideo->GetOverscan() != Video::OverscanDisabled)
+        if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() != Video::OverscanDisabled))
             runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (m_pCartridge->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
         runtime_info.region = m_pCartridge->IsPAL() ? Region_PAL : Region_NTSC;
         return true;
@@ -390,6 +447,7 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        SelectVideoChipForCartridge();
         Reset();
 
         m_pProcessor->DisassembleNextOPCode();
@@ -654,6 +712,10 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
 
     if (!IsValidPointer(buffer))
     {
+#if defined(__LIBRETRO__)
+        size = GC_LIBRETRO_SAVESTATE_SIZE;
+        return true;
+#else
         stringstream stream;
         if (!SaveState(stream, size, screenshot))
         {
@@ -661,9 +723,18 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
             return false;
         }
         return true;
+#endif
     }
     else
     {
+#if defined(__LIBRETRO__)
+        if (size < GC_LIBRETRO_SAVESTATE_SIZE)
+        {
+            Error("Failed to save state to buffer: output buffer is too small");
+            return false;
+        }
+#endif
+
         memory_stream direct_stream(reinterpret_cast<char*>(buffer), size);
 
         if (!SaveState(direct_stream, size, screenshot))
@@ -678,17 +749,36 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
             return false;
         }
 
+#if defined(__LIBRETRO__)
+        if ((size < sizeof(GC_SaveState_Header_Libretro)) || (size > GC_LIBRETRO_SAVESTATE_SIZE))
+        {
+            Error("Invalid libretro save-state size: %zu", size);
+            return false;
+        }
+
+        size_t source_header = size - sizeof(GC_SaveState_Header_Libretro);
+        size_t destination_header = GC_LIBRETRO_SAVESTATE_SIZE - sizeof(GC_SaveState_Header_Libretro);
+        memmove(buffer + destination_header, buffer + source_header, sizeof(GC_SaveState_Header_Libretro));
+        memset(buffer + source_header, 0, GC_LIBRETRO_SAVESTATE_SIZE - size);
+        size = GC_LIBRETRO_SAVESTATE_SIZE;
+#else
         size = direct_stream.size();
+#endif
         return true;
     }
 }
 
 bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screenshot)
 {
+#if defined(__LIBRETRO__)
+    UNUSED(screenshot);
+#endif
+
     if (m_pCartridge->IsReady())
     {
         Debug("Gathering save state data...");
 
+        stream.write(reinterpret_cast<const char*>(&m_video_chip), sizeof(m_video_chip));
         m_pMemory->SaveState(stream);
         m_pProcessor->SaveState(stream);
         m_pAudio->SaveState(stream);
@@ -702,6 +792,17 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
         header.version = GC_SAVESTATE_VERSION;
         Debug("Save state header magic: 0x%08x", header.magic);
         Debug("Save state header version: %d", header.version);
+
+        if (!stream.good())
+            return false;
+
+        size_t data_size = static_cast<size_t>(stream.tellp());
+
+        if ((data_size + sizeof(header)) > GC_LIBRETRO_SAVESTATE_SIZE)
+        {
+            Error("Libretro save state exceeds fixed %d-byte size", GC_LIBRETRO_SAVESTATE_SIZE);
+            return false;
+        }
 #else
         GC_SaveState_Header header;
         memset(&header, 0, sizeof(header));
@@ -815,7 +916,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
 
         Debug("Load state stream size: %d", size);
 
-        GC_SaveState_Header_Libretro header;
+        GC_SaveState_Header_Libretro header = {};
 #if !defined(__LIBRETRO__)
         bool is_desktop_savestate = false;
 #endif
@@ -874,6 +975,22 @@ bool GearcolecoCore::LoadState(std::istream& stream)
 
             Log("Loading state (v%d)...", header.version);
 
+            if (header.version >= 106)
+            {
+                GC_VideoChip video_chip;
+                stream.read(reinterpret_cast<char*>(&video_chip), sizeof(video_chip));
+                if ((video_chip != GC_VIDEO_CHIP_TMS9918A) && (video_chip != GC_VIDEO_CHIP_F18A))
+                {
+                    Error("Invalid video chip in save state");
+                    return false;
+                }
+                SelectVideoChip(video_chip);
+            }
+            else
+            {
+                SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
+            }
+
             m_pMemory->LoadState(stream);
             m_pProcessor->LoadState(stream, header.version);
 
@@ -882,7 +999,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             else
                 m_pAudio->LoadState(stream, header.version);
 
-            m_pVideo->LoadState(stream);
+            m_pVideo->LoadState(stream, header.version);
             m_pInput->LoadState(stream, header.version);
 
             return true;
@@ -907,10 +1024,11 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             {
                 Log("Loading legacy state...");
 
+                SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
                 m_pMemory->LoadState(stream);
                 m_pProcessor->LoadState(stream, GC_SAVESTATE_VERSION_V1);
                 m_pAudio->LoadStateV1(stream);
-                m_pVideo->LoadState(stream);
+                m_pVideo->LoadState(stream, GC_SAVESTATE_VERSION_V1);
                 m_pInput->LoadState(stream, GC_SAVESTATE_VERSION_V1);
 
                 return true;
@@ -1059,7 +1177,10 @@ void GearcolecoCore::Reset()
 
 void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
-    int size = m_pMemory->IsBiosLoaded() ? GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN : GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
+    GC_RuntimeInfo runtime_info;
+    GetRuntimeInfo(runtime_info);
+    int size = m_pMemory->IsBiosLoaded() ? runtime_info.screen_width * runtime_info.screen_height :
+        GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
     u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)

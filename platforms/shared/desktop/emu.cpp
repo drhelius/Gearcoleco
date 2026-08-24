@@ -24,6 +24,7 @@
 #include <atomic>
 #include <string.h>
 #include "gearcoleco.h"
+#include "F18A.h"
 #include "sound_queue.h"
 #include "config.h"
 #include "rewind.h"
@@ -51,6 +52,9 @@ static double rewind_pop_accumulator = 0.0;
 u16* debug_background_buffer;
 u16* debug_tile_buffer;
 u16* debug_sprite_buffers[GC_MAX_SPRITES];
+u16* debug_f18a_nametable_buffer;
+u16* debug_f18a_pattern_buffer;
+u16* debug_f18a_sprite_buffers[GC_MAX_SPRITES];
 
 enum Loading_State
 {
@@ -69,6 +73,7 @@ static Cartridge::ForceConfiguration loading_config;
 static void save_ram(void);
 static void load_ram(void);
 static void reset_buffers(void);
+static void apply_video_config(void);
 static const char* get_mapper(Cartridge::CartridgeTypes type);
 static const char* get_configurated_dir(int option, const char* path);
 static void init_debug(void);
@@ -77,6 +82,9 @@ static void update_debug(void);
 static void update_debug_background_buffer(void);
 static void update_debug_tile_buffer(void);
 static void update_debug_sprite_buffers(void);
+static void update_debug_f18a_nametable_buffer(void);
+static void update_debug_f18a_pattern_buffer(void);
+static void update_debug_f18a_sprite_buffers(void);
 static void debug_step_instruction(void);
 static void reset_rewind_timing(void);
 static int get_rewind_pop_budget(void);
@@ -110,6 +118,8 @@ bool emu_init(void)
     emu_frame_counter = 0;
     emu_debug_tile_palette = 0;
     emu_debug_tile_color_mode = true;
+    emu_debug_f18a_layer = 0;
+    emu_debug_f18a_pattern_palette = 0;
 
     for (int i = 0; i < 5; i++)
     {
@@ -167,6 +177,7 @@ void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     loading_file_path[sizeof(loading_file_path) - 1] = '\0';
     loading_result = false;
     loading_config = config;
+    gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
     loading_state.store(Loading_State_Loading);
     if (loading_thread_active)
         loading_thread.join();
@@ -177,6 +188,16 @@ void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
 bool emu_is_media_loading(void)
 {
     return loading_state.load() == Loading_State_Loading;
+}
+
+static void apply_video_config(void)
+{
+    emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
+    emu_video_no_sprite_limit(config_video.sprite_limit);
+    if (config_video.palette == 2)
+        emu_palette(config_video.color);
+    else
+        emu_predefined_palette(config_video.palette);
 }
 
 bool emu_finish_media_loading(void)
@@ -196,6 +217,7 @@ bool emu_finish_media_loading(void)
         return false;
 
     emu_audio_reset();
+    apply_video_config();
     load_ram();
 
     if (config_debug.debug && (config_debug.dis_look_ahead_count > 0))
@@ -203,6 +225,7 @@ bool emu_finish_media_loading(void)
 
     update_savestates_data();
     rewind_reset();
+    runahead_reset();
 
     return true;
 }
@@ -212,7 +235,9 @@ void emu_render_current_frame(void)
     if (emu_is_empty())
         return;
 
-    int size = gearcoleco->GetMemory()->IsBiosLoaded() ? GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN : GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
+    GC_RuntimeInfo runtime;
+    gearcoleco->GetRuntimeInfo(runtime);
+    int size = gearcoleco->GetMemory()->IsBiosLoaded() ? runtime.screen_width * runtime.screen_height : GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
     u16* src_buffer = gearcoleco->GetMemory()->IsBiosLoaded() ? gearcoleco->GetVideo()->GetFrameBuffer() : kNoBiosImage;
 
     gearcoleco->GetVideo()->Render32bit(src_buffer, emu_frame_buffer, GC_PIXEL_RGBA8888, size, true);
@@ -459,9 +484,12 @@ void emu_reset(Cartridge::ForceConfiguration config)
     reset_rewind_timing();
     emu_audio_reset();
     save_ram();
+    gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
     gearcoleco->ResetROM(&config);
+    apply_video_config();
     load_ram();
     rewind_reset();
+    runahead_reset();
 }
 
 void emu_dissasemble_rom(void)
@@ -521,6 +549,7 @@ void emu_load_ram(const char* file_path, Cartridge::ForceConfiguration config)
         gearcoleco->ResetROM(&config);
         gearcoleco->LoadRam(file_path, true);
         rewind_reset();
+        runahead_reset();
     }
 }
 
@@ -543,6 +572,7 @@ void emu_load_state_slot(int index)
         {
             events_sync_input();
             rewind_reset();
+            runahead_reset();
         }
     }
 }
@@ -561,6 +591,7 @@ void emu_load_state_file(const char* file_path)
         {
             events_sync_input();
             rewind_reset();
+            runahead_reset();
         }
     }
 }
@@ -744,6 +775,11 @@ void emu_video_no_sprite_limit(bool enabled)
     gearcoleco->GetVideo()->SetNoSpriteLimit(enabled);
 }
 
+void emu_set_video_chip(int video_chip)
+{
+    gearcoleco->SetVideoChip((GC_VideoChip)video_chip);
+}
+
 void emu_set_overscan(int overscan)
 {
     switch (overscan)
@@ -783,11 +819,25 @@ void emu_save_sprite(const char* file_path, int index)
     if (!gearcoleco->GetCartridge()->IsReady())
         return;
 
-    update_debug();
+    Video* video = gearcoleco->GetVideo();
+    int sprite_size;
+    u8* buffer;
+    if (video->IsF18AHardware())
+    {
+        update_debug_f18a_sprite_buffers();
+        sprite_size = emu_debug_f18a_sprite_sizes[index];
+        video->Render32bit(debug_f18a_sprite_buffers[index], emu_debug_f18a_sprite_buffers[index], GC_PIXEL_RGBA8888, 16 * 16);
+        buffer = emu_debug_f18a_sprite_buffers[index];
+    }
+    else
+    {
+        update_debug_sprite_buffers();
+        sprite_size = IsSetBit(video->GetRegisters()[1], 1) ? 16 : 8;
+        video->Render32bit(debug_sprite_buffers[index], emu_debug_sprite_buffers[index], GC_PIXEL_RGBA8888, 16 * 16);
+        buffer = emu_debug_sprite_buffers[index];
+    }
 
-    int sprite_size = IsSetBit(gearcoleco->GetVideo()->GetRegisters()[1], 1) ? 16 : 8;
-
-    stbi_write_png(file_path, sprite_size, sprite_size, 4, emu_debug_sprite_buffers[index], 16 * 4);
+    stbi_write_png(file_path, sprite_size, sprite_size, 4, buffer, 16 * 4);
 
     Log("Sprite saved to %s", file_path);
 }
@@ -797,9 +847,21 @@ void emu_save_background(const char* file_path)
     if (!gearcoleco->GetCartridge()->IsReady())
         return;
 
-    update_debug();
-
-    stbi_write_png(file_path, 256, 192, 4, emu_debug_background_buffer, 256 * 4);
+    Video* video = gearcoleco->GetVideo();
+    if (video->IsF18AHardware())
+    {
+        update_debug_f18a_nametable_buffer();
+        video->Render32bit(debug_f18a_nametable_buffer, emu_debug_f18a_nametable_buffer,
+            GC_PIXEL_RGBA8888, GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT);
+        stbi_write_png(file_path, video->GetScreenWidth(), video->GetScreenHeight(), 4,
+            emu_debug_f18a_nametable_buffer, GC_VIDEO_MAX_WIDTH * 4);
+    }
+    else
+    {
+        update_debug_background_buffer();
+        video->Render32bit(debug_background_buffer, emu_debug_background_buffer, GC_PIXEL_RGBA8888, 256 * 256);
+        stbi_write_png(file_path, 256, 192, 4, emu_debug_background_buffer, 256 * 4);
+    }
 
     Log("Background saved to %s", file_path);
 }
@@ -809,9 +871,22 @@ void emu_save_tiles(const char* file_path)
     if (!gearcoleco->GetCartridge()->IsReady())
         return;
 
-    update_debug();
-
-    stbi_write_png(file_path, 256, 256, 4, emu_debug_tile_buffer, 256 * 4);
+    Video* video = gearcoleco->GetVideo();
+    if (video->IsF18AHardware())
+    {
+        update_debug_f18a_pattern_buffer();
+        video->Render32bit(debug_f18a_pattern_buffer, emu_debug_f18a_pattern_buffer, GC_PIXEL_RGBA8888, 256 * 256);
+        u8* regs = video->GetRegisters();
+        int mode = ((regs[0] & 0x04) << 1) | ((regs[0] & 0x02) << 1) | ((regs[1] & 0x08) >> 2) | ((regs[1] & 0x10) >> 4);
+        int height = mode == 4 ? 192 : 64;
+        stbi_write_png(file_path, 256, height, 4, emu_debug_f18a_pattern_buffer, 256 * 4);
+    }
+    else
+    {
+        update_debug_tile_buffer();
+        video->Render32bit(debug_tile_buffer, emu_debug_tile_buffer, GC_PIXEL_RGBA8888, 256 * 256);
+        stbi_write_png(file_path, 256, 256, 4, emu_debug_tile_buffer, 256 * 4);
+    }
 
     Log("Pattern table saved to %s", file_path);
 }
@@ -842,11 +917,25 @@ int emu_get_sprite_png(int sprite_index, unsigned char** out_buffer)
     if (sprite_index < 0 || sprite_index >= GC_MAX_SPRITES)
         return 0;
 
-    update_debug();
-
-    int sprite_size = IsSetBit(gearcoleco->GetVideo()->GetRegisters()[1], 1) ? 16 : 8;
-
-    u8* buffer = emu_debug_sprite_buffers[sprite_index];
+    Video* video = gearcoleco->GetVideo();
+    int sprite_size;
+    u8* buffer;
+    if (video->IsF18AHardware())
+    {
+        update_debug_f18a_sprite_buffers();
+        sprite_size = emu_debug_f18a_sprite_sizes[sprite_index];
+        video->Render32bit(debug_f18a_sprite_buffers[sprite_index],
+            emu_debug_f18a_sprite_buffers[sprite_index], GC_PIXEL_RGBA8888, 16 * 16);
+        buffer = emu_debug_f18a_sprite_buffers[sprite_index];
+    }
+    else
+    {
+        update_debug_sprite_buffers();
+        sprite_size = IsSetBit(video->GetRegisters()[1], 1) ? 16 : 8;
+        video->Render32bit(debug_sprite_buffers[sprite_index],
+            emu_debug_sprite_buffers[sprite_index], GC_PIXEL_RGBA8888, 16 * 16);
+        buffer = emu_debug_sprite_buffers[sprite_index];
+    }
 
     if (!buffer)
         return 0;
@@ -955,18 +1044,31 @@ static void init_debug(void)
 {
     emu_debug_background_buffer = new u8[256 * 256 * 4];
     emu_debug_tile_buffer = new u8[32 * 32 * 64 * 4];
+    emu_debug_f18a_nametable_buffer = new u8[GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT * 4];
+    emu_debug_f18a_pattern_buffer = new u8[256 * 256 * 4];
     debug_background_buffer = new u16[256 * 256];
     debug_tile_buffer = new u16[32 * 32 * 64];
+    debug_f18a_nametable_buffer = new u16[GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT];
+    debug_f18a_pattern_buffer = new u16[256 * 256];
 
     memset(debug_tile_buffer, 0, 32 * 32 * 64 * sizeof(u16));
     memset(emu_debug_tile_buffer, 0, 32 * 32 * 64 * 4);
+    memset(debug_f18a_nametable_buffer, 0, GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT * sizeof(u16));
+    memset(emu_debug_f18a_nametable_buffer, 0, GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT * 4);
+    memset(debug_f18a_pattern_buffer, 0, 256 * 256 * sizeof(u16));
+    memset(emu_debug_f18a_pattern_buffer, 0, 256 * 256 * 4);
 
     for (int s = 0; s < GC_MAX_SPRITES; s++)
     {
         emu_debug_sprite_buffers[s] = new u8[16 * 16 * 4];
         debug_sprite_buffers[s] = new u16[16 * 16];
+        emu_debug_f18a_sprite_buffers[s] = new u8[16 * 16 * 4];
+        debug_f18a_sprite_buffers[s] = new u16[16 * 16];
+        emu_debug_f18a_sprite_sizes[s] = 8;
         memset(debug_sprite_buffers[s], 0, 16 * 16 * sizeof(u16));
         memset(emu_debug_sprite_buffers[s], 0, 16 * 16 * 4);
+        memset(debug_f18a_sprite_buffers[s], 0, 16 * 16 * sizeof(u16));
+        memset(emu_debug_f18a_sprite_buffers[s], 0, 16 * 16 * 4);
     }
 
     memset(debug_background_buffer, 0, 256 * 256 * sizeof(u16));
@@ -979,11 +1081,17 @@ static void destroy_debug(void)
     SafeDeleteArray(emu_debug_tile_buffer);
     SafeDeleteArray(debug_background_buffer);
     SafeDeleteArray(debug_tile_buffer);
+    SafeDeleteArray(emu_debug_f18a_nametable_buffer);
+    SafeDeleteArray(emu_debug_f18a_pattern_buffer);
+    SafeDeleteArray(debug_f18a_nametable_buffer);
+    SafeDeleteArray(debug_f18a_pattern_buffer);
 
     for (int s = 0; s < GC_MAX_SPRITES; s++)
     {
         SafeDeleteArray(emu_debug_sprite_buffers[s]);
         SafeDeleteArray(debug_sprite_buffers[s]);
+        SafeDeleteArray(emu_debug_f18a_sprite_buffers[s]);
+        SafeDeleteArray(debug_f18a_sprite_buffers[s]);
     }
 }
 
@@ -1010,15 +1118,54 @@ static void update_debug(void)
 {
     Video* video = gearcoleco->GetVideo();
 
-    update_debug_background_buffer();
-    update_debug_tile_buffer();
-    update_debug_sprite_buffers();
-
-    video->Render32bit(debug_background_buffer, emu_debug_background_buffer, GC_PIXEL_RGBA8888, 256 * 256);
-    video->Render32bit(debug_tile_buffer, emu_debug_tile_buffer, GC_PIXEL_RGBA8888, 32 * 32 * 64);
-
-    for (int s = 0; s < GC_MAX_SPRITES; s++)
-        video->Render32bit(debug_sprite_buffers[s], emu_debug_sprite_buffers[s], GC_PIXEL_RGBA8888, 16 * 16);
+    if (video->IsF18AHardware())
+    {
+        if (config_debug.show_f18a_nametables)
+        {
+            update_debug_f18a_nametable_buffer();
+            video->Render32bit(debug_f18a_nametable_buffer, emu_debug_f18a_nametable_buffer,
+                GC_PIXEL_RGBA8888, GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT);
+        }
+        if (config_debug.show_f18a_patterns)
+        {
+            update_debug_f18a_pattern_buffer();
+            video->Render32bit(debug_f18a_pattern_buffer, emu_debug_f18a_pattern_buffer,
+                GC_PIXEL_RGBA8888, 256 * 256);
+        }
+        if (config_debug.show_f18a_sprites)
+        {
+            update_debug_f18a_sprite_buffers();
+            for (int s = 0; s < GC_MAX_SPRITES; s++)
+            {
+                video->Render32bit(debug_f18a_sprite_buffers[s],
+                    emu_debug_f18a_sprite_buffers[s], GC_PIXEL_RGBA8888, 16 * 16);
+            }
+        }
+    }
+    else
+    {
+        if (config_debug.show_tms9918a_nametable)
+        {
+            update_debug_background_buffer();
+            video->Render32bit(debug_background_buffer, emu_debug_background_buffer,
+                GC_PIXEL_RGBA8888, 256 * 256);
+        }
+        if (config_debug.show_tms9918a_patterns)
+        {
+            update_debug_tile_buffer();
+            video->Render32bit(debug_tile_buffer, emu_debug_tile_buffer,
+                GC_PIXEL_RGBA8888, 32 * 32 * 64);
+        }
+        if (config_debug.show_tms9918a_sprites)
+        {
+            update_debug_sprite_buffers();
+            for (int s = 0; s < GC_MAX_SPRITES; s++)
+            {
+                video->Render32bit(debug_sprite_buffers[s], emu_debug_sprite_buffers[s],
+                    GC_PIXEL_RGBA8888, 16 * 16);
+            }
+        }
+    }
 }
 
 static void update_debug_background_buffer(void)
@@ -1321,6 +1468,27 @@ static void update_debug_sprite_buffers(void)
                 debug_sprite_buffers[s][pixel] = sprite_pixel ? sprite_color : 0;
             }
         }
+    }
+}
+
+static void update_debug_f18a_nametable_buffer(void)
+{
+    F18A* video = static_cast<F18A*>(gearcoleco->GetVideo());
+    video->RenderDebugNameTable(debug_f18a_nametable_buffer, emu_debug_f18a_layer != 0);
+}
+
+static void update_debug_f18a_pattern_buffer(void)
+{
+    F18A* video = static_cast<F18A*>(gearcoleco->GetVideo());
+    video->RenderDebugPatternTable(debug_f18a_pattern_buffer, emu_debug_f18a_pattern_palette);
+}
+
+static void update_debug_f18a_sprite_buffers(void)
+{
+    F18A* video = static_cast<F18A*>(gearcoleco->GetVideo());
+    for (int s = 0; s < GC_MAX_SPRITES; s++)
+    {
+        emu_debug_f18a_sprite_sizes[s] = video->RenderDebugSprite(debug_f18a_sprite_buffers[s], s);
     }
 }
 

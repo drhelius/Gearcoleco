@@ -54,6 +54,10 @@ EXTERN u32 emu_savestates_generation;
 EXTERN u8* emu_debug_background_buffer;
 EXTERN u8* emu_debug_tile_buffer;
 EXTERN u8* emu_debug_sprite_buffers[GC_MAX_SPRITES];
+EXTERN u8* emu_debug_f18a_nametable_buffer;
+EXTERN u8* emu_debug_f18a_pattern_buffer;
+EXTERN u8* emu_debug_f18a_sprite_buffers[GC_MAX_SPRITES];
+EXTERN int emu_debug_f18a_sprite_sizes[GC_MAX_SPRITES];
 
 EXTERN Debug_Command emu_debug_command;
 EXTERN bool emu_debug_pc_changed;
@@ -64,6 +68,8 @@ EXTERN bool emu_debug_disable_breakpoints;
 EXTERN bool emu_debug_irq_breakpoints;
 EXTERN int emu_debug_tile_palette;
 EXTERN bool emu_debug_tile_color_mode;
+EXTERN int emu_debug_f18a_layer;
+EXTERN int emu_debug_f18a_pattern_palette;
 
 EXTERN bool emu_init(void);
 EXTERN void emu_destroy(void);
@@ -120,6 +126,7 @@ EXTERN int emu_mcp_get_http_port(void);
 EXTERN void emu_mcp_pump_commands(void);
 EXTERN void emu_load_bios(const char* file_path);
 EXTERN void emu_video_no_sprite_limit(bool enabled);
+EXTERN void emu_set_video_chip(int video_chip);
 EXTERN void emu_set_overscan(int overscan);
 EXTERN void emu_save_screenshot(const char* file_path);
 EXTERN void emu_save_sprite(const char* file_path, int index);

@@ -58,6 +58,7 @@ public:
     void Reset();
     u32 GetCRC() const;
     bool IsPAL() const;
+    bool IsF18ARequired() const;
     bool HasSRAM() const
     {
         return m_bSRAM;
@@ -104,6 +105,7 @@ private:
     char m_szFileDirectory[512];
     int m_iROMBankCount;
     bool m_bPAL;
+    bool m_bF18ARequired;
     u32 m_iCRC;
     bool m_bSRAM;
     u8* m_pEEPROM;

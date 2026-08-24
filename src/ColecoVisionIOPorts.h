@@ -36,6 +36,7 @@ public:
     ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory, Processor* pProcessor);
     ~ColecoVisionIOPorts();
     void Reset();
+    void SetVideo(Video* pVideo);
     void SetTraceLogger(TraceLogger* pTraceLogger);
     u8 In(u8 port);
     void Out(u8 port, u8 value);

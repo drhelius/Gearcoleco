@@ -615,6 +615,15 @@ static void menu_video(void)
 
         ImGui::Separator();
 
+        if (ImGui::BeginMenu("Video Chip"))
+        {
+            ImGui::PushItemWidth(150.0f);
+            ImGui::Combo("##video_chip", &config_video.video_chip,
+                "Auto\0TMS9918A\0F18A\0\0");
+            ImGui::PopItemWidth();
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Scale"))
         {
             ImGui::PushItemWidth(250.0f);
@@ -1412,12 +1421,40 @@ static void menu_debug(void)
 
         if (ImGui::BeginMenu("Video", config_debug.debug))
         {
-            ImGui::MenuItem("Show Name Table", "", &config_debug.show_video_nametable);
-            ImGui::MenuItem("Show Pattern Table", "", &config_debug.show_video_tiles);
-            ImGui::MenuItem("Show Sprites", "", &config_debug.show_video_sprites);
-            //if (!emu_get_core()->GetVideo()->IsSG1000Mode())
-                ImGui::MenuItem("Show Palettes", "", &config_debug.show_video_palettes);
-            ImGui::MenuItem("Show VDP Registers", "", &config_debug.show_video_regs);
+            bool f18a_active = emu_get_core()->GetVideoChip() == GC_VIDEO_CHIP_F18A;
+
+            if (ImGui::BeginMenu("TMS9918A"))
+            {
+                ImGui::MenuItem("Name Table", "", &config_debug.show_tms9918a_nametable,
+                    !f18a_active);
+                ImGui::MenuItem("Pattern Table", "", &config_debug.show_tms9918a_patterns,
+                    !f18a_active);
+                ImGui::MenuItem("Sprites", "", &config_debug.show_tms9918a_sprites,
+                    !f18a_active);
+                ImGui::MenuItem("Palettes", "", &config_debug.show_tms9918a_palettes,
+                    !f18a_active);
+                ImGui::MenuItem("Registers", "", &config_debug.show_tms9918a_regs,
+                    !f18a_active);
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("F18A"))
+            {
+                ImGui::MenuItem("Name Tables", "", &config_debug.show_f18a_nametables,
+                    f18a_active);
+                ImGui::MenuItem("Pattern Table", "", &config_debug.show_f18a_patterns,
+                    f18a_active);
+                ImGui::MenuItem("Sprites", "", &config_debug.show_f18a_sprites,
+                    f18a_active);
+                ImGui::MenuItem("Palette RAM", "", &config_debug.show_f18a_palette,
+                    f18a_active);
+                ImGui::MenuItem("Registers", "", &config_debug.show_f18a_regs,
+                    f18a_active);
+                ImGui::MenuItem("Extended Registers", "",
+                    &config_debug.show_f18a_extended_regs, f18a_active);
+                ImGui::EndMenu();
+            }
+
             ImGui::EndMenu();
         }
 

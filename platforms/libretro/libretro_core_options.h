@@ -90,6 +90,21 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         },
         "Auto"
     },
+    {
+        "gearcoleco_video_chip",
+        "Video Chip (restart)",
+        NULL,
+        "Select the installed video chip. 'Auto' uses TMS9918A unless the loaded game database entry requires F18A. Changes take effect when content is restarted.",
+        NULL,
+        "system",
+        {
+            { "Auto",     NULL },
+            { "TMS9918A", NULL },
+            { "F18A",     NULL },
+            { NULL, NULL },
+        },
+        "Auto"
+    },
 
     /* Video */
 
@@ -113,7 +128,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "gearcoleco_overscan",
         "Overscan",
         NULL,
-        "Select which overscan (borders) will be used in emulation. 'Disabled' shows no overscan. 'Top+Bottom' enables vertical overscan only. 'Full (284 width)' and 'Full (320 width)' enable full overscan with different horizontal widths.",
+        "Select which overscan (borders) will be used in TMS9918A emulation. 'Disabled' shows no overscan. 'Top+Bottom' enables vertical overscan only. 'Full (284 width)' and 'Full (320 width)' enable full overscan with different horizontal widths. F18A output uses its active logical raster without TMS overscan.",
         NULL,
         "video",
         {

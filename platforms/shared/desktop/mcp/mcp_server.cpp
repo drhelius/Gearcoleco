@@ -778,7 +778,7 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "get_vdp_registers"},
         {"title", "Get VDP Registers"},
-        {"description", "Read TMS9918 VDP registers R0-R7 with hex values and decoded meanings."},
+        {"description", "Read TMS9918A or F18A V1 registers with hex values and decoded meanings."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -790,7 +790,7 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "get_vdp_status"},
         {"title", "Get VDP Status"},
-        {"description", "Read TMS9918 VDP video state: flags, mode, render line, display state."},
+        {"description", "Read TMS9918A or F18A V1 video state, status flags, raster state, and GPU state."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},

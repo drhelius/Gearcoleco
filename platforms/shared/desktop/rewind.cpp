@@ -36,6 +36,8 @@ static bool storage_dirty = true;
 static int seek_age = -1;
 static size_t slot_size = 0;
 static size_t allocated_size = 0;
+static int snapshot_width = 0;
+static int snapshot_height = 0;
 
 static int slot_at(int age);
 static int get_target_capacity(void);
@@ -78,16 +80,11 @@ void rewind_reset(void)
         release_storage();
         return;
     }
-
-    capacity = get_target_capacity();
-    ensure_storage();
 }
 
 void rewind_push(void)
 {
     if (!config_rewind.enabled)
-        return;
-    if (!IsValidPointer(buffer))
         return;
     if (emu_is_empty() || emu_is_paused())
         return;
@@ -98,6 +95,13 @@ void rewind_push(void)
     if (frame_accum < config_rewind.frames_per_snapshot)
         return;
     frame_accum = 0;
+
+    GC_RuntimeInfo runtime;
+    if (emu_get_core()->GetRuntimeInfo(runtime) &&
+        ((runtime.screen_width != snapshot_width) || (runtime.screen_height != snapshot_height)))
+    {
+        storage_dirty = true;
+    }
 
     if (!ensure_storage())
         return;
@@ -262,8 +266,16 @@ static bool ensure_storage(void)
     if (target_slot_size == 0)
         return false;
 
+    GC_RuntimeInfo runtime;
+    bool runtime_valid = emu_get_core()->GetRuntimeInfo(runtime);
+
     if (storage_dirty && IsValidPointer(buffer) && (capacity == target_capacity) && (slot_size >= target_slot_size))
     {
+        if (runtime_valid)
+        {
+            snapshot_width = runtime.screen_width;
+            snapshot_height = runtime.screen_height;
+        }
         storage_dirty = false;
         return true;
     }
@@ -287,6 +299,13 @@ static bool ensure_storage(void)
     active = false;
     storage_dirty = false;
     seek_age = -1;
+
+    if (runtime_valid)
+    {
+        snapshot_width = runtime.screen_width;
+        snapshot_height = runtime.screen_height;
+    }
+
     for (int i = 0; i < REWIND_MAX_SNAPSHOTS; i++)
         sizes[i] = 0;
 
@@ -302,6 +321,8 @@ static void release_storage(void)
     allocated_size = 0;
     slot_size = 0;
     capacity = 0;
+    snapshot_width = 0;
+    snapshot_height = 0;
 }
 
 static void truncate_to_seek_position(void)
@@ -331,7 +352,8 @@ static void restore_screenshot(const u8* slot, size_t size)
     if (header.screenshot_size == 0)
         return;
 
-    size_t max_screenshot_size = (size_t)GC_RESOLUTION_WIDTH_WITH_OVERSCAN * GC_RESOLUTION_HEIGHT_WITH_OVERSCAN * 4;
+    size_t max_screenshot_size = (size_t)GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT * 4;
+
     if (header.screenshot_size > max_screenshot_size)
         return;
 

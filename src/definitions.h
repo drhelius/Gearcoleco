@@ -111,6 +111,7 @@ typedef void (*RamChangedCallback) (void);
 
 #define GC_RESOLUTION_WIDTH 256
 #define GC_RESOLUTION_HEIGHT 192
+#define GC_VIDEO_MAX_WIDTH 512
 
 #define GC_MAX_GAMEPADS 2
 #define GC_MAX_SPRITES 32
@@ -123,6 +124,7 @@ typedef void (*RamChangedCallback) (void);
 #define GC_RESOLUTION_SMS_OVERSCAN_H_284_R 14
 #define GC_RESOLUTION_OVERSCAN_V 24
 #define GC_RESOLUTION_OVERSCAN_V_PAL 48
+#define GC_VIDEO_MAX_HEIGHT GC_RESOLUTION_HEIGHT_WITH_OVERSCAN
 
 #define GC_CYCLES_PER_LINE 228
 
@@ -140,9 +142,10 @@ typedef void (*RamChangedCallback) (void);
 #define GC_AUDIO_QUEUE_SIZE 1792
 
 #define GC_SAVESTATE_MAGIC 0x09200902
-#define GC_SAVESTATE_VERSION 105
+#define GC_SAVESTATE_VERSION 106
 #define GC_SAVESTATE_MIN_VERSION 100
 #define GC_SAVESTATE_VERSION_V1 1
+#define GC_LIBRETRO_SAVESTATE_SIZE 0x3A000
 
 struct GC_SaveState_Header
 {
@@ -187,6 +190,13 @@ enum GC_Color_Format
     GC_PIXEL_BGR565,
     GC_PIXEL_BGR555,
     GC_PIXEL_BGRA8888
+};
+
+enum GC_VideoChip
+{
+    GC_VIDEO_CHIP_AUTO = 0,
+    GC_VIDEO_CHIP_TMS9918A,
+    GC_VIDEO_CHIP_F18A
 };
 
 enum GC_Keys

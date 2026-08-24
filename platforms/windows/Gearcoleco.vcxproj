@@ -37,7 +37,10 @@
     <ClCompile Include="..\..\src\Processor.cpp" />
     <ClCompile Include="..\..\src\TraceLogger.cpp" />
     <ClCompile Include="..\..\src\VgmRecorder.cpp" />
-    <ClCompile Include="..\..\src\Video.cpp" />
+    <ClCompile Include="..\..\src\TMS9918A.cpp" />
+    <ClCompile Include="..\..\src\F18A.cpp" />
+    <ClCompile Include="..\..\src\F18A_enhancements.cpp" />
+    <ClCompile Include="..\..\src\F18AGPU.cpp" />
     <ClCompile Include="..\shared\dependencies\miniz\miniz.c">
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
     </ClCompile>
@@ -59,6 +62,7 @@
     <ClCompile Include="..\shared\desktop\gui_debug_psg.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_rewind.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_tms9918.cpp" />
+    <ClCompile Include="..\shared\desktop\gui_debug_f18a.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_trace_logger.cpp" />
     <ClCompile Include="..\shared\desktop\trace_logger_formatter.cpp" />
     <ClCompile Include="..\shared\desktop\gui_filedialogs.cpp" />
@@ -155,6 +159,9 @@
     <ClInclude Include="..\..\src\TraceLogger.h" />
     <ClInclude Include="..\..\src\VgmRecorder.h" />
     <ClInclude Include="..\..\src\Video.h" />
+    <ClInclude Include="..\..\src\TMS9918A.h" />
+    <ClInclude Include="..\..\src\F18A.h" />
+    <ClInclude Include="..\..\src\F18AGPU.h" />
     <ClInclude Include="..\shared\dependencies\glad\glad.h" />
     <ClInclude Include="..\shared\dependencies\miniz\miniz.h" />
     <ClInclude Include="..\shared\dependencies\imgui\imgui_impl_sdl3.h" />
@@ -199,6 +206,7 @@
     <ClInclude Include="..\shared\desktop\gui_debug_rewind.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_text.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_tms9918.h" />
+    <ClInclude Include="..\shared\desktop\gui_debug_f18a.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_trace_logger.h" />
     <ClInclude Include="..\shared\desktop\trace_logger_formatter.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_widgets.h" />

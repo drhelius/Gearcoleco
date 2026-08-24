@@ -37,13 +37,13 @@ static void draw_context_menu_sprites(int index);
 static void draw_context_menu_background(void);
 static void draw_context_menu_tiles(const char* popup_id);
 
-void gui_debug_window_vram_nametable(void)
+void gui_debug_window_tms9918a_nametable(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(124, 81), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(544, 362), ImGuiCond_FirstUseEver);
 
-    ImGui::Begin("Name Table", &config_debug.show_video_nametable);
+    ImGui::Begin("TMS9918A Name Table", &config_debug.show_tms9918a_nametable);
 
     static int selected_bg_tile_x = -1;
     static int selected_bg_tile_y = -1;
@@ -220,13 +220,13 @@ void gui_debug_window_vram_nametable(void)
     ImGui::PopStyleVar();
 }
 
-void gui_debug_window_vram_tiles(void)
+void gui_debug_window_tms9918a_patterns(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(540, 456), ImGuiCond_FirstUseEver);
 
-    ImGui::Begin("Pattern Table", &config_debug.show_video_tiles);
+    ImGui::Begin("TMS9918A Pattern Table", &config_debug.show_tms9918a_patterns);
 
     static int selected_tile_x = -1;
     static int selected_tile_y = -1;
@@ -388,13 +388,13 @@ void gui_debug_window_vram_tiles(void)
     ImGui::PopStyleVar();
 }
 
-void gui_debug_window_vram_sprites(void)
+void gui_debug_window_tms9918a_sprites(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(200, 200), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(480, 346), ImGuiCond_FirstUseEver);
 
-    ImGui::Begin("Sprites", &config_debug.show_video_sprites);
+    ImGui::Begin("TMS9918A Sprites", &config_debug.show_tms9918a_sprites);
 
     static int selected_sprite = -1;
 
@@ -555,13 +555,13 @@ void gui_debug_window_vram_sprites(void)
     ImGui::PopStyleVar();
 }
 
-void gui_debug_window_vram_palettes(void)
+void gui_debug_window_tms9918a_palettes(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(350, 350), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(290, 190), ImGuiCond_FirstUseEver);
 
-    ImGui::Begin("Palettes", &config_debug.show_video_palettes);
+    ImGui::Begin("TMS9918A Palettes", &config_debug.show_tms9918a_palettes);
 
     const u8* selected_palette = kPalette_888_coleco;
     const char* palette_name = "COLECO PALETTE";
@@ -661,13 +661,13 @@ void gui_debug_window_vram_palettes(void)
     ImGui::PopStyleVar();
 }
 
-void gui_debug_window_vram_regs(void)
+void gui_debug_window_tms9918a_regs(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(339, 69), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(268, 578), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(264, 596), ImGuiCond_FirstUseEver);
 
-    ImGui::Begin("VDP Registers", &config_debug.show_video_regs);
+    ImGui::Begin("TMS9918A Registers", &config_debug.show_tms9918a_regs);
 
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
@@ -677,6 +677,8 @@ void gui_debug_window_vram_regs(void)
     ImGui::TextColored(brown, "STATE");
     ImGui::Separator();
 
+    ImGui::TextColored(violet, " VIDEO CHIP       ");ImGui::SameLine();
+    ImGui::Text("TMS9918A");
     ImGui::TextColored(violet, " PAL (50Hz)       ");ImGui::SameLine();
     video->IsPAL() ? ImGui::TextColored(green, "YES ") : ImGui::TextColored(gray, "NO  ");
     ImGui::TextColored(violet, " LATCH FIRST BYTE ");ImGui::SameLine();

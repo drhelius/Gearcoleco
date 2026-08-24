@@ -47,6 +47,7 @@ SOURCES_CXX := \
     $(DESKTOP_SRC_DIR)/gui_debug_psg.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_ay8910.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_tms9918.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_f18a.cpp \
     $(DESKTOP_SRC_DIR)/trace_logger_formatter.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_debug_adapter.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_tool_registry.cpp \
@@ -64,7 +65,10 @@ SOURCES_CXX := \
     $(SRC_DIR)/opcodes_ed.cpp \
     $(SRC_DIR)/Processor.cpp \
     $(SRC_DIR)/TraceLogger.cpp \
-    $(SRC_DIR)/Video.cpp \
+    $(SRC_DIR)/TMS9918A.cpp \
+    $(SRC_DIR)/F18A.cpp \
+    $(SRC_DIR)/F18A_enhancements.cpp \
+    $(SRC_DIR)/F18AGPU.cpp \
     $(SRC_DIR)/VgmRecorder.cpp \
     $(SRC_DIR)/audio/Blip_Buffer.cpp \
     $(SRC_DIR)/audio/Effects_Buffer.cpp \

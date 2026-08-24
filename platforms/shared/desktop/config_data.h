@@ -24,7 +24,7 @@
 #include <string>
 #include "gearcoleco.h"
 
-static const int config_version = 5;
+static const int config_version = 6;
 static const int config_minimum_version = 2;
 static const int config_max_recent_roms = 10;
 static const int config_memory_editor_count = 5;
@@ -88,6 +88,7 @@ struct config_Emulator
 
 struct config_Video
 {
+    int video_chip;
     int scale;
     int scale_manual;
     int ratio;
@@ -222,11 +223,17 @@ struct config_Debug
     bool show_symbols;
     bool show_memory;
     bool show_video;
-    bool show_video_nametable;
-    bool show_video_tiles;
-    bool show_video_sprites;
-    bool show_video_palettes;
-    bool show_video_regs;
+    bool show_tms9918a_nametable;
+    bool show_tms9918a_patterns;
+    bool show_tms9918a_sprites;
+    bool show_tms9918a_palettes;
+    bool show_f18a_nametables;
+    bool show_f18a_patterns;
+    bool show_f18a_sprites;
+    bool show_f18a_palette;
+    bool show_tms9918a_regs;
+    bool show_f18a_regs;
+    bool show_f18a_extended_regs;
     bool show_psg;
     bool show_ay8910;
     bool show_trace_logger;

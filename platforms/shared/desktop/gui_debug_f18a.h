@@ -17,23 +17,22 @@
  *
  */
 
-#ifndef RUNAHEAD_H
-#define RUNAHEAD_H
+#ifndef GUI_DEBUG_F18A_H
+#define GUI_DEBUG_F18A_H
 
-#include "gearcoleco.h"
-
-#ifdef RUNAHEAD_IMPORT
+#ifdef GUI_DEBUG_F18A_IMPORT
     #define EXTERN
 #else
     #define EXTERN extern
 #endif
 
-EXTERN void runahead_init(void);
-EXTERN void runahead_destroy(void);
-EXTERN void runahead_reset(void);
-EXTERN int runahead_get_frames(void);
-EXTERN void runahead_run(int frames, u8* frame_buffer, s16* sample_buffer, int* sample_count);
+EXTERN void gui_debug_window_f18a_nametables(void);
+EXTERN void gui_debug_window_f18a_patterns(void);
+EXTERN void gui_debug_window_f18a_sprites(void);
+EXTERN void gui_debug_window_f18a_palette(void);
+EXTERN void gui_debug_window_f18a_regs(void);
+EXTERN void gui_debug_window_f18a_extended_regs(void);
 
-#undef RUNAHEAD_IMPORT
+#undef GUI_DEBUG_F18A_IMPORT
 #undef EXTERN
-#endif /* RUNAHEAD_H */
+#endif /* GUI_DEBUG_F18A_H */

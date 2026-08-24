@@ -26,11 +26,11 @@
     #define EXTERN extern
 #endif
 
-EXTERN void gui_debug_window_vram_nametable(void);
-EXTERN void gui_debug_window_vram_tiles(void);
-EXTERN void gui_debug_window_vram_sprites(void);
-EXTERN void gui_debug_window_vram_palettes(void);
-EXTERN void gui_debug_window_vram_regs(void);
+EXTERN void gui_debug_window_tms9918a_nametable(void);
+EXTERN void gui_debug_window_tms9918a_patterns(void);
+EXTERN void gui_debug_window_tms9918a_sprites(void);
+EXTERN void gui_debug_window_tms9918a_palettes(void);
+EXTERN void gui_debug_window_tms9918a_regs(void);
 
 #undef GUI_DEBUG_TMS9918_IMPORT
 #undef EXTERN

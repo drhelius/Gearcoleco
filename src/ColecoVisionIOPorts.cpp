@@ -34,6 +34,11 @@ ColecoVisionIOPorts::~ColecoVisionIOPorts()
 {
 }
 
+void ColecoVisionIOPorts::SetVideo(Video* pVideo)
+{
+    m_pVideo = pVideo;
+}
+
 void ColecoVisionIOPorts::Reset()
 {
 }

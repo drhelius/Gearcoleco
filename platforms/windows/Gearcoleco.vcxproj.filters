@@ -42,6 +42,7 @@
     <ClCompile Include="..\shared\desktop\gui_debug_psg.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_rewind.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_tms9918.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\gui_debug_f18a.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_trace_logger.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\trace_logger_formatter.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_filedialogs.cpp"><Filter>desktop</Filter></ClCompile>
@@ -73,7 +74,10 @@
     <ClCompile Include="..\..\src\Processor.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\TraceLogger.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\VgmRecorder.cpp"><Filter>core</Filter></ClCompile>
-    <ClCompile Include="..\..\src\Video.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\TMS9918A.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\F18A.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\F18A_enhancements.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\F18AGPU.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\audio\Blip_Buffer.cpp"><Filter>core\audio</Filter></ClCompile>
     <ClCompile Include="..\..\src\audio\Effects_Buffer.cpp"><Filter>core\audio</Filter></ClCompile>
     <ClCompile Include="..\..\src\audio\Multi_Buffer.cpp"><Filter>core\audio</Filter></ClCompile>
@@ -116,6 +120,7 @@
     <ClInclude Include="..\shared\desktop\gui_debug_rewind.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_text.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_tms9918.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\gui_debug_f18a.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_trace_logger.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\trace_logger_formatter.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_widgets.h"><Filter>desktop</Filter></ClInclude>
@@ -175,6 +180,9 @@
     <ClInclude Include="..\..\src\TraceLogger.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\VgmRecorder.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Video.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\TMS9918A.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\F18A.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\F18AGPU.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\audio\blargg_common.h"><Filter>core\audio</Filter></ClInclude>
     <ClInclude Include="..\..\src\audio\blargg_config.h"><Filter>core\audio</Filter></ClInclude>
     <ClInclude Include="..\..\src\audio\blargg_source.h"><Filter>core\audio</Filter></ClInclude>

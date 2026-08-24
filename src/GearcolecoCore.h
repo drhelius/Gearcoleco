@@ -27,6 +27,8 @@ class Memory;
 class Processor;
 class Audio;
 class Video;
+class TMS9918A;
+class F18A;
 class Input;
 class ColecoVisionIOPorts;
 class Random;
@@ -77,6 +79,8 @@ public:
     Processor* GetProcessor();
     Audio* GetAudio();
     Video* GetVideo();
+    void SetVideoChip(GC_VideoChip video_chip);
+    GC_VideoChip GetVideoChip() const;
     Input* GetInput();
     TraceLogger* GetTraceLogger();
     u64 GetMasterClockCycles();
@@ -84,6 +88,8 @@ public:
 
 private:
     void Reset();
+    void SelectVideoChip(GC_VideoChip video_chip);
+    void SelectVideoChipForCartridge();
     bool SaveState(std::ostream& stream, size_t& size, bool screenshot);
     bool LoadState(std::istream& stream);
     std::string GetSaveStatePath(const char* path, int index);
@@ -92,6 +98,8 @@ private:
     Memory* m_pMemory;
     Processor* m_pProcessor;
     Audio* m_pAudio;
+    TMS9918A* m_pTMS9918A;
+    F18A* m_pF18A;
     Video* m_pVideo;
     Input* m_pInput;
     Cartridge* m_pCartridge;
@@ -102,6 +110,8 @@ private:
     GC_Color_Format m_pixelFormat;
     u8* m_pFrameBuffer;
     u64 m_MasterClockCycles;
+    GC_VideoChip m_requested_video_chip;
+    GC_VideoChip m_video_chip;
 };
 
 #endif	/* CORE_H */

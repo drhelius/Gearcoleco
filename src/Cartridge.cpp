@@ -42,6 +42,7 @@ Cartridge::Cartridge()
     m_szFileDirectory[0] = 0;
     m_iROMBankCount = 0;
     m_bPAL = false;
+    m_bF18ARequired = false;
     m_bSRAM = false;
     m_iCRC = 0;
 }
@@ -72,6 +73,7 @@ void Cartridge::Reset()
     m_szFileDirectory[0] = 0;
     m_iROMBankCount = 0;
     m_bPAL = false;
+    m_bF18ARequired = false;
     m_bSRAM = false;
     m_iCRC = 0;
     for (int j = 0; j < 0x400; j++)
@@ -86,6 +88,11 @@ u32 Cartridge::GetCRC() const
 bool Cartridge::IsPAL() const
 {
     return m_bPAL;
+}
+
+bool Cartridge::IsF18ARequired() const
+{
+    return m_bF18ARequired;
 }
 
 bool Cartridge::IsValidROM() const
@@ -377,6 +384,7 @@ bool Cartridge::GatherMetadata(u32 crc)
 {
     m_bPAL = false;
     m_bSRAM = false;
+    m_bF18ARequired = false;
 
     Log("ROM CRC32: %X", crc);
 
@@ -481,6 +489,12 @@ void Cartridge::GetInfoFromDB(u32 crc)
                 m_Type = CartridgeOCM;
                 for (int j = 0; j < 0x400; j++)
                     m_pEEPROM[j] = 0xFF;
+            }
+
+            if (kGameDatabase[i].mode & GC_GameDBMode_F18A)
+            {
+                Log("Cartridge requires F18A");
+                m_bF18ARequired = true;
             }
         }
         else

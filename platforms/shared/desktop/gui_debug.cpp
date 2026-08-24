@@ -30,6 +30,7 @@
 #include "gui_debug_psg.h"
 #include "gui_debug_ay8910.h"
 #include "gui_debug_tms9918.h"
+#include "gui_debug_f18a.h"
 #include "gui_debug_trace_logger.h"
 #include "emu.h"
 #include "config.h"
@@ -99,16 +100,34 @@ void gui_debug_windows(void)
             gui_debug_window_psg();
         if (config_debug.show_ay8910)
             gui_debug_window_ay8910();
-        if (config_debug.show_video_nametable)
-            gui_debug_window_vram_nametable();
-        if (config_debug.show_video_tiles)
-            gui_debug_window_vram_tiles();
-        if (config_debug.show_video_sprites)
-            gui_debug_window_vram_sprites();
-        if (config_debug.show_video_palettes)
-            gui_debug_window_vram_palettes();
-        if (config_debug.show_video_regs)
-            gui_debug_window_vram_regs();
+        if (emu_get_core()->GetVideoChip() == GC_VIDEO_CHIP_F18A)
+        {
+            if (config_debug.show_f18a_nametables)
+                gui_debug_window_f18a_nametables();
+            if (config_debug.show_f18a_patterns)
+                gui_debug_window_f18a_patterns();
+            if (config_debug.show_f18a_sprites)
+                gui_debug_window_f18a_sprites();
+            if (config_debug.show_f18a_palette)
+                gui_debug_window_f18a_palette();
+            if (config_debug.show_f18a_regs)
+                gui_debug_window_f18a_regs();
+            if (config_debug.show_f18a_extended_regs)
+                gui_debug_window_f18a_extended_regs();
+        }
+        else
+        {
+            if (config_debug.show_tms9918a_nametable)
+                gui_debug_window_tms9918a_nametable();
+            if (config_debug.show_tms9918a_patterns)
+                gui_debug_window_tms9918a_patterns();
+            if (config_debug.show_tms9918a_sprites)
+                gui_debug_window_tms9918a_sprites();
+            if (config_debug.show_tms9918a_palettes)
+                gui_debug_window_tms9918a_palettes();
+            if (config_debug.show_tms9918a_regs)
+                gui_debug_window_tms9918a_regs();
+        }
         if (config_debug.show_trace_logger)
             gui_debug_window_trace_logger();
         if (config_debug.show_rewind)

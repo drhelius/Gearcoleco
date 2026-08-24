@@ -12,7 +12,8 @@ Gearcoleco is an accurate cross-platform ColecoVision emulator.
 Created by Nacho Sánchez. Follow me on X: https://x.com/drhelius
 -----------------------------------------------------
 Features:
-    - Accurate Z80, TMS9918 VDP, SN76489 PSG and AY-3-8910 SGM emulation.
+    - Accurate Z80, TMS9918A VDP, SN76489 PSG and AY-3-8910 SGM emulation.
+    - Optional original F18A V1.9 host, video, palette, interrupt, DMA and GPU emulation.
     - ColecoVision Super Game Module and MegaCart support.
     - Super Action Controller, Wheel Controller and Roller Controller support.
     - Save states with preview and rewind, and run-ahead.

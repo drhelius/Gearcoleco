@@ -18,13 +18,12 @@
  */
 
 #ifndef VIDEO_H
-#define	VIDEO_H
+#define VIDEO_H
 
 #include "definitions.h"
 
-class Memory;
-class Processor;
 class TraceLogger;
+class F18AGPU;
 
 class Video
 {
@@ -38,133 +37,96 @@ public:
     };
 
 public:
-    Video(Memory* pMemory, Processor* pProcessor);
-    ~Video();
-    void Init();
-    void Reset(bool bPAL);
-    bool Tick(unsigned int clockCycles);
-    u8 GetDataPort();
-    u8 GetStatusFlags();
-    void WriteData(u8 data);
-    void WriteControl(u8 control);
-    void SaveState(std::ostream& stream);
-    void LoadState(std::istream& stream);
-    u8* GetVRAM();
-    u8* GetRegisters();
-    u16* GetFrameBuffer();
-    int GetMode();
-    void Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
-    void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
-    void SetOverscan(Overscan overscan);
-    Overscan GetOverscan();
-    void SetCustomPalette(GC_Color* palette);
-    void SetPredefinedPalette(int palette);
-    void SetNoSpriteLimit(bool noSpriteLimit);
-    bool IsPAL();
-    u8 GetBufferReg();
-    u16 GetAddressReg();
-    u8 GetStatusReg();
-    int GetRenderLine();
-    int GetCycleCounter();
-    bool GetLatch();
-    void SetTraceLogger(TraceLogger* pTraceLogger);
-
-private:
-    INLINE void TraceVDPEvent(u8 event, u8 reg = 0xFF, u8 raw = 0,
-        int sprite = 0xFF, int auxiliary = 0);
-    void LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary);
-    void ScanLine(int line);
-    void LatchSpriteAttributes();
-    void RenderBackground(int line);
-    void RenderSprites(int line);
-    void InitPalettes();
-
-private:
-    Memory* m_pMemory;
-    Processor* m_pProcessor;
-    TraceLogger* m_pTraceLogger;
-    u8* m_pInfoBuffer;
-    u16* m_pFrameBuffer;
-    u8* m_pVdpVRAM;
-    bool m_bFirstByteInSequence;
-    u8 m_VdpRegister[8];
-    u8 m_VdpBuffer;
-    u16 m_VdpAddress;
-    int m_iCycleCounter;
-    u8 m_VdpStatus;
-    int m_iLinesPerFrame;
-    bool m_bPAL;
-    int m_iMode;
-    int m_iRenderLine;
-    u8 m_SpriteAttribLatch[GC_MAX_SPRITES * 4];
-    Overscan m_Overscan;
-
-    struct LineEvents 
+    virtual ~Video()
     {
-        bool vint;
-        bool render;
-        bool display;
-    };
+    }
 
-    LineEvents m_LineEvents;
-
-    enum Timing
+    virtual void Init() = 0;
+    virtual void Reset(bool pal) = 0;
+    virtual bool Tick(unsigned int clock_cycles) = 0;
+    virtual u8 GetDataPort() = 0;
+    virtual u8 GetStatusFlags() = 0;
+    virtual void WriteData(u8 data) = 0;
+    virtual void WriteControl(u8 control) = 0;
+    virtual void SaveState(std::ostream& stream) = 0;
+    virtual void LoadState(std::istream& stream, u32 version = GC_SAVESTATE_VERSION) = 0;
+    virtual u8* GetVRAM() = 0;
+    virtual u8* GetRegisters() = 0;
+    virtual u16* GetFrameBuffer() = 0;
+    virtual int GetMode() = 0;
+    virtual void Render32bit(u16* source, u8* destination, GC_Color_Format pixel_format,
+        int size, bool overscan = false) = 0;
+    virtual void Render16bit(u16* source, u8* destination, GC_Color_Format pixel_format,
+        int size, bool overscan = false) = 0;
+    virtual void SetOverscan(Overscan overscan) = 0;
+    virtual Overscan GetOverscan() = 0;
+    virtual void SetCustomPalette(GC_Color* palette) = 0;
+    virtual void SetPredefinedPalette(int palette) = 0;
+    virtual void SetNoSpriteLimit(bool no_sprite_limit) = 0;
+    virtual bool IsPAL() = 0;
+    virtual u8 GetBufferReg() = 0;
+    virtual u16 GetAddressReg() = 0;
+    virtual u8 GetStatusReg() = 0;
+    virtual int GetRenderLine() = 0;
+    virtual int GetCycleCounter() = 0;
+    virtual bool GetLatch() = 0;
+    virtual void SetTraceLogger(TraceLogger* trace_logger) = 0;
+    virtual bool IsF18AHardware() const = 0;
+    virtual bool IsF18AUnlocked() const
     {
-        TIMING_VINT = 0,
-        TIMING_RENDER = 1,
-        TIMING_DISPLAY = 2
-    };
+        return false;
+    }
 
-    int m_Timing[3];
-    bool m_bDisplayEnabled;
-    bool m_bSpriteOvrRequest;
-    bool m_bNoSpriteLimit;
+    virtual int GetScreenWidth() const = 0;
+    virtual int GetScreenHeight() const = 0;
 
-    u16 m_palette_565_rgb[16];
-    u16 m_palette_555_rgb[16];
-    u16 m_palette_565_bgr[16];
-    u16 m_palette_555_bgr[16];
+    virtual u8 GetF18AStatusRegister(int index) const
+    {
+        UNUSED(index);
+        return 0;
+    }
 
-    u8 m_CustomPalette[48];
-    u8* m_pCurrentPalette;
+    virtual const u16* GetF18APalette() const
+    {
+        return NULL;
+    }
+
+    virtual F18AGPU* GetF18AGPU()
+    {
+        return NULL;
+    }
 };
 
-#include "TraceLogger.h"
-
-INLINE void Video::TraceVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
+const u8 kPalette_888_coleco[48] =
 {
-    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_VDP, event))
-        LogVDPEvent(event, reg, raw, sprite, auxiliary);
-}
+    0, 0, 0, 0, 0, 0, 33, 200, 66, 94, 220, 120, 84, 85, 237, 125,
+    118, 252, 212, 82, 77, 66, 235, 245, 252, 85, 84, 255, 121, 120, 212,
+    193, 84, 230, 206, 128, 33, 176, 59, 201, 91, 186, 204, 204, 204, 255,
+    255, 255
+};
 
-inline u8* Video::GetVRAM()
+const u8 kPalette_888_tms9918[48] =
 {
-    return m_pVdpVRAM;
-}
+    0, 0, 0, 0, 8, 0, 0, 241, 1, 50, 251, 65, 67, 76, 255, 112, 110,
+    255, 238, 75, 28, 9, 255, 255, 255, 78, 31, 255, 112, 65, 211, 213,
+    0, 228, 221, 52, 0, 209, 0, 219, 79, 211, 193, 212, 190, 244, 255,
+    241
+};
 
-inline u8* Video::GetRegisters()
+const u8 k2bitTo8bit[4] = {0, 85, 170, 255};
+const u8 k2bitTo5bit[4] = {0, 10, 21, 31};
+const u8 k2bitTo6bit[4] = {0, 21, 42, 63};
+const u8 k4bitTo8bit[16] =
 {
-    return m_VdpRegister;
-}
-
-inline int Video::GetMode()
+    0, 17, 34, 51, 68, 86, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255
+};
+const u8 k4bitTo5bit[16] =
 {
-    return m_iMode;
-}
-
-inline u16* Video::GetFrameBuffer()
+    0, 2, 4, 6, 8, 10, 12, 14, 17, 19, 21, 23, 25, 27, 29, 31
+};
+const u8 k4bitTo6bit[16] =
 {
-    return m_pFrameBuffer;
-}
+    0, 4, 8, 13, 17, 21, 25, 29, 34, 38, 42, 46, 50, 55, 59, 63
+};
 
-const u8 kPalette_888_coleco[48] = {0,0,0, 0,0,0, 33,200,66, 94,220,120, 84,85,237, 125,118,252, 212,82,77, 66,235,245, 252,85,84, 255,121,120, 212,193,84, 230,206,128, 33,176,59, 201,91,186, 204,204,204, 255,255,255};
-const u8 kPalette_888_tms9918[48] = {0,0,0, 0,8,0, 0,241,1, 50,251,65, 67,76,255, 112,110,255, 238,75,28, 9,255,255, 255,78,31, 255,112,65, 211,213,0, 228,221,52, 0,209,0, 219,79,211, 193,212,190, 244,255,241};
-
-const u8 k2bitTo8bit[4] = {0,85,170,255};
-const u8 k2bitTo5bit[4] = {0,10,21,31};
-const u8 k2bitTo6bit[4] = {0,21,42,63};
-const u8 k4bitTo8bit[16] = {0,17,34,51,68,86,102,119,136,153,170,187,204,221,238,255};
-const u8 k4bitTo5bit[16] = {0,2,4,6,8,10,12,14,17,19,21,23,25,27,29,31};
-const u8 k4bitTo6bit[16] = {0,4,8,13,17,21,25,29,34,38,42,46,50,55,59,63};
-
-#endif	/* VIDEO_H */
+#endif

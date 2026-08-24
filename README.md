@@ -95,8 +95,9 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 
 ## Features
 
-- Very accurate Z80 core, TMS9918 VDP, SN76489 PSG and AY-3-8910 SGM emulation.
+- Very accurate Z80 core, TMS9918A VDP, SN76489 PSG and AY-3-8910 SGM emulation.
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
+- Optional F18A v1.9 emulation.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states with preview and rewind support.
 - Run-ahead support to reduce input latency.

@@ -36,11 +36,17 @@ static inline void process(config_Operation operation)
     CONFIG_BOOL("Debug", "Breakpoints", config_debug.show_breakpoints, false);
     CONFIG_BOOL("Debug", "Symbols", config_debug.show_symbols, false);
     CONFIG_BOOL("Debug", "Video", config_debug.show_video, false);
-    CONFIG_BOOL("Debug", "VideoNameTable", config_debug.show_video_nametable, false);
-    CONFIG_BOOL("Debug", "VideoTiles", config_debug.show_video_tiles, false);
-    CONFIG_BOOL("Debug", "VideoSprites", config_debug.show_video_sprites, false);
-    CONFIG_BOOL("Debug", "VideoPalettes", config_debug.show_video_palettes, false);
-    CONFIG_BOOL("Debug", "VideoRegs", config_debug.show_video_regs, false);
+    CONFIG_BOOL("Debug", "TMS9918ANameTable", config_debug.show_tms9918a_nametable, false);
+    CONFIG_BOOL("Debug", "TMS9918APatterns", config_debug.show_tms9918a_patterns, false);
+    CONFIG_BOOL("Debug", "TMS9918ASprites", config_debug.show_tms9918a_sprites, false);
+    CONFIG_BOOL("Debug", "TMS9918APalettes", config_debug.show_tms9918a_palettes, false);
+    CONFIG_BOOL("Debug", "F18ANameTables", config_debug.show_f18a_nametables, false);
+    CONFIG_BOOL("Debug", "F18APatterns", config_debug.show_f18a_patterns, false);
+    CONFIG_BOOL("Debug", "F18ASprites", config_debug.show_f18a_sprites, false);
+    CONFIG_BOOL("Debug", "F18APalette", config_debug.show_f18a_palette, false);
+    CONFIG_BOOL("Debug", "TMS9918ARegs", config_debug.show_tms9918a_regs, false);
+    CONFIG_BOOL("Debug", "F18ARegs", config_debug.show_f18a_regs, false);
+    CONFIG_BOOL("Debug", "F18AExtendedRegs", config_debug.show_f18a_extended_regs, false);
     CONFIG_BOOL("Debug", "PSG", config_debug.show_psg, false);
     CONFIG_BOOL("Debug", "AY8910", config_debug.show_ay8910, false);
     CONFIG_BOOL("Debug", "TraceLogger", config_debug.show_trace_logger, false);
@@ -150,6 +156,7 @@ static inline void process(config_Operation operation)
 
     //**************************************
     // Video
+    CONFIG_INT_RANGE("Video", "VideoChip", config_video.video_chip, GC_VIDEO_CHIP_AUTO, GC_VIDEO_CHIP_AUTO, GC_VIDEO_CHIP_F18A);
     //**************************************
 
     // Display
@@ -451,6 +458,12 @@ static void migrate(int file_version)
         write_int("Debug", "TraceSgmEvents", TRACE_SGM_EVENT_ALL);
         write_int("Debug", "TraceMapperEvents", TRACE_MAPPER_EVENT_ALL);
         write_bool("Debug", "TraceCycles", false);
+    }
+
+    if (file_version < 6)
+    {
+        int old_video_chip = read_int("Video", "VideoChip", 0);
+        write_int("Video", "VideoChip", old_video_chip == 1 ? GC_VIDEO_CHIP_F18A : GC_VIDEO_CHIP_AUTO);
     }
 
     int scale = 0;

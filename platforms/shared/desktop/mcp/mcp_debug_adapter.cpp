@@ -18,6 +18,7 @@
  */
 
 #include "mcp_debug_adapter.h"
+#include "F18AGPU.h"
 #include "Input.h"
 #include "log.h"
 #include "../utils.h"
@@ -33,6 +34,7 @@
 #include "../config.h"
 #include "../events.h"
 #include "../rewind.h"
+#include "../runahead.h"
 #include <cstring>
 #include <sstream>
 #include <iomanip>
@@ -738,6 +740,30 @@ json DebugAdapter::GetVDPRegisters()
         registers.push_back(reg);
     }
 
+    if (video->IsF18AHardware())
+    {
+        const int f18a_indexes[] = { 10, 11, 15, 19, 24, 25, 26, 27, 28, 29, 30, 31,
+            32, 33, 34, 35, 36, 47, 48, 49, 50, 51, 54, 55, 56, 57 };
+        const char* f18a_names[] = { "T2 NAME TABLE", "T2 COLOR TABLE", "STATUS SELECT",
+            "LINE INTERRUPT", "PALETTE SELECT", "T2 HSCROLL", "T2 VSCROLL", "T1 HSCROLL",
+            "T1 VSCROLL", "PAGE SIZE", "SPRITE MAX", "BITMAP CONTROL", "BITMAP BASE",
+            "BITMAP X", "BITMAP Y", "BITMAP WIDTH", "BITMAP HEIGHT", "DATA PORT MODE",
+            "VRAM INCREMENT", "ECM MODE", "F18A CONTROL", "SPRITE STOP", "GPU PC MSB",
+            "GPU PC LSB", "GPU CONTROL", "F18A UNLOCK" };
+
+        for (int i = 0; i < (int)(sizeof(f18a_indexes) / sizeof(f18a_indexes[0])); i++)
+        {
+            json reg = json::array();
+            int index = f18a_indexes[i];
+            reg.push_back(index);
+            std::ostringstream ss;
+            ss << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (int)regs[index];
+            reg.push_back(ss.str());
+            reg.push_back(f18a_names[i]);
+            registers.push_back(reg);
+        }
+    }
+
     json decoded;
     decoded["screen_enabled"] = (regs[1] & 0x40) != 0;
     decoded["nmi_enabled"] = (regs[1] & 0x20) != 0;
@@ -752,6 +778,10 @@ json DebugAdapter::GetVDPRegisters()
     decoded["sprite_pattern_addr"] = (regs[6] & 0x07) << 11;
     decoded["backdrop_color"] = regs[7] & 0x0F;
     decoded["text_color"] = (regs[7] >> 4) & 0x0F;
+    decoded["video_chip"] = video->IsF18AHardware() ? "F18A V1.9" : "TMS9918A";
+    decoded["f18a_unlocked"] = video->IsF18AUnlocked();
+    decoded["screen_width"] = video->GetScreenWidth();
+    decoded["screen_height"] = video->GetScreenHeight();
 
     json result;
     result["fields"] = json::array({"index", "value", "description"});
@@ -779,6 +809,18 @@ json DebugAdapter::GetVDPStatus()
     status["cycle_counter"] = video->GetCycleCounter();
     status["display_enabled"] = (video->GetRegisters()[1] & 0x40) != 0;
     status["is_pal"] = video->IsPAL();
+
+    if (video->IsF18AHardware())
+    {
+        json f18a_status = json::array();
+        for (int i = 0; i < 16; i++)
+            f18a_status.push_back(video->GetF18AStatusRegister(i));
+        status["f18a_status"] = f18a_status;
+        status["f18a_unlocked"] = video->IsF18AUnlocked();
+        status["gpu_pc"] = video->GetF18AGPU()->GetPC();
+        status["gpu_status"] = video->GetF18AGPU()->GetStatus();
+        status["gpu_running"] = video->GetF18AGPU()->IsRunning();
+    }
 
     return status;
 }
@@ -1229,6 +1271,7 @@ json DebugAdapter::LoadStateFile(const std::string& file_path)
 
     events_sync_input();
     rewind_reset();
+    runahead_reset();
 
     result["success"] = true;
     result["file_path"] = file_path;
