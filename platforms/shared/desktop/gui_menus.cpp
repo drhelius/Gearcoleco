@@ -53,6 +53,8 @@ static bool open_bios = false;
 static bool open_bios_warning = false;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
+static const ImVec4 service_mcp_http_color(0.10f, 0.90f, 0.10f, 1.0f);
+static const ImVec4 service_mcp_stdio_color(0.90f, 0.70f, 0.10f, 1.0f);
 static ShaderPresetInfo shader_presets[SHADER_PRESET_MAX_DISCOVERED];
 static int shader_preset_count = 0;
 
@@ -461,7 +463,7 @@ static void menu_emulator(void)
             ImGui::Separator();
             if (strlen(gui_bios_path) > 0)
             {
-                ImGui::TextColored(ImVec4(0.10f, 0.90f, 0.10f, 1.0f), "BIOS loaded");
+                ImGui::TextColored(service_mcp_http_color, "BIOS loaded");
             }
             else
             {
@@ -1368,9 +1370,9 @@ static void menu_debug(void)
             ImGui::Separator();
 
             if (stdio_running)
-                ImGui::TextColored(ImVec4(0.90f, 0.70f, 0.10f, 1.0f), "STDIO mode active");
+                ImGui::TextColored(service_mcp_stdio_color, "STDIO mode active");
             else if (http_running)
-                ImGui::TextColored(ImVec4(0.10f, 0.90f, 0.10f, 1.0f), "Listening on %s:%d",
+                ImGui::TextColored(service_mcp_http_color, "Listening on %s:%d",
                     emu_mcp_get_http_address(), emu_mcp_get_http_port());
             else
                 ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "Stopped");
@@ -1524,13 +1526,13 @@ static void draw_mcp_status(void)
         return;
 
     char status[128];
-    ImVec4 color(0.10f, 0.90f, 0.10f, 1.0f);
+    ImVec4 color = service_mcp_http_color;
 
     int transport_mode = emu_mcp_get_transport_mode();
     if (transport_mode == 0)
     {
         snprintf(status, sizeof(status), "MCP: STDIO");
-        color = ImVec4(0.90f, 0.70f, 0.10f, 1.0f);
+        color = service_mcp_stdio_color;
     }
     else if (transport_mode == 1)
     {
