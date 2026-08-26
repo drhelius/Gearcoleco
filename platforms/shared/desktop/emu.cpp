@@ -68,6 +68,7 @@ static std::thread loading_thread;
 static bool loading_thread_active;
 static bool loading_result;
 static char loading_file_path[4096];
+static bool loading_softpatching;
 static Cartridge::ForceConfiguration loading_config;
 
 static void save_ram(void);
@@ -158,7 +159,7 @@ void emu_destroy(void)
 
 static void load_media_thread_func(void)
 {
-    loading_result = gearcoleco->LoadROM(loading_file_path, &loading_config);
+    loading_result = gearcoleco->LoadROM(loading_file_path, &loading_config, loading_softpatching);
     loading_state.store(Loading_State_Finished);
 }
 
@@ -176,6 +177,7 @@ void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     strncpy(loading_file_path, file_path, sizeof(loading_file_path) - 1);
     loading_file_path[sizeof(loading_file_path) - 1] = '\0';
     loading_result = false;
+    loading_softpatching = config_emulator.softpatching;
     loading_config = config;
     gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
     loading_state.store(Loading_State_Loading);

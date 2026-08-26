@@ -255,9 +255,9 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
     return false;
 }
 
-bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config)
+bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config, bool softpatching)
 {
-    if (m_pCartridge->LoadFromFile(szFilePath))
+    if (m_pCartridge->LoadFromFile(szFilePath, softpatching))
     {
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);

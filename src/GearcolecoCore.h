@@ -51,7 +51,7 @@ public:
     ~GearcolecoCore();
     void Init(GC_Color_Format pixelFormat = GC_PIXEL_RGBA8888);
     bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug = NULL, bool render = true);
-    bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL);
+    bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL, bool softpatching = false);
     bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
     void SaveDisassembledROM();
     bool GetRuntimeInfo(GC_RuntimeInfo& runtime_info);

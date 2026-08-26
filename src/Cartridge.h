@@ -84,13 +84,16 @@ public:
     {
         return m_pROM;
     }
-    bool LoadFromFile(const char* path);
+    bool LoadFromFile(const char* path, bool softpatching = false);
     bool LoadFromBuffer(const u8* buffer, int size);
+    bool IsSoftpatchApplied() const;
+    const char* GetSoftpatchPath() const;
 
 private:
     bool GatherMetadata(u32 crc);
     void GetInfoFromDB(u32 crc);
-    bool LoadFromZipFile(const u8* buffer, int size);
+    bool LoadFromZipFile(const u8* buffer, int size, bool softpatching);
+    bool LoadFromBufferWithSoftpatch(const u8* buffer, int size, bool softpatching);
 
 private:
     u8* m_pROM;
@@ -109,6 +112,8 @@ private:
     u32 m_iCRC;
     bool m_bSRAM;
     u8* m_pEEPROM;
+    bool m_softpatch_applied;
+    char m_softpatch_path[4096];
 };
 
 #endif	/* CARTRIDGE_H */
