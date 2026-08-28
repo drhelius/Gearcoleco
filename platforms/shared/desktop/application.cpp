@@ -478,11 +478,13 @@ static void sdl_events(void)
             if (!file_dialog_active)
                 ImGui_ImplSDL3_ProcessEvent(&event);
 
-            if (!file_dialog_active && !ImGui::GetIO().WantCaptureKeyboard)
-                events_shortcuts(&event);
+            bool keyboard_captured = file_dialog_active || ImGui::GetIO().WantCaptureKeyboard;
+            bool shortcut_consumed = false;
+            if (!keyboard_captured)
+                shortcut_consumed = events_shortcuts(&event);
 
             if (!file_dialog_active)
-                events_handle_emu_event(&event);
+                events_handle_emu_event(&event, shortcut_consumed || keyboard_captured);
         }
     }
 }
@@ -523,6 +525,7 @@ static void sdl_events_app(const SDL_Event* event)
         case SDL_EVENT_WINDOW_FOCUS_LOST:
         {
             display_disable_vsync();
+            events_release_adam_keys();
             if (config_emulator.pause_when_inactive)
             {
                 paused_when_focus_lost = emu_is_paused();

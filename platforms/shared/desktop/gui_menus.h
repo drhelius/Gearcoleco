@@ -30,6 +30,8 @@ EXTERN char gui_savefiles_path[4096];
 EXTERN char gui_savestates_path[4096];
 EXTERN char gui_screenshots_path[4096];
 EXTERN char gui_bios_path[4096];
+EXTERN char gui_adam_eos_path[4096];
+EXTERN char gui_adam_smartwriter_path[4096];
 EXTERN char gui_mcp_http_address[64];
 
 EXTERN void gui_init_menus(void);

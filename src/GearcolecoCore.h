@@ -33,6 +33,8 @@ class Input;
 class ColecoVisionIOPorts;
 class Random;
 class TraceLogger;
+class Adam;
+class AdamMedia;
 
 class GearcolecoCore
 {
@@ -53,6 +55,24 @@ public:
     bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug = NULL, bool render = true);
     bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL, bool softpatching = false);
     bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
+    bool LoadAdamFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size,
+        const u8* smartwriter, int smartwriter_size);
+    bool LoadAdamFirmware(GC_AdamFirmware firmware, const u8* data, int size);
+    void UnloadAdamFirmware();
+    bool StartAdam(GC_AdamBootMode boot_mode = GC_ADAM_BOOT_COMPUTER);
+    bool LoadAdamMediaFromBuffer(GC_AdamMediaSlot slot, GC_AdamMediaType type,
+        const u8* data, size_t size, bool write_protected = false, u32 base_crc = 0);
+    void EjectAdamMedia(GC_AdamMediaSlot slot);
+    void EjectAllAdamMedia();
+    void UnloadContent();
+    AdamMedia* GetAdamMedia(GC_AdamMediaSlot slot);
+    void AdamKeyPressed(GC_AdamKey key);
+    void AdamKeyReleased(GC_AdamKey key);
+    void AdamReleaseAllKeys();
+    bool IsReady() const;
+    GC_Machine GetMachine() const;
+    GC_ContentType GetContentType() const;
+    GC_AdamBootMode GetAdamBootMode() const;
     void SaveDisassembledROM();
     bool GetRuntimeInfo(GC_RuntimeInfo& runtime_info);
     void KeyPressed(GC_Controllers controller, GC_Keys key);
@@ -83,11 +103,12 @@ public:
     GC_VideoChip GetVideoChip() const;
     Input* GetInput();
     TraceLogger* GetTraceLogger();
+    Adam* GetAdam();
     u64 GetMasterClockCycles();
     void RenderFrameBuffer(u8* finalFrameBuffer);
 
 private:
-    void Reset();
+    void Reset(bool cold = true);
     void SelectVideoChip(GC_VideoChip video_chip);
     void SelectVideoChipForCartridge();
     bool SaveState(std::ostream& stream, size_t& size, bool screenshot);
@@ -106,12 +127,16 @@ private:
     ColecoVisionIOPorts* m_pColecoVisionIOPorts;
     Random* m_pRandom;
     TraceLogger* m_pTraceLogger;
+    Adam* m_pAdam;
     bool m_bPaused;
     GC_Color_Format m_pixelFormat;
     u8* m_pFrameBuffer;
     u64 m_MasterClockCycles;
     GC_VideoChip m_requested_video_chip;
     GC_VideoChip m_video_chip;
+    GC_Machine m_machine;
+    GC_ContentType m_content_type;
+    GC_AdamBootMode m_adam_boot_mode;
 };
 
 #endif	/* CORE_H */

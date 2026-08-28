@@ -54,9 +54,11 @@ void gui_action_reload_rom(void)
 {
     if (!emu_is_empty())
     {
-        char rom_path[4096];
-        strncpy_fit(rom_path, emu_get_core()->GetCartridge()->GetFilePath(), sizeof(rom_path));
-        gui_load_rom(rom_path);
+        const char* content_path = emu_get_content_path();
+        if (content_path[0] != '\0')
+            gui_load_rom(content_path);
+        else if (emu_get_machine() == GC_MACHINE_ADAM)
+            emu_start_adam();
     }
 }
 
@@ -125,7 +127,7 @@ void gui_action_save_screenshot(const char* path)
 {
     using namespace std;
 
-    if (!emu_get_core()->GetCartridge()->IsReady())
+    if (emu_is_empty())
         return;
 
     time_t now = time(0);
@@ -151,17 +153,20 @@ void gui_action_save_screenshot(const char* path)
             default:
             case Directory_Location_Default:
             {
-                file_path = file_path.assign(config_root_path)+ "/" + string(emu_get_core()->GetCartridge()->GetFileName()) + " - " + date_time + ".png";
+                file_path = file_path.assign(config_root_path)+ "/" + string(emu_get_content_name()) + " - " + date_time + ".png";
                 break;
             }
             case Directory_Location_ROM:
             {
-                file_path = file_path.assign(emu_get_core()->GetCartridge()->GetFilePath()) + " - " + date_time + ".png";
+                if (emu_get_content_path()[0] != '\0')
+                    file_path = file_path.assign(emu_get_content_path()) + " - " + date_time + ".png";
+                else
+                    file_path = file_path.assign(config_root_path) + "/ADAM - " + date_time + ".png";
                 break;
             }
             case Directory_Location_Custom:
             {
-                file_path = file_path.assign(config_emulator.screenshots_path)+ "/" + string(emu_get_core()->GetCartridge()->GetFileName()) + " - " + date_time + ".png";
+                file_path = file_path.assign(config_emulator.screenshots_path)+ "/" + string(emu_get_content_name()) + " - " + date_time + ".png";
                 break;
             }
         }
@@ -177,7 +182,7 @@ void gui_action_save_sprite(const char* path, int index)
 {
     using namespace std;
 
-    if (!emu_get_core()->GetCartridge()->IsReady())
+    if (emu_is_empty())
         return;
 
     emu_save_sprite(path, index);
@@ -190,7 +195,7 @@ void gui_action_save_all_sprites(const char* folder_path)
 {
     using namespace std;
 
-    if (!emu_get_core()->GetCartridge()->IsReady())
+    if (emu_is_empty())
         return;
 
     for (int i = 0; i < GC_MAX_SPRITES; i++)
@@ -208,7 +213,7 @@ void gui_action_save_background(const char* path)
 {
     using namespace std;
 
-    if (!emu_get_core()->GetCartridge()->IsReady())
+    if (emu_is_empty())
         return;
 
     emu_save_background(path);
@@ -221,7 +226,7 @@ void gui_action_save_tiles(const char* path)
 {
     using namespace std;
 
-    if (!emu_get_core()->GetCartridge()->IsReady())
+    if (emu_is_empty())
         return;
 
     emu_save_tiles(path);
@@ -229,4 +234,3 @@ void gui_action_save_tiles(const char* path)
     string message = "Pattern table saved to " + string(path);
     gui_set_status_message(message.c_str(), 3000);
 }
-

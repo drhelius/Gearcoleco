@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Adam.cpp" />
+    <ClCompile Include="..\..\src\AdamMedia.cpp" />
+    <ClCompile Include="..\..\src\AdamNet.cpp" />
     <ClCompile Include="..\..\src\Audio.cpp" />
     <ClCompile Include="..\..\src\audio\Blip_Buffer.cpp" />
     <ClCompile Include="..\..\src\audio\Effects_Buffer.cpp" />
@@ -112,6 +115,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\Adam.h" />
+    <ClInclude Include="..\..\src\AdamMedia.h" />
+    <ClInclude Include="..\..\src\AdamNet.h" />
     <ClInclude Include="..\..\src\log.h" />
     <ClInclude Include="..\..\src\ActivisionMapper.h" />
     <ClInclude Include="..\..\src\Audio.h" />

@@ -30,6 +30,7 @@ class Random;
 class Mapper;
 class StandardMapper;
 class TraceLogger;
+class Adam;
 
 class Memory
 {
@@ -37,6 +38,7 @@ public:
     Memory(Cartridge* pCartridge, Random* pRandom);
     ~Memory();
     void SetProcessor(Processor* pProcessor);
+    void SetAdam(Adam* adam);
     void SetTraceLogger(TraceLogger* pTraceLogger);
     void Init();
     void Reset();
@@ -51,7 +53,7 @@ public:
     void LoadBios(const char* szFilePath);
     bool LoadBiosFromBuffer(const u8* buffer, int size);
     void UnloadBios();
-    bool IsBiosLoaded();
+    bool IsBiosLoaded() const;
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
     void ResetRomDisassembledMemory();
@@ -81,6 +83,7 @@ private:
     Mapper* m_pMapper;
     StandardMapper* m_pStandardMapper;
     TraceLogger* m_pTraceLogger;
+    Adam* m_pAdam;
     GC_Disassembler_Record** m_pDisassembledRomMap;
     GC_Disassembler_Record** m_pDisassembledRamMap;
     GC_Disassembler_Record** m_pDisassembledBiosMap;

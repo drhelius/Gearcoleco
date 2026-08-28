@@ -164,7 +164,8 @@ int main(int argc, char* argv[])
     {
         printf("Usage: %s [options] [rom_file] [symbol_file]\n", argv[0]);
         printf("\nArguments:\n");
-        printf("  [rom_file]                  ROM file: accepts ROMs (.col, .cv, .rom, .bin) or ZIP (.zip)\n");
+        printf("  [rom_file]                  Cartridge or ADAM media "
+            "(.col, .cv, .rom, .bin, .ddp, .dsk, .zip, .m3u)\n");
         printf("  [symbol_file]               Optional symbol file for debugging\n");
         printf("\nOptions:\n");
         printf("  -f, --fullscreen            Start in fullscreen mode\n");

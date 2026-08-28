@@ -51,6 +51,9 @@ static bool choose_screenshots_path = false;
 static bool choose_backup_ram_path = false;
 static bool open_bios = false;
 static bool open_bios_warning = false;
+static bool open_adam_eos = false;
+static bool open_adam_smartwriter = false;
+static int open_adam_media_slot = -1;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
 static const ImVec4 service_mcp_http_color(0.10f, 0.90f, 0.10f, 1.0f);
@@ -78,6 +81,9 @@ static void gamepad_configuration_item(const char* text, int* button, int player
 static void hotkey_configuration_item(const char* text, config_Hotkey* hotkey);
 static void gamepad_device_selector(int player);
 static void draw_savestate_slot_info(int slot);
+static void draw_adam_media_slots(void);
+static void draw_adam_keyboard_map(void);
+static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc);
 
 void gui_init_menus(void)
 {
@@ -102,6 +108,9 @@ void gui_main_menu(void)
     choose_backup_ram_path = false;
     open_bios = false;
     open_bios_warning = false;
+    open_adam_eos = false;
+    open_adam_smartwriter = false;
+    open_adam_media_slot = -1;
     save_debug_settings = false;
     load_debug_settings = false;
 
@@ -133,7 +142,7 @@ static void menu_gearcoleco(void)
         gui_in_use = true;
         bool media_actions_enabled = !emu_is_empty();
 
-        if (ImGui::MenuItem("Open ROM...", config_hotkeys[config_HotkeyIndex_OpenROM].str))
+        if (ImGui::MenuItem("Open Media...", config_hotkeys[config_HotkeyIndex_OpenROM].str))
         {
             if (emu_is_bios_loaded())
                 open_rom = true;
@@ -162,6 +171,21 @@ static void menu_gearcoleco(void)
                 }
             }
 
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("Boot ADAM", NULL, false, config_emulator.machine == GC_MACHINE_ADAM))
+        {
+            if (emu_start_adam())
+                application_update_title_with_rom("ADAM");
+            else
+                gui_set_error_message("Unable to boot ADAM. Configure valid OS-7, EOS, and SmartWriter firmware first.");
+        }
+
+        if ((config_emulator.machine == GC_MACHINE_ADAM || emu_get_machine() == GC_MACHINE_ADAM) &&
+            ImGui::BeginMenu("ADAM Media"))
+        {
+            draw_adam_media_slots();
             ImGui::EndMenu();
         }
 
@@ -327,6 +351,51 @@ static void menu_emulator(void)
     {
         gui_in_use = true;
 
+        ImGui::PushItemWidth(160.0f);
+        int previous_machine = config_emulator.machine;
+        if (ImGui::Combo("Machine", &config_emulator.machine,
+            "Auto\0ColecoVision\0ADAM\0\0"))
+        {
+            if (!emu_is_empty())
+            {
+                char content_path[4096];
+                strncpy_fit(content_path, emu_get_content_path(), sizeof(content_path));
+                if (content_path[0] != '\0')
+                {
+                    bool adam_media = ends_with_no_case(content_path, ".ddp") ||
+                        ends_with_no_case(content_path, ".dsk") ||
+                        ends_with_no_case(content_path, ".m3u");
+                    if ((config_emulator.machine == GC_MACHINE_COLECOVISION) && adam_media)
+                    {
+                        if (!emu_unload_content())
+                            config_emulator.machine = previous_machine;
+                    }
+                    else if (!gui_load_rom(content_path))
+                        config_emulator.machine = previous_machine;
+                }
+                else if (config_emulator.machine == GC_MACHINE_ADAM)
+                {
+                    if (!emu_start_adam())
+                        config_emulator.machine = previous_machine;
+                }
+                else if (!emu_unload_content())
+                    config_emulator.machine = previous_machine;
+            }
+        }
+        ImGui::PopItemWidth();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Auto selects ColecoVision cartridges and ADAM .ddp/.dsk/.m3u media.\nADAM without content requires explicit ADAM selection.");
+
+        if (config_emulator.machine == GC_MACHINE_ADAM)
+        {
+            ImGui::PushItemWidth(160.0f);
+            ImGui::Combo("ADAM Boot", &config_emulator.adam_boot_mode,
+                "Auto\0Computer\0Cartridge\0\0");
+            ImGui::PopItemWidth();
+        }
+
+        ImGui::Separator();
+
         if (ImGui::BeginMenu("Save States Dir"))
         {
             ImGui::PushItemWidth(220.0f);
@@ -345,7 +414,11 @@ static void menu_emulator(void)
                 case Directory_Location_ROM:
                 {
                     if (!emu_is_empty())
-                        ImGui::Text("%s", emu_get_core()->GetCartridge()->GetFileDirectory());
+                    {
+                        char directory[4096];
+                        get_directory(emu_get_content_path(), directory, sizeof(directory));
+                        ImGui::Text("%s", directory);
+                    }
                     break;
                 }
                 case Directory_Location_Custom:
@@ -384,7 +457,11 @@ static void menu_emulator(void)
                 case Directory_Location_ROM:
                 {
                     if (!emu_is_empty())
-                        ImGui::Text("%s", emu_get_core()->GetCartridge()->GetFileDirectory());
+                    {
+                        char directory[4096];
+                        get_directory(emu_get_content_path(), directory, sizeof(directory));
+                        ImGui::Text("%s", directory);
+                    }
                     break;
                 }
                 case Directory_Location_Custom:
@@ -422,7 +499,11 @@ static void menu_emulator(void)
                 case Directory_Location_ROM:
                 {
                     if (!emu_is_empty())
-                        ImGui::Text("%s", emu_get_core()->GetCartridge()->GetFileDirectory());
+                    {
+                        char directory[4096];
+                        get_directory(emu_get_content_path(), directory, sizeof(directory));
+                        ImGui::Text("%s", directory);
+                    }
                     break;
                 }
                 case Directory_Location_Custom:
@@ -447,29 +528,54 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("BIOS"))
+        if (ImGui::BeginMenu("Firmware"))
         {
-            if (ImGui::MenuItem("Load BIOS..."))
+            ImGui::TextDisabled("OS-7 / ColecoVision BIOS");
+            if (ImGui::MenuItem("Load OS-7..."))
             {
                 open_bios = true;
             }
             ImGui::PushItemWidth(350);
-            if (ImGui::InputText("##bios_path", gui_bios_path, IM_ARRAYSIZE(gui_bios_path), ImGuiInputTextFlags_AutoSelectAll))
+            if (ImGui::InputText("##bios_path", gui_bios_path, IM_ARRAYSIZE(gui_bios_path),
+                ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
             {
-                config_emulator.bios_path.assign(gui_bios_path);
-                emu_load_bios(gui_bios_path);
+                if (emu_load_bios(gui_bios_path))
+                    config_emulator.bios_path.assign(gui_bios_path);
             }
             ImGui::PopItemWidth();
 
+            draw_adam_firmware_status(GC_ADAM_FIRMWARE_OS7, 0x3AA93EF3);
+
             ImGui::Separator();
-            if (strlen(gui_bios_path) > 0)
+            ImGui::TextDisabled("ADAM EOS");
+            if (ImGui::MenuItem("Load EOS..."))
+                open_adam_eos = true;
+            ImGui::PushItemWidth(350);
+            if (ImGui::InputText("##adam_eos_path", gui_adam_eos_path,
+                IM_ARRAYSIZE(gui_adam_eos_path), ImGuiInputTextFlags_AutoSelectAll |
+                ImGuiInputTextFlags_EnterReturnsTrue))
             {
-                ImGui::TextColored(service_mcp_http_color, "BIOS loaded");
+                config_emulator.adam_eos_path.assign(gui_adam_eos_path);
+                emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
             }
-            else
+            ImGui::PopItemWidth();
+            draw_adam_firmware_status(GC_ADAM_FIRMWARE_EOS, 0x05A37A34);
+
+            ImGui::Separator();
+            ImGui::TextDisabled("ADAM SmartWriter");
+            if (ImGui::MenuItem("Load SmartWriter..."))
+                open_adam_smartwriter = true;
+            ImGui::PushItemWidth(350);
+            if (ImGui::InputText("##adam_smartwriter_path", gui_adam_smartwriter_path,
+                IM_ARRAYSIZE(gui_adam_smartwriter_path), ImGuiInputTextFlags_AutoSelectAll |
+                ImGuiInputTextFlags_EnterReturnsTrue))
             {
-                ImGui::TextColored(ImVec4(0.50f, 0.50f, 0.50f, 1.0f), "No BIOS loaded");
+                config_emulator.adam_smartwriter_path.assign(gui_adam_smartwriter_path);
+                emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER,
+                    gui_adam_smartwriter_path);
             }
+            ImGui::PopItemWidth();
+            draw_adam_firmware_status(GC_ADAM_FIRMWARE_SMARTWRITER, 0x58D86A2A);
 
             ImGui::EndMenu();
         }
@@ -501,7 +607,7 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
-        ImGui::MenuItem("Show ROM info", "", &config_emulator.show_info);
+        ImGui::MenuItem("Show content info", "", &config_emulator.show_info);
         ImGui::MenuItem("Status Messages", "", &config_emulator.status_messages);
 
         ImGui::Separator();
@@ -520,10 +626,10 @@ static void menu_emulator(void)
 
         if (ImGui::BeginMenu("Hotkeys"))
         {
-            hotkey_configuration_item("Open ROM:", &config_hotkeys[config_HotkeyIndex_OpenROM]);
+            hotkey_configuration_item("Open Media:", &config_hotkeys[config_HotkeyIndex_OpenROM]);
             hotkey_configuration_item("Quit:", &config_hotkeys[config_HotkeyIndex_Quit]);
             hotkey_configuration_item("Reset:", &config_hotkeys[config_HotkeyIndex_Reset]);
-            hotkey_configuration_item("Reload ROM:", &config_hotkeys[config_HotkeyIndex_ReloadROM]);
+            hotkey_configuration_item("Reload Media:", &config_hotkeys[config_HotkeyIndex_ReloadROM]);
             hotkey_configuration_item("Pause:", &config_hotkeys[config_HotkeyIndex_Pause]);
             hotkey_configuration_item("Fast Forward:", &config_hotkeys[config_HotkeyIndex_FFWD]);
             hotkey_configuration_item("Rewind:", &config_hotkeys[config_HotkeyIndex_Rewind]);
@@ -578,6 +684,103 @@ static void menu_emulator(void)
 
         ImGui::EndMenu();
     }
+}
+
+static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc)
+{
+    if (!emu_is_adam_firmware_loaded(firmware))
+    {
+        ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "Missing or invalid");
+        return;
+    }
+
+    u32 crc = emu_get_adam_firmware_crc(firmware);
+    if (crc == known_crc)
+        ImGui::TextColored(service_mcp_http_color, "Known revision (CRC32 %08X)", crc);
+    else
+        ImGui::TextColored(service_mcp_stdio_color, "Unknown revision (CRC32 %08X)", crc);
+}
+
+static void draw_adam_media_slots(void)
+{
+    ImGui::MenuItem("Working-copy persistence", NULL,
+        &config_emulator.adam_media_persistence);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Writes are stored in complete .gearcoleco working-copy images next to the source.\nThe source image is never overwritten. This setting applies to newly inserted media.");
+
+    ImGui::Separator();
+    static const char* labels[GC_ADAM_MEDIA_SLOT_COUNT] = {
+        "Disk 1", "Disk 2", "Data Pack 1", "Data Pack 2"
+    };
+
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        GC_AdamMediaSlot slot = (GC_AdamMediaSlot)i;
+        Emu_AdamMediaInfo info;
+        emu_get_adam_media_info(slot, &info);
+
+        if (ImGui::BeginMenu(labels[i]))
+        {
+            if (info.inserted)
+            {
+                ImGui::Text("%s", info.path[0] ? get_filename(info.path) : "State media");
+                ImGui::Text("Capacity: %zu KiB", info.size / 1024);
+                ImGui::Text("Base CRC32: %08X", info.base_crc);
+                if (info.dirty)
+                    ImGui::TextColored(service_mcp_stdio_color, "Modified");
+                else
+                    ImGui::TextDisabled("Unmodified");
+                if (info.working_path[0])
+                {
+                    ImGui::TextDisabled("Working copy:");
+                    ImGui::TextWrapped("%s", info.working_path);
+                }
+
+                bool write_protected = info.write_protected;
+                if (ImGui::MenuItem("Write protected", NULL, &write_protected))
+                {
+                    if (emu_set_adam_media_write_protected(slot, write_protected))
+                        config_emulator.adam_media_write_protected[slot] = write_protected;
+                }
+
+                if (ImGui::MenuItem("Save working copy", NULL, false,
+                    info.dirty && info.working_path[0]))
+                {
+                    if (!emu_save_adam_media(slot))
+                        gui_set_error_message("Unable to save the ADAM working copy. The media remains mounted and dirty.");
+                }
+
+                if (ImGui::MenuItem("Eject"))
+                {
+                    if (!emu_eject_adam_media(slot))
+                        gui_set_error_message("Unable to save the ADAM working copy. The media remains mounted and dirty.");
+                }
+            }
+            else
+                ImGui::TextDisabled("Empty");
+
+            if (ImGui::MenuItem(info.inserted ? "Replace..." : "Insert..."))
+                open_adam_media_slot = i;
+
+            ImGui::EndMenu();
+        }
+    }
+}
+
+static void draw_adam_keyboard_map(void)
+{
+    ImGui::TextDisabled("ADAM keyboard defaults");
+    ImGui::Separator();
+    ImGui::Text("Host A-Z, 0-9 and punctuation -> ADAM keyboard");
+    ImGui::Text("F1-F6 -> SmartKey I-VI");
+    ImGui::Text("F7 / F8 / F9 -> Wild Card / Undo / ADAM Home");
+    ImGui::Text("Insert / Home -> Move-Copy / Store-Fetch");
+    ImGui::Text("Delete / End -> Insert / Print");
+    ImGui::Text("Page Up / Page Down -> Clear / Delete");
+    ImGui::Text("Arrow keys -> ADAM cursor keys");
+    ImGui::Text("Shift / Control / Caps Lock -> ADAM modifiers");
+    ImGui::Separator();
+    ImGui::TextWrapped("In ADAM mode the focused emulation viewport owns these keys. Emulator hotkeys remain available from the menus; fullscreen and quit retain their explicit shortcuts.");
 }
 
 static void menu_video(void)
@@ -1019,7 +1222,13 @@ static void menu_input(void)
             ImGui::EndMenu();
         }
 
-                    ImGui::Separator();
+        if (ImGui::BeginMenu("ADAM Keyboard Map"))
+        {
+            draw_adam_keyboard_map();
+            ImGui::EndMenu();
+        }
+
+        ImGui::Separator();
 
         if (ImGui::BeginMenu("Gamepads"))
         {
@@ -1340,7 +1549,7 @@ static void menu_debug(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Reload ROM", config_hotkeys[config_HotkeyIndex_ReloadROM].str, false, config_debug.debug && !emu_is_empty()))
+        if (ImGui::MenuItem("Reload Media", config_hotkeys[config_HotkeyIndex_ReloadROM].str, false, config_debug.debug && !emu_is_empty()))
         {
             gui_action_reload_rom();
         }
@@ -1589,6 +1798,12 @@ static void file_dialogs(void)
         gui_file_dialog_choose_saves_path();
     if (open_bios)
         gui_file_dialog_load_bios();
+    if (open_adam_eos)
+        gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_EOS);
+    if (open_adam_smartwriter)
+        gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER);
+    if (open_adam_media_slot >= 0)
+        gui_file_dialog_insert_adam_media((GC_AdamMediaSlot)open_adam_media_slot);
     if (save_debug_settings)
         gui_file_dialog_save_debug_settings();
     if (load_debug_settings)

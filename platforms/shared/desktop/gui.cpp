@@ -121,6 +121,14 @@ bool gui_init(void)
     strncpy_fit(gui_bios_path, config_emulator.bios_path.c_str(), sizeof(gui_bios_path));
     if (strlen(gui_bios_path) > 0)
         emu_load_bios(gui_bios_path);
+    strncpy_fit(gui_adam_eos_path, config_emulator.adam_eos_path.c_str(),
+        sizeof(gui_adam_eos_path));
+    if (strlen(gui_adam_eos_path) > 0)
+        emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
+    strncpy_fit(gui_adam_smartwriter_path, config_emulator.adam_smartwriter_path.c_str(),
+        sizeof(gui_adam_smartwriter_path));
+    if (strlen(gui_adam_smartwriter_path) > 0)
+        emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER, gui_adam_smartwriter_path);
 
     emu_video_no_sprite_limit(config_video.sprite_limit);
     emu_set_disassembler_syntax(config_debug.dis_syntax);
@@ -305,7 +313,6 @@ bool gui_load_rom(const char* path, const char* symbol_path)
         return false;
 
     gui_debug_auto_save_settings();
-    config_push_recent_media(path);
     emu_resume();
 
     strncpy(loading_rom_path, path, sizeof(loading_rom_path) - 1);
@@ -317,9 +324,10 @@ bool gui_load_rom(const char* path, const char* symbol_path)
     }
     else
         loading_symbol_path[0] = '\0';
-    loading_rom_active = true;
+    if (!emu_load_media_async(path, gui_get_force_configuration()))
+        return false;
 
-    emu_load_media_async(path, gui_get_force_configuration());
+    loading_rom_active = true;
 
     return true;
 }
@@ -339,15 +347,15 @@ bool gui_finish_loading_rom(void)
     bool success = emu_finish_media_loading();
 
     if (success)
+    {
+        config_push_recent_media(loading_rom_path);
         success = finish_loading_rom();
+    }
     else
     {
-        std::string message("Error loading ROM:\n");
+        std::string message("Error loading content:\n");
         message += loading_rom_path;
         gui_set_error_message(message.c_str());
-
-        emu_get_core()->GetCartridge()->Reset();
-        gui_action_reset();
     }
 
     return success;
@@ -694,7 +702,7 @@ static bool finish_loading_rom(void)
     }
 
     if (!emu_is_empty())
-        application_update_title_with_rom(emu_get_core()->GetCartridge()->GetFileName());
+        application_update_title_with_rom(emu_get_content_name());
 
     return true;
 }

@@ -137,7 +137,16 @@ static inline void process(config_Operation operation)
     CONFIG_BOOL("Emulator", "SoftPatching", config_emulator.softpatching, true);
     CONFIG_INT("Emulator", "Mapper", config_emulator.mapper, 0);
     CONFIG_INT("Emulator", "Region", config_emulator.region, 0);
+    CONFIG_INT_RANGE("Emulator", "Machine", config_emulator.machine, GC_MACHINE_AUTO, GC_MACHINE_AUTO, GC_MACHINE_ADAM);
+    CONFIG_INT_RANGE("Emulator", "AdamBootMode", config_emulator.adam_boot_mode, 0, 0, 2);
     CONFIG_STRING("Emulator", "BiosPath", config_emulator.bios_path, "");
+    CONFIG_STRING("Emulator", "AdamEOSPath", config_emulator.adam_eos_path, "");
+    CONFIG_STRING("Emulator", "AdamSmartWriterPath", config_emulator.adam_smartwriter_path, "");
+    CONFIG_BOOL("Emulator", "AdamMediaPersistence", config_emulator.adam_media_persistence, true);
+    CONFIG_BOOL("Emulator", "AdamDisk1WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DISK_1], false);
+    CONFIG_BOOL("Emulator", "AdamDisk2WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DISK_2], false);
+    CONFIG_BOOL("Emulator", "AdamDataPack1WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DATA_PACK_1], false);
+    CONFIG_BOOL("Emulator", "AdamDataPack2WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DATA_PACK_2], false);
     CONFIG_INT("Emulator", "Spinner", config_emulator.spinner, 0);
     CONFIG_INT("Emulator", "SpinnerSensitivity", config_emulator.spinner_sensitivity, 4);
 

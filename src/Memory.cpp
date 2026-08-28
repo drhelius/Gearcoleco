@@ -43,6 +43,7 @@ Memory::Memory(Cartridge* pCartridge, Random* pRandom)
     InitPointer(m_pMapper);
     InitPointer(m_pStandardMapper);
     InitPointer(m_pTraceLogger);
+    InitPointer(m_pAdam);
     InitPointer(m_pDisassembledRomMap);
     InitPointer(m_pDisassembledRamMap);
     InitPointer(m_pDisassembledBiosMap);
@@ -103,6 +104,11 @@ Memory::~Memory()
 void Memory::SetProcessor(Processor* pProcessor)
 {
     m_pProcessor = pProcessor;
+}
+
+void Memory::SetAdam(Adam* adam)
+{
+    m_pAdam = adam;
 }
 
 void Memory::SetTraceLogger(TraceLogger* pTraceLogger)
@@ -182,6 +188,17 @@ void Memory::SetupMapper()
 void Memory::Reset()
 {
     m_iTotalCycles = 0;
+
+    if (IsValidPointer(m_pAdam) && m_pAdam->IsEnabled())
+    {
+        m_bSGMUpper = false;
+        m_bSGMLower = false;
+        memset(m_pRam, 0, 0x400);
+        memset(m_pSGMRam, 0, 0x8000);
+        m_pBios[0x69] = 0x3C;
+        return;
+    }
+
     m_bSGMUpper = (m_pCartridge->GetType() == Cartridge::CartridgeOCM);
     m_bSGMLower = false;
 
@@ -307,7 +324,7 @@ u32 Memory::GetRomBankAddress()
     return IsValidPointer(m_pMapper) ? m_pMapper->GetRomBankAddress() : 0;
 }
 
-bool Memory::IsBiosLoaded()
+bool Memory::IsBiosLoaded() const
 {
     return m_bBiosLoaded;
 }

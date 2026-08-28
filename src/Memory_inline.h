@@ -24,12 +24,16 @@
 #include "Cartridge.h"
 #include "Mapper.h"
 #include "StandardMapper.h"
+#include "Adam.h"
 
 inline u8 Memory::Read(u16 address)
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
     m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, true);
     #endif
+
+    if (unlikely(IsValidPointer(m_pAdam) && m_pAdam->IsEnabled()))
+        return m_pAdam->ReadMemory(address);
 
     switch (address & 0xE000)
     {
@@ -62,6 +66,9 @@ inline u8 Memory::Read(u16 address)
 
 inline u8 Memory::DebugRetrieve(u16 address)
 {
+    if (unlikely(IsValidPointer(m_pAdam) && m_pAdam->IsEnabled()))
+        return m_pAdam->DebugReadMemory(address);
+
     switch (address & 0xE000)
     {
         case 0x0000:
@@ -86,6 +93,12 @@ inline void Memory::Write(u16 address, u8 value)
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
     m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, false);
     #endif
+
+    if (unlikely(IsValidPointer(m_pAdam) && m_pAdam->IsEnabled()))
+    {
+        m_pAdam->WriteMemory(address, value);
+        return;
+    }
 
     switch (address & 0xE000)
     {

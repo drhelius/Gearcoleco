@@ -63,6 +63,9 @@ enum FileDialogID
     FileDialog_SaveDebugSettings,
     FileDialog_LoadDebugSettings,
     FileDialog_LoadBios,
+    FileDialog_LoadAdamEOS,
+    FileDialog_LoadAdamSmartWriter,
+    FileDialog_InsertAdamMedia,
 };
 
 static FileDialogID pending_dialog_id = FileDialog_None;
@@ -129,7 +132,7 @@ void gui_file_dialog_open_rom(void)
     if (!begin_dialog())
         return;
 
-    SDL_DialogFileFilter filters[] = { { "ROM Files", "col;cv;rom;bin;zip" } };
+    SDL_DialogFileFilter filters[] = { { "Content Files", "col;cv;rom;bin;zip;ddp;dsk;m3u" } };
     const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
     SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_OpenROM, application_sdl_window, filters, 1, default_path, false);
 }
@@ -341,6 +344,34 @@ void gui_file_dialog_load_bios(void)
     SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadBios, application_sdl_window, filters, 2, NULL, false);
 }
 
+void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware)
+{
+    if (!begin_dialog())
+        return;
+
+    FileDialogID id = firmware == GC_ADAM_FIRMWARE_EOS ? FileDialog_LoadAdamEOS :
+        FileDialog_LoadAdamSmartWriter;
+    SDL_DialogFileFilter filters[] = { { "Firmware Files", "rom;bin" }, { "All Files", "*" } };
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window,
+        filters, 2, NULL, false);
+}
+
+void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot)
+{
+    if (!begin_dialog())
+        return;
+
+    pending_dialog_int_param1 = slot;
+    bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
+    SDL_DialogFileFilter filters[] = {
+        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk" : "ddp" }
+    };
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
+        config_emulator.last_open_path.c_str();
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_InsertAdamMedia,
+        application_sdl_window, filters, 1, default_path, false);
+}
+
 void gui_file_dialog_process_results(void)
 {
     bool refocus_window = pending_refocus_window && !dialog_active;
@@ -535,9 +566,49 @@ static void process_dialog_result(FileDialogID id, const char* path)
         }
         case FileDialog_LoadBios:
         {
-            strncpy_fit(gui_bios_path, path, sizeof(gui_bios_path));
-            config_emulator.bios_path.assign(path);
-            emu_load_bios(gui_bios_path);
+            if (emu_load_bios(path))
+            {
+                strncpy_fit(gui_bios_path, path, sizeof(gui_bios_path));
+                config_emulator.bios_path.assign(path);
+            }
+            else
+                gui_set_error_message("Invalid OS-7 firmware. Expected an 8192-byte colecovision.rom, coleco.rom, or os7.u2 image.");
+            break;
+        }
+        case FileDialog_LoadAdamEOS:
+        {
+            if (emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, path))
+            {
+                strncpy_fit(gui_adam_eos_path, path, sizeof(gui_adam_eos_path));
+                config_emulator.adam_eos_path.assign(path);
+            }
+            else
+                gui_set_error_message("Invalid ADAM EOS firmware. Expected an 8192-byte eos.rom image.");
+            break;
+        }
+        case FileDialog_LoadAdamSmartWriter:
+        {
+            if (emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER, path))
+            {
+                strncpy_fit(gui_adam_smartwriter_path, path, sizeof(gui_adam_smartwriter_path));
+                config_emulator.adam_smartwriter_path.assign(path);
+            }
+            else
+                gui_set_error_message("Invalid ADAM SmartWriter firmware. Expected a 32768-byte writer.rom, wp.rom, or wp_r80.rom image.");
+            break;
+        }
+        case FileDialog_InsertAdamMedia:
+        {
+            GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
+            if (!emu_insert_adam_media(slot, path))
+                gui_set_error_message("Unable to insert ADAM media. Check the image type, exact size, slot, and working-copy status.");
+            else
+            {
+                config_push_recent_media(path);
+                std::string str_path = path;
+                std::string::size_type pos = str_path.find_last_of("\\/");
+                config_emulator.last_open_path.assign(str_path.substr(0, pos + 1));
+            }
             break;
         }
         default:

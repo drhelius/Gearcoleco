@@ -59,6 +59,51 @@ struct retro_core_option_v2_definition option_defs_us[] = {
     /* System */
 
     {
+        "gearcoleco_machine",
+        "Machine (restart)",
+        NULL,
+        "Select the emulated machine. Auto uses ColecoVision for cartridges and ADAM for DDP, disk, and playlist content. ADAM must be selected explicitly for no-content SmartWriter boot.",
+        NULL,
+        "system",
+        {
+            { "Auto",         NULL },
+            { "ColecoVision", NULL },
+            { "ADAM",         NULL },
+            { NULL, NULL },
+        },
+        "Auto"
+    },
+    {
+        "gearcoleco_adam_boot",
+        "ADAM Boot Mode (restart)",
+        NULL,
+        "Select the ADAM boot architecture. Auto uses computer mode for media or no content and cartridge mode for a cartridge.",
+        NULL,
+        "system",
+        {
+            { "Auto",      NULL },
+            { "Computer",  NULL },
+            { "Cartridge", NULL },
+            { NULL, NULL },
+        },
+        "Auto"
+    },
+    {
+        "gearcoleco_adam_writable_media",
+        "ADAM Writable Media (restart)",
+        NULL,
+        "Disabled mounts ADAM media write protected. Save-directory working copy stores writes in complete images under the frontend save directory and never overwrites source content.",
+        NULL,
+        "system",
+        {
+            { "Disabled",                    NULL },
+            { "Save-directory working copy", NULL },
+            { NULL, NULL },
+        },
+        "Disabled"
+    },
+
+    {
         "gearcoleco_timing",
         "Refresh Rate (restart)",
         NULL,
@@ -210,7 +255,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "1"
     },
 
-    { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
+    { NULL, NULL, NULL, NULL, NULL, NULL, {{NULL, NULL}}, NULL },
 };
 
 struct retro_core_options_v2 options_us = {

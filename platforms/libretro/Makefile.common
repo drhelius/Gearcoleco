@@ -1,6 +1,9 @@
 SOURCES_C   := $(DEPS_DIR)/miniz/miniz.c \
 
 SOURCES_CXX := $(CORE_DIR)/libretro.cpp \
+               $(SOURCE_DIR)/Adam.cpp \
+               $(SOURCE_DIR)/AdamMedia.cpp \
+               $(SOURCE_DIR)/AdamNet.cpp \
                $(SOURCE_DIR)/GearcolecoCore.cpp \
                $(SOURCE_DIR)/Memory.cpp \
                $(SOURCE_DIR)/Processor.cpp \

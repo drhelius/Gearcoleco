@@ -43,6 +43,18 @@ enum Directory_Location
     Directory_Location_Custom = 2
 };
 
+struct Emu_AdamMediaInfo
+{
+    bool inserted;
+    bool write_protected;
+    bool dirty;
+    GC_AdamMediaType type;
+    size_t size;
+    u32 base_crc;
+    char path[4096];
+    char working_path[4096];
+};
+
 #define EMU_FRAME_BUFFER_WIDTH 512
 #define EMU_FRAME_BUFFER_HEIGHT 512
 #define EMU_FRAME_BUFFER_SIZE (EMU_FRAME_BUFFER_WIDTH * EMU_FRAME_BUFFER_HEIGHT * 4)
@@ -74,7 +86,7 @@ EXTERN int emu_debug_f18a_pattern_palette;
 EXTERN bool emu_init(void);
 EXTERN void emu_destroy(void);
 EXTERN void emu_update(void);
-EXTERN void emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration config);
+EXTERN bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration config);
 EXTERN bool emu_is_media_loading(void);
 EXTERN bool emu_finish_media_loading(void);
 EXTERN void emu_render_current_frame(void);
@@ -89,6 +101,22 @@ EXTERN bool emu_is_paused(void);
 EXTERN bool emu_is_debug_idle(void);
 EXTERN bool emu_is_empty(void);
 EXTERN bool emu_is_bios_loaded(void);
+EXTERN bool emu_start_adam(void);
+EXTERN bool emu_unload_content(void);
+EXTERN bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_path);
+EXTERN bool emu_is_adam_firmware_loaded(GC_AdamFirmware firmware);
+EXTERN u32 emu_get_adam_firmware_crc(GC_AdamFirmware firmware);
+EXTERN bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path);
+EXTERN bool emu_save_adam_media(GC_AdamMediaSlot slot);
+EXTERN bool emu_eject_adam_media(GC_AdamMediaSlot slot);
+EXTERN bool emu_set_adam_media_write_protected(GC_AdamMediaSlot slot, bool write_protected);
+EXTERN bool emu_get_adam_media_info(GC_AdamMediaSlot slot, Emu_AdamMediaInfo* info);
+EXTERN void emu_adam_key_pressed(GC_AdamKey key);
+EXTERN void emu_adam_key_released(GC_AdamKey key);
+EXTERN void emu_adam_release_all_keys(void);
+EXTERN GC_Machine emu_get_machine(void);
+EXTERN const char* emu_get_content_path(void);
+EXTERN const char* emu_get_content_name(void);
 EXTERN void emu_reset(Cartridge::ForceConfiguration config);
 EXTERN void emu_dissasemble_rom(void);
 EXTERN void emu_audio_mute(bool mute);
@@ -125,7 +153,7 @@ EXTERN int emu_mcp_get_transport_mode(void);
 EXTERN const char* emu_mcp_get_http_address(void);
 EXTERN int emu_mcp_get_http_port(void);
 EXTERN void emu_mcp_pump_commands(void);
-EXTERN void emu_load_bios(const char* file_path);
+EXTERN bool emu_load_bios(const char* file_path);
 EXTERN void emu_video_no_sprite_limit(bool enabled);
 EXTERN void emu_set_video_chip(int video_chip);
 EXTERN void emu_set_overscan(int overscan);

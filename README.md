@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/drhelius/Gearcoleco)](https://github.com/drhelius/Gearcoleco/blob/main/LICENSE)
 [![Twitter Follow](https://img.shields.io/twitter/follow/drhelius)](https://x.com/drhelius)
 
-Gearcoleco is a very accurate, cross-platform ColecoVision emulator written in C++ that runs on Windows, macOS, Linux, BSD and RetroArch, with an embedded MCP server for AI debugging and development.
+Gearcoleco is a very accurate, cross-platform ColecoVision and Coleco ADAM emulator written in C++ that runs on Windows, macOS, Linux, BSD and RetroArch, with an embedded MCP server for AI debugging and development.
 
 This is an open source project with its ongoing development made possible thanks to the support by these awesome [backers](backers.md). If you find it useful, please consider [sponsoring](https://github.com/sponsors/drhelius).
 
@@ -97,6 +97,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 
 - Very accurate Z80 core, TMS9918A VDP, SN76489 PSG and AY-3-8910 SGM emulation.
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
+- Coleco ADAM computer and cartridge boot modes, full keyboard, ADAMnet, printer, Digital Data Pack and floppy support.
 - Optional F18A v1.9 emulation.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states with preview and rewind support.
@@ -109,19 +110,44 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - MCP server for AI-assisted debugging with GitHub Copilot, Claude, Codex and similar, exposing tools for execution control, memory inspection, hardware status, rewind and more.
 - Windows, Linux and macOS *Portable Mode*.
 - [Programmable Shader Chain](platforms/shared/desktop/shaders/README.md).
-- ROM loading from the command line by adding the ROM path as an argument.
-- ROM loading using drag & drop.
+- Content loading from the command line by adding the cartridge, ADAM media or playlist path as an argument.
+- Content loading using drag & drop.
 - Support for modern game controllers through [gamecontrollerdb.txt](https://github.com/mdqinc/SDL_GameControllerDB) file located in the same directory as the application binary.
 
 ## Tips
 
 ### Basic Usage
 - **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 `2c66f5911e5b42b8ebe113403548eee7` is recommended.
+- **ADAM Firmware**: ADAM mode additionally requires an 8192-byte `eos.rom` image and a 32768-byte SmartWriter image named `writer.rom`, `wp.rom` or `wp_r80.rom`. The known common CRC32 values are `05a37a34` for EOS and `58d86a2a` for SmartWriter. OS-7 may be named `colecovision.rom`, `coleco.rom` or `os7.u2`; its known CRC32 is `3aa93ef3`. Supply these as separate raw files: MAME's multi-ROM `adam.zip` and its 16384-byte U22 image are not firmware input formats. Firmware is not included with Gearcoleco.
+- **ADAM Media**: Gearcoleco accepts 256 KiB `.ddp` images, 160/320 KiB `.dsk` images, ZIP archives containing exactly one valid ADAM image, and homogeneous `.m3u` playlists. Select `ADAM` under **Emulator > Machine** to boot SmartWriter without content. Loading ADAM media in `Auto` mode selects ADAM automatically.
+- **ADAM Writes**: The desktop application stores changes in complete images named with `.gearcoleco.ddp` or `.gearcoleco.dsk` next to the immutable source. Use **Gearcoleco > ADAM Media** to inspect slots, toggle write protection, save or eject. A failed save leaves the image mounted and dirty.
 - **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing `F12`. It is also recommended to disable spinners for software that don't use them.
 - **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
 - **Portable Mode**: Run with `--portable`, or create an empty file named `portable.ini` in the same directory as the application binary. On macOS, place the file next to the `.app` bundle.
+
+### ADAM Keyboard
+
+Normal letters, digits, punctuation, Return, Escape, Backspace, Tab, Shift, Control, Caps Lock and arrow keys map directly. The dedicated ADAM keys use these defaults:
+
+| Host key | ADAM key |
+|---|---|
+| F1-F6 | SmartKey I-VI |
+| F7 / F8 / F9 | Wild Card / Undo / ADAM Home |
+| Insert / Home | Move-Copy / Store-Fetch |
+| Delete / End | Insert / Print |
+| Page Up / Page Down | Clear / Delete |
+
+When ADAM owns keyboard focus, overlapping emulator hotkeys are available from the menus so SmartKeys and editing keys reach the emulated keyboard. Leaving the window releases every held ADAM key.
+
+### ADAM in Libretro
+
+Place OS-7, EOS and SmartWriter firmware in the frontend system directory or its `gearcoleco` subdirectory using the names above. The core supports ordinary `.ddp`, `.dsk`, `.zip` and `.m3u` loading, no-content SmartWriter boot, keyboard callbacks, disk control and an optional three-slot ADAM subsystem. Set **Machine** to `ADAM` before starting without content.
+
+Writable libretro media is disabled by default. The `Save-directory working copy` option creates complete checksum-named images in the frontend save directory; source content is never overwritten. Disk-control swaps require the normal eject, select and close sequence.
+
+Current ADAM media limitations are logical DDP images only, 160/320 KiB 5.25-inch disk images, and high-level cycle-scheduled device timing. The desktop validates homogeneous `.m3u` playlists and starts with their first entry; additional desktop swaps use the media-slot menu. Physical tape audio, 3.5-inch disk geometries, modem/network devices and real-time printer output are not implemented.
 
 ### Debugging Features
 - **Docking Windows**: In debug mode, you can dock windows together by pressing SHIFT and dragging a window onto another.
@@ -132,10 +158,10 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 
 ### Command Line Usage
 ```
-gearcoleco [options] [rom_file] [symbol_file]
+gearcoleco [options] [content_file] [symbol_file]
 
 Arguments:
-  [rom_file]                  ROM file: accepts ROMs (.col, .cv, .rom, .bin) or ZIP (.zip)
+  [content_file]              Cartridge or ADAM media (.col, .cv, .rom, .bin, .ddp, .dsk, .zip, .m3u)
   [symbol_file]               Optional symbol file for debugging
 
 Options:

@@ -20,6 +20,8 @@
 #ifndef GUI_FILEDIALOGS_H
 #define GUI_FILEDIALOGS_H
 
+#include "definitions.h"
+
 #ifdef GUI_FILEDIALOGS_IMPORT
     #define EXTERN
 #else
@@ -49,6 +51,8 @@ EXTERN void gui_file_dialog_load_debug_settings(void);
 EXTERN void gui_file_dialog_choose_saves_path(void);
 EXTERN void gui_file_dialog_choose_trace_path(void);
 EXTERN void gui_file_dialog_load_bios(void);
+EXTERN void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware);
+EXTERN void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot);
 EXTERN void gui_file_dialog_process_results(void);
 EXTERN bool gui_file_dialog_is_active(void);
 

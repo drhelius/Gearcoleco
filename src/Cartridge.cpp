@@ -399,6 +399,14 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size)
             return false;
         }
 
+        if ((size >= 4) && (buffer[0] == 'P') && (buffer[1] == 'K') &&
+            (((buffer[2] == 3) && (buffer[3] == 4)) ||
+            ((buffer[2] == 5) && (buffer[3] == 6)) ||
+            ((buffer[2] == 7) && (buffer[3] == 8))))
+        {
+            return LoadFromZipFile(buffer, size, false);
+        }
+
         // Unkown size
         if ((size % 1024) != 0)
         {

@@ -24,6 +24,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Adam.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\AdamMedia.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\AdamNet.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\application.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\application_headless.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\config.cpp"><Filter>desktop</Filter></ClCompile>
@@ -95,6 +98,9 @@
     <ClCompile Include="..\shared\dependencies\imgui\implot_items.cpp"><Filter>dependencies\imgui</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\Adam.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\AdamMedia.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\AdamNet.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\application.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\application_headless.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\backers.h"><Filter>desktop</Filter></ClInclude>

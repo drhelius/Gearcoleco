@@ -24,7 +24,7 @@
 #include <string>
 #include "gearcoleco.h"
 
-static const int config_version = 7;
+static const int config_version = 8;
 static const int config_minimum_version = 2;
 static const int config_max_recent_roms = 15;
 static const int config_memory_editor_count = 5;
@@ -66,9 +66,15 @@ struct config_Emulator
     int runahead;
     int mapper;
     int region;
+    int machine;
+    int adam_boot_mode;
     bool show_info;
     std::string recent_roms[config_max_recent_roms];
     std::string bios_path;
+    std::string adam_eos_path;
+    std::string adam_smartwriter_path;
+    bool adam_media_persistence;
+    bool adam_media_write_protected[GC_ADAM_MEDIA_SLOT_COUNT];
     int savefiles_dir_option;
     std::string savefiles_path;
     int savestates_dir_option;

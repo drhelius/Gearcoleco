@@ -52,6 +52,9 @@ SOURCES_CXX := \
     $(DESKTOP_SRC_DIR)/mcp/mcp_debug_adapter.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_tool_registry.cpp \
     $(DESKTOP_SRC_DIR)/mcp/mcp_server.cpp \
+    $(SRC_DIR)/Adam.cpp \
+    $(SRC_DIR)/AdamMedia.cpp \
+    $(SRC_DIR)/AdamNet.cpp \
     $(SRC_DIR)/Audio.cpp \
     $(SRC_DIR)/AY8910.cpp \
     $(SRC_DIR)/Cartridge.cpp \

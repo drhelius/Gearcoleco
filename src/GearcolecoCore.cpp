@@ -30,6 +30,7 @@
 #include "Input.h"
 #include "Cartridge.h"
 #include "ColecoVisionIOPorts.h"
+#include "Adam.h"
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
 #include "TraceLogger.h"
 #endif
@@ -51,16 +52,21 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pColecoVisionIOPorts);
     InitPointer(m_pRandom);
     InitPointer(m_pTraceLogger);
+    InitPointer(m_pAdam);
     InitPointer(m_pFrameBuffer);
     m_bPaused = true;
     m_pixelFormat = GC_PIXEL_RGBA8888;
     m_MasterClockCycles = 0;
     m_requested_video_chip = GC_VIDEO_CHIP_AUTO;
     m_video_chip = GC_VIDEO_CHIP_TMS9918A;
+    m_machine = GC_MACHINE_COLECOVISION;
+    m_content_type = GC_CONTENT_NONE;
+    m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
 }
 
 GearcolecoCore::~GearcolecoCore()
 {
+    SafeDelete(m_pAdam);
     SafeDelete(m_pColecoVisionIOPorts);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     SafeDelete(m_pTraceLogger);
@@ -92,6 +98,9 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pVideo = m_pTMS9918A;
     m_pInput = new Input(m_pProcessor);
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
+    m_pAdam = new Adam();
+    m_pAdam->Init(m_pColecoVisionIOPorts);
+    m_pMemory->SetAdam(m_pAdam);
 
     m_pMemory->Init();
     m_pProcessor->Init();
@@ -162,14 +171,14 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
 {
     m_pFrameBuffer = pFrameBuffer;
 
-    if (!m_pMemory->IsBiosLoaded())
+    if (!IsReady())
     {
         if (render)
             RenderFrameBuffer(pFrameBuffer);
         return false;
     }
 
-    if (!m_bPaused && m_pCartridge->IsReady())
+    if (!m_bPaused && IsReady())
     {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
         bool debug_enable = false;
@@ -191,6 +200,8 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
+            if (m_machine == GC_MACHINE_ADAM)
+                m_pAdam->Clock(clockCycles);
             totalClocks += clockCycles;
 
             if (debug_enable)
@@ -237,6 +248,8 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
+            if (m_machine == GC_MACHINE_ADAM)
+                m_pAdam->Clock(clockCycles);
             totalClocks += clockCycles;
 
             if (totalClocks > 702240)
@@ -262,6 +275,11 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        m_machine = GC_MACHINE_COLECOVISION;
+        m_content_type = GC_CONTENT_CARTRIDGE;
+        m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
+        EjectAllAdamMedia();
+        m_pAdam->SetEnabled(false);
         SelectVideoChipForCartridge();
         Reset();
 
@@ -283,6 +301,11 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
+        m_machine = GC_MACHINE_COLECOVISION;
+        m_content_type = GC_CONTENT_CARTRIDGE;
+        m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
+        EjectAllAdamMedia();
+        m_pAdam->SetEnabled(false);
         SelectVideoChipForCartridge();
         Reset();
 
@@ -293,6 +316,186 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::Fo
     }
     else
         return false;
+}
+
+bool GearcolecoCore::LoadAdamFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size,
+    const u8* smartwriter, int smartwriter_size)
+{
+    bool loaded = m_pAdam->LoadFirmware(os7, os7_size, eos, eos_size, smartwriter, smartwriter_size);
+
+    if (loaded)
+    {
+        Log("ADAM firmware loaded (OS-7 %08X, EOS %08X, SmartWriter %08X)",
+            m_pAdam->GetFirmwareCRC(GC_ADAM_FIRMWARE_OS7),
+            m_pAdam->GetFirmwareCRC(GC_ADAM_FIRMWARE_EOS),
+            m_pAdam->GetFirmwareCRC(GC_ADAM_FIRMWARE_SMARTWRITER));
+    }
+    else
+    {
+        Error("Invalid or incomplete ADAM firmware");
+    }
+
+    return loaded;
+}
+
+bool GearcolecoCore::LoadAdamFirmware(GC_AdamFirmware firmware, const u8* data, int size)
+{
+    bool loaded = m_pAdam->LoadFirmware(firmware, data, size);
+
+    if (loaded)
+        Log("ADAM firmware role %d loaded (%d bytes, CRC32 %08X)", firmware, size,
+            m_pAdam->GetFirmwareCRC(firmware));
+    else
+        Error("Invalid ADAM firmware role %d (%d bytes)", firmware, size);
+
+    return loaded;
+}
+
+void GearcolecoCore::UnloadAdamFirmware()
+{
+    m_pAdam->UnloadFirmware();
+
+    if (m_machine == GC_MACHINE_ADAM)
+    {
+        m_pAdam->SetEnabled(false);
+        m_bPaused = true;
+    }
+}
+
+bool GearcolecoCore::StartAdam(GC_AdamBootMode boot_mode)
+{
+    if (!m_pAdam->IsFirmwareReady())
+    {
+        Error("ADAM firmware is incomplete");
+        return false;
+    }
+
+    if ((boot_mode == GC_ADAM_BOOT_CARTRIDGE) && !m_pCartridge->IsReady())
+    {
+        Error("ADAM cartridge boot requested without a cartridge");
+        return false;
+    }
+
+    m_machine = GC_MACHINE_ADAM;
+    if (boot_mode == GC_ADAM_BOOT_CARTRIDGE)
+        m_content_type = GC_CONTENT_CARTRIDGE;
+    else if ((m_content_type != GC_CONTENT_ADAM_DATA_PACK) &&
+        (m_content_type != GC_CONTENT_ADAM_DISK))
+        m_content_type = GC_CONTENT_NONE;
+    m_adam_boot_mode = boot_mode;
+    SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
+    Reset(true);
+    m_pMemory->ResetRomDisassembledMemory();
+    m_pProcessor->DisassembleNextOPCode();
+    Log("ADAM started in %s mode", boot_mode == GC_ADAM_BOOT_CARTRIDGE ? "cartridge" : "computer");
+    return true;
+}
+
+bool GearcolecoCore::LoadAdamMediaFromBuffer(GC_AdamMediaSlot slot, GC_AdamMediaType type,
+    const u8* data, size_t size, bool write_protected, u32 base_crc)
+{
+    if (!m_pAdam->IsFirmwareReady())
+    {
+        Error("ADAM firmware is incomplete");
+        return false;
+    }
+
+    bool starting_adam = m_machine != GC_MACHINE_ADAM;
+    GC_AdamMediaError error = m_pAdam->InsertMedia(slot, type, data, size, write_protected, base_crc);
+    if (error != GC_ADAM_MEDIA_ERROR_NONE)
+    {
+        Error("Invalid ADAM media for slot %d (error %d)", slot, error);
+        return false;
+    }
+
+    if (starting_adam)
+        m_content_type = (type == GC_ADAM_MEDIA_DATA_PACK) ? GC_CONTENT_ADAM_DATA_PACK :
+            GC_CONTENT_ADAM_DISK;
+
+    if (starting_adam)
+    {
+        m_machine = GC_MACHINE_ADAM;
+        m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
+        SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
+        Reset(true);
+        m_pMemory->ResetRomDisassembledMemory();
+        m_pProcessor->DisassembleNextOPCode();
+    }
+
+    Log("ADAM %s inserted in slot %d (%zu bytes%s)",
+        type == GC_ADAM_MEDIA_DATA_PACK ? "data pack" : "disk", slot, size,
+        write_protected ? ", write protected" : "");
+    return true;
+}
+
+void GearcolecoCore::EjectAdamMedia(GC_AdamMediaSlot slot)
+{
+    m_pAdam->EjectMedia(slot);
+}
+
+void GearcolecoCore::EjectAllAdamMedia()
+{
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        m_pAdam->EjectMedia((GC_AdamMediaSlot)i);
+}
+
+void GearcolecoCore::UnloadContent()
+{
+    m_pAdam->ReleaseAllKeys();
+    EjectAllAdamMedia();
+    m_pAdam->SetEnabled(false);
+    m_pCartridge->Reset();
+    m_pProcessor->SetIOPOrts(m_pColecoVisionIOPorts);
+    m_machine = GC_MACHINE_COLECOVISION;
+    m_content_type = GC_CONTENT_NONE;
+    m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
+    m_bPaused = true;
+}
+
+AdamMedia* GearcolecoCore::GetAdamMedia(GC_AdamMediaSlot slot)
+{
+    return m_pAdam->GetMedia(slot);
+}
+
+void GearcolecoCore::AdamKeyPressed(GC_AdamKey key)
+{
+    if (m_machine == GC_MACHINE_ADAM)
+        m_pAdam->KeyPressed(key);
+}
+
+void GearcolecoCore::AdamKeyReleased(GC_AdamKey key)
+{
+    if (m_machine == GC_MACHINE_ADAM)
+        m_pAdam->KeyReleased(key);
+}
+
+void GearcolecoCore::AdamReleaseAllKeys()
+{
+    if (m_machine == GC_MACHINE_ADAM)
+        m_pAdam->ReleaseAllKeys();
+}
+
+bool GearcolecoCore::IsReady() const
+{
+    if (m_machine == GC_MACHINE_ADAM)
+        return m_pAdam->IsEnabled() && m_pAdam->IsFirmwareReady();
+
+    return m_pCartridge->IsReady() && m_pMemory->IsBiosLoaded();
+}
+
+GC_Machine GearcolecoCore::GetMachine() const
+{
+    return m_machine;
+}
+
+GC_ContentType GearcolecoCore::GetContentType() const
+{
+    return m_content_type;
+}
+
+GC_AdamBootMode GearcolecoCore::GetAdamBootMode() const
+{
+    return m_adam_boot_mode;
 }
 
 void GearcolecoCore::SaveDisassembledROM()
@@ -350,15 +553,17 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
     runtime_info.region = Region_NTSC;
     runtime_info.fps = master_clock / (GC_CYCLES_PER_LINE * lines_per_frame);
 
-    if (m_pCartridge->IsReady() && m_pMemory->IsBiosLoaded())
+    if (IsReady())
     {
+        bool pal = (m_machine == GC_MACHINE_ADAM) ? false : m_pCartridge->IsPAL();
         if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull284))
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
         if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull320))
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_320_L + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
         if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() != Video::OverscanDisabled))
-            runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (m_pCartridge->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
-        runtime_info.region = m_pCartridge->IsPAL() ? Region_PAL : Region_NTSC;
+            runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (pal ?
+                GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
+        runtime_info.region = pal ? Region_PAL : Region_NTSC;
         return true;
     }
 
@@ -398,6 +603,11 @@ Input* GearcolecoCore::GetInput()
 TraceLogger* GearcolecoCore::GetTraceLogger()
 {
     return m_pTraceLogger;
+}
+
+Adam* GearcolecoCore::GetAdam()
+{
+    return m_pAdam;
 }
 
 u64 GearcolecoCore::GetMasterClockCycles()
@@ -445,6 +655,22 @@ bool GearcolecoCore::IsPaused()
 
 void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
 {
+    if (m_machine == GC_MACHINE_ADAM)
+    {
+        if (!IsReady())
+            return;
+
+        Log(GEARCOLECO_TITLE " RESET");
+
+        if (IsValidPointer(config) && m_pCartridge->IsReady())
+            m_pCartridge->ForceConfig(*config);
+
+        SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
+        Reset(false);
+        m_pProcessor->DisassembleNextOPCode();
+        return;
+    }
+
     if (m_pCartridge->IsReady())
     {
         Log(GEARCOLECO_TITLE " RESET");
@@ -461,6 +687,12 @@ void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
 
 void GearcolecoCore::ResetROMPreservingRAM(Cartridge::ForceConfiguration* config)
 {
+    if ((m_machine == GC_MACHINE_ADAM) && !m_pCartridge->IsReady())
+    {
+        ResetROM(config);
+        return;
+    }
+
     if (m_pCartridge->IsReady())
     {
         Mapper* pMapper = m_pMemory->GetMapper();
@@ -493,7 +725,7 @@ void GearcolecoCore::ResetROMPreservingRAM(Cartridge::ForceConfiguration* config
 
 void GearcolecoCore::ResetSound()
 {
-    m_pAudio->Reset(m_pCartridge->IsPAL());
+    m_pAudio->Reset((m_machine == GC_MACHINE_ADAM) ? false : m_pCartridge->IsPAL());
 }
 
 void GearcolecoCore::SaveRam()
@@ -709,9 +941,9 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
 
     Debug("Saving state to buffer [%d bytes]...", size);
 
-    if (!m_pCartridge->IsReady())
+    if (!IsReady())
     {
-        Error("Cartridge is not ready when trying to save state");
+        Error("Machine is not ready when trying to save state");
         return false;
     }
 
@@ -779,11 +1011,19 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
     UNUSED(screenshot);
 #endif
 
-    if (m_pCartridge->IsReady())
+    if (IsReady())
     {
         Debug("Gathering save state data...");
 
+        u8 machine = (u8)m_machine;
+        u8 content_type = (u8)m_content_type;
+        u8 adam_boot_mode = (u8)m_adam_boot_mode;
+        stream.write(reinterpret_cast<const char*>(&machine), sizeof(machine));
+        stream.write(reinterpret_cast<const char*>(&content_type), sizeof(content_type));
+        stream.write(reinterpret_cast<const char*>(&adam_boot_mode), sizeof(adam_boot_mode));
         stream.write(reinterpret_cast<const char*>(&m_video_chip), sizeof(m_video_chip));
+        if (m_machine == GC_MACHINE_ADAM)
+            m_pAdam->SaveState(stream);
         m_pMemory->SaveState(stream);
         m_pProcessor->SaveState(stream);
         m_pAudio->SaveState(stream);
@@ -814,8 +1054,16 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
         header.magic = GC_SAVESTATE_MAGIC;
         header.version = GC_SAVESTATE_VERSION;
         header.timestamp = time(NULL);
-        strncpy_fit(header.rom_name, m_pCartridge->GetFileName(), sizeof(header.rom_name));
-        header.rom_crc = m_pCartridge->GetCRC();
+        if (m_machine == GC_MACHINE_ADAM)
+        {
+            strncpy_fit(header.rom_name, "ADAM", sizeof(header.rom_name));
+            header.rom_crc = m_pAdam->GetFirmwareCRC(GC_ADAM_FIRMWARE_EOS);
+        }
+        else
+        {
+            strncpy_fit(header.rom_name, m_pCartridge->GetFileName(), sizeof(header.rom_name));
+            header.rom_crc = m_pCartridge->GetCRC();
+        }
         strncpy_fit(header.emu_build, GEARCOLECO_VERSION, sizeof(header.emu_build));
 
         Debug("Save state header magic: 0x%08x", header.magic);
@@ -894,9 +1142,9 @@ bool GearcolecoCore::LoadState(const u8* buffer, size_t size)
 
     Debug("Loading state from buffer [%d bytes]...", size);
 
-    if (!m_pCartridge->IsReady())
+    if (!IsReady())
     {
-        Error("Cartridge is not ready when trying to load state");
+        Error("Machine is not ready when trying to load state");
         return false;
     }
 
@@ -912,7 +1160,7 @@ bool GearcolecoCore::LoadState(const u8* buffer, size_t size)
 
 bool GearcolecoCore::LoadState(std::istream& stream)
 {
-    if (m_pCartridge->IsReady())
+    if (IsReady())
     {
         using namespace std;
 
@@ -980,6 +1228,35 @@ bool GearcolecoCore::LoadState(std::istream& stream)
 
             Log("Loading state (v%d)...", header.version);
 
+            GC_ContentType state_content_type = m_content_type;
+            GC_AdamBootMode state_adam_boot_mode = m_adam_boot_mode;
+
+            if (header.version >= 107)
+            {
+                u8 machine = 0;
+                u8 content_type = 0;
+                u8 adam_boot_mode = 0;
+                stream.read(reinterpret_cast<char*>(&machine), sizeof(machine));
+                stream.read(reinterpret_cast<char*>(&content_type), sizeof(content_type));
+                stream.read(reinterpret_cast<char*>(&adam_boot_mode), sizeof(adam_boot_mode));
+
+                if (!stream.good() || (machine < GC_MACHINE_COLECOVISION) ||
+                    (machine > GC_MACHINE_ADAM) || (content_type > GC_CONTENT_ADAM_DISK) ||
+                    (adam_boot_mode > GC_ADAM_BOOT_CARTRIDGE) || (machine != m_machine))
+                {
+                    Error("Incompatible machine in save state");
+                    return false;
+                }
+
+                state_content_type = (GC_ContentType)content_type;
+                state_adam_boot_mode = (GC_AdamBootMode)adam_boot_mode;
+            }
+            else if (m_machine != GC_MACHINE_COLECOVISION)
+            {
+                Error("Legacy save state is not an ADAM state");
+                return false;
+            }
+
             if (header.version >= 106)
             {
                 GC_VideoChip video_chip;
@@ -996,6 +1273,18 @@ bool GearcolecoCore::LoadState(std::istream& stream)
                 SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
             }
 
+            if (m_machine == GC_MACHINE_ADAM)
+            {
+                if (m_video_chip != GC_VIDEO_CHIP_TMS9918A || !m_pAdam->LoadState(stream))
+                {
+                    Error("Invalid or incompatible ADAM state");
+                    return false;
+                }
+            }
+
+            m_content_type = state_content_type;
+            m_adam_boot_mode = state_adam_boot_mode;
+
             m_pMemory->LoadState(stream);
             m_pProcessor->LoadState(stream, header.version);
 
@@ -1007,7 +1296,7 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             m_pVideo->LoadState(stream, header.version);
             m_pInput->LoadState(stream, header.version);
 
-            return true;
+            return stream.good();
         }
 
         // Try legacy V1 format (8-byte trailer: magic + size)
@@ -1025,7 +1314,8 @@ bool GearcolecoCore::LoadState(std::istream& stream)
             Debug("Load state V1 magic: 0x%08x", v1_magic);
             Debug("Load state V1 size: %d", v1_size);
 
-            if ((v1_size == size) && (v1_magic == GC_SAVESTATE_MAGIC))
+            if ((m_machine == GC_MACHINE_COLECOVISION) && (v1_size == size) &&
+                (v1_magic == GC_SAVESTATE_MAGIC))
             {
                 Log("Loading legacy state...");
 
@@ -1167,14 +1457,21 @@ bool GearcolecoCore::GetSaveStateScreenshot(int index, const char* path, GC_Save
     return true;
 }
 
-void GearcolecoCore::Reset()
+void GearcolecoCore::Reset(bool cold)
 {
     m_MasterClockCycles = 0;
     m_pMemory->SetupMapper();
+    m_pAdam->SetMapper(m_pMemory->GetMapper());
+    m_pAdam->SetEnabled(m_machine == GC_MACHINE_ADAM);
+    m_pProcessor->SetIOPOrts(m_machine == GC_MACHINE_ADAM ? static_cast<IOPorts*>(m_pAdam) :
+        static_cast<IOPorts*>(m_pColecoVisionIOPorts));
     m_pMemory->Reset();
+    if (m_machine == GC_MACHINE_ADAM)
+        m_pAdam->Reset(cold, m_adam_boot_mode);
     m_pProcessor->Reset();
-    m_pAudio->Reset(m_pCartridge->IsPAL());
-    m_pVideo->Reset(m_pCartridge->IsPAL());
+    bool pal = (m_machine == GC_MACHINE_ADAM) ? false : m_pCartridge->IsPAL();
+    m_pAudio->Reset(pal);
+    m_pVideo->Reset(pal);
     m_pInput->Reset();
     m_pColecoVisionIOPorts->Reset();
     m_bPaused = false;
@@ -1184,9 +1481,9 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
 {
     GC_RuntimeInfo runtime_info;
     GetRuntimeInfo(runtime_info);
-    int size = m_pMemory->IsBiosLoaded() ? runtime_info.screen_width * runtime_info.screen_height :
+    int size = IsReady() ? runtime_info.screen_width * runtime_info.screen_height :
         GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
-    u16* srcBuffer = (m_pMemory->IsBiosLoaded() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
+    u16* srcBuffer = (IsReady() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
 
     switch (m_pixelFormat)
     {
