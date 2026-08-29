@@ -240,6 +240,7 @@ struct GC_RuntimeInfo
     int screen_width;
     int screen_height;
     GC_Region region;
+    double fps;
 };
 
 enum GC_Disassembler_Syntax

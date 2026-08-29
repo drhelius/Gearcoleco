@@ -105,6 +105,7 @@ EXTERN void emu_load_state_slot(int index);
 EXTERN void emu_save_state_file(const char* file_path);
 EXTERN void emu_load_state_file(const char* file_path);
 EXTERN void emu_get_runtime(GC_RuntimeInfo& runtime);
+EXTERN double emu_get_frame_rate(void);
 EXTERN void emu_get_info(char* info, int buffer_size);
 EXTERN GearcolecoCore* emu_get_core(void);
 EXTERN void emu_debug_step_over(void);

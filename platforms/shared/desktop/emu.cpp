@@ -603,6 +603,17 @@ void emu_get_runtime(GC_RuntimeInfo& runtime)
     gearcoleco->GetRuntimeInfo(runtime);
 }
 
+double emu_get_frame_rate(void)
+{
+    if (!IsValidPointer(gearcoleco))
+        return 60.0;
+
+    GC_RuntimeInfo runtime;
+    emu_get_runtime(runtime);
+
+    return runtime.fps;
+}
+
 void emu_get_info(char* info, int buffer_size)
 {
     if (!emu_is_empty())

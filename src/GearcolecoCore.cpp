@@ -341,9 +341,14 @@ void GearcolecoCore::SaveDisassembledROM()
 
 bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
+    bool pal = m_pCartridge->IsPAL();
+    double master_clock = pal ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
+    int lines_per_frame = pal ? GC_LINES_PER_FRAME_PAL : GC_LINES_PER_FRAME_NTSC;
+
     runtime_info.screen_width = m_pVideo->GetScreenWidth();
     runtime_info.screen_height = m_pVideo->GetScreenHeight();
     runtime_info.region = Region_NTSC;
+    runtime_info.fps = master_clock / (GC_CYCLES_PER_LINE * lines_per_frame);
 
     if (m_pCartridge->IsReady() && m_pMemory->IsBiosLoaded())
     {
