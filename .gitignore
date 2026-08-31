@@ -67,9 +67,12 @@ xcuserdata/
 *.xcexplist
 *.xcsettings
 *.xccheckout
+platforms/ios/Support/ThumbnailKeys.local.xcconfig
 
 #binaries
-platforms/**/gearcoleco
+platforms/linux/**/gearcoleco
+platforms/macos/**/gearcoleco
+platforms/raspberry*/**/gearcoleco
 
 #Switch
 *.a
