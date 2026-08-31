@@ -435,11 +435,12 @@ void Processor::InvalidOPCode()
 {
 #ifdef DEBUG_GEARCOLECO
     u16 opcode_address = PC.GetValue() - 1;
-    u16 prefix_address = PC.GetValue() - 2;
     u8 opcode = m_pMemory->Read(opcode_address);
-    u8 prefix = m_pMemory->Read(prefix_address);
 
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    u16 prefix_address = PC.GetValue() - 2;
+    u8 prefix = m_pMemory->Read(prefix_address);
+
     switch (prefix)
     {
         case 0xCB:
