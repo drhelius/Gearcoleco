@@ -419,7 +419,7 @@ Exact filters are `cpu.instructions`, `cpu.interrupts`, `vdp.registers`, `vdp.in
 | `select_memory_range` / `get_memory_selection` / `set_memory_selection_value` | Range operations |
 | `add_memory_bookmark` / `remove_memory_bookmark` / `list_memory_bookmarks` | Bookmark management |
 | `add_memory_watch` / `remove_memory_watch` / `list_memory_watches` | Watch management |
-| `memory_search_capture` / `memory_search` / `memory_find_bytes` | Memory searching |
+| `memory_search_capture` / `memory_search` / `memory_find` | Search values, hex bytes, or text |
 
 ## Hardware Resources
 
