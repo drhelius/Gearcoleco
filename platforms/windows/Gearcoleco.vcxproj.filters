@@ -222,5 +222,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Gearcoleco.rc" />
+    <ResourceCompile Include="version.rc" />
   </ItemGroup>
 </Project>
