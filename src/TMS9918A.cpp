@@ -292,6 +292,39 @@ void TMS9918A::WriteData(u8 data)
     m_VdpAddress = (m_VdpAddress + 1) & 0x3FFF;
 }
 
+void TMS9918A::RemapVRAM(bool memory16K)
+{
+    u8* remapped_vram = new u8[0x4000];
+
+    if (memory16K)
+    {
+        for (int address = 0; address < 0x4000; address += 0x40)
+        {
+            int mapped_address = (address & 0x203F) | ((address & 0x1000) >> 6) |
+                ((address & 0x0FC0) << 1);
+
+            for (int i = 0; i < 0x40; i++)
+                remapped_vram[mapped_address + i] = m_pVdpVRAM[address + i];
+        }
+    }
+    else
+    {
+        for (int address = 0; address < 0x4000; address += 0x40)
+        {
+            int mapped_address = (address & 0x203F) | ((address & 0x1000) >> 6) |
+                ((address & 0x0FC0) << 1);
+
+            for (int i = 0; i < 0x40; i++)
+                remapped_vram[address + i] = m_pVdpVRAM[mapped_address + i];
+        }
+    }
+
+    for (int i = 0; i < 0x4000; i++)
+        m_pVdpVRAM[i] = remapped_vram[i];
+
+    SafeDeleteArray(remapped_vram);
+}
+
 void TMS9918A::WriteControl(u8 control)
 {
     if (m_bFirstByteInSequence)
@@ -317,9 +350,14 @@ void TMS9918A::WriteControl(u8 control)
             case 0xC0:
             {
                 bool old_nmi = IsSetBit(m_VdpRegister[1], 5);
+                bool old_memory_16k = IsSetBit(m_VdpRegister[1], 7);
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
                 u8 reg = control & 0x07;
                 m_VdpRegister[reg] = data & masks[reg];
+
+                if ((reg == 1) && (old_memory_16k != IsSetBit(m_VdpRegister[1], 7)))
+                    RemapVRAM(IsSetBit(m_VdpRegister[1], 7));
+
                 if (reg < 2)
                 {
                     m_iMode = ((m_VdpRegister[1] & 0x08) >> 1) | (m_VdpRegister[0] & 0x02) |

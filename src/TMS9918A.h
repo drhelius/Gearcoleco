@@ -68,6 +68,7 @@ private:
     void LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary);
     void ScanLine(int line);
     void LatchSpriteAttributes();
+    void RemapVRAM(bool memory16K);
     void RenderBackground(int line);
     void RenderSprites(int line);
     void InitPalettes();
