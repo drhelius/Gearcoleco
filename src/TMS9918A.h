@@ -69,6 +69,7 @@ private:
     void ScanLine(int line);
     void LatchSpriteAttributes();
     void RemapVRAM(bool memory16K);
+    INLINE u16 ResolveBackdropColor() const;
     void RenderBackground(int line);
     void RenderSprites(int line);
     void InitPalettes();
@@ -149,6 +150,12 @@ inline int TMS9918A::GetMode()
 inline u16* TMS9918A::GetFrameBuffer()
 {
     return m_pFrameBuffer;
+}
+
+INLINE u16 TMS9918A::ResolveBackdropColor() const
+{
+    u16 color = m_VdpRegister[7] & 0x0F;
+    return (color > 0) ? color : 1;
 }
 
 #endif	/* TMS9918A_H */

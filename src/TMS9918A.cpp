@@ -431,7 +431,7 @@ void TMS9918A::ScanLine(int line)
     {
         if (line < GC_RESOLUTION_HEIGHT)
         {
-            u16 color = m_VdpRegister[7] & 0x0F;
+            u16 color = ResolveBackdropColor();
             int line_width = line * GC_RESOLUTION_WIDTH;
 
             for (int scx = 0; scx < GC_RESOLUTION_WIDTH; scx++)
@@ -461,8 +461,7 @@ void TMS9918A::RenderBackground(int line)
     int pattern_table_addr = m_VdpRegister[4] << 11;
     int region_mask = ((m_VdpRegister[4] & 0x03) << 8) | 0xFF;
     int color_mask = ((m_VdpRegister[3] & 0x7F) << 3) | 0x07;
-    int backdrop_color = m_VdpRegister[7] & 0x0F;
-    backdrop_color = (backdrop_color > 0) ? backdrop_color : 1;
+    int backdrop_color = ResolveBackdropColor();
 
     int tile_y = line >> 3;
     int tile_y_offset = line & 7;
@@ -745,7 +744,7 @@ void TMS9918A::Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_For
     int overscan_total_width = GC_RESOLUTION_WIDTH;
     int overscan_total_height = 0;
     bool overscan_enabled = false;
-    int overscan_color = (m_VdpRegister[7] & 0x0F) * 3;
+    int overscan_color = ResolveBackdropColor() * 3;
     int buffer_size = size * 4;
     bool bgr = (pixelFormat == GC_PIXEL_BGRA8888);
 
@@ -814,7 +813,7 @@ void TMS9918A::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_For
     int overscan_total_width = GC_RESOLUTION_WIDTH;
     int overscan_total_height = 0;
     bool overscan_enabled = false;
-    int overscan_color = m_VdpRegister[7] & 0x0F;
+    int overscan_color = ResolveBackdropColor();
     int buffer_size = size * 2;
     bool bgr = ((pixelFormat == GC_PIXEL_BGR555) || (pixelFormat == GC_PIXEL_BGR565));
     bool green_6bit = (pixelFormat == GC_PIXEL_RGB565) || (pixelFormat == GC_PIXEL_BGR565);
