@@ -437,13 +437,18 @@ void TMS9918A::RenderBackground(int line)
             int bg_color = backdrop_color;
             fg_color = (fg_color > 0) ? fg_color : backdrop_color;
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 6; i++)
             {
                 int pixel = line_offset + i;
                 m_pFrameBuffer[pixel] = bg_color;
-                m_pFrameBuffer[pixel + 248] = bg_color;
                 m_pInfoBuffer[pixel] = 0x00;
-                m_pInfoBuffer[pixel + 248] = 0x00;
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                int pixel = line_offset + 246 + i;
+                m_pFrameBuffer[pixel] = bg_color;
+                m_pInfoBuffer[pixel] = 0x00;
             }
 
             for (int tile_x = 0; tile_x < 40; tile_x++)
@@ -453,7 +458,7 @@ void TMS9918A::RenderBackground(int line)
                 int name_tile = m_pVdpVRAM[name_tile_addr];
                 u8 pattern_line = m_pVdpVRAM[pattern_table_addr + (name_tile << 3) + tile_y_offset];
 
-                int screen_offset = line_offset + (tile_x * 6) + 8;
+                int screen_offset = line_offset + (tile_x * 6) + 6;
 
                 for (int tile_pixel = 0; tile_pixel < 6; tile_pixel++)
                 {
