@@ -584,7 +584,7 @@ void TMS9918A::RenderSprites(int line)
 
         sprite_count++;
 
-        if (!IsSetBit(m_VdpStatus, 6) && (sprite_count > 4))
+        if (!IsSetBit(m_VdpStatus, 7) && !IsSetBit(m_VdpStatus, 6) && (sprite_count > 4))
         {
             TraceVDPEvent(TRACE_VDP_SPRITE_OVERFLOW, 0xFF, 0, sprite);
             m_VdpStatus = SetBit(m_VdpStatus, 6);
