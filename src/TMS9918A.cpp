@@ -314,6 +314,7 @@ void TMS9918A::WriteControl(u8 control)
                 break;
             }
             case 0x80:
+            case 0xC0:
             {
                 bool old_nmi = IsSetBit(m_VdpRegister[1], 5);
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
