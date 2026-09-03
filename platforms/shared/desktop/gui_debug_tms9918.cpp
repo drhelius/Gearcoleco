@@ -508,10 +508,12 @@ void gui_debug_window_tms9918a_sprites(void)
         int x = vram[sprite_attribute_offset + 1];
         int y = vram[sprite_attribute_offset];
 
-        int final_y = (y + 1) & 0xFF;
+        int final_y = y;
 
-        if (final_y >= 0xE0)
-            final_y = -(0x100 - final_y);
+        if (final_y > 0xE0)
+            final_y -= 0x100;
+
+        final_y++;
 
         float real_x = (float)(x - sprite_shift);
         float real_y = (float)final_y;

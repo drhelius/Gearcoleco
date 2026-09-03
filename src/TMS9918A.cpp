@@ -655,10 +655,12 @@ void TMS9918A::RenderSprites(int line)
     for (int sprite = 0; sprite <= max_sprite; sprite++)
     {
         int attrib_i = sprite << 2;
-        int sprite_y = (m_SpriteAttribLatch[attrib_i] + 1) & 0xFF;
+        int sprite_y = m_SpriteAttribLatch[attrib_i];
 
-        if (sprite_y >= 0xE0)
-            sprite_y = -(0x100 - sprite_y);
+        if (sprite_y > 0xE0)
+            sprite_y -= 0x100;
+
+        sprite_y++;
 
         if ((sprite_y > line) || ((sprite_y + sprite_size) <= line))
             continue;
