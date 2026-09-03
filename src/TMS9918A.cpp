@@ -675,6 +675,7 @@ void TMS9918A::RenderSprites(int line)
         }
 
         int sprite_color = m_SpriteAttribLatch[attrib_i + 3] & 0x0F;
+        bool hardware_sprite = sprite_count < 5;
 
         int sprite_shift = (m_SpriteAttribLatch[attrib_i + 3] & 0x80) ? 32 : 0;
         int sprite_x = m_SpriteAttribLatch[attrib_i + 1] - sprite_shift;
@@ -708,27 +709,31 @@ void TMS9918A::RenderSprites(int line)
             else
                 sprite_pixel = IsSetBit(m_pVdpVRAM[sprite_line_addr + 16], 15 - tile_x_adjusted);
 
-            if (sprite_pixel && ((sprite_count < 5) || m_bNoSpriteLimit))
-            {
-                if (!IsSetBit(m_pInfoBuffer[pixel], 0) && (sprite_color > 0))
-                {
-                    m_pFrameBuffer[pixel] = sprite_color;
-                    m_pInfoBuffer[pixel] = SetBit(m_pInfoBuffer[pixel], 0);
-                }
+            if (!sprite_pixel)
+                continue;
 
-                if (IsSetBit(m_pInfoBuffer[pixel], 1))
+            if ((hardware_sprite || m_bNoSpriteLimit) &&
+                !IsSetBit(m_pInfoBuffer[pixel], 0) && (sprite_color > 0))
+            {
+                m_pFrameBuffer[pixel] = sprite_color;
+                m_pInfoBuffer[pixel] = SetBit(m_pInfoBuffer[pixel], 0);
+            }
+
+            if (!hardware_sprite)
+                continue;
+
+            if (IsSetBit(m_pInfoBuffer[pixel], 1))
+            {
+                if (!IsSetBit(m_VdpStatus, 5))
                 {
-                    if (!IsSetBit(m_VdpStatus, 5))
-                    {
-                        TraceVDPEvent(TRACE_VDP_SPRITE_COLLISION, 0xFF, 0,
-                            sprite, sprite_pixel_x);
-                        m_VdpStatus = SetBit(m_VdpStatus, 5);
-                    }
+                    TraceVDPEvent(TRACE_VDP_SPRITE_COLLISION, 0xFF, 0,
+                        sprite, sprite_pixel_x);
+                    m_VdpStatus = SetBit(m_VdpStatus, 5);
                 }
-                else
-                {
-                    m_pInfoBuffer[pixel] = SetBit(m_pInfoBuffer[pixel], 1);
-                }
+            }
+            else
+            {
+                m_pInfoBuffer[pixel] = SetBit(m_pInfoBuffer[pixel], 1);
             }
         }
     }
