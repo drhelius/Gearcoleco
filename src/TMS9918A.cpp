@@ -473,7 +473,6 @@ void TMS9918A::RenderBackground(int line)
         }
         case 4:
         {
-            pattern_table_addr &= 0x2000;
             break;
         }
     }
