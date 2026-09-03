@@ -384,7 +384,7 @@ void TMS9918A::ScanLine(int line)
         {
             RenderBackground(line);
 
-            if (m_iMode != 0x01)
+            if ((m_iMode & 0x01) == 0)
                 RenderSprites(line);
         }
     }
@@ -432,7 +432,14 @@ void TMS9918A::RenderBackground(int line)
     switch (m_iMode)
     {
         case 1:
+        case 3:
         {
+            if (m_iMode == 3)
+            {
+                pattern_table_addr &= 0x2000;
+                region = (tile_y & 0x18) << 5;
+            }
+
             int fg_color = (m_VdpRegister[7] >> 4) & 0x0F;
             int bg_color = backdrop_color;
             fg_color = (fg_color > 0) ? fg_color : backdrop_color;
@@ -456,6 +463,10 @@ void TMS9918A::RenderBackground(int line)
                 int tile_number = (tile_y * 40) + tile_x;
                 int name_tile_addr = name_table_addr + tile_number;
                 int name_tile = m_pVdpVRAM[name_tile_addr];
+
+                if (m_iMode == 3)
+                    name_tile = (name_tile + region) & region_mask;
+
                 u8 pattern_line = m_pVdpVRAM[pattern_table_addr + (name_tile << 3) + tile_y_offset];
 
                 int screen_offset = line_offset + (tile_x * 6) + 6;
@@ -480,6 +491,35 @@ void TMS9918A::RenderBackground(int line)
         {
             break;
         }
+        case 5:
+        case 7:
+        {
+            int fg_color = (m_VdpRegister[7] >> 4) & 0x0F;
+            int bg_color = backdrop_color;
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+
+            for (int i = 0; i < GC_RESOLUTION_WIDTH; i++)
+            {
+                int pixel = line_offset + i;
+                m_pFrameBuffer[pixel] = bg_color;
+                m_pInfoBuffer[pixel] = 0x00;
+            }
+
+            for (int tile_x = 0; tile_x < 40; tile_x++)
+            {
+                int screen_offset = line_offset + (tile_x * 6) + 8;
+
+                for (int tile_pixel = 0; tile_pixel < 4; tile_pixel++)
+                    m_pFrameBuffer[screen_offset + tile_pixel] = fg_color;
+            }
+            return;
+        }
+        case 6:
+        {
+            pattern_table_addr &= 0x2000;
+            region = (tile_y & 0x18) << 5;
+            break;
+        }
     }
 
     for (int tile_x = 0; tile_x < 32; tile_x++)
@@ -490,9 +530,12 @@ void TMS9918A::RenderBackground(int line)
         u8 pattern_line = 0;
         u8 color_line = 0;
 
-        if (m_iMode == 4)
+        if ((m_iMode == 4) || (m_iMode == 6))
         {
-            int offset_color = pattern_table_addr + (name_tile << 3) + ((tile_y & 0x03) << 1) + (line & 0x04 ? 1 : 0);
+            if (m_iMode == 6)
+                name_tile = (name_tile + region) & region_mask;
+
+            int offset_color = pattern_table_addr + (name_tile << 3) + ((line >> 2) & 0x07);
             color_line = m_pVdpVRAM[offset_color];
 
             int left_color = color_line >> 4;

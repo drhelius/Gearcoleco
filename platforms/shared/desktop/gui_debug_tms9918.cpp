@@ -59,13 +59,16 @@ void gui_debug_window_tms9918a_nametable(void)
     u8* regs = video->GetRegisters();
     u8* vram = video->GetVRAM();
     int mode = video->GetMode();
+    bool text_mode = (mode & 0x01) != 0;
+    bool bogus_mode = (mode == 5) || (mode == 7);
+    bool region_mode = (mode == 2) || (mode == 3) || (mode == 6);
 
     bool window_hovered = ImGui::IsWindowHovered();
     static bool show_grid = true;
     int lines = 24;
-    int cols = (mode == 1) ? 40 : 32;
+    int cols = text_mode ? 40 : 32;
     float scale = 1.5f;
-    float tile_width = (mode == 1) ? 6.0f : 8.0f;
+    float tile_width = text_mode ? 6.0f : 8.0f;
     float size_h = tile_width * cols * scale;
     float size_v = 8.0f * lines * scale;
     float spacing_h = tile_width * scale;
@@ -128,18 +131,25 @@ void gui_debug_window_tms9918a_nametable(void)
                 selected_bg_tile_x = hovered_bg_tile_x;
                 selected_bg_tile_y = hovered_bg_tile_y;
 
-                int name_table_addr = regs[2] << 10;
-                int pattern_table_addr = regs[4] << 11;
-                int region = (hovered_bg_tile_y & 0x18) << 5;
-                int tile_number = (hovered_bg_tile_y * cols) + hovered_bg_tile_x;
-                int name_tile_addr = (name_table_addr + tile_number) & 0x3FFF;
-                int name_tile = vram[name_tile_addr];
-                if (mode == 2)
-                    pattern_table_addr &= 0x2000;
-                if (mode == 2)
-                    name_tile += region;
-                int goto_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
-                gui_debug_memory_goto(MEMORY_EDITOR_VRAM, goto_addr);
+                if (!bogus_mode)
+                {
+                    int name_table_addr = regs[2] << 10;
+                    int pattern_table_addr = regs[4] << 11;
+                    int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
+                    int region = (hovered_bg_tile_y & 0x18) << 5;
+                    int tile_number = (hovered_bg_tile_y * cols) + hovered_bg_tile_x;
+                    int name_tile_addr = (name_table_addr + tile_number) & 0x3FFF;
+                    int name_tile = vram[name_tile_addr];
+
+                    if (region_mode)
+                    {
+                        pattern_table_addr &= 0x2000;
+                        name_tile = (name_tile + region) & region_mask;
+                    }
+
+                    int goto_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
+                    gui_debug_memory_goto(MEMORY_EDITOR_VRAM, goto_addr);
+                }
             }
         }
 
@@ -170,41 +180,49 @@ void gui_debug_window_tms9918a_nametable(void)
         ImGui::TextColored(cyan, "   Y:"); ImGui::SameLine();
         ImGui::Text("$%02X", tile_y);
 
-        int name_table_addr = regs[2] << 10;
-        int color_table_addr = regs[3] << 6;
-        if (mode == 2)
-            color_table_addr &= 0x2000;
-        int pattern_table_addr = regs[4] << 11;
-        int region = (tile_y & 0x18) << 5;
-
-        int tile_number = (tile_y * cols) + tile_x;
-        int name_tile_addr = (name_table_addr + tile_number) & 0x3FFF;
-        int name_tile = vram[name_tile_addr];
-
-        if (mode == 2)
+        if (bogus_mode)
         {
-            pattern_table_addr &= 0x2000;
-            name_tile += region;
+            ImGui::TextColored(gray, " Fixed output; VRAM tables unused");
         }
-        int tile_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
+        else
+        {
+            int name_table_addr = regs[2] << 10;
+            int color_table_addr = regs[3] << 6;
+            if (mode == 2)
+                color_table_addr &= 0x2000;
+            int pattern_table_addr = regs[4] << 11;
+            int region_mask = ((regs[4] & 0x03) << 8) | 0xFF;
+            int region = (tile_y & 0x18) << 5;
 
-        int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
+            int tile_number = (tile_y * cols) + tile_x;
+            int name_tile_addr = (name_table_addr + tile_number) & 0x3FFF;
+            int name_tile = vram[name_tile_addr];
 
-        int color_tile_addr = 0;
+            if (region_mode)
+            {
+                pattern_table_addr &= 0x2000;
+                name_tile = (name_tile + region) & region_mask;
+            }
+            int tile_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
 
-        if (mode == 2)
-            color_tile_addr = color_table_addr + ((name_tile & color_mask) << 3);
-        else if (mode == 0)
-            color_tile_addr = color_table_addr + (name_tile >> 3);
+            int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
 
-        ImGui::TextColored(cyan, " Name Addr:"); ImGui::SameLine();
-        ImGui::Text(" $%04X", name_tile_addr);
-        ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
-        ImGui::Text("$%03X", name_tile);
-        ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
-        ImGui::Text(" $%04X", tile_addr);
-        ImGui::TextColored(cyan, " Color Addr:"); ImGui::SameLine();
-        ImGui::Text("$%04X", color_tile_addr);
+            int color_tile_addr = 0;
+
+            if (mode == 2)
+                color_tile_addr = color_table_addr + ((name_tile & color_mask) << 3);
+            else if (mode == 0)
+                color_tile_addr = color_table_addr + (name_tile >> 3);
+
+            ImGui::TextColored(cyan, " Name Addr:"); ImGui::SameLine();
+            ImGui::Text(" $%04X", name_tile_addr);
+            ImGui::TextColored(cyan, " Tile Number:"); ImGui::SameLine();
+            ImGui::Text("$%03X", name_tile);
+            ImGui::TextColored(cyan, " Tile Addr:"); ImGui::SameLine();
+            ImGui::Text(" $%04X", tile_addr);
+            ImGui::TextColored(cyan, " Color Addr:"); ImGui::SameLine();
+            ImGui::Text("$%04X", color_tile_addr);
+        }
     }
 
     ImGui::Columns(1);
@@ -239,9 +257,9 @@ void gui_debug_window_tms9918a_patterns(void)
 
     bool window_hovered = ImGui::IsWindowHovered();
     static bool show_grid = true;
-    bool split_mode2 = (mode == 2);
-    int section_count = split_mode2 ? 3 : 1;
-    int lines_per_section = split_mode2 ? 8 : 32;
+    bool split_pattern_table = (mode == 2) || (mode == 3) || (mode == 6);
+    int section_count = split_pattern_table ? 3 : 1;
+    int lines_per_section = split_pattern_table ? 8 : 32;
     int visible_lines = section_count * lines_per_section;
     float scale = 1.5f;
     float width = 8.0f * 32.0f * scale;
@@ -340,7 +358,7 @@ void gui_debug_window_tms9918a_patterns(void)
             selected_tile_y = hovered_tile_y;
 
             int tile = (hovered_tile_y << 5) + hovered_tile_x;
-            int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
+            int pattern_table_addr = (regs[4] & (split_pattern_table ? 0x04 : 0x07)) << 11;
             int goto_addr = (pattern_table_addr + (tile << 3)) & 0x3FFF;
             gui_debug_memory_goto(MEMORY_EDITOR_VRAM, goto_addr);
         }
@@ -360,11 +378,11 @@ void gui_debug_window_tms9918a_patterns(void)
         ImGui::TextColored(brown, "DETAILS:");
 
         int tile = (tile_y << 5) + tile_x;
-        int pattern_table_addr = (regs[4] & (mode == 2 ? 0x04 : 0x07)) << 11;
-        int section = split_mode2 ? (tile_y / lines_per_section) : 0;
-        int table_addr = (pattern_table_addr + (split_mode2 ? (section * 0x800) : 0)) & 0x3FFF;
+        int pattern_table_addr = (regs[4] & (split_pattern_table ? 0x04 : 0x07)) << 11;
+        int section = split_pattern_table ? (tile_y / lines_per_section) : 0;
+        int table_addr = (pattern_table_addr + (split_pattern_table ? (section * 0x800) : 0)) & 0x3FFF;
         int tile_in_section = ((tile_y % lines_per_section) << 5) + tile_x;
-        int tile_addr = split_mode2 ? ((table_addr + (tile_in_section << 3)) & 0x3FFF) : ((pattern_table_addr + (tile << 3)) & 0x3FFF);
+        int tile_addr = split_pattern_table ? ((table_addr + (tile_in_section << 3)) & 0x3FFF) : ((pattern_table_addr + (tile << 3)) & 0x3FFF);
 
         ImGui::TextColored(cyan, " Table Addr:"); ImGui::SameLine();
         ImGui::Text("$%04X", table_addr);
@@ -666,6 +684,7 @@ void gui_debug_window_tms9918a_regs(void)
 
     Video* video = emu_get_core()->GetVideo();
     u8* regs = video->GetRegisters();
+    int mode = video->GetMode();
 
     ImGui::PushFont(gui_default_font);
 
@@ -720,6 +739,9 @@ void gui_debug_window_tms9918a_regs(void)
     int sprite_gen_addr = (regs[6] & 0x07) << 11;
     int backdrop = regs[7] & 0x0F;
     int text_color = (regs[7] >> 4) & 0x0F;
+
+    if ((mode == 2) || (mode == 3) || (mode == 6))
+        pattern_table_addr &= 0x2000;
 
     ImGui::TextColored(violet, " NAME TABLE       ");ImGui::SameLine();ImGui::Text("$%04X", name_table_addr);
     ImGui::TextColored(violet, " COLOR TABLE      ");ImGui::SameLine();ImGui::Text("$%04X", color_table_addr);

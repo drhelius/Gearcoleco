@@ -1200,7 +1200,11 @@ static void update_debug_background_buffer(void)
     switch (mode)
     {
         case 1:
+        case 3:
         {
+            if (mode == 3)
+                pattern_table_addr &= 0x2000;
+
             int fg_color = (regs[7] >> 4) & 0x0F;
             int bg_color = backdrop_color;
             fg_color = (fg_color > 0) ? fg_color : backdrop_color;
@@ -1210,12 +1214,17 @@ static void update_debug_background_buffer(void)
                 int line_offset = line * GC_RESOLUTION_WIDTH;
                 int tile_y = line >> 3;
                 int tile_y_offset = line & 7;
+                int line_region = (tile_y & 0x18) << 5;
 
                 for (int tile_x = 0; tile_x < 40; tile_x++)
                 {
                     int tile_number = (tile_y * 40) + tile_x;
                     int name_tile_addr = name_table_addr + tile_number;
                     int name_tile = vram[name_tile_addr & 0x3FFF];
+
+                    if (mode == 3)
+                        name_tile = (name_tile + line_region) & region_mask;
+
                     u8 pattern_line = vram[(pattern_table_addr + (name_tile << 3) + tile_y_offset) & 0x3FFF];
 
                     int screen_offset = line_offset + (tile_x * 6);
@@ -1240,6 +1249,35 @@ static void update_debug_background_buffer(void)
         {
             break;
         }
+        case 5:
+        case 7:
+        {
+            int fg_color = (regs[7] >> 4) & 0x0F;
+            int bg_color = backdrop_color;
+            fg_color = (fg_color > 0) ? fg_color : backdrop_color;
+
+            for (int line = 0; line < 192; line++)
+            {
+                int line_offset = line * GC_RESOLUTION_WIDTH;
+
+                for (int x = 0; x < GC_RESOLUTION_WIDTH; x++)
+                    debug_background_buffer[line_offset + x] = bg_color;
+
+                for (int tile_x = 0; tile_x < 40; tile_x++)
+                {
+                    int screen_offset = line_offset + (tile_x * 6);
+
+                    for (int tile_pixel = 0; tile_pixel < 4; tile_pixel++)
+                        debug_background_buffer[screen_offset + tile_pixel] = fg_color;
+                }
+            }
+            return;
+        }
+        case 6:
+        {
+            pattern_table_addr &= 0x2000;
+            break;
+        }
     }
 
     for (int line = 0; line < 192; line++)
@@ -1257,9 +1295,12 @@ static void update_debug_background_buffer(void)
             u8 pattern_line = 0;
             u8 color_line = 0;
 
-            if (mode == 4)
+            if ((mode == 4) || (mode == 6))
             {
-                int offset_color = pattern_table_addr + (name_tile << 3) + ((tile_y & 0x03) << 1) + (line & 0x04 ? 1 : 0);
+                if (mode == 6)
+                    name_tile = (name_tile + region) & region_mask;
+
+                int offset_color = pattern_table_addr + (name_tile << 3) + ((line >> 2) & 0x07);
                 color_line = vram[offset_color & 0x3FFF];
 
                 int left_color = color_line >> 4;
@@ -1321,7 +1362,8 @@ static void update_debug_tile_buffer(void)
     u8* regs = video->GetRegisters();
     int mode = video->GetMode();
 
-    int pattern_table_addr = (regs[4] & ((mode == 2) ? 0x04 : 0x07)) << 11;
+    bool split_pattern_table = (mode == 2) || (mode == 3) || (mode == 6);
+    int pattern_table_addr = (regs[4] & (split_pattern_table ? 0x04 : 0x07)) << 11;
 
     if (emu_debug_tile_color_mode)
     {
@@ -1352,7 +1394,7 @@ static void update_debug_tile_buffer(void)
                 int fg_color = 15;
                 int bg_color = 0;
 
-                if (mode == 1)
+                if ((mode == 1) || (mode == 3))
                 {
                     fg_color = (regs[7] >> 4) & 0x0F;
                     bg_color = backdrop_color;
@@ -1361,7 +1403,7 @@ static void update_debug_tile_buffer(void)
                     int tile_data_addr = (pattern_table_addr + (tile_number * 8) + offset_y) & 0x3FFF;
                     pattern_line = vram[tile_data_addr];
                 }
-                else if (mode == 4)
+                else if ((mode == 4) || (mode == 6))
                 {
                     int offset_color = pattern_table_addr + (tile_number << 3) + ((tile_y & 0x03) << 1) + (offset_y & 0x04 ? 1 : 0);
                     color_line = vram[offset_color & 0x3FFF];
