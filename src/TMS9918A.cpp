@@ -298,12 +298,12 @@ void TMS9918A::WriteControl(u8 control)
     {
         m_bFirstByteInSequence = false;
         m_VdpAddress = (m_VdpAddress & 0x3F00) | control;
-        m_VdpBuffer = control;
     }
     else
     {
         m_bFirstByteInSequence = true;
-        m_VdpAddress = ((control & 0x3F) << 8) | m_VdpBuffer;
+        u8 data = (u8)m_VdpAddress;
+        m_VdpAddress = ((control & 0x3F) << 8) | data;
 
         switch (control & 0xC0)
         {
@@ -318,7 +318,7 @@ void TMS9918A::WriteControl(u8 control)
                 bool old_nmi = IsSetBit(m_VdpRegister[1], 5);
                 u8 masks[8] = { 0x03, 0xFB, 0x0F, 0xFF, 0x07, 0x7F, 0x07, 0xFF };
                 u8 reg = control & 0x07;
-                m_VdpRegister[reg] = m_VdpBuffer & masks[reg];
+                m_VdpRegister[reg] = data & masks[reg];
                 if (reg < 2)
                 {
                     m_iMode = ((m_VdpRegister[1] & 0x08) >> 1) | (m_VdpRegister[0] & 0x02) |
@@ -327,12 +327,12 @@ void TMS9918A::WriteControl(u8 control)
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
                 m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER, reg, false);
 #endif
-                TraceVDPEvent(TRACE_VDP_REG_WRITE, reg, m_VdpBuffer);
+                TraceVDPEvent(TRACE_VDP_REG_WRITE, reg, data);
 
                 if ((reg == 1) && IsSetBit(m_VdpRegister[1], 5) && (!old_nmi) && IsSetBit(m_VdpStatus, 7))
                 {
                     m_pProcessor->RequestNMI();
-                    TraceVDPEvent(TRACE_VDP_NMI_REQUEST, reg, m_VdpBuffer, 0xFF, 1);
+                    TraceVDPEvent(TRACE_VDP_NMI_REQUEST, reg, data, 0xFF, 1);
                 }
 
                 break;
