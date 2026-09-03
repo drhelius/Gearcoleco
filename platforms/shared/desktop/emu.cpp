@@ -1238,7 +1238,6 @@ static void update_debug_background_buffer(void)
         }
         case 4:
         {
-            pattern_table_addr &= 0x2000;
             break;
         }
     }
@@ -1335,11 +1334,6 @@ static void update_debug_tile_buffer(void)
             pattern_table_addr &= 0x2000;
             color_table_addr &= 0x2000;
         }
-        else if (mode == 4)
-        {
-            pattern_table_addr &= 0x2000;
-        }
-
         for (int y = 0; y < 256; y++)
         {
             int width_y = (y * 256);

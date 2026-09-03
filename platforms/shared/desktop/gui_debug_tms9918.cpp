@@ -134,7 +134,7 @@ void gui_debug_window_tms9918a_nametable(void)
                 int tile_number = (hovered_bg_tile_y * cols) + hovered_bg_tile_x;
                 int name_tile_addr = (name_table_addr + tile_number) & 0x3FFF;
                 int name_tile = vram[name_tile_addr];
-                if (mode == 2 || mode == 4)
+                if (mode == 2)
                     pattern_table_addr &= 0x2000;
                 if (mode == 2)
                     name_tile += region;
@@ -186,11 +186,6 @@ void gui_debug_window_tms9918a_nametable(void)
             pattern_table_addr &= 0x2000;
             name_tile += region;
         }
-        else if (mode == 4)
-        {
-            pattern_table_addr &= 0x2000;
-        }
-
         int tile_addr = (pattern_table_addr + (name_tile << 3)) & 0x3FFF;
 
         int color_mask = ((regs[3] & 0x7F) << 3) | 0x07;
