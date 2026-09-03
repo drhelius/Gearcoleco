@@ -593,9 +593,6 @@ void TMS9918A::RenderSprites(int line)
 
         int sprite_color = m_SpriteAttribLatch[attrib_i + 3] & 0x0F;
 
-        if (sprite_color == 0)
-            continue;
-
         int sprite_shift = (m_SpriteAttribLatch[attrib_i + 3] & 0x80) ? 32 : 0;
         int sprite_x = m_SpriteAttribLatch[attrib_i + 1] - sprite_shift;
 
