@@ -29,6 +29,7 @@
 #include "gui_menus.h"
 #include "gui_filedialogs.h"
 #include "gui_debug_constants.h"
+#include "events.h"
 #include "utils.h"
 #include "Adam.h"
 
@@ -413,6 +414,18 @@ static void draw_media_window(void)
     ImGui::Checkbox("Working-copy persistence", &config_emulator.adam_media_persistence);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Applies to newly inserted media. Source images are never overwritten.");
+
+    bool keyboard_capture = events_is_adam_keyboard_capture_enabled();
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Capture ADAM keyboard (F12)", &keyboard_capture))
+        events_set_adam_keyboard_capture(keyboard_capture);
+    ImGui::SameLine();
+    if (events_is_adam_keyboard_captured())
+        ImGui::TextColored(green, "Captured");
+    else if (keyboard_capture)
+        ImGui::TextColored(orange, "Focus the output window");
+    else
+        ImGui::TextDisabled("Released");
 
     if (ImGui::BeginTable("##adam_media", 7,
         ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))

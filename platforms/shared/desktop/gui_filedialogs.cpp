@@ -31,6 +31,7 @@
 #include "gui_debug.h"
 #include "gui_menus.h"
 #include "application.h"
+#include "events.h"
 #include "config.h"
 #include "emu.h"
 #include "utils.h"
@@ -89,6 +90,7 @@ static bool begin_dialog(void)
 {
     if (dialog_active)
         return false;
+    events_release_adam_keys();
     dialog_active = true;
 
 #if !defined(__APPLE__)

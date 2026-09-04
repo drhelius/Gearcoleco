@@ -26,6 +26,7 @@
 #include "config.h"
 #include "application.h"
 #include "emu.h"
+#include "events.h"
 #include "ogl_renderer.h"
 #include "utils.h"
 #include "gearcoleco.h"
@@ -172,9 +173,15 @@ void gui_render(void)
     gui_main_menu();
 
     gui_main_window_hovered = false;
+    bool output_was_focused = gui_main_window_focused;
+    gui_main_window_focused = false;
+    gui_main_window_sdl_window_id = 0;
 
     if((!config_debug.debug && !emu_is_empty()) || (config_debug.debug && config_debug.show_screen))
         main_window();
+
+    if (output_was_focused && !gui_main_window_focused)
+        events_release_adam_keys();
 
     gui_debug_windows();
     gui_adam_windows();
@@ -583,6 +590,7 @@ static void main_window(void)
 
         ImGui::Begin("Output###debug_output", &config_debug.show_screen, flags);
         gui_main_window_hovered = ImGui::IsWindowHovered();
+        gui_main_window_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     }
     else
     {
@@ -600,7 +608,16 @@ static void main_window(void)
 
         ImGui::Begin(GEARCOLECO_TITLE, 0, flags);
         gui_main_window_hovered = ImGui::IsWindowHovered();
+        gui_main_window_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     }
+
+    ImGuiViewport* output_viewport = ImGui::GetWindowViewport();
+    SDL_Window* output_window = output_viewport ?
+        (SDL_Window*)output_viewport->PlatformHandle : NULL;
+    if (output_window)
+        gui_main_window_sdl_window_id = SDL_GetWindowID(output_window);
+    else if (application_sdl_window)
+        gui_main_window_sdl_window_id = SDL_GetWindowID(application_sdl_window);
 
     OglRendererScreenGeometry screen_geometry;
     screen_geometry.logical_width = image_logical_width;
@@ -616,6 +633,22 @@ static void main_window(void)
     ogl_renderer_get_screen_uv(&tex_h, &tex_v);
 
     ImGui::Image((ImTextureID)(intptr_t)ogl_renderer_get_screen_texture(), ImVec2(image_w, image_h), ImVec2(0, 0), ImVec2(tex_h, tex_v));
+
+    if (emu_get_machine() == GC_MACHINE_ADAM)
+    {
+        bool capture_enabled = events_is_adam_keyboard_capture_enabled();
+        bool captured = events_is_adam_keyboard_captured();
+        const char* message = captured ? "ADAM keyboard captured - F12 releases" :
+            (capture_enabled ? "ADAM keyboard not focused - click output" :
+            "ADAM keyboard released - F12 enables");
+        ImVec2 position = ImGui::GetItemRectMin() + ImVec2(8.0f, 8.0f);
+        ImVec2 text_size = ImGui::CalcTextSize(message);
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddRectFilled(position - ImVec2(4.0f, 3.0f),
+            position + text_size + ImVec2(4.0f, 3.0f), IM_COL32(0, 0, 0, 190), 3.0f);
+        draw_list->AddText(position, captured ? IM_COL32(80, 240, 80, 255) :
+            IM_COL32(255, 180, 60, 255), message);
+    }
 
     if (config_video.fps)
         gui_show_fps();

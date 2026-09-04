@@ -33,6 +33,9 @@ EXTERN void events_handle_emu_event(const SDL_Event* event, bool shortcut_consum
 EXTERN void events_emu(void);
 EXTERN void events_sync_input(void);
 EXTERN void events_release_adam_keys(void);
+EXTERN void events_set_adam_keyboard_capture(bool enabled);
+EXTERN bool events_is_adam_keyboard_capture_enabled(void);
+EXTERN bool events_is_adam_keyboard_captured(void);
 EXTERN void events_reset_input(void);
 EXTERN bool events_input_updated(void);
 

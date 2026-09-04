@@ -103,6 +103,8 @@ const gui_HotkeyMapping gui_hotkey_map[GUI_HOTKEY_MAP_COUNT] = {
 
 EXTERN bool gui_in_use;
 EXTERN bool gui_main_window_hovered;
+EXTERN bool gui_main_window_focused;
+EXTERN SDL_WindowID gui_main_window_sdl_window_id;
 EXTERN bool gui_main_menu_hovered;
 EXTERN ImFont* gui_default_font;
 EXTERN ImFont* gui_default_fonts[4];

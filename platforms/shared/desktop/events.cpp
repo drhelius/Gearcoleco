@@ -42,6 +42,7 @@ static bool input_initialized = false;
 static bool roller_mouse_buttons[2] = { };
 static bool adam_scancode_down[SDL_SCANCODE_COUNT] = { };
 static int adam_key_references[GC_ADAM_KEY_COUNT] = { };
+static bool adam_keyboard_capture_enabled = true;
 
 static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat);
 static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
@@ -51,14 +52,17 @@ static void input_filter_opposing_directions(int controller, bool* left, bool* r
 static void input_send_key(int controller, int index, GC_Keys key, bool pressed);
 static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode);
 static void send_adam_key(SDL_Scancode scancode, bool pressed);
+static bool adam_keyboard_captures_event(const SDL_Event* event);
 
 bool events_shortcuts(const SDL_Event* event)
 {
     bool adam = (emu_get_machine() == GC_MACHINE_ADAM) && !emu_is_empty();
+    bool adam_captured = adam && adam_keyboard_captures_event(event);
 
     if (event->type == SDL_EVENT_KEY_UP)
     {
-        if (!adam && events_match_hotkey_scancode(event, config_hotkeys[config_HotkeyIndex_Rewind]))
+        if (!adam_captured && events_match_hotkey_scancode(event,
+            config_hotkeys[config_HotkeyIndex_Rewind]))
         {
             gui_action_rewind_released();
             return true;
@@ -69,7 +73,8 @@ bool events_shortcuts(const SDL_Event* event)
     if (event->type != SDL_EVENT_KEY_DOWN)
         return false;
 
-    if (!adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Rewind], false))
+    if (!adam_captured && events_check_hotkey(event,
+        config_hotkeys[config_HotkeyIndex_Rewind], false))
     {
         gui_action_rewind_pressed();
         return true;
@@ -82,14 +87,21 @@ bool events_shortcuts(const SDL_Event* event)
         return true;
     }
 
-    if (adam)
+    if (adam && events_check_hotkey(event,
+        config_hotkeys[config_HotkeyIndex_Fullscreen], false))
     {
-        if (events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Fullscreen], false))
-        {
-            gui_shortcut(gui_ShortcutFullscreen);
-            return true;
-        }
+        gui_shortcut(gui_ShortcutFullscreen);
+        return true;
+    }
 
+    if (adam && (event->key.repeat == 0) && (event->key.scancode == SDL_SCANCODE_F12))
+    {
+        events_set_adam_keyboard_capture(!adam_keyboard_capture_enabled);
+        return true;
+    }
+
+    if (adam_captured)
+    {
         if ((event->key.repeat == 0) && (event->key.scancode == SDL_SCANCODE_ESCAPE) &&
             config_emulator.fullscreen && !config_emulator.always_show_menu)
         {
@@ -152,8 +164,8 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
     if ((emu_get_machine() == GC_MACHINE_ADAM) &&
         ((event->type == SDL_EVENT_KEY_DOWN) || (event->type == SDL_EVENT_KEY_UP)))
     {
-        if ((event->type == SDL_EVENT_KEY_UP) ||
-            (!shortcut_consumed && !gui_in_use && (event->key.repeat == 0)))
+        if (adam_keyboard_captures_event(event) && ((event->type == SDL_EVENT_KEY_UP) ||
+            (!shortcut_consumed && !gui_in_use && (event->key.repeat == 0))))
             send_adam_key(event->key.scancode, event->type == SDL_EVENT_KEY_DOWN);
         return;
     }
@@ -298,6 +310,33 @@ void events_release_adam_keys(void)
     memset(adam_scancode_down, 0, sizeof(adam_scancode_down));
     memset(adam_key_references, 0, sizeof(adam_key_references));
     emu_adam_release_all_keys();
+}
+
+void events_set_adam_keyboard_capture(bool enabled)
+{
+    if (adam_keyboard_capture_enabled == enabled)
+        return;
+    adam_keyboard_capture_enabled = enabled;
+    events_release_adam_keys();
+}
+
+bool events_is_adam_keyboard_capture_enabled(void)
+{
+    return adam_keyboard_capture_enabled;
+}
+
+bool events_is_adam_keyboard_captured(void)
+{
+    return adam_keyboard_capture_enabled && gui_main_window_focused && !gui_dialog_in_use &&
+        !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+}
+
+static bool adam_keyboard_captures_event(const SDL_Event* event)
+{
+    if (!events_is_adam_keyboard_captured())
+        return false;
+    return (gui_main_window_sdl_window_id == 0) ||
+        (event->key.windowID == gui_main_window_sdl_window_id);
 }
 
 void events_reset_input(void)

@@ -713,6 +713,7 @@ static void draw_adam_keyboard_map(void)
     ImGui::Text("Page Up / Page Down -> Clear / Delete");
     ImGui::Text("Arrow keys -> ADAM cursor keys");
     ImGui::Text("Shift / Control / Caps Lock -> ADAM modifiers");
+    ImGui::Text("F12 -> Capture/release ADAM keyboard");
     ImGui::Separator();
     ImGui::TextWrapped("In ADAM mode the focused emulation viewport owns these keys. Emulator hotkeys remain available from the menus; fullscreen and quit retain their explicit shortcuts.");
 }
