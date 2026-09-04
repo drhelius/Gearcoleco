@@ -292,11 +292,18 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         return false;
 }
 
-bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config)
+bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size,
+    Cartridge::ForceConfiguration* config, const char* path, bool softpatching)
 {
-    m_pCartridge->Reset();
-
-    if (m_pCartridge->LoadFromBuffer(buffer, size))
+    bool loaded;
+    if (IsValidPointer(path))
+        loaded = m_pCartridge->LoadFromBuffer(buffer, size, path, softpatching);
+    else
+    {
+        m_pCartridge->Reset();
+        loaded = m_pCartridge->LoadFromBuffer(buffer, size);
+    }
+    if (loaded)
     {
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);

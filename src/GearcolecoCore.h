@@ -54,7 +54,8 @@ public:
     void Init(GC_Color_Format pixelFormat = GC_PIXEL_RGBA8888);
     bool RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug = NULL, bool render = true);
     bool LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config = NULL, bool softpatching = false);
-    bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL);
+    bool LoadROMFromBuffer(const u8* buffer, int size, Cartridge::ForceConfiguration* config = NULL,
+        const char* path = NULL, bool softpatching = false);
     bool LoadAdamFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size,
         const u8* smartwriter, int smartwriter_size);
     bool LoadAdamFirmware(GC_AdamFirmware firmware, const u8* data, int size);

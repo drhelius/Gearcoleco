@@ -52,6 +52,8 @@ public:
     u8* GetEEPROM() const;
 
 public:
+    static bool IsValidROMBuffer(const u8* buffer, int size);
+
     Cartridge();
     ~Cartridge();
     void Init();
@@ -86,12 +88,14 @@ public:
     }
     bool LoadFromFile(const char* path, bool softpatching = false);
     bool LoadFromBuffer(const u8* buffer, int size);
+    bool LoadFromBuffer(const u8* buffer, int size, const char* path, bool softpatching);
     bool IsSoftpatchApplied() const;
     const char* GetSoftpatchPath() const;
 
 private:
     bool GatherMetadata(u32 crc);
     void GetInfoFromDB(u32 crc);
+    void SetFilePath(const char* path);
     bool LoadFromZipFile(const u8* buffer, int size, bool softpatching);
     bool LoadFromBufferWithSoftpatch(const u8* buffer, int size, bool softpatching);
 

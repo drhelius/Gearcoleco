@@ -28,6 +28,33 @@
 #include "common.h"
 #include "ips_patch.h"
 
+bool Cartridge::IsValidROMBuffer(const u8* buffer, int size)
+{
+    if (!IsValidPointer(buffer) || (size <= 0))
+        return false;
+
+    u8 second = size > 1 ? buffer[1] : 0xFF;
+    u16 header = second | (buffer[0] << 8);
+    if ((header == 0xAA55) || (header == 0x55AA))
+        return true;
+
+    if (size > 0x8000)
+    {
+        int offset = size - 0x4000;
+        header = buffer[offset + 1] | (buffer[offset] << 8);
+        if ((header == 0xAA55) || (header == 0x55AA))
+            return true;
+    }
+
+    u32 crc = CalculateCRC32(0, buffer, size);
+    for (int i = 0; kGameDatabase[i].title != 0; i++)
+    {
+        if ((kGameDatabase[i].crc == crc) && (kGameDatabase[i].mode & GC_GameDBMode_OCM))
+            return true;
+    }
+    return false;
+}
+
 Cartridge::Cartridge()
 {
     InitPointer(m_pROM);
@@ -251,37 +278,23 @@ bool Cartridge::LoadFromZipFile(const u8* buffer, int size, bool softpatching)
     return false;
 }
 
-bool Cartridge::LoadFromFile(const char* path, bool softpatching)
+void Cartridge::SetFilePath(const char* path)
 {
-    using namespace std;
-
-    Log("Loading %s...", path);
-
-    Reset();
-
     strncpy_fit(m_szFilePath, path, sizeof(m_szFilePath));
 
     std::string pathstr(path);
     std::string filename;
-
     size_t pos = pathstr.find_last_of("\\");
     if (pos != std::string::npos)
-    {
         filename.assign(pathstr.begin() + pos + 1, pathstr.end());
-    }
     else
     {
         pos = pathstr.find_last_of("/");
         if (pos != std::string::npos)
-        {
             filename.assign(pathstr.begin() + pos + 1, pathstr.end());
-        }
         else
-        {
             filename = pathstr;
-        }
     }
-
     strncpy_fit(m_szFileName, filename.c_str(), sizeof(m_szFileName));
 
     std::string directory;
@@ -291,6 +304,16 @@ bool Cartridge::LoadFromFile(const char* path, bool softpatching)
     else
         directory = ".";
     strncpy_fit(m_szFileDirectory, directory.c_str(), sizeof(m_szFileDirectory));
+}
+
+bool Cartridge::LoadFromFile(const char* path, bool softpatching)
+{
+    using namespace std;
+
+    Log("Loading %s...", path);
+
+    Reset();
+    SetFilePath(path);
 
     ifstream file;
     open_ifstream_utf8(file, path, ios::in | ios::binary | ios::ate);
@@ -360,6 +383,28 @@ bool Cartridge::LoadFromFile(const char* path, bool softpatching)
         Reset();
     }
 
+    return m_bReady;
+}
+
+bool Cartridge::LoadFromBuffer(const u8* buffer, int size, const char* path,
+    bool softpatching)
+{
+    if (!IsValidPointer(buffer) || !IsValidPointer(path))
+        return false;
+
+    Reset();
+    SetFilePath(path);
+    m_bReady = LoadFromBufferWithSoftpatch(buffer, size, softpatching);
+    if (!m_bReady && m_softpatch_applied)
+    {
+        Error("Media rejected after applying IPS patch %s. Loading unpatched media.",
+            m_softpatch_path);
+        Reset();
+        SetFilePath(path);
+        m_bReady = LoadFromBufferWithSoftpatch(buffer, size, false);
+    }
+    if (!m_bReady)
+        Reset();
     return m_bReady;
 }
 

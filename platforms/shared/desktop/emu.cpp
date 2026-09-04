@@ -40,6 +40,9 @@
 #include "no_bios.h"
 #include "mcp/mcp_manager.h"
 #include "utils.h"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+#include "miniz.h"
+#undef MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #if defined(_WIN32)
@@ -68,6 +71,25 @@ enum Loading_State
     Loading_State_None = 0,
     Loading_State_Loading,
     Loading_State_Finished
+};
+
+enum DesktopContentType
+{
+    DesktopContentInvalid = 0,
+    DesktopContentCartridge,
+    DesktopContentAdamDisk,
+    DesktopContentAdamDataPack
+};
+
+struct DesktopContent
+{
+    DesktopContentType type;
+    u8* data;
+    size_t size;
+    char source_path[4096];
+    char entry_name[512];
+    bool archive;
+    bool playlist;
 };
 
 static std::atomic<int> loading_state(Loading_State_None);
@@ -123,15 +145,18 @@ static bool prepare_adam_firmware_paths(void);
 static bool load_adam_firmware_paths(void);
 static void resolve_adam_firmware_path(GC_AdamFirmware firmware, char* path,
     size_t path_size);
-static bool load_adam_content(const char* file_path);
-static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const char* file_path, bool primary, bool discard_current_changes);
-static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
-    size_t media_path_size, GC_AdamMediaType* type);
+static void init_desktop_content(DesktopContent* content);
+static void destroy_desktop_content(DesktopContent* content);
+static bool classify_desktop_content(const char* path, GC_Machine machine,
+    DesktopContent* content);
+static bool classify_desktop_zip(const char* path, const u8* data, size_t size,
+    GC_Machine machine, DesktopContent* content);
+static bool classify_adam_playlist(const char* playlist_path, DesktopContent* content);
+static bool is_valid_cartridge_buffer(const u8* data, size_t size);
+static bool load_adam_content(const DesktopContent* content, const char* requested_path);
+static bool load_adam_media_content(GC_AdamMediaSlot slot, const DesktopContent* content,
+    bool primary, bool discard_current_changes);
 static GC_AdamMediaType adam_media_type_from_path(const char* path);
-static GC_AdamMediaType detect_adam_media_path(const char* path);
-static bool read_adam_media_path(const char* path, u8** data, size_t* size,
-    GC_AdamMediaType* type);
 static bool write_adam_working_copy(GC_AdamMediaSlot slot);
 static bool write_adam_media_file(AdamMedia* media, const char* file_path);
 static bool check_adam_working_path(const char* file_path);
@@ -214,29 +239,38 @@ void emu_destroy(void)
 
 static void load_media_thread_func(void)
 {
-    GC_AdamMediaType media_type = detect_adam_media_path(loading_file_path);
-    GC_Machine machine = loading_machine;
+    DesktopContent content;
+    init_desktop_content(&content);
+    if (!classify_desktop_content(loading_file_path, loading_machine, &content))
+    {
+        loading_result = false;
+        loading_state.store(Loading_State_Finished);
+        return;
+    }
 
+    GC_Machine machine = loading_machine;
     if (machine == GC_MACHINE_AUTO)
-        machine = (media_type == GC_ADAM_MEDIA_NONE && !ends_with_no_case(loading_file_path, ".m3u")) ?
-            GC_MACHINE_COLECOVISION : GC_MACHINE_ADAM;
+        machine = content.type == DesktopContentCartridge ? GC_MACHINE_COLECOVISION :
+            GC_MACHINE_ADAM;
 
     if (machine == GC_MACHINE_ADAM)
-        loading_result = load_adam_content(loading_file_path);
-    else if (media_type != GC_ADAM_MEDIA_NONE || ends_with_no_case(loading_file_path, ".m3u"))
+        loading_result = load_adam_content(&content, loading_file_path);
+    else if (content.type != DesktopContentCartridge)
     {
         Error("ADAM media cannot be loaded while ColecoVision is selected");
         loading_result = false;
     }
     else
     {
-        loading_result = gearcoleco->LoadROM(loading_file_path, &loading_config, loading_softpatching);
+        loading_result = gearcoleco->LoadROMFromBuffer(content.data, (int)content.size,
+            &loading_config, content.source_path, loading_softpatching);
         if (loading_result)
         {
             clear_all_adam_host_media();
             strncpy_fit(loaded_content_path, loading_file_path, sizeof(loaded_content_path));
         }
     }
+    destroy_desktop_content(&content);
     loading_state.store(Loading_State_Finished);
 }
 
@@ -516,61 +550,237 @@ static GC_AdamMediaType adam_media_type_from_path(const char* path)
     return GC_ADAM_MEDIA_NONE;
 }
 
-static bool read_adam_media_path(const char* path, u8** data, size_t* size,
-    GC_AdamMediaType* type)
+static void init_desktop_content(DesktopContent* content)
 {
-    if (!IsValidPointer(data) || !IsValidPointer(size) || !IsValidPointer(type))
+    memset(content, 0, sizeof(*content));
+    content->type = DesktopContentInvalid;
+}
+
+static void destroy_desktop_content(DesktopContent* content)
+{
+    SafeDeleteArray(content->data);
+    init_desktop_content(content);
+}
+
+static bool is_valid_cartridge_buffer(const u8* data, size_t size)
+{
+    if (!IsValidPointer(data) || (size == 0) || (size > 0x7FFFFFFF))
         return false;
+    return Cartridge::IsValidROMBuffer(data, (int)size);
+}
 
-    *data = NULL;
-    *size = 0;
-    *type = GC_ADAM_MEDIA_NONE;
+static void append_zip_candidate(std::string* candidates, const char* type,
+    const char* name)
+{
+    if (!candidates->empty())
+        candidates->append(", ");
+    candidates->append(type);
+    candidates->append(" '");
+    candidates->append(name);
+    candidates->append("'");
+}
 
-    u8* source = NULL;
-    size_t source_size = 0;
-    if (!read_binary_file(path, &source, &source_size))
-        return false;
-
-    GC_AdamMediaType source_type = adam_media_type_from_path(path);
-    if (ends_with_no_case(path, ".zip"))
+static bool classify_desktop_zip(const char* path, const u8* data, size_t size,
+    GC_Machine machine, DesktopContent* content)
+{
+    mz_zip_archive archive;
+    memset(&archive, 0, sizeof(archive));
+    if (!mz_zip_reader_init_mem(&archive, data, size, 0))
     {
-        char media_name[512];
-        bool extracted = AdamMedia::ExtractFromZip(source, source_size, data, size, type,
-            media_name, sizeof(media_name));
-        SafeDeleteArray(source);
-        if (!extracted)
+        Error("Invalid ZIP archive: %s", path);
+        return false;
+    }
+
+    u8* cartridge_data = NULL;
+    size_t cartridge_size = 0;
+    char cartridge_name[512] = "";
+    int cartridge_count = 0;
+    u8* adam_data = NULL;
+    size_t adam_size = 0;
+    char adam_name[512] = "";
+    GC_AdamMediaType adam_type = GC_ADAM_MEDIA_NONE;
+    int adam_count = 0;
+    std::string candidates;
+
+    mz_uint files = mz_zip_reader_get_num_files(&archive);
+    for (mz_uint i = 0; i < files; i++)
+    {
+        mz_zip_archive_file_stat file_stat;
+        if (!mz_zip_reader_file_stat(&archive, i, &file_stat))
+        {
+            mz_zip_reader_end(&archive);
+            SafeDeleteArray(cartridge_data);
+            SafeDeleteArray(adam_data);
+            Error("Unable to inspect ZIP entry %u: %s", i, path);
             return false;
-        return true;
+        }
+        if (file_stat.m_is_directory || !file_stat.m_is_supported ||
+            (file_stat.m_uncomp_size == 0) ||
+            (file_stat.m_uncomp_size > (mz_uint64)(size_t)-1))
+        {
+            continue;
+        }
+
+        bool cartridge = ends_with_no_case(file_stat.m_filename, ".col") ||
+            ends_with_no_case(file_stat.m_filename, ".cv") ||
+            ends_with_no_case(file_stat.m_filename, ".rom") ||
+            ends_with_no_case(file_stat.m_filename, ".bin");
+        GC_AdamMediaType media_type = adam_media_type_from_path(file_stat.m_filename);
+        if (!cartridge && (media_type == GC_ADAM_MEDIA_NONE))
+            continue;
+
+        size_t extracted_size = (size_t)file_stat.m_uncomp_size;
+        u8* extracted = new u8[extracted_size];
+        if (!mz_zip_reader_extract_to_mem(&archive, i, extracted, extracted_size, 0))
+        {
+            SafeDeleteArray(extracted);
+            mz_zip_reader_end(&archive);
+            SafeDeleteArray(cartridge_data);
+            SafeDeleteArray(adam_data);
+            Error("Unable to extract ZIP entry '%s': %s", file_stat.m_filename, path);
+            return false;
+        }
+
+        if (cartridge && is_valid_cartridge_buffer(extracted, extracted_size))
+        {
+            cartridge_count++;
+            append_zip_candidate(&candidates, "cartridge", file_stat.m_filename);
+            if (!IsValidPointer(cartridge_data))
+            {
+                cartridge_data = extracted;
+                cartridge_size = extracted_size;
+                strncpy_fit(cartridge_name, file_stat.m_filename,
+                    sizeof(cartridge_name));
+                extracted = NULL;
+            }
+        }
+        else if ((media_type != GC_ADAM_MEDIA_NONE) &&
+            AdamMedia::IsValidImageSize(media_type, extracted_size))
+        {
+            adam_count++;
+            append_zip_candidate(&candidates,
+                media_type == GC_ADAM_MEDIA_DISK ? "ADAM disk" : "ADAM data pack",
+                file_stat.m_filename);
+            if (!IsValidPointer(adam_data))
+            {
+                adam_data = extracted;
+                adam_size = extracted_size;
+                adam_type = media_type;
+                strncpy_fit(adam_name, file_stat.m_filename, sizeof(adam_name));
+                extracted = NULL;
+            }
+        }
+        SafeDeleteArray(extracted);
+    }
+    mz_zip_reader_end(&archive);
+
+    bool choose_adam = false;
+    int compatible_count = 0;
+    if (machine == GC_MACHINE_COLECOVISION)
+        compatible_count = cartridge_count;
+    else if (machine == GC_MACHINE_ADAM)
+    {
+        choose_adam = adam_count > 0;
+        compatible_count = choose_adam ? adam_count : cartridge_count;
+    }
+    else
+    {
+        compatible_count = cartridge_count + adam_count;
+        choose_adam = (adam_count == 1) && (cartridge_count == 0);
     }
 
-    if (!AdamMedia::IsValidImageSize(source_type, source_size))
+    if (compatible_count != 1)
     {
-        SafeDeleteArray(source);
+        if (compatible_count > 1)
+            Error("Ambiguous ZIP content in %s. Candidates: %s", path,
+                candidates.empty() ? "none" : candidates.c_str());
+        else
+            Error("ZIP contains no compatible content for the selected machine: %s. "
+                "Recognized candidates: %s", path,
+                candidates.empty() ? "none" : candidates.c_str());
+        SafeDeleteArray(cartridge_data);
+        SafeDeleteArray(adam_data);
         return false;
     }
 
-    *data = source;
-    *size = source_size;
-    *type = source_type;
+    content->archive = true;
+    strncpy_fit(content->source_path, path, sizeof(content->source_path));
+    if (choose_adam)
+    {
+        content->type = adam_type == GC_ADAM_MEDIA_DISK ? DesktopContentAdamDisk :
+            DesktopContentAdamDataPack;
+        content->data = adam_data;
+        content->size = adam_size;
+        strncpy_fit(content->entry_name, adam_name, sizeof(content->entry_name));
+        SafeDeleteArray(cartridge_data);
+    }
+    else
+    {
+        content->type = DesktopContentCartridge;
+        content->data = cartridge_data;
+        content->size = cartridge_size;
+        strncpy_fit(content->entry_name, cartridge_name, sizeof(content->entry_name));
+        SafeDeleteArray(adam_data);
+    }
     return true;
 }
 
-static GC_AdamMediaType detect_adam_media_path(const char* path)
+static bool classify_desktop_content(const char* path, GC_Machine machine,
+    DesktopContent* content)
 {
-    GC_AdamMediaType type = adam_media_type_from_path(path);
-    if ((type != GC_ADAM_MEDIA_NONE) || !ends_with_no_case(path, ".zip"))
-        return type;
+    if (!IsValidPointer(path) || !IsValidPointer(content))
+        return false;
+    init_desktop_content(content);
+
+    if (ends_with_no_case(path, ".m3u"))
+        return classify_adam_playlist(path, content);
 
     u8* data = NULL;
     size_t size = 0;
-    if (!read_adam_media_path(path, &data, &size, &type))
-        return GC_ADAM_MEDIA_NONE;
-    SafeDeleteArray(data);
-    return type;
+    if (!read_binary_file(path, &data, &size))
+    {
+        Error("Unable to read content: %s", path);
+        return false;
+    }
+
+    if (ends_with_no_case(path, ".zip"))
+    {
+        bool classified = classify_desktop_zip(path, data, size, machine, content);
+        SafeDeleteArray(data);
+        return classified;
+    }
+
+    GC_AdamMediaType media_type = adam_media_type_from_path(path);
+    if (media_type != GC_ADAM_MEDIA_NONE)
+    {
+        if (!AdamMedia::IsValidImageSize(media_type, size))
+        {
+            Error("Invalid ADAM media size %zu: %s", size, path);
+            SafeDeleteArray(data);
+            return false;
+        }
+        content->type = media_type == GC_ADAM_MEDIA_DISK ? DesktopContentAdamDisk :
+            DesktopContentAdamDataPack;
+    }
+    else
+    {
+        if (size > 0x7FFFFFFF)
+        {
+            Error("Cartridge image is too large: %s", path);
+            SafeDeleteArray(data);
+            return false;
+        }
+        content->type = DesktopContentCartridge;
+    }
+
+    content->data = data;
+    content->size = size;
+    strncpy_fit(content->source_path, path, sizeof(content->source_path));
+    strncpy_fit(content->entry_name, get_filename(path), sizeof(content->entry_name));
+    return true;
 }
 
-static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
-    size_t media_path_size, GC_AdamMediaType* type)
+static bool classify_adam_playlist(const char* playlist_path, DesktopContent* content)
 {
     u8* text = NULL;
     size_t text_size = 0;
@@ -582,8 +792,8 @@ static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
 
     char directory[4096];
     get_directory(playlist_path, directory, sizeof(directory));
-    media_path[0] = '\0';
-    *type = GC_ADAM_MEDIA_NONE;
+    DesktopContent selected;
+    init_desktop_content(&selected);
     int entries = 0;
     size_t position = 0;
 
@@ -606,12 +816,14 @@ static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
         {
             if (entries >= 64)
             {
+                destroy_desktop_content(&selected);
                 SafeDeleteArray(text);
                 Error("ADAM playlist contains more than 64 entries: %s", playlist_path);
                 return false;
             }
             if ((end - position) >= 4096)
             {
+                destroy_desktop_content(&selected);
                 SafeDeleteArray(text);
                 Error("ADAM playlist entry is too long: %s", playlist_path);
                 return false;
@@ -624,19 +836,22 @@ static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
             char resolved[4096];
             if (!join_path(directory, entry, resolved, sizeof(resolved)))
             {
+                destroy_desktop_content(&selected);
                 SafeDeleteArray(text);
                 return false;
             }
 
-            u8* validation = NULL;
-            size_t validation_size = 0;
-            GC_AdamMediaType entry_type = GC_ADAM_MEDIA_NONE;
-            bool valid = read_adam_media_path(resolved, &validation, &validation_size,
-                &entry_type);
-            SafeDeleteArray(validation);
-
-            if (!valid || ((*type != GC_ADAM_MEDIA_NONE) && (*type != entry_type)))
+            DesktopContent entry_content;
+            init_desktop_content(&entry_content);
+            bool valid = classify_desktop_content(resolved, GC_MACHINE_ADAM,
+                &entry_content);
+            bool adam_media = entry_content.type == DesktopContentAdamDisk ||
+                entry_content.type == DesktopContentAdamDataPack;
+            if (!valid || !adam_media || ((selected.type != DesktopContentInvalid) &&
+                (selected.type != entry_content.type)))
             {
+                destroy_desktop_content(&entry_content);
+                destroy_desktop_content(&selected);
                 SafeDeleteArray(text);
                 Error("ADAM playlist contains missing, invalid, or mixed media: %s", resolved);
                 return false;
@@ -644,9 +859,10 @@ static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
 
             if (entries == 0)
             {
-                strncpy_fit(media_path, resolved, media_path_size);
-                *type = entry_type;
+                selected = entry_content;
+                entry_content.data = NULL;
             }
+            destroy_desktop_content(&entry_content);
             entries++;
         }
 
@@ -656,12 +872,15 @@ static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
     SafeDeleteArray(text);
     if (entries == 0)
     {
+        destroy_desktop_content(&selected);
         Error("ADAM playlist is empty: %s", playlist_path);
         return false;
     }
 
     if (entries > 1)
         Log("Desktop ADAM playlist loaded; media UI starts with entry 1 of %d", entries);
+    selected.playlist = true;
+    *content = selected;
     return true;
 }
 
@@ -709,9 +928,11 @@ static void make_adam_working_path(const char* source_path, GC_AdamMediaType typ
     join_path(directory, filename, path, path_size);
 }
 
-static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const char* file_path, bool primary, bool discard_current_changes)
+static bool load_adam_media_content(GC_AdamMediaSlot slot, const DesktopContent* content,
+    bool primary, bool discard_current_changes)
 {
+    GC_AdamMediaType type = content->type == DesktopContentAdamDisk ?
+        GC_ADAM_MEDIA_DISK : GC_ADAM_MEDIA_DATA_PACK;
     bool disk_slot = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
     if ((disk_slot && (type != GC_ADAM_MEDIA_DISK)) ||
         (!disk_slot && (type != GC_ADAM_MEDIA_DATA_PACK)))
@@ -720,42 +941,24 @@ static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
         return false;
     }
 
-    u8* source = NULL;
-    size_t size = 0;
-    GC_AdamMediaType source_type = GC_ADAM_MEDIA_NONE;
-    if (!read_adam_media_path(file_path, &source, &size, &source_type))
-    {
-        Error("Unable to read ADAM media: %s", file_path);
-        return false;
-    }
+    if (content->archive)
+        Log("ADAM media extracted from ZIP: %s (%s)", content->source_path,
+            content->entry_name);
 
-    if (source_type != type)
-    {
-        Error("ADAM media type does not match slot %d: %s", slot, file_path);
-        SafeDeleteArray(source);
-        return false;
-    }
-
-    if (ends_with_no_case(file_path, ".zip"))
-        Log("ADAM media extracted from ZIP: %s", file_path);
-
-    u32 base_crc = calculate_crc32(source, size);
+    u32 base_crc = calculate_crc32(content->data, content->size);
     char working_path[4096];
-    make_adam_working_path(file_path, type, slot, base_crc, primary, working_path,
+    make_adam_working_path(content->source_path, type, slot, base_crc, primary, working_path,
         sizeof(working_path));
 
-    u8* mounted_data = source;
+    const u8* mounted_data = content->data;
     u8* working = NULL;
     bool persistence = primary ? loading_adam_media_persistence :
         config_emulator.adam_media_persistence;
     bool configured_write_protected = primary ? loading_adam_media_write_protected[slot] :
         config_emulator.adam_media_write_protected[slot];
     if (persistence && !check_adam_working_path(working_path))
-    {
-        SafeDeleteArray(source);
         return false;
-    }
-    if (persistence && read_binary_file_exact(working_path, &working, size))
+    if (persistence && read_binary_file_exact(working_path, &working, content->size))
     {
         mounted_data = working;
         Log("Loading ADAM working copy: %s", working_path);
@@ -764,59 +967,36 @@ static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
     if (!primary && !discard_current_changes && !write_adam_working_copy(slot))
     {
         SafeDeleteArray(working);
-        SafeDeleteArray(source);
         return false;
     }
 
     bool write_protected = !persistence || configured_write_protected;
-    bool loaded = gearcoleco->LoadAdamMediaFromBuffer(slot, type, mounted_data, size,
+    bool loaded = gearcoleco->LoadAdamMediaFromBuffer(slot, type, mounted_data, content->size,
         write_protected, base_crc);
 
     if (loaded)
     {
         clear_adam_host_media(slot);
-        strncpy_fit(adam_host_media[slot].source_path, file_path,
+        strncpy_fit(adam_host_media[slot].source_path, content->source_path,
             sizeof(adam_host_media[slot].source_path));
         if (persistence)
             strncpy_fit(adam_host_media[slot].working_path, working_path,
                 sizeof(adam_host_media[slot].working_path));
         adam_host_media[slot].base_crc = base_crc;
         if (primary)
-            strncpy_fit(loaded_content_path, file_path, sizeof(loaded_content_path));
+            strncpy_fit(loaded_content_path, content->source_path,
+                sizeof(loaded_content_path));
     }
 
     SafeDeleteArray(working);
-    SafeDeleteArray(source);
     return loaded;
 }
 
-static bool load_adam_content(const char* file_path)
+static bool load_adam_content(const DesktopContent* content, const char* requested_path)
 {
-    char media_path[4096];
-    strncpy_fit(media_path, file_path, sizeof(media_path));
-    GC_AdamMediaType media_type = detect_adam_media_path(file_path);
-
-    if (ends_with_no_case(file_path, ".m3u"))
+    if ((content->type == DesktopContentAdamDisk) ||
+        (content->type == DesktopContentAdamDataPack))
     {
-        if (!resolve_adam_playlist(file_path, media_path, sizeof(media_path), &media_type))
-            return false;
-    }
-
-    if (media_type != GC_ADAM_MEDIA_NONE)
-    {
-        u8* validation = NULL;
-        size_t validation_size = 0;
-        GC_AdamMediaType validation_type = GC_ADAM_MEDIA_NONE;
-        if (!read_adam_media_path(media_path, &validation, &validation_size, &validation_type))
-            return false;
-        bool valid = validation_type == media_type;
-        SafeDeleteArray(validation);
-        if (!valid)
-        {
-            Error("Invalid ADAM media size %zu: %s", validation_size, media_path);
-            return false;
-        }
-
         if (loading_adam_boot_mode == 2)
         {
             Error("ADAM cartridge boot was selected but no cartridge was loaded");
@@ -828,22 +1008,23 @@ static bool load_adam_content(const char* file_path)
 
         gearcoleco->UnloadContent();
         clear_all_adam_host_media();
-        GC_AdamMediaSlot slot = media_type == GC_ADAM_MEDIA_DATA_PACK ?
+        GC_AdamMediaSlot slot = content->type == DesktopContentAdamDataPack ?
             GC_ADAM_MEDIA_DATA_PACK_1 : GC_ADAM_MEDIA_DISK_1;
-        if (!load_adam_media_path(slot, media_type, media_path, true, false))
+        if (!load_adam_media_content(slot, content, true, false))
             return false;
 
-        if (ends_with_no_case(file_path, ".m3u"))
-            strncpy_fit(loaded_content_path, file_path, sizeof(loaded_content_path));
+        if (content->playlist)
+            strncpy_fit(loaded_content_path, requested_path, sizeof(loaded_content_path));
         return true;
     }
 
     if (!load_adam_firmware_paths())
         return false;
 
-    if (!gearcoleco->LoadROM(file_path, &loading_config, loading_softpatching))
+    if (!gearcoleco->LoadROMFromBuffer(content->data, (int)content->size, &loading_config,
+        content->source_path, loading_softpatching))
     {
-        Error("Invalid ADAM cartridge: %s", file_path);
+        Error("Invalid ADAM cartridge: %s", requested_path);
         return false;
     }
 
@@ -853,7 +1034,7 @@ static bool load_adam_content(const char* file_path)
     if (!gearcoleco->StartAdam(boot_mode))
         return false;
 
-    strncpy_fit(loaded_content_path, file_path, sizeof(loaded_content_path));
+    strncpy_fit(loaded_content_path, requested_path, sizeof(loaded_content_path));
     return true;
 }
 
@@ -1080,14 +1261,23 @@ bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
         (slot < GC_ADAM_MEDIA_DISK_1) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
         return false;
 
-    GC_AdamMediaType type = detect_adam_media_path(file_path);
-    bool disk_slot = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
-    if ((disk_slot && (type != GC_ADAM_MEDIA_DISK)) ||
-        (!disk_slot && (type != GC_ADAM_MEDIA_DATA_PACK)))
+    DesktopContent content;
+    init_desktop_content(&content);
+    if (!classify_desktop_content(file_path, GC_MACHINE_ADAM, &content))
         return false;
 
-    bool loaded = load_adam_media_path(slot, type, file_path, false,
+    bool content_is_disk = content.type == DesktopContentAdamDisk;
+    bool content_is_data_pack = content.type == DesktopContentAdamDataPack;
+    bool disk_slot = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
+    if ((disk_slot && !content_is_disk) || (!disk_slot && !content_is_data_pack))
+    {
+        destroy_desktop_content(&content);
+        return false;
+    }
+
+    bool loaded = load_adam_media_content(slot, &content, false,
         discard_current_changes);
+    destroy_desktop_content(&content);
     if (loaded)
     {
         rewind_reset();
