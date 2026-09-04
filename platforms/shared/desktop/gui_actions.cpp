@@ -58,7 +58,7 @@ void gui_action_reload_rom(void)
         if (content_path[0] != '\0')
             gui_load_rom(content_path);
         else if (emu_get_machine() == GC_MACHINE_ADAM)
-            emu_start_adam();
+            gui_start_adam();
     }
 }
 

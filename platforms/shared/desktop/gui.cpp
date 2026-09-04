@@ -56,7 +56,7 @@ static void main_window(void);
 static void show_status_message(void);
 static void show_error_window(void);
 static void show_loading_popup(void);
-static bool finish_loading_rom(void);
+static bool finish_started_content(bool load_symbols);
 static void update_window_visibility_padding(void);
 static GC_Color color_float_to_int(ImVec4 color);
 static ImVec4 color_int_to_float(GC_Color color);
@@ -332,6 +332,18 @@ bool gui_load_rom(const char* path, const char* symbol_path)
     return true;
 }
 
+bool gui_start_adam(void)
+{
+    if (loading_rom_active)
+        return false;
+
+    gui_debug_auto_save_settings();
+    emu_resume();
+    if (!emu_start_adam())
+        return false;
+    return finish_started_content(false);
+}
+
 bool gui_is_rom_loading(void)
 {
     return loading_rom_active;
@@ -349,7 +361,7 @@ bool gui_finish_loading_rom(void)
     if (success)
     {
         config_push_recent_media(loading_rom_path);
-        success = finish_loading_rom();
+        success = finish_started_content(true);
     }
     else
     {
@@ -675,18 +687,21 @@ static void show_loading_popup(void)
     ImGui::PopStyleVar(3);
 }
 
-static bool finish_loading_rom(void)
+static bool finish_started_content(bool load_symbols)
 {
     gui_debug_reset();
 
-    if (loading_symbol_path[0] != '\0')
-        gui_debug_load_symbols_file(loading_symbol_path);
-    else
+    if (load_symbols)
     {
-        std::string str(loading_rom_path);
-        str = str.substr(0, str.find_last_of("."));
-        if (!gui_debug_load_symbols_file((str + ".sym").c_str()))
-            gui_debug_load_symbols_file((str + ".noi").c_str());
+        if (loading_symbol_path[0] != '\0')
+            gui_debug_load_symbols_file(loading_symbol_path);
+        else
+        {
+            std::string str(loading_rom_path);
+            str = str.substr(0, str.find_last_of("."));
+            if (!gui_debug_load_symbols_file((str + ".sym").c_str()))
+                gui_debug_load_symbols_file((str + ".noi").c_str());
+        }
     }
 
     gui_debug_auto_load_settings();

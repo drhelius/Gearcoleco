@@ -178,9 +178,7 @@ static void menu_gearcoleco(void)
 
         if (ImGui::MenuItem("Start ADAM..."))
         {
-            if (emu_start_adam())
-                application_update_title_with_rom("ADAM");
-            else
+            if (!gui_start_adam())
                 gui_set_error_message("Unable to boot ADAM. Configure valid OS-7, EOS, and SmartWriter firmware first.");
         }
 
