@@ -861,6 +861,18 @@ json McpServer::BuildToolList()
 
     // Media and state management tools
     tools.push_back({
+        {"name", "start_adam"},
+        {"title", "Start ADAM"},
+        {"description", "Start a no-content ADAM SmartWriter session using configured OS-7, EOS, and SmartWriter firmware."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", false}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
         {"name", "load_media"},
         {"title", "Load Media"},
         {"description", "Load cartridge or ADAM media (.col .cv .rom .bin .zip .ddp .dsk .m3u); reset the machine and auto-load symbols where applicable."},
@@ -1134,6 +1146,30 @@ json McpServer::BuildToolList()
                 }}
             }},
             {"required", json::array({"commands"})},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "adam_keyboard"},
+        {"title", "ADAM Keyboard"},
+        {"description", "Press, release, or tap a semantic Coleco ADAM keyboard key."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", false}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"key", {
+                    {"type", "string"},
+                    {"description", "ADAM key: a-z, 0-9, punctuation names, editing keys, SmartKeys, directions, or modifiers."},
+                    {"enum", json::array({"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "space", "minus", "plus", "caret", "semicolon", "quote", "open_bracket", "close_bracket", "backslash", "comma", "period", "slash", "return", "enter", "escape", "esc", "backspace", "tab", "home", "smart_1", "smart_2", "smart_3", "smart_4", "smart_5", "smart_6", "wild_card", "undo", "move", "store", "insert", "print", "clear", "delete", "up", "right", "down", "left", "shift", "control", "ctrl", "lock"})}
+                }},
+                {"action", {
+                    {"type", "string"},
+                    {"description", "Keyboard action."},
+                    {"enum", json::array({"press", "release", "tap"})}
+                }}
+            }},
+            {"required", json::array({"key", "action"})},
             {"additionalProperties", false}
         }}
     });
@@ -2488,6 +2524,10 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         return m_debugAdapter.GetScreenshot();
     }
     // Media and state management
+    else if (normalizedTool == "start_adam")
+    {
+        return m_debugAdapter.StartAdam();
+    }
     else if (normalizedTool == "load_media")
     {
         return {{"error", "load_media must be handled by the MCP manager"}};
@@ -2555,6 +2595,12 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string button = arguments["button"];
         std::string action = arguments["action"];
         return m_debugAdapter.ControllerButton(player, button, action);
+    }
+    else if (normalizedTool == "adam_keyboard")
+    {
+        std::string key = arguments["key"];
+        std::string action = arguments["action"];
+        return m_debugAdapter.AdamKeyboard(key, action);
     }
     else if (normalizedTool == "get_input_state")
     {

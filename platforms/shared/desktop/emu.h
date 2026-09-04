@@ -90,6 +90,7 @@ EXTERN void emu_update(void);
 EXTERN bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration config);
 EXTERN bool emu_is_media_loading(void);
 EXTERN bool emu_finish_media_loading(void);
+EXTERN GC_Machine emu_get_last_load_machine(void);
 EXTERN void emu_render_current_frame(void);
 EXTERN void emu_reset_rewind_timing(void);
 EXTERN void emu_key_pressed(GC_Controllers controller, GC_Keys key);

@@ -84,6 +84,13 @@ int application_headless_init(const ApplicationParams& params)
             Log("Symbol file argument: %s", params.symbol_file);
         gui_load_rom(params.rom_file, params.symbol_file);
     }
+    else if ((config_emulator.machine == GC_MACHINE_ADAM) &&
+        emu_are_adam_firmware_paths_valid())
+    {
+        Log("Starting configured no-content ADAM session");
+        if (!gui_start_adam())
+            Error("Unable to start configured no-content ADAM session");
+    }
 
     if (!rom_file_argument && symbol_file_argument)
     {

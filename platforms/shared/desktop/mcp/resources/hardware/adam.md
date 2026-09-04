@@ -14,6 +14,8 @@ Gearcoleco emulates the base Coleco ADAM with a cycle-scheduled high-level ADAMn
 
 Computer mode requires separate raw OS-7, EOS, and SmartWriter images. Firmware is identified by role, exact size, and CRC. Firmware bytes are not included in save states.
 
+MCP tool `start_adam` starts a firmware-only SmartWriter session and returns per-role path, size, and CRC details when firmware is missing or invalid.
+
 ## ADAMnet structures
 
 - The initial Processor Control Block is at `$fec0` and is 4 bytes.
@@ -27,3 +29,7 @@ Computer mode requires separate raw OS-7, EOS, and SmartWriter images. Firmware 
 - Data Pack 1 and Data Pack 2 accept 256 KiB `.ddp` images.
 - Media may be dirty or write-protected and has a generation value used to reject a transfer after a swap.
 - Desktop source files remain immutable; writes go to complete working-copy images.
+
+## Keyboard control
+
+MCP tool `adam_keyboard` accepts semantic key names with `press`, `release`, or `tap`. It covers letters, digits, punctuation, editing keys, SmartKeys I-VI, directional keys, Shift, Control, and Lock.

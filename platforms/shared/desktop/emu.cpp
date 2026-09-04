@@ -111,6 +111,7 @@ static char loading_file_path[4096];
 static bool loading_softpatching;
 static Cartridge::ForceConfiguration loading_config;
 static GC_Machine loading_machine;
+static GC_Machine loading_detected_machine;
 static int loading_adam_boot_mode;
 static bool loading_adam_media_persistence;
 static bool loading_adam_media_write_protected[GC_ADAM_MEDIA_SLOT_COUNT];
@@ -273,6 +274,7 @@ static void load_media_thread_func(void)
     if (machine == GC_MACHINE_AUTO)
         machine = content.type == DesktopContentCartridge ? GC_MACHINE_COLECOVISION :
             GC_MACHINE_ADAM;
+    loading_detected_machine = machine;
 
     if (machine == GC_MACHINE_ADAM)
     {
@@ -326,6 +328,7 @@ bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     loading_softpatching = config_emulator.softpatching;
     loading_config = config;
     loading_machine = (GC_Machine)config_emulator.machine;
+    loading_detected_machine = GC_MACHINE_AUTO;
     loading_adam_boot_mode = config_emulator.adam_boot_mode;
     loading_adam_media_persistence = config_emulator.adam_media_persistence;
     memcpy(loading_adam_media_write_protected, config_emulator.adam_media_write_protected,
@@ -347,6 +350,11 @@ bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
 bool emu_is_media_loading(void)
 {
     return loading_state.load() == Loading_State_Loading;
+}
+
+GC_Machine emu_get_last_load_machine(void)
+{
+    return loading_detected_machine;
 }
 
 static void apply_video_config(void)

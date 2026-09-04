@@ -134,6 +134,7 @@ public:
     json StartLoadMedia(const std::string& file_path);
     bool IsMediaLoading() const;
     json FinishLoadMedia(const std::string& file_path);
+    json StartAdam();
     json ListSaveStateSlots();
     json SelectSaveStateSlot(int slot);
     json SaveState();
@@ -147,6 +148,7 @@ public:
 
     // Controller input
     json ControllerButton(int player, const std::string& button, const std::string& action);
+    json AdamKeyboard(const std::string& key, const std::string& action);
     json GetInputState();
 
     // Disassembler operations

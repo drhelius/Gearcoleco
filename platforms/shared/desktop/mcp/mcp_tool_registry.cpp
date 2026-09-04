@@ -205,11 +205,11 @@ static const McpToolCategory kMcpToolCategories[] =
     {"symbols", "Symbols", "Add, remove, load, list, and look up debug symbols or labels."},
     {"hardware_video", "Video Hardware", "Inspect TMS9918A VDP registers, display timing, status, sprites, scanlines, and video state."},
     {"hardware_audio", "Audio Hardware", "Inspect ColecoVision PSG and AY-3-8910 audio state, channels, mixer, and sound registers."},
-    {"media", "Media", "Load cartridges or ADAM media, list recent media, load symbols, and inspect the active machine and slots."},
+    {"media", "Media", "Start ADAM, load cartridges or ADAM media, list recent media, load symbols, and inspect the active machine and slots."},
     {"capture", "Capture", "Capture current screenshots and ColecoVision sprite images or sprite metadata."},
     {"state", "Save States", "List save slots, select a slot, save emulator state, and load emulator state."},
     {"rewind", "Rewind", "Inspect rewind buffer status and seek to rewind snapshots for time-travel debugging."},
-    {"input", "Input", "Inspect, press, release, tap, or macro controller input."},
+    {"input", "Input", "Inspect or control ColecoVision controllers and semantic ADAM keyboard input."},
     {"trace", "Trace", "Read trace log entries and configure CPU, interrupt, video, audio, memory, and debug-message tracing."},
     {"tools", "Other Tools", "Additional emulator/debugger tools that do not fit another category."}
 };
@@ -264,7 +264,7 @@ static const char* const kMcpAudioTools[] =
 
 static const char* const kMcpMediaTools[] =
 {
-    "load_media", "get_media_info", "list_recent_media", "get_adam_printer_output",
+    "start_adam", "load_media", "get_media_info", "list_recent_media", "get_adam_printer_output",
     "clear_adam_printer_output"
 };
 
@@ -286,7 +286,7 @@ static const char* const kMcpRewindTools[] =
 
 static const char* const kMcpInputTools[] =
 {
-    "controller_button", "controller_macro", "get_input_state"
+    "controller_button", "adam_keyboard", "controller_macro", "get_input_state"
 };
 
 static const char* const kMcpTraceTools[] =
@@ -645,6 +645,7 @@ bool McpToolRegistry::IsDirectToolName(const std::string& tool_name) const
     std::string name = NormalizeToolName(tool_name);
 
     return (name == "load_media") ||
+           (name == "start_adam") ||
            (name == "get_media_info") ||
            (name == "debug_pause") ||
            (name == "debug_continue") ||
@@ -658,7 +659,8 @@ bool McpToolRegistry::IsDirectToolName(const std::string& tool_name) const
            (name == "get_disassembly") ||
            (name == "set_breakpoint") ||
            (name == "get_screenshot") ||
-           (name == "controller_button");
+           (name == "controller_button") ||
+           (name == "adam_keyboard");
 }
 
 std::string McpToolRegistry::ToolCategoryForName(const std::string& tool_name) const

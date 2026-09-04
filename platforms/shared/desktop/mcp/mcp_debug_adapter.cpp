@@ -49,6 +49,40 @@ struct DisassemblerBookmark
     char name[32];
 };
 
+static json AdamFirmwareError(bool adam)
+{
+    json result;
+    result["error"] = adam ? "ADAM firmware is missing or invalid" :
+        "ColecoVision OS-7 firmware is missing or invalid";
+    result["error_code"] = "missing_or_invalid_firmware";
+    result["machine"] = adam ? "ADAM" : "ColecoVision";
+    json firmware_info = json::array();
+    int count = adam ? GC_ADAM_FIRMWARE_COUNT : 1;
+    for (int i = 0; i < count; i++)
+    {
+        GC_AdamFirmware firmware = (GC_AdamFirmware)i;
+        const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+        char path[4096];
+        size_t actual_size = 0;
+        u32 crc = 0;
+        emu_get_adam_firmware_path(firmware, path, sizeof(path));
+        bool valid = emu_inspect_adam_firmware(firmware, path, &actual_size, &crc);
+        std::ostringstream crc_text;
+        crc_text << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << crc;
+        firmware_info.push_back({
+            {"role", metadata->role_name},
+            {"path", path},
+            {"expected_size", metadata->size},
+            {"actual_size", actual_size},
+            {"crc32", actual_size > 0 ? crc_text.str() : ""},
+            {"valid", valid},
+            {"known_revision", valid && (crc == metadata->crc)}
+        });
+    }
+    result["firmware"] = firmware_info;
+    return result;
+}
+
 static int MemoryEditorOffsetToDisplayAddress(const MemoryAreaInfo& info, int offset)
 {
     return offset + (int)info.display_base;
@@ -1216,7 +1250,16 @@ json DebugAdapter::FinishLoadMedia(const std::string& file_path)
 
     if (gui_is_rom_loading() && !gui_finish_loading_rom())
     {
+        if ((emu_get_last_load_machine() == GC_MACHINE_ADAM) &&
+            !emu_are_adam_firmware_paths_valid())
+        {
+            return AdamFirmwareError(true);
+        }
         result["error"] = "Failed to load media file";
+        result["error_code"] = "media_load_failed";
+        result["detected_machine"] = emu_get_last_load_machine() == GC_MACHINE_ADAM ?
+            "ADAM" : (emu_get_last_load_machine() == GC_MACHINE_COLECOVISION ?
+            "ColecoVision" : "Unknown");
         Log("[MCP] LoadMedia failed: %s", file_path.c_str());
         return result;
     }
@@ -1242,6 +1285,24 @@ json DebugAdapter::FinishLoadMedia(const std::string& file_path)
     }
 
     return result;
+}
+
+json DebugAdapter::StartAdam()
+{
+    if (gui_is_rom_loading())
+        return {{"error", "Another media load is already in progress"},
+            {"error_code", "load_in_progress"}};
+    if (!emu_are_adam_firmware_paths_valid())
+        return AdamFirmwareError(true);
+    if (!gui_start_adam())
+        return {{"error", "Unable to start ADAM"}, {"error_code", "adam_start_failed"}};
+
+    return {
+        {"success", true},
+        {"machine", "ADAM"},
+        {"boot_mode", "computer"},
+        {"content_name", emu_get_content_name()}
+    };
 }
 
 json DebugAdapter::LoadSymbols(const std::string& file_path)
@@ -1579,6 +1640,53 @@ json DebugAdapter::ControllerButton(int player, const std::string& button, const
     result["action"] = action;
 
     return result;
+}
+
+json DebugAdapter::AdamKeyboard(const std::string& key, const std::string& action)
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+    if ((action != "press") && (action != "release") && (action != "tap"))
+        return {{"error", "Invalid action (must be: press, release, tap)"}};
+
+    std::string key_name = key;
+    std::transform(key_name.begin(), key_name.end(), key_name.begin(), ::tolower);
+    GC_AdamKey adam_key = GC_ADAM_KEY_COUNT;
+    if ((key_name.length() == 1) && (key_name[0] >= 'a') && (key_name[0] <= 'z'))
+        adam_key = (GC_AdamKey)(GC_ADAM_KEY_A + key_name[0] - 'a');
+    else if ((key_name.length() == 1) && (key_name[0] >= '0') && (key_name[0] <= '9'))
+        adam_key = (GC_AdamKey)(GC_ADAM_KEY_0 + key_name[0] - '0');
+    else
+    {
+        static const char* names[] = {
+            "space", "minus", "plus", "caret", "semicolon", "quote", "open_bracket",
+            "close_bracket", "backslash", "comma", "period", "slash", "return",
+            "escape", "backspace", "tab", "home", "smart_1", "smart_2", "smart_3",
+            "smart_4", "smart_5", "smart_6", "wild_card", "undo", "move", "store",
+            "insert", "print", "clear", "delete", "up", "right", "down", "left",
+            "shift", "control", "lock"
+        };
+        for (int i = 0; i < (int)(sizeof(names) / sizeof(names[0])); i++)
+        {
+            if (key_name == names[i])
+            {
+                adam_key = (GC_AdamKey)(GC_ADAM_KEY_SPACE + i);
+                break;
+            }
+        }
+        if (key_name == "enter") adam_key = GC_ADAM_KEY_RETURN;
+        else if (key_name == "esc") adam_key = GC_ADAM_KEY_ESCAPE;
+        else if (key_name == "ctrl") adam_key = GC_ADAM_KEY_CONTROL;
+    }
+
+    if (adam_key == GC_ADAM_KEY_COUNT)
+        return {{"error", "Invalid ADAM key name"}};
+
+    if ((action == "press") || (action == "tap"))
+        emu_adam_key_pressed(adam_key);
+    if ((action == "release") || (action == "tap"))
+        emu_adam_key_released(adam_key);
+    return {{"success", true}, {"key", key_name}, {"action", action}};
 }
 
 json DebugAdapter::GetInputState()
