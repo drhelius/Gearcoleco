@@ -90,6 +90,7 @@ struct AdamHostMediaRecord
     char source_path[4096];
     char working_path[4096];
     u32 base_crc;
+    bool state_owned;
 };
 
 static AdamHostMediaRecord adam_host_media[GC_ADAM_MEDIA_SLOT_COUNT];
@@ -126,6 +127,7 @@ static GC_AdamMediaType adam_media_type_from_path(const char* path);
 static GC_AdamMediaType detect_adam_media_path(const char* path);
 static bool read_adam_media_path(const char* path, u8** data, size_t* size,
     GC_AdamMediaType* type);
+static bool write_adam_media_file(AdamMedia* media, const char* file_path);
 static void clear_adam_host_media(GC_AdamMediaSlot slot);
 static void clear_all_adam_host_media(void);
 static void make_adam_working_path(const char* source_path, GC_AdamMediaType type,
@@ -811,7 +813,18 @@ static bool write_adam_working_copy(GC_AdamMediaSlot slot)
     if (record->working_path[0] == '\0')
         return false;
 
-    std::string temporary_path(record->working_path);
+    return write_adam_media_file(media, record->working_path);
+}
+
+static bool write_adam_media_file(AdamMedia* media, const char* file_path)
+{
+    if (!IsValidPointer(media) || !media->IsInserted() || !IsValidPointer(file_path) ||
+        (file_path[0] == '\0'))
+    {
+        return false;
+    }
+
+    std::string temporary_path(file_path);
     temporary_path += ".tmp";
     std::ofstream file;
     open_ofstream_utf8(file, temporary_path.c_str(), std::ios::out | std::ios::binary |
@@ -831,16 +844,16 @@ static bool write_adam_working_copy(GC_AdamMediaSlot slot)
         return false;
     }
 
-    if (!SDL_RenamePath(temporary_path.c_str(), record->working_path))
+    if (!SDL_RenamePath(temporary_path.c_str(), file_path))
     {
         SDL_RemovePath(temporary_path.c_str());
-        Error("Unable to replace ADAM working copy %s: %s", record->working_path,
+        Error("Unable to replace ADAM working copy %s: %s", file_path,
             SDL_GetError());
         return false;
     }
 
     media->ClearDirty();
-    Log("ADAM working copy saved: %s", record->working_path);
+    Log("ADAM working copy saved: %s", file_path);
     return true;
 }
 
@@ -972,6 +985,28 @@ bool emu_save_adam_media(GC_AdamMediaSlot slot)
     return saved;
 }
 
+bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path)
+{
+    if ((loading_state.load() != Loading_State_None) || !IsValidPointer(file_path) ||
+        (slot < GC_ADAM_MEDIA_DISK_1) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
+    {
+        return false;
+    }
+
+    AdamMedia* media = gearcoleco->GetAdamMedia(slot);
+    if (!write_adam_media_file(media, file_path))
+        return false;
+
+    clear_adam_host_media(slot);
+    AdamHostMediaRecord* record = &adam_host_media[slot];
+    strncpy_fit(record->source_path, file_path, sizeof(record->source_path));
+    strncpy_fit(record->working_path, file_path, sizeof(record->working_path));
+    record->base_crc = media->GetBaseCRC();
+    rewind_reset();
+    runahead_reset();
+    return true;
+}
+
 bool emu_eject_adam_media(GC_AdamMediaSlot slot)
 {
     if ((loading_state.load() != Loading_State_None) ||
@@ -992,6 +1027,8 @@ bool emu_set_adam_media_write_protected(GC_AdamMediaSlot slot, bool write_protec
         return false;
     AdamMedia* media = gearcoleco->GetAdamMedia(slot);
     if (!IsValidPointer(media) || !media->IsInserted())
+        return false;
+    if (adam_host_media[slot].state_owned && !write_protected)
         return false;
     media->SetWriteProtected(write_protected);
     rewind_reset();
@@ -1016,6 +1053,7 @@ bool emu_get_adam_media_info(GC_AdamMediaSlot slot, Emu_AdamMediaInfo* info)
     info->inserted = true;
     info->write_protected = media->IsWriteProtected();
     info->dirty = media->IsDirty();
+    info->state_owned = adam_host_media[slot].state_owned;
     info->type = media->GetType();
     info->size = media->GetSize();
     info->base_crc = media->GetBaseCRC();
@@ -1023,6 +1061,31 @@ bool emu_get_adam_media_info(GC_AdamMediaSlot slot, Emu_AdamMediaInfo* info)
     strncpy_fit(info->working_path, adam_host_media[slot].working_path,
         sizeof(info->working_path));
     return true;
+}
+
+void emu_reconcile_adam_media_after_state_load(void)
+{
+    if (gearcoleco->GetMachine() != GC_MACHINE_ADAM)
+        return;
+
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        AdamMedia* media = gearcoleco->GetAdamMedia((GC_AdamMediaSlot)i);
+        AdamHostMediaRecord* record = &adam_host_media[i];
+        if (!IsValidPointer(media) || !media->IsInserted())
+        {
+            clear_adam_host_media((GC_AdamMediaSlot)i);
+            continue;
+        }
+
+        if ((record->source_path[0] != '\0') && (record->base_crc == media->GetBaseCRC()))
+            continue;
+
+        clear_adam_host_media((GC_AdamMediaSlot)i);
+        record->state_owned = true;
+        media->SetWriteProtected(true);
+        media->ClearDirty();
+    }
 }
 
 void emu_adam_key_pressed(GC_AdamKey key)
@@ -1412,6 +1475,7 @@ void emu_load_state_slot(int index)
             if (get_adam_state_path(index, state_path, sizeof(state_path)) &&
                 gearcoleco->LoadState(state_path, -1))
             {
+                emu_reconcile_adam_media_after_state_load();
                 events_sync_input();
                 rewind_reset();
                 runahead_reset();
@@ -1441,6 +1505,7 @@ void emu_load_state_file(const char* file_path)
     {
         if (gearcoleco->LoadState(file_path, -1))
         {
+            emu_reconcile_adam_media_after_state_load();
             events_sync_input();
             rewind_reset();
             runahead_reset();

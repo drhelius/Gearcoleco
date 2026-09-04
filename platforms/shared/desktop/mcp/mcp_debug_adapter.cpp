@@ -642,6 +642,7 @@ json DebugAdapter::GetMediaInfo()
                 {"size", media_info.size},
                 {"write_protected", media_info.write_protected},
                 {"dirty", media_info.dirty},
+                {"state_owned", media_info.state_owned},
                 {"base_crc", crc.str()},
                 {"source_path", media_info.path},
                 {"working_path", media_info.working_path}
@@ -1384,6 +1385,7 @@ json DebugAdapter::LoadStateFile(const std::string& file_path)
         return result;
     }
 
+    emu_reconcile_adam_media_after_state_load();
     events_sync_input();
     rewind_reset();
     runahead_reset();

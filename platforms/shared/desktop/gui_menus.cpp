@@ -54,6 +54,7 @@ static bool open_bios_warning = false;
 static bool open_adam_eos = false;
 static bool open_adam_smartwriter = false;
 static int open_adam_media_slot = -1;
+static int save_adam_media_slot = -1;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
 static const ImVec4 service_mcp_http_color(0.10f, 0.90f, 0.10f, 1.0f);
@@ -111,6 +112,7 @@ void gui_main_menu(void)
     open_adam_eos = false;
     open_adam_smartwriter = false;
     open_adam_media_slot = -1;
+    save_adam_media_slot = -1;
     save_debug_settings = false;
     load_debug_settings = false;
 
@@ -728,6 +730,8 @@ static void draw_adam_media_slots(void)
                 ImGui::Text("Base CRC32: %08X", info.base_crc);
                 if (info.dirty)
                     ImGui::TextColored(service_mcp_stdio_color, "Modified");
+                else if (info.state_owned)
+                    ImGui::TextDisabled("Read-only state snapshot");
                 else
                     ImGui::TextDisabled("Unmodified");
                 if (info.working_path[0])
@@ -742,8 +746,14 @@ static void draw_adam_media_slots(void)
                     if (emu_set_adam_media_write_protected(slot, write_protected))
                         config_emulator.adam_media_write_protected[slot] = write_protected;
                 }
+                if (info.state_owned && ImGui::IsItemHovered())
+                    ImGui::SetTooltip("State-restored media has no host destination and remains read-only.");
 
-                if (ImGui::MenuItem("Save working copy", NULL, false,
+                if (info.state_owned && ImGui::MenuItem("Save As..."))
+                {
+                    save_adam_media_slot = i;
+                }
+                else if (!info.state_owned && ImGui::MenuItem("Save working copy", NULL, false,
                     info.dirty && info.working_path[0]))
                 {
                     if (!emu_save_adam_media(slot))
@@ -1804,6 +1814,8 @@ static void file_dialogs(void)
         gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER);
     if (open_adam_media_slot >= 0)
         gui_file_dialog_insert_adam_media((GC_AdamMediaSlot)open_adam_media_slot);
+    if (save_adam_media_slot >= 0)
+        gui_file_dialog_save_adam_media((GC_AdamMediaSlot)save_adam_media_slot);
     if (save_debug_settings)
         gui_file_dialog_save_debug_settings();
     if (load_debug_settings)

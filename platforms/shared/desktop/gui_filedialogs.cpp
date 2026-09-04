@@ -66,6 +66,8 @@ enum FileDialogID
     FileDialog_LoadAdamEOS,
     FileDialog_LoadAdamSmartWriter,
     FileDialog_InsertAdamMedia,
+    FileDialog_SaveAdamDisk,
+    FileDialog_SaveAdamDataPack,
 };
 
 static FileDialogID pending_dialog_id = FileDialog_None;
@@ -122,6 +124,10 @@ static const char* get_save_file_extension(FileDialogID id)
             return ".txt";
         case FileDialog_SaveDebugSettings:
             return ".ggdebug";
+        case FileDialog_SaveAdamDisk:
+            return ".dsk";
+        case FileDialog_SaveAdamDataPack:
+            return ".ddp";
         default:
             return NULL;
     }
@@ -372,6 +378,23 @@ void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot)
         application_sdl_window, filters, 1, default_path, false);
 }
 
+void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
+{
+    if (!begin_dialog())
+        return;
+
+    pending_dialog_int_param1 = slot;
+    bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
+    FileDialogID id = disk ? FileDialog_SaveAdamDisk : FileDialog_SaveAdamDataPack;
+    SDL_DialogFileFilter filters[] = {
+        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk" : "ddp" }
+    };
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
+        config_emulator.last_open_path.c_str();
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window,
+        filters, 1, default_path);
+}
+
 void gui_file_dialog_process_results(void)
 {
     bool refocus_window = pending_refocus_window && !dialog_active;
@@ -609,6 +632,16 @@ static void process_dialog_result(FileDialogID id, const char* path)
                 std::string::size_type pos = str_path.find_last_of("\\/");
                 config_emulator.last_open_path.assign(str_path.substr(0, pos + 1));
             }
+            break;
+        }
+        case FileDialog_SaveAdamDisk:
+        case FileDialog_SaveAdamDataPack:
+        {
+            GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
+            if (!emu_save_adam_media_as(slot, path))
+                gui_set_error_message("Unable to save the ADAM state media image.");
+            else
+                gui_set_status_message("ADAM media image saved", 3000);
             break;
         }
         default:
