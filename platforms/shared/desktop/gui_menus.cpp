@@ -23,6 +23,7 @@
 #include "gui_filedialogs.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
+#include "gui_debug.h"
 #include "gui_debug_disassembler.h"
 #include "gui_debug_memory.h"
 #include "config.h"
@@ -57,6 +58,8 @@ static int open_adam_media_slot = -1;
 static int save_adam_media_slot = -1;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
+static bool open_machine_change = false;
+static int requested_machine = GC_MACHINE_AUTO;
 static const ImVec4 service_mcp_http_color(0.10f, 0.90f, 0.10f, 1.0f);
 static const ImVec4 service_mcp_stdio_color(0.90f, 0.70f, 0.10f, 1.0f);
 static ShaderPresetInfo shader_presets[SHADER_PRESET_MAX_DISCOVERED];
@@ -85,6 +88,7 @@ static void draw_savestate_slot_info(int slot);
 static void draw_adam_media_slots(void);
 static void draw_adam_keyboard_map(void);
 static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc);
+static void draw_machine_change_popup(void);
 
 void gui_init_menus(void)
 {
@@ -133,6 +137,13 @@ void gui_main_menu(void)
 
         ImGui::EndMainMenuBar();
     }
+
+    if (open_machine_change)
+    {
+        open_machine_change = false;
+        ImGui::OpenPopup("Change Machine");
+    }
+    draw_machine_change_popup();
 
     file_dialogs();
 }
@@ -352,34 +363,16 @@ static void menu_emulator(void)
         gui_in_use = true;
 
         ImGui::PushItemWidth(160.0f);
-        int previous_machine = config_emulator.machine;
-        if (ImGui::Combo("Machine", &config_emulator.machine,
+        int selected_machine = config_emulator.machine;
+        if (ImGui::Combo("Machine", &selected_machine,
             "Auto\0ColecoVision\0ADAM\0\0"))
         {
-            if (!emu_is_empty())
+            if (emu_is_empty())
+                config_emulator.machine = selected_machine;
+            else
             {
-                char content_path[4096];
-                strncpy_fit(content_path, emu_get_content_path(), sizeof(content_path));
-                if (content_path[0] != '\0')
-                {
-                    bool adam_media = ends_with_no_case(content_path, ".ddp") ||
-                        ends_with_no_case(content_path, ".dsk") ||
-                        ends_with_no_case(content_path, ".m3u");
-                    if ((config_emulator.machine == GC_MACHINE_COLECOVISION) && adam_media)
-                    {
-                        if (!emu_unload_content())
-                            config_emulator.machine = previous_machine;
-                    }
-                    else if (!gui_load_rom(content_path))
-                        config_emulator.machine = previous_machine;
-                }
-                else if (config_emulator.machine == GC_MACHINE_ADAM)
-                {
-                    if (!emu_start_adam())
-                        config_emulator.machine = previous_machine;
-                }
-                else if (!emu_unload_content())
-                    config_emulator.machine = previous_machine;
+                requested_machine = selected_machine;
+                open_machine_change = true;
             }
         }
         ImGui::PopItemWidth();
@@ -694,6 +687,62 @@ static void menu_emulator(void)
 
         ImGui::EndMenu();
     }
+}
+
+static void draw_machine_change_popup(void)
+{
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (!ImGui::BeginPopupModal("Change Machine", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+        return;
+
+    gui_dialog_in_use = true;
+    const char* machine_name = requested_machine == GC_MACHINE_ADAM ? "ADAM" :
+        (requested_machine == GC_MACHINE_COLECOVISION ? "ColecoVision" : "Auto");
+    GC_ContentType content_type = emu_get_core()->GetContentType();
+    bool incompatible_media = requested_machine == GC_MACHINE_COLECOVISION &&
+        ((content_type == GC_CONTENT_ADAM_DATA_PACK) || (content_type == GC_CONTENT_ADAM_DISK));
+
+    if (incompatible_media)
+        ImGui::Text("Current ADAM media cannot run as ColecoVision and will be unloaded.");
+    else
+        ImGui::Text("Reload current content using the %s machine setting?", machine_name);
+    ImGui::Separator();
+
+    if (ImGui::Button(incompatible_media ? "Unload" : "Reload", ImVec2(100, 0)))
+    {
+        bool changed = false;
+        const char* content_path = emu_get_content_path();
+        if (incompatible_media || (content_path[0] == '\0'))
+        {
+            changed = emu_unload_content();
+            if (changed)
+            {
+                config_emulator.machine = requested_machine;
+                gui_debug_reset();
+                application_reset_title();
+            }
+        }
+        else
+            changed = gui_load_rom_with_machine(content_path, requested_machine);
+
+        if (changed)
+        {
+            gui_dialog_in_use = false;
+            ImGui::CloseCurrentPopup();
+        }
+        else
+            gui_set_error_message("Unable to change machine. The configured machine setting was preserved.");
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(100, 0)))
+    {
+        gui_dialog_in_use = false;
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
 }
 
 static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc)

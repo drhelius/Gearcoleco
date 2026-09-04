@@ -273,6 +273,12 @@ void application_update_title_with_rom(const char* rom)
     SDL_SetWindowTitle(application_sdl_window, final_title);
 }
 
+void application_reset_title(void)
+{
+    if (application_sdl_window)
+        SDL_SetWindowTitle(application_sdl_window, WINDOW_TITLE);
+}
+
 void application_input_pump(void)
 {
     events_emu();

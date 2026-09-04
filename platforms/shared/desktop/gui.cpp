@@ -50,6 +50,7 @@ static char error_message[4096] = "";
 static bool loading_rom_active = false;
 static char loading_rom_path[4096] = "";
 static char loading_symbol_path[4096] = "";
+static int loading_machine_commit = -1;
 
 
 static void main_window(void);
@@ -332,6 +333,20 @@ bool gui_load_rom(const char* path, const char* symbol_path)
     return true;
 }
 
+bool gui_load_rom_with_machine(const char* path, int machine)
+{
+    if ((machine < GC_MACHINE_AUTO) || (machine > GC_MACHINE_ADAM))
+        return false;
+
+    int previous_machine = config_emulator.machine;
+    config_emulator.machine = machine;
+    bool started = gui_load_rom(path);
+    config_emulator.machine = previous_machine;
+    if (started)
+        loading_machine_commit = machine;
+    return started;
+}
+
 bool gui_start_adam(void)
 {
     if (loading_rom_active)
@@ -362,13 +377,18 @@ bool gui_finish_loading_rom(void)
     {
         config_push_recent_media(loading_rom_path);
         success = finish_started_content(true);
+        if (success && (loading_machine_commit >= GC_MACHINE_AUTO))
+            config_emulator.machine = loading_machine_commit;
     }
+
     else
     {
         std::string message("Error loading content:\n");
         message += loading_rom_path;
         gui_set_error_message(message.c_str());
     }
+
+    loading_machine_commit = -1;
 
     return success;
 }
