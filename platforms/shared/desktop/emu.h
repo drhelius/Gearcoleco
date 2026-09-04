@@ -137,6 +137,7 @@ EXTERN void emu_adam_release_all_keys(void);
 EXTERN GC_Machine emu_get_machine(void);
 EXTERN const char* emu_get_content_path(void);
 EXTERN const char* emu_get_content_name(void);
+EXTERN bool emu_get_debug_identity(char* identity, size_t identity_size);
 EXTERN void emu_reset(Cartridge::ForceConfiguration config);
 EXTERN void emu_dissasemble_rom(void);
 EXTERN void emu_audio_mute(bool mute);

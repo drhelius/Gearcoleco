@@ -305,14 +305,11 @@ void gui_debug_load_settings(const char* file_path)
 
 static std::string get_auto_debug_settings_path(void)
 {
-    GearcolecoCore* core = emu_get_core();
-    if (!core || !core->GetCartridge() || strlen(core->GetCartridge()->GetFileName()) == 0)
+    char identity[1200];
+    if (!emu_get_debug_identity(identity, sizeof(identity)))
         return "";
 
-    std::string filename = core->GetCartridge()->GetFileName();
-    std::string::size_type dot = filename.find_last_of('.');
-    if (dot != std::string::npos)
-        filename = filename.substr(0, dot);
+    std::string filename = identity;
     filename += ".gcdebug";
 
     std::string path = config_root_path;

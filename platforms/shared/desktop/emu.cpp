@@ -120,6 +120,7 @@ static char loading_bios_path[4096];
 static char loading_adam_eos_path[4096];
 static char loading_adam_smartwriter_path[4096];
 static char loaded_content_path[4096];
+static char loaded_debug_identity[1200];
 
 struct AdamHostMediaRecord
 {
@@ -180,6 +181,7 @@ static void clear_all_adam_host_media(void);
 static void make_adam_working_path(const char* source_path, GC_AdamMediaType type,
     GC_AdamMediaSlot slot, u32 base_crc, bool primary, char* path, size_t path_size);
 static bool get_adam_state_path(int index, char* path, size_t path_size);
+static void set_debug_identity(GC_Machine machine, const char* content_name);
 
 bool emu_init(void)
 {
@@ -213,6 +215,7 @@ bool emu_init(void)
     emu_debug_f18a_layer = 0;
     emu_debug_f18a_pattern_palette = 0;
     loaded_content_path[0] = '\0';
+    loaded_debug_identity[0] = '\0';
     clear_adam_playlist(&loading_adam_playlist);
     clear_adam_playlist(&adam_playlist);
     clear_all_adam_host_media();
@@ -272,7 +275,11 @@ static void load_media_thread_func(void)
             GC_MACHINE_ADAM;
 
     if (machine == GC_MACHINE_ADAM)
+    {
         loading_result = load_adam_content(&content, loading_file_path);
+        if (loading_result)
+            set_debug_identity(machine, content.entry_name);
+    }
     else if (content.type != DesktopContentCartridge)
     {
         Error("ADAM media cannot be loaded while ColecoVision is selected");
@@ -286,6 +293,7 @@ static void load_media_thread_func(void)
         {
             clear_all_adam_host_media();
             strncpy_fit(loaded_content_path, loading_file_path, sizeof(loaded_content_path));
+            set_debug_identity(machine, content.entry_name);
         }
     }
     destroy_desktop_content(&content);
@@ -1200,6 +1208,7 @@ bool emu_start_adam(void)
     gearcoleco->SetVideoChip(GC_VIDEO_CHIP_TMS9918A);
     if (!gearcoleco->StartAdam(GC_ADAM_BOOT_COMPUTER))
         return false;
+    set_debug_identity(GC_MACHINE_ADAM, NULL);
 
     emu_audio_reset();
     apply_video_config();
@@ -1218,6 +1227,7 @@ bool emu_unload_content(void)
     gearcoleco->UnloadContent();
     clear_all_adam_host_media();
     loaded_content_path[0] = '\0';
+    loaded_debug_identity[0] = '\0';
     reset_buffers();
     rewind_reset();
     runahead_reset();
@@ -1628,6 +1638,35 @@ const char* emu_get_content_name(void)
     if (loaded_content_path[0] != '\0')
         return get_filename(loaded_content_path);
     return gearcoleco->GetMachine() == GC_MACHINE_ADAM ? "ADAM" : "";
+}
+
+bool emu_get_debug_identity(char* identity, size_t identity_size)
+{
+    if (!IsValidPointer(identity) || (identity_size == 0))
+        return false;
+    identity[0] = '\0';
+    if ((loading_state.load() != Loading_State_None) || emu_is_empty() ||
+        (loaded_debug_identity[0] == '\0'))
+    {
+        return false;
+    }
+    strncpy_fit(identity, loaded_debug_identity, identity_size);
+    return true;
+}
+
+static void set_debug_identity(GC_Machine machine, const char* content_name)
+{
+    const char* machine_name = machine == GC_MACHINE_ADAM ? "ADAM" : "ColecoVision";
+    if (!IsValidPointer(content_name) || (content_name[0] == '\0'))
+    {
+        strncpy_fit(loaded_debug_identity, machine_name, sizeof(loaded_debug_identity));
+        return;
+    }
+
+    char name[1024];
+    get_filename_without_extension(content_name, name, sizeof(name));
+    snprintf(loaded_debug_identity, sizeof(loaded_debug_identity), "%s - %s", machine_name,
+        name);
 }
 
 void emu_render_current_frame(void)
