@@ -570,6 +570,11 @@ static bool read_file(const char* path, u8** data, size_t* size)
 
     if (vfs_interface)
     {
+        if (!vfs_interface->open || !vfs_interface->size || !vfs_interface->read ||
+            !vfs_interface->close)
+        {
+            return false;
+        }
         retro_vfs_file_handle* file = vfs_interface->open(path, RETRO_VFS_FILE_ACCESS_READ,
             RETRO_VFS_FILE_ACCESS_HINT_NONE);
         if (!file)
@@ -592,7 +597,9 @@ static bool read_file(const char* path, u8** data, size_t* size)
             total += read;
         }
 
-        bool loaded = vfs_interface->close(file) == 0 && total == file_size;
+        bool complete_read = total == file_size;
+        bool closed = vfs_interface->close(file) == 0;
+        bool loaded = complete_read && closed;
         if (!loaded)
         {
             SafeDeleteArray(buffer);
@@ -1248,8 +1255,9 @@ static bool make_working_path(const char* source_path, GC_AdamMediaType type,
 
 static bool vfs_write_file(const char* path, const u8* data, size_t size)
 {
-    if (!vfs_interface || !vfs_interface->write || !vfs_interface->flush ||
-        !vfs_interface->rename || !vfs_interface->remove)
+    if (!vfs_interface || !vfs_interface->open || !vfs_interface->write ||
+        !vfs_interface->flush || !vfs_interface->close || !vfs_interface->rename ||
+        !vfs_interface->remove)
         return false;
 
     char temporary[4128];
@@ -1269,9 +1277,10 @@ static bool vfs_write_file(const char* path, const u8* data, size_t size)
             break;
         total += (size_t)written;
     }
-    bool written = (total == size) && (vfs_interface->flush(file) == 0) &&
-        (vfs_interface->close(file) == 0);
-    if (!written)
+    bool complete_write = total == size;
+    bool flushed = vfs_interface->flush(file) == 0;
+    bool closed = vfs_interface->close(file) == 0;
+    if (!complete_write || !flushed || !closed)
     {
         vfs_interface->remove(temporary);
         return false;
@@ -2047,6 +2056,11 @@ static bool load_rom(const struct retro_game_info* info)
 
     if (!vfs_interface)
         return core->LoadROM(info->path, &config);
+    if (!vfs_interface->open || !vfs_interface->size || !vfs_interface->read ||
+        !vfs_interface->close)
+    {
+        return false;
+    }
 
     retro_vfs_file_handle* file = vfs_interface->open(info->path, RETRO_VFS_FILE_ACCESS_READ,
         RETRO_VFS_FILE_ACCESS_HINT_NONE);
@@ -2072,7 +2086,9 @@ static bool load_rom(const struct retro_game_info* info)
         total += read;
     }
 
-    bool loaded = vfs_interface->close(file) == 0 && total == size;
+    bool complete_read = total == size;
+    bool closed = vfs_interface->close(file) == 0;
+    bool loaded = complete_read && closed;
     if (loaded)
         loaded = core->LoadROMFromBuffer(buffer, (int)size, &config);
 
