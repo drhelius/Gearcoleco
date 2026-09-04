@@ -205,7 +205,7 @@ static const McpToolCategory kMcpToolCategories[] =
     {"symbols", "Symbols", "Add, remove, load, list, and look up debug symbols or labels."},
     {"hardware_video", "Video Hardware", "Inspect TMS9918A VDP registers, display timing, status, sprites, scanlines, and video state."},
     {"hardware_audio", "Audio Hardware", "Inspect ColecoVision PSG and AY-3-8910 audio state, channels, mixer, and sound registers."},
-    {"media", "Media", "Load ROMs, list recent media, load symbols, and inspect loaded cartridge/media information."},
+    {"media", "Media", "Load cartridges or ADAM media, list recent media, load symbols, and inspect the active machine and slots."},
     {"capture", "Capture", "Capture current screenshots and ColecoVision sprite images or sprite metadata."},
     {"state", "Save States", "List save slots, select a slot, save emulator state, and load emulator state."},
     {"rewind", "Rewind", "Inspect rewind buffer status and seek to rewind snapshots for time-travel debugging."},

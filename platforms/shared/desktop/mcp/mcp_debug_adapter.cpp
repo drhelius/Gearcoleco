@@ -18,6 +18,7 @@
  */
 
 #include "mcp_debug_adapter.h"
+#include "Adam.h"
 #include "F18AGPU.h"
 #include "Input.h"
 #include "log.h"
@@ -59,7 +60,8 @@ static int MemoryEditorDisplayAddressToOffset(const MemoryAreaInfo& info, int ad
 
 static bool NormalizeMemoryAreaAddress(const MemoryAreaInfo& info, u32 address, u32* offset)
 {
-    if (!IsValidPointer(offset) || !IsValidPointer(info.data) || info.size == 0)
+    if (!IsValidPointer(offset) || (!IsValidPointer(info.data) && !info.virtual_area) ||
+        (info.size == 0))
         return false;
 
     u64 display_start = info.display_base;
@@ -320,7 +322,7 @@ std::vector<MemoryAreaInfo> DebugAdapter::ListMemoryAreas()
     for (int i = 0; i < MEMORY_EDITOR_MAX; i++)
     {
         MemoryAreaInfo info = GetMemoryAreaInfo(i);
-        if (info.data != NULL && info.size > 0)
+        if ((info.data != NULL || info.virtual_area) && info.size > 0)
         {
             result.push_back(info);
         }
@@ -334,7 +336,7 @@ std::vector<u8> DebugAdapter::ReadMemoryArea(int area, u32 offset, size_t size)
     std::vector<u8> result;
     MemoryAreaInfo info = GetMemoryAreaInfo(area);
 
-    if (info.data == NULL || offset >= info.size)
+    if ((info.data == NULL && !info.virtual_area) || offset >= info.size)
         return result;
 
     u32 bytes_to_read = (u32)size;
@@ -343,23 +345,44 @@ std::vector<u8> DebugAdapter::ReadMemoryArea(int area, u32 offset, size_t size)
 
     for (u32 i = 0; i < bytes_to_read; i++)
     {
-        result.push_back(info.data[offset + i]);
+        if (info.virtual_area)
+            result.push_back(m_core->GetAdam()->DebugReadMemory((u16)(offset + i)));
+        else
+            result.push_back(info.data[offset + i]);
     }
 
     return result;
 }
 
-void DebugAdapter::WriteMemoryArea(int area, u32 offset, const std::vector<u8>& data)
+size_t DebugAdapter::WriteMemoryArea(int area, u32 offset, const std::vector<u8>& data)
 {
     MemoryAreaInfo info = GetMemoryAreaInfo(area);
 
-    if (info.data == NULL || offset >= info.size)
-        return;
+    if ((info.data == NULL && !info.virtual_area) || offset >= info.size)
+        return 0;
 
-    for (size_t i = 0; i < data.size() && (offset + i) < info.size; i++)
+    size_t bytes_to_write = data.size();
+    if (offset + bytes_to_write > info.size)
+        bytes_to_write = info.size - offset;
+
+    if (info.virtual_area)
     {
-        info.data[offset + i] = data[i];
+        for (size_t i = 0; i < bytes_to_write; i++)
+            if (!m_core->GetAdam()->CanWriteMemory((u16)(offset + i)))
+                return 0;
     }
+
+    for (size_t i = 0; i < bytes_to_write; i++)
+    {
+        if (info.virtual_area)
+        {
+            if (!m_core->GetAdam()->DebugWriteMemory((u16)(offset + i), data[i]))
+                return i;
+        }
+        else
+            info.data[offset + i] = data[i];
+    }
+    return bytes_to_write;
 }
 
 std::vector<DisasmLine> DebugAdapter::GetDisassembly(u16 start_address, u16 end_address, int bank, bool resolve_symbols)
@@ -499,6 +522,7 @@ MemoryAreaInfo DebugAdapter::GetMemoryAreaInfo(int area)
     info.data = NULL;
     info.size = 0;
     info.display_base = 0;
+    info.virtual_area = false;
 
     Memory* memory = m_core->GetMemory();
     Cartridge* cart = m_core->GetCartridge();
@@ -507,17 +531,23 @@ MemoryAreaInfo DebugAdapter::GetMemoryAreaInfo(int area)
     switch (area)
     {
         case MEMORY_EDITOR_BIOS:
+            if (m_core->GetMachine() == GC_MACHINE_ADAM)
+                break;
             info.name = "BIOS";
             info.data = memory->GetBios();
             info.size = 0x2000;
             break;
         case MEMORY_EDITOR_RAM:
+            if (m_core->GetMachine() == GC_MACHINE_ADAM)
+                break;
             info.name = "RAM";
             info.data = memory->GetRam();
             info.size = 0x400;
             info.display_base = 0x6000;
             break;
         case MEMORY_EDITOR_SGM_RAM:
+            if (m_core->GetMachine() == GC_MACHINE_ADAM)
+                break;
             info.name = "SGM RAM";
             info.data = memory->GetSGMRam();
             info.size = 0x8000;
@@ -532,6 +562,20 @@ MemoryAreaInfo DebugAdapter::GetMemoryAreaInfo(int area)
             info.data = cart->GetROM();
             info.size = cart->GetROMSize();
             break;
+        case MEMORY_EDITOR_ADAM_MAPPED:
+            if (m_core->GetMachine() != GC_MACHINE_ADAM)
+                break;
+            info.name = "CPU MAP";
+            info.size = 0x10000;
+            info.virtual_area = true;
+            break;
+        case MEMORY_EDITOR_ADAM_RAM:
+            if (m_core->GetMachine() != GC_MACHINE_ADAM)
+                break;
+            info.name = "ADAM RAM";
+            info.data = m_core->GetAdam()->GetMainRAM();
+            info.size = Adam::kMainRAMSize;
+            break;
         default:
             break;
     }
@@ -542,11 +586,73 @@ MemoryAreaInfo DebugAdapter::GetMemoryAreaInfo(int area)
 json DebugAdapter::GetMediaInfo()
 {
     json info;
-    Cartridge* cart = m_core->GetCartridge();
 
     info["emulator"] = GEARCOLECO_TITLE;
     info["emulator_version"] = GEARCOLECO_VERSION;
-    info["ready"] = cart->IsReady();
+    info["ready"] = m_core->IsReady();
+
+    if (m_core->GetMachine() == GC_MACHINE_ADAM)
+    {
+        static const char* slot_names[GC_ADAM_MEDIA_SLOT_COUNT] = {
+            "disk_1", "disk_2", "data_pack_1", "data_pack_2"
+        };
+        static const char* content_names[] = {
+            "none", "cartridge", "data_pack", "disk"
+        };
+
+        info["machine"] = "ADAM";
+        info["boot_mode"] = m_core->GetAdamBootMode() == GC_ADAM_BOOT_CARTRIDGE ?
+            "cartridge" : "computer";
+        int content_type = (int)m_core->GetContentType();
+        info["content_type"] = (content_type >= 0 && content_type < 4) ?
+            content_names[content_type] : "unknown";
+        info["file_path"] = emu_get_content_path();
+        info["file_name"] = emu_get_content_name();
+        info["is_pal"] = false;
+
+        json firmware = json::array();
+        for (int i = 0; i < GC_ADAM_FIRMWARE_COUNT; i++)
+        {
+            const Adam::FirmwareMetadata* metadata =
+                Adam::GetFirmwareMetadata((GC_AdamFirmware)i);
+            std::ostringstream crc;
+            crc << std::hex << std::uppercase << std::setfill('0') << std::setw(8)
+                << m_core->GetAdam()->GetFirmwareCRC((GC_AdamFirmware)i);
+            firmware.push_back({
+                {"role", metadata->role_name},
+                {"loaded", m_core->GetAdam()->GetFirmwareCRC((GC_AdamFirmware)i) != 0},
+                {"crc", crc.str()}
+            });
+        }
+        info["firmware"] = firmware;
+
+        json media = json::array();
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        {
+            Emu_AdamMediaInfo media_info;
+            emu_get_adam_media_info((GC_AdamMediaSlot)i, &media_info);
+            std::ostringstream crc;
+            crc << std::hex << std::uppercase << std::setfill('0') << std::setw(8)
+                << media_info.base_crc;
+            media.push_back({
+                {"slot", slot_names[i]},
+                {"inserted", media_info.inserted},
+                {"type", media_info.type == GC_ADAM_MEDIA_DATA_PACK ? "data_pack" :
+                    (media_info.type == GC_ADAM_MEDIA_DISK ? "disk" : "none")},
+                {"size", media_info.size},
+                {"write_protected", media_info.write_protected},
+                {"dirty", media_info.dirty},
+                {"base_crc", crc.str()},
+                {"source_path", media_info.path},
+                {"working_path", media_info.working_path}
+            });
+        }
+        info["media"] = media;
+        return info;
+    }
+
+    Cartridge* cart = m_core->GetCartridge();
+    info["machine"] = "ColecoVision";
     info["file_path"] = cart->GetFilePath();
     info["file_name"] = cart->GetFileName();
     info["file_directory"] = cart->GetFileDirectory();
@@ -573,8 +679,6 @@ json DebugAdapter::GetMediaInfo()
         info["cartridge_type"] = type_names[type_idx];
     else
         info["cartridge_type"] = "Unknown";
-
-    info["cartridge_system"] = "ColecoVision";
 
     return info;
 }
@@ -1004,7 +1108,7 @@ json DebugAdapter::GetScreenshot()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1073,7 +1177,7 @@ json DebugAdapter::FinishLoadMedia(const std::string& file_path)
         return result;
     }
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "Failed to load media file";
         Log("[MCP] LoadMedia failed: %s", file_path.c_str());
@@ -1082,11 +1186,16 @@ json DebugAdapter::FinishLoadMedia(const std::string& file_path)
 
     result["success"] = true;
     result["file_path"] = file_path;
-    result["rom_name"] = m_core->GetCartridge()->GetFileName();
-    result["is_pal"] = m_core->GetCartridge()->IsPAL();
-    result["softpatch_applied"] = m_core->GetCartridge()->IsSoftpatchApplied();
-    if (m_core->GetCartridge()->IsSoftpatchApplied())
-        result["softpatch_path"] = m_core->GetCartridge()->GetSoftpatchPath();
+    result["content_name"] = emu_get_content_name();
+    result["machine"] = m_core->GetMachine() == GC_MACHINE_ADAM ? "ADAM" : "ColecoVision";
+    result["is_pal"] = m_core->GetMachine() != GC_MACHINE_ADAM &&
+        m_core->GetCartridge()->IsPAL();
+    if (m_core->GetMachine() == GC_MACHINE_COLECOVISION)
+    {
+        result["softpatch_applied"] = m_core->GetCartridge()->IsSoftpatchApplied();
+        if (m_core->GetCartridge()->IsSoftpatchApplied())
+            result["softpatch_path"] = m_core->GetCartridge()->GetSoftpatchPath();
+    }
 
     return result;
 }
@@ -1172,7 +1281,7 @@ json DebugAdapter::SaveState()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         Log("[MCP] SaveState failed: No media loaded");
@@ -1184,7 +1293,7 @@ json DebugAdapter::SaveState()
 
     result["success"] = true;
     result["slot"] = slot;
-    result["rom_name"] = m_core->GetCartridge()->GetFileName();
+    result["content_name"] = emu_get_content_name();
 
     return result;
 }
@@ -1193,7 +1302,7 @@ json DebugAdapter::LoadState()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         Log("[MCP] LoadState failed: No media loaded");
@@ -1230,7 +1339,7 @@ json DebugAdapter::SaveStateFile(const std::string& file_path)
         return result;
     }
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         Log("[MCP] SaveStateFile failed: No media loaded");
@@ -1261,7 +1370,7 @@ json DebugAdapter::LoadStateFile(const std::string& file_path)
         return result;
     }
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         Log("[MCP] LoadStateFile failed: No media loaded");
@@ -1463,7 +1572,7 @@ json DebugAdapter::ListSprites()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1509,7 +1618,7 @@ json DebugAdapter::GetSpriteImage(int sprite_index)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1555,7 +1664,7 @@ json DebugAdapter::RunToAddress(u16 address)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1573,7 +1682,7 @@ json DebugAdapter::AddDisassemblerBookmark(u16 address, const std::string& name)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1592,7 +1701,7 @@ json DebugAdapter::RemoveDisassemblerBookmark(u16 address)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1610,7 +1719,7 @@ json DebugAdapter::AddSymbol(u8 bank, u16 address, const std::string& name)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1632,7 +1741,7 @@ json DebugAdapter::RemoveSymbol(u8 bank, u16 address)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1653,7 +1762,7 @@ json DebugAdapter::SelectMemoryRange(int editor, int start_address, int end_addr
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1666,7 +1775,7 @@ json DebugAdapter::SelectMemoryRange(int editor, int start_address, int end_addr
     }
 
     MemoryAreaInfo info = GetMemoryAreaInfo(editor);
-    if (!IsValidPointer(info.data) || info.size == 0)
+    if ((!IsValidPointer(info.data) && !info.virtual_area) || info.size == 0)
     {
         result["error"] = "Memory area unavailable";
         return result;
@@ -1721,7 +1830,7 @@ json DebugAdapter::SetMemorySelectionValue(int editor, u8 value)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1746,7 +1855,7 @@ json DebugAdapter::AddMemoryBookmark(int editor, int address, const std::string&
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1774,7 +1883,7 @@ json DebugAdapter::RemoveMemoryBookmark(int editor, int address)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1801,7 +1910,7 @@ json DebugAdapter::AddMemoryWatch(int editor, int address, const std::string& no
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1841,7 +1950,7 @@ json DebugAdapter::RemoveMemoryWatch(int editor, int address)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1868,7 +1977,7 @@ json DebugAdapter::ListDisassemblerBookmarks()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1906,7 +2015,7 @@ json DebugAdapter::ListSymbols()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1947,7 +2056,7 @@ json DebugAdapter::LookupSymbolByName(const std::string& name)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -1979,7 +2088,7 @@ json DebugAdapter::LookupSymbolAtAddress(u8 bank, u16 address)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2004,7 +2113,7 @@ json DebugAdapter::ListCallStack()
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2053,7 +2162,7 @@ json DebugAdapter::ListMemoryBookmarks(int area)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2100,7 +2209,7 @@ json DebugAdapter::ListMemoryWatches(int area)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2155,7 +2264,7 @@ json DebugAdapter::GetMemorySelection(int area)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2197,7 +2306,7 @@ json DebugAdapter::MemorySearchCapture(int area)
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2221,7 +2330,7 @@ json DebugAdapter::MemorySearch(int area, const std::string& op, const std::stri
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;
@@ -2321,7 +2430,7 @@ json DebugAdapter::MemoryFind(int area, const std::string& value, bool text, boo
 {
     json result;
 
-    if (!m_core || !m_core->GetCartridge()->IsReady())
+    if (!m_core || !m_core->IsReady())
     {
         result["error"] = "No media loaded";
         return result;

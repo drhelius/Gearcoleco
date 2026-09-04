@@ -1,6 +1,12 @@
 {
   "toc": [
     {
+      "uri": "adam",
+      "title": "Coleco ADAM Technical Notes",
+      "description": "GEARCOLECO ADAM QUICK REFERENCE. Covers the MIOC and ADAM control ports, CPU-visible versus physical RAM, firmware roles, ADAMnet PCB/DCB layout, base device IDs, media slots, and debugger memory areas.",
+      "mimeType": "text/markdown"
+    },
+    {
       "uri": "colecovision",
       "title": "ColecoVision Technical Notes",
       "description": "PRIMARY SYSTEM QUICK REFERENCE. Old online ColecoVision technical note covering cartridge headers at $8000, BIOS title-screen behavior, title string format, built-in title character set, controller mode toggles ($80 keypad/right buttons and $C0 joystick/left buttons), keypad return codes, joystick bits, memory map (BIOS, expansion, RAM mirror, cartridge ROM), I/O decode ranges, SN76489 sound overview, and TMS9918A video basics. Use first for quick system, cartridge, controller, memory-map, and I/O-map questions.",

@@ -353,15 +353,15 @@ void McpServer::HandleInitialize(const json& request)
         {"serverInfo", {
             {"name", "gearcoleco-mcp-server"},
             {"title", GEARCOLECO_TITLE " MCP Server"},
-            {"description", "Debug/control " GEARCOLECO_TITLE " ColecoVision: execution, breakpoints, memory, Z80 CPU, TMS9918 VDP, SN76489 PSG, AY-3-8910 SGM, disassembly, symbols, sprites, save states, rewind, keypad/input, screenshots."},
+            {"description", "Debug/control " GEARCOLECO_TITLE " ColecoVision and ADAM: execution, breakpoints, memory, Z80 CPU, TMS9918 VDP, audio, disassembly, symbols, media, save states, rewind, input, and screenshots."},
             {"version", GEARCOLECO_VERSION}
         }}
     };
 
     response["result"]["instructions"] =
-        "Use this server for ColecoVision and Super Game Module game debugging, reverse engineering, "
-        "memory inspection, Z80 tracing, breakpoints, VDP, PSG, AY-3-8910, sprites, save states, "
-        "rewind, input, and screenshots.";
+        "Use this server for ColecoVision, Super Game Module, and ADAM debugging, reverse engineering, "
+        "memory inspection, Z80 tracing, breakpoints, VDP, audio, media, save states, rewind, input, "
+        "and screenshots.";
 
     if (g_mcp_router_enabled)
     {
@@ -469,7 +469,7 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "debug_reset"},
         {"title", "Debug Reset"},
-        {"description", "Reset the emulated ColecoVision system."},
+        {"description", "Reset the active ColecoVision or ADAM machine."},
         {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", false}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -622,7 +622,7 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "list_memory_areas"},
         {"title", "List Memory Areas"},
-        {"description", "List memory spaces/tabs: WRAM, VRAM, ROM banks; returns area IDs, sizes, offsets."},
+        {"description", "List memory spaces available for the active machine, including ADAM CPU-mapped and physical RAM areas."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -741,7 +741,7 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "get_media_info"},
         {"title", "Get Media Info"},
-        {"description", "Read loaded ColecoVision ROM info: path, type, size, mapper."},
+        {"description", "Read active machine and content information, including ADAM firmware and media slots."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -753,7 +753,7 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "list_recent_media"},
         {"title", "List Recent Media"},
-        {"description", "List recent ROMs with file_path values for load_media."},
+        {"description", "List recent cartridge or ADAM media paths for load_media."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -839,14 +839,14 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "load_media"},
         {"title", "Load Media"},
-        {"description", "Load ROM media (.col .cv .rom .bin .zip); reset emulator and auto-load symbols. Debugger state may be lost unless saved debugger settings are enabled."},
+        {"description", "Load cartridge or ADAM media (.col .cv .rom .bin .zip .ddp .dsk .m3u); reset the machine and auto-load symbols where applicable."},
         {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", false}, {"openWorldHint", true}}},
         {"inputSchema", {
             {"type", "object"},
             {"properties", {
                 {"file_path", {
                     {"type", "string"},
-                    {"description", "Absolute ROM file path."}
+                    {"description", "Absolute cartridge or ADAM media file path."}
                 }}
             }},
             {"required", json::array({"file_path"})}
@@ -2287,8 +2287,12 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
             data.push_back(byte);
         }
 
-        m_debugAdapter.WriteMemoryArea(area, offset, data);
-        return {{"success", true}, {"area", area}, {"offset", offsetStr}, {"bytes_written", data.size()}};
+        size_t written = m_debugAdapter.WriteMemoryArea(area, offset, data);
+        if (written != data.size())
+            return {{"error", "Memory area is unavailable, out of range, or read-only"},
+                {"bytes_written", written}};
+        return {{"success", true}, {"area", area}, {"offset", offsetStr},
+            {"bytes_written", written}};
     }
     // Registers
     else if (normalizedTool == "write_z80_register")

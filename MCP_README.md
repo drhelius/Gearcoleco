@@ -2,7 +2,7 @@
 
 Gearcoleco includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like GitHub Copilot, Claude, Codex and similar.
 
-This server provides tools for ColecoVision game development, rom hacking, reverse engineering, and debugging through standardized MCP protocols.
+This server provides tools for ColecoVision and Coleco ADAM development, ROM hacking, reverse engineering, and debugging through standardized MCP protocols.
 
 ## Downloads
 
@@ -48,7 +48,7 @@ This server provides tools for ColecoVision game development, rom hacking, rever
 ## Features
 
 - Full debugger access: pause, continue, step into/over/out, step frame, reset
-- Memory inspection across all ColecoVision memory areas: BIOS, RAM, SGM RAM, VRAM, ROM
+- Memory inspection across machine-appropriate areas, including ADAM CPU-mapped memory and physical 64 KiB RAM
 - Just-in-time disassembly with symbols and bank resolution
 - Z80 CPU register read/write
 - Hardware state inspection: TMS9918 VDP registers/status, SN76489 PSG, AY-3-8910 (SGM)
@@ -325,7 +325,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `debug_step_over` | Step over calls |
 | `debug_step_out` | Step out of current call |
 | `debug_step_frame` | Step one or more frames. Optional `frames` is 1-1000 (default 1). Optional `mode` is `async` (default, returns after scheduling) or `sync` (returns after all requested frames complete at VBlank). Use `mode: "sync"` when issuing dependent tool calls. |
-| `debug_reset` | Reset the ColecoVision system |
+| `debug_reset` | Reset the active ColecoVision or ADAM machine |
 | `debug_get_status` | Get current debug state |
 
 ### CPU & Registers
@@ -371,7 +371,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `get_vdp_status` | Get VDP status flags, mode, render state |
 | `get_psg_status` | Get SN76489 PSG channel state |
 | `get_ay8910_status` | Get AY-3-8910 SGM sound chip state |
-| `get_media_info` | Get loaded ROM information |
+| `get_media_info` | Get the active machine, cartridge, firmware, and ADAM media information |
 
 ### Sprites & Screen
 | Tool | Description |
@@ -384,7 +384,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | Tool | Description |
 |------|-------------|
 | `list_recent_media` | List the 10 most recent ROM files opened by Gearcoleco |
-| `load_media` | Load a ROM file |
+| `load_media` | Load a cartridge or ADAM `.ddp`/`.dsk`/`.zip`/`.m3u` file |
 | `list_save_state_slots` | List save state slots |
 | `select_save_state_slot` | Select active slot |
 | `save_state` / `load_state` | Save/load state |
