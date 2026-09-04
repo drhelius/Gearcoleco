@@ -86,6 +86,8 @@ public:
     virtual void Reset();
     u8 ReadMemory(u16 address);
     u8 DebugReadMemory(u16 address);
+    bool DebugWriteMemory(u16 address, u8 value);
+    bool CanWriteMemory(u16 address) const;
     void WriteMemory(u16 address, u8 value);
     u8 ReadPhysicalRAM(u16 address) const;
     void WritePhysicalRAM(u16 address, u8 value);

@@ -35,7 +35,8 @@
 #include "emu.h"
 #include "config.h"
 
-static const char* GCDEBUG_MAGIC = "GCDEBUG1";
+static const char* GCDEBUG_MAGIC_V1 = "GCDEBUG1";
+static const char* GCDEBUG_MAGIC = "GCDEBUG2";
 static const int GCDEBUG_MAGIC_LEN = 8;
 static const int GCDEBUG_MAX_RECORDS = 0x10000;
 
@@ -202,8 +203,14 @@ void gui_debug_load_settings(const char* file_path)
     }
 
     char magic[8] = {};
-    if (!read_settings_data(file, magic, GCDEBUG_MAGIC_LEN) ||
-        memcmp(magic, GCDEBUG_MAGIC, GCDEBUG_MAGIC_LEN) != 0)
+    if (!read_settings_data(file, magic, GCDEBUG_MAGIC_LEN))
+    {
+        Log("Invalid debug settings file: %s", file_path);
+        return;
+    }
+
+    bool legacy_v1 = memcmp(magic, GCDEBUG_MAGIC_V1, GCDEBUG_MAGIC_LEN) == 0;
+    if (!legacy_v1 && (memcmp(magic, GCDEBUG_MAGIC, GCDEBUG_MAGIC_LEN) != 0))
     {
         Log("Invalid debug settings file: %s", file_path);
         return;
@@ -275,7 +282,7 @@ void gui_debug_load_settings(const char* file_path)
         bookmarks.push_back(item);
     }
 
-    if (!gui_debug_memory_load_settings(file))
+    if (!gui_debug_memory_load_settings(file, legacy_v1 ? 5 : MEMORY_EDITOR_MAX))
     {
         Log("Invalid debug settings file: %s", file_path);
         return;

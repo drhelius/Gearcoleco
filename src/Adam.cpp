@@ -562,6 +562,21 @@ u8 Adam::DebugReadMemory(u16 address)
     return 0xFF;
 }
 
+bool Adam::DebugWriteMemory(u16 address, u8 value)
+{
+    MemoryPage* page = &m_Pages[address >> 13];
+    if (!IsValidPointer(page->write))
+        return false;
+
+    page->write[address & 0x1FFF] = value;
+    return true;
+}
+
+bool Adam::CanWriteMemory(u16 address) const
+{
+    return IsValidPointer(m_Pages[address >> 13].write);
+}
+
 void Adam::WriteMemory(u16 address, u8 value)
 {
     MemoryPage* page = &m_Pages[address >> 13];

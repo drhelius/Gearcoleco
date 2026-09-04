@@ -38,6 +38,10 @@ MemEditor::MemEditor()
     m_jump_to_address = -1;
     m_scroll_to_address = -1;
     InitPointer(m_mem_data);
+    m_read_callback = NULL;
+    m_write_callback = NULL;
+    m_can_write_callback = NULL;
+    InitPointer(m_callback_user_data);
     m_mem_size = 0;
     m_mem_base_addr = 0;
     m_hex_addr_format[0] = 0;
@@ -78,20 +82,39 @@ MemEditor::~MemEditor()
 
 void MemEditor::Reset(const char* title, uint8_t* mem_data, int mem_size, int base_display_addr, int word)
 {
+    ResetInternal(title, mem_data, mem_size, NULL, NULL, NULL, NULL, base_display_addr, word);
+}
+
+void MemEditor::Reset(const char* title, int mem_size, MemEditorReadCallback read_callback,
+    MemEditorWriteCallback write_callback, MemEditorCanWriteCallback can_write_callback,
+    void* user_data, int base_display_addr, int word)
+{
+    ResetInternal(title, NULL, mem_size, read_callback, write_callback, can_write_callback,
+        user_data, base_display_addr, word);
+}
+
+void MemEditor::ResetInternal(const char* title, uint8_t* mem_data, int mem_size,
+    MemEditorReadCallback read_callback, MemEditorWriteCallback write_callback,
+    MemEditorCanWriteCallback can_write_callback, void* user_data,
+    int base_display_addr, int word)
+{
     SafeDeleteArray(m_search_data);
 
     snprintf(m_title, sizeof(m_title), "%s", IsValidPointer(title) ? title : "");
-    m_mem_data = NULL;
+    m_mem_data = mem_data;
+    m_read_callback = read_callback;
+    m_write_callback = write_callback;
+    m_can_write_callback = can_write_callback;
+    m_callback_user_data = user_data;
     m_mem_size = 0;
     m_mem_base_addr = base_display_addr;
     m_mem_word = CLAMP(word, 1, 2);
     m_hex_addr_digits = 2;
     m_hex_addr_format[0] = 0;
 
-    if (!IsValidPointer(mem_data) || (mem_size <= 0))
+    if ((!IsValidPointer(m_mem_data) && (m_read_callback == NULL)) || (mem_size <= 0))
         return;
 
-    m_mem_data = mem_data;
     m_mem_size = mem_size;
 
     int size = m_mem_base_addr + m_mem_size - 1;
@@ -103,12 +126,90 @@ void MemEditor::Reset(const char* title, uint8_t* mem_data, int mem_size, int ba
 
     size_t search_size = (size_t)m_mem_size * (size_t)m_mem_word;
     m_search_data = new uint8_t[search_size];
-    memcpy(m_search_data, m_mem_data, search_size);
+    SearchCapture();
+}
+
+bool MemEditor::HasMemory() const
+{
+    return (m_mem_size > 0) && (IsValidPointer(m_mem_data) || (m_read_callback != NULL));
+}
+
+bool MemEditor::ReadByte(int address, uint8_t* value) const
+{
+    if (!IsValidPointer(value) || !HasMemory() || (address < 0) ||
+        (address >= (m_mem_size * m_mem_word)))
+    {
+        return false;
+    }
+
+    if (m_read_callback != NULL)
+        return m_read_callback(address, value, m_callback_user_data);
+
+    *value = m_mem_data[address];
+    return true;
+}
+
+bool MemEditor::ReadValue(int address, int size, uint32_t* value) const
+{
+    if (!IsValidPointer(value) || (size <= 0) || (size > 4))
+        return false;
+
+    *value = 0;
+    for (int i = 0; i < size; i++)
+    {
+        uint8_t data = 0;
+        if (!ReadByte(address + i, &data))
+            return false;
+        *value |= (uint32_t)data << (i * 8);
+    }
+    return true;
+}
+
+bool MemEditor::CanWriteByte(int address) const
+{
+    if (!HasMemory() || (address < 0) || (address >= (m_mem_size * m_mem_word)))
+        return false;
+
+    if (IsValidPointer(m_mem_data))
+        return true;
+    if (m_write_callback == NULL)
+        return false;
+    return (m_can_write_callback == NULL) || m_can_write_callback(address, m_callback_user_data);
+}
+
+bool MemEditor::CanWriteRange(int address, int size) const
+{
+    if (size <= 0)
+        return false;
+    for (int i = 0; i < size; i++)
+        if (!CanWriteByte(address + i))
+            return false;
+    return true;
+}
+
+bool MemEditor::WriteByte(int address, uint8_t value)
+{
+    if (!CanWriteByte(address))
+        return false;
+    if (m_write_callback != NULL)
+        return m_write_callback(address, value, m_callback_user_data);
+    m_mem_data[address] = value;
+    return true;
+}
+
+bool MemEditor::WriteValue(int address, int size, uint32_t value)
+{
+    if (!CanWriteRange(address, size))
+        return false;
+    for (int i = 0; i < size; i++)
+        if (!WriteByte(address + i, (uint8_t)(value >> (i * 8))))
+            return false;
+    return true;
 }
 
 void MemEditor::Draw(bool ascii, bool preview, bool options, bool cursors)
 {
-    if (!IsValidPointer(m_mem_data) || m_mem_size <= 0)
+    if (!HasMemory())
         return;
 
     if ((m_mem_word > 1) && ((m_options.preview_data_type < 2) || (m_options.preview_data_type > 3)))
@@ -252,17 +353,19 @@ void MemEditor::Draw(bool ascii, bool preview, bool options, bool cursors)
 
                         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
-                        if (m_editing_address == byte_address)
+                        int data_address = byte_address * m_mem_word;
+                        uint32_t data = 0;
+                        bool readable = ReadValue(data_address, m_mem_word, &data);
+                        bool writable = readable && CanWriteRange(data_address, m_mem_word);
+
+                        if ((m_editing_address == byte_address) && writable)
                         {
                             ImGui::PushItemWidth((character_size).x * (2 * m_mem_word));
 
                             if (m_mem_word == 1)
-                                snprintf(buf, 32, "%02X", m_mem_data[byte_address]);
+                                snprintf(buf, 32, "%02X", data);
                             else if (m_mem_word == 2)
-                            {
-                                uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
-                                snprintf(buf, 32, "%04X", mem_data_16[byte_address]);
-                            }
+                                snprintf(buf, 32, "%04X", data);
 
                             if (m_set_keyboard_here)
                             {
@@ -278,15 +381,9 @@ void MemEditor::Draw(bool ascii, bool preview, bool options, bool cursors)
                                 u16 value = 0;
                                 if (parse_hex_string(buf, strlen(buf), &value))
                                 {
-                                    if (m_mem_word == 1)
-                                        m_mem_data[byte_address] = (uint8_t)value;
-                                    else if (m_mem_word == 2)
-                                    {
-                                        uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
-                                        mem_data_16[byte_address] = value;
-                                    }
-
-                                    if (byte_address < (m_mem_size - 1))
+                                    if (WriteValue(data_address, m_mem_word, value) &&
+                                        (byte_address < (m_mem_size - 1)) &&
+                                        CanWriteRange((byte_address + 1) * m_mem_word, m_mem_word))
                                     {
                                         m_editing_address = byte_address + 1;
                                         m_selection_end = m_selection_start = m_editing_address;
@@ -306,28 +403,26 @@ void MemEditor::Draw(bool ascii, bool preview, bool options, bool cursors)
                         }
                         else
                         {
+                            if (m_editing_address == byte_address)
+                                m_editing_address = -1;
+
                             ImGui::PushItemWidth((character_size).x);
-
-                            uint16_t data = 0;
-
-                            if (m_mem_word == 1)
-                                data = m_mem_data[byte_address];
-                            else if (m_mem_word == 2)
-                            {
-                                uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
-                                data = mem_data_16[byte_address];
-                            }
 
                             bool gray_out = m_options.gray_out_zeros && (data== 0);
                             bool highlight = (byte_address >= m_selection_start && byte_address < (m_selection_start + (DataPreviewSize() / m_mem_word)));
 
                             ImVec4 color = highlight ? highlight_color : (gray_out ? gray_color : normal_color);
-                            if (m_mem_word == 1)
+                            if (!readable)
+                                ImGui::TextColored(gray_color, m_mem_word == 1 ? "??" : "????");
+                            else if (m_mem_word == 1)
                                 ImGui::TextColored(color, m_options.uppercase_hex ? "%02X" : "%02x", data);
                             else if (m_mem_word == 2)
                                 ImGui::TextColored(color, m_options.uppercase_hex ? "%04X" : "%04x", data);
 
-                            if (cell_hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                            if (cell_hovered && !writable)
+                                ImGui::SetTooltip(readable ? "Read-only" : "Unavailable");
+
+                            if (writable && cell_hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
                             {
                                 m_editing_address = byte_address;
                                 m_set_keyboard_here = true;
@@ -379,10 +474,13 @@ void MemEditor::Draw(bool ascii, bool preview, bool options, bool cursors)
                                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
                                 ImGui::PushItemWidth(character_size.x);
 
-                                unsigned char c = m_mem_data[byte_address];
-
+                                uint8_t c = 0;
+                                bool readable = ReadByte(byte_address, &c);
                                 bool gray_out = m_options.gray_out_zeros && (c < 32 || c >= 128);
-                                ImGui::TextColored(gray_out ? gray_color : normal_color, "%c", (c >= 32 && c < 128) ? c : '.');
+                                if (readable)
+                                    ImGui::TextColored(gray_out ? gray_color : normal_color, "%c", (c >= 32 && c < 128) ? c : '.');
+                                else
+                                    ImGui::TextColored(gray_color, "?");
 
                                 ImGui::PopItemWidth();
                                 ImGui::PopStyleVar();
@@ -659,35 +757,40 @@ void MemEditor::DrawDataPreview(int address)
     int data = 0;
     int data_size = DataPreviewSize();
     int final_address = address * m_mem_word;
-    bool preview_in_bounds = (final_address + data_size) <= (m_mem_size * m_mem_word);
+    bool preview_available = (final_address + data_size) <= (m_mem_size * m_mem_word);
 
-    for (int i = 0; preview_in_bounds && i < data_size; i++)
+    for (int i = 0; preview_available && i < data_size; i++)
     {
-        if (m_options.preview_endianess == 0)
-            data |= m_mem_data[final_address + i] << (i * 8);
-        else
-            data |= m_mem_data[final_address + data_size - i - 1] << (i * 8);
+        uint8_t value = 0;
+        int byte_address = m_options.preview_endianess == 0 ?
+            final_address + i : final_address + data_size - i - 1;
+        if (!ReadByte(byte_address, &value))
+        {
+            preview_available = false;
+            break;
+        }
+        data |= value << (i * 8);
     }
 
     ImVec4 color = orange;
 
     ImGui::TextColored(color, "Dec:");
     ImGui::SameLine();
-    if (preview_in_bounds)
+    if (preview_available)
         DrawDataPreviewAsDec(data);
     else
         ImGui::Text(" ");
 
     ImGui::TextColored(color, "Hex:");
     ImGui::SameLine();
-    if (preview_in_bounds)
+    if (preview_available)
         DrawDataPreviewAsHex(data);
     else
         ImGui::Text(" ");
 
     ImGui::TextColored(color, "Bin:");
     ImGui::SameLine();
-    if (preview_in_bounds)
+    if (preview_available)
         DrawDataPreviewAsBin(data);
     else
         ImGui::Text(" ");
@@ -997,10 +1100,16 @@ void MemEditor::WatchPopup()
 
 void MemEditor::SearchCapture()
 {
-    if (!IsValidPointer(m_mem_data) || !IsValidPointer(m_search_data) || m_mem_size <= 0)
+    if (!HasMemory() || !IsValidPointer(m_search_data))
         return;
-    size_t search_size = (size_t)m_mem_size * (size_t)m_mem_word;
-    memcpy(m_search_data, m_mem_data, search_size);
+
+    int search_size = m_mem_size * m_mem_word;
+    for (int i = 0; i < search_size; i++)
+    {
+        uint8_t value = 0xFF;
+        ReadByte(i, &value);
+        m_search_data[i] = value;
+    }
 }
 
 int MemEditor::PerformSearch(int op, int compare_type, int compare_value, int data_type)
@@ -1073,7 +1182,7 @@ bool MemEditor::SetSelection(int start, int end)
 
 bool MemEditor::NormalizeSelectionAddress(int address, int* offset)
 {
-    if (!IsValidPointer(offset) || !IsValidPointer(m_mem_data) || m_mem_size <= 0 || address < 0)
+    if (!IsValidPointer(offset) || !HasMemory() || address < 0)
         return false;
 
     if (address >= m_mem_base_addr && address < (m_mem_base_addr + m_mem_size))
@@ -1497,7 +1606,7 @@ void MemEditor::SearchWindow()
 
 void MemEditor::CalculateSearchResults()
 {
-    if (!IsValidPointer(m_search_data) || !IsValidPointer(m_mem_data))
+    if (!HasMemory() || !IsValidPointer(m_search_data))
         return;
 
     m_search_results.clear();
@@ -1508,10 +1617,10 @@ void MemEditor::CalculateSearchResults()
         if (!CanSearchAddressFit(m_search_compare_specific_address))
             return;
 
-        if (m_mem_word == 1)
-            compare_address_value = m_mem_data[m_search_compare_specific_address];
-        else if (m_mem_word == 2)
-            compare_address_value = ((uint16_t*)m_mem_data)[m_search_compare_specific_address];
+        uint32_t value = 0;
+        if (!ReadValue(m_search_compare_specific_address * m_mem_word, m_mem_word, &value))
+            return;
+        compare_address_value = (int)value;
     }
 
     for (int i = 0; i < m_mem_size; i++)
@@ -1519,33 +1628,39 @@ void MemEditor::CalculateSearchResults()
         int compare_value = 0;
         int current_value = 0;
         int search_value = 0;
-        uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
-        uint16_t* search_data_16 = (uint16_t*)m_search_data;
+        uint32_t current_data = 0;
+        uint32_t search_data = 0;
+        int byte_address = i * m_mem_word;
+
+        if (!ReadValue(byte_address, m_mem_word, &current_data))
+            continue;
+        for (int b = 0; b < m_mem_word; b++)
+            search_data |= (uint32_t)m_search_data[byte_address + b] << (b * 8);
 
         if (m_mem_word == 1)
         {
             if (m_search_data_type == 1)
             {
-                current_value = (int8_t)m_mem_data[i];
-                search_value = (int8_t)m_search_data[i];
+                current_value = (int8_t)current_data;
+                search_value = (int8_t)search_data;
             }
             else
             {
-                current_value = m_mem_data[i];
-                search_value = m_search_data[i];
+                current_value = (int)current_data;
+                search_value = (int)search_data;
             }
         }
         else if (m_mem_word == 2)
         {
             if (m_search_data_type == 1)
             {
-                current_value = (int16_t)mem_data_16[i];
-                search_value = (int16_t)search_data_16[i];
+                current_value = (int16_t)current_data;
+                search_value = (int16_t)search_data;
             }
             else
             {
-                current_value = mem_data_16[i];
-                search_value = search_data_16[i];
+                current_value = (int)current_data;
+                search_value = (int)search_data;
             }
         }
 
@@ -1662,18 +1777,21 @@ void MemEditor::PopGuiFont()
 void MemEditor::Copy(bool as_decimal)
 {
     int size = (m_selection_end - m_selection_start + 1) * m_mem_word;
-    uint8_t* data = m_mem_data + (m_selection_start * m_mem_word);
+    int start = m_selection_start * m_mem_word;
 
     std::string text;
 
     for (int i = 0; i < size; i++)
     {
         char byte[8];
+        uint8_t value = 0;
 
-        if (as_decimal)
-            snprintf(byte, 8, "%d", data[i]);
+        if (!ReadByte(start + i, &value))
+            snprintf(byte, 8, "??");
+        else if (as_decimal)
+            snprintf(byte, 8, "%d", value);
         else
-            snprintf(byte, 8, m_options.uppercase_hex ? "%02X" : "%02x", data[i]);
+            snprintf(byte, 8, m_options.uppercase_hex ? "%02X" : "%02x", value);
 
         if (i > 0)
             text += " ";
@@ -1720,9 +1838,7 @@ void MemEditor::Paste()
         int end = start + MIN(buffer_size, selection_size);
 
         for (int i = start; i < end; i++)
-        {
-            m_mem_data[i] = data[i - start];
-        }
+            WriteByte(i, data[i - start]);
 
         delete[] data;
     }
@@ -1748,17 +1864,11 @@ void MemEditor::FindNextValue(int value)
     for (int i = 0; i < m_mem_size; i++)
     {
         int index = (start + i) % m_mem_size;
-        uint16_t data = 0;
+        uint32_t data = 0;
+        if (!ReadValue(index * m_mem_word, m_mem_word, &data))
+            continue;
 
-        if (m_mem_word == 1)
-            data = m_mem_data[index];
-        else if (m_mem_word == 2)
-        {
-            uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
-            data = mem_data_16[index];
-        }
-
-        if (data == (uint16_t)value)
+        if (data == (uint32_t)value)
         {
             JumpToAddress(index + m_mem_base_addr);
             break;
@@ -1779,7 +1889,7 @@ void MemEditor::ClearSelection()
 
 void MemEditor::SetValueToSelection(int value)
 {
-    if (!IsValidPointer(m_mem_data) || m_mem_size <= 0 || m_mem_word <= 0)
+    if (!HasMemory() || m_mem_word <= 0)
         return;
 
     int selection_start = m_selection_start;
@@ -1801,14 +1911,12 @@ void MemEditor::SetValueToSelection(int value)
     if (m_mem_word == 1)
     {
         for (int i = selection_start; i <= selection_end; i++)
-            m_mem_data[i] = (uint8_t)value;
+            WriteByte(i, (uint8_t)value);
     }
     else if (m_mem_word == 2)
     {
-        uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
-
         for (int i = selection_start; i <= selection_end; i++)
-            mem_data_16[i] = (uint16_t)value;
+            WriteValue(i * 2, 2, (uint16_t)value);
     }
 }
 
@@ -1834,15 +1942,28 @@ void MemEditor::SaveToTextFile(const char* file_path)
                 row_end = total_bytes;
 
             if (m_mem_word == 1)
+            {
                 for (int i = row_start; i < row_end; i++)
-                    fprintf(file, "%02X ", m_mem_data[i]);
+                {
+                    uint8_t value = 0;
+                    if (ReadByte(i, &value))
+                        fprintf(file, "%02X ", value);
+                    else
+                        fprintf(file, "?? ");
+                }
+            }
             else if (m_mem_word == 2)
             {
                 int word_count = (row_end - row_start) / 2;
-                uint16_t* mem_data_16 = (uint16_t*)m_mem_data;
                 int word_start = row_start / 2;
                 for (int i = 0; i < word_count; i++)
-                    fprintf(file, "%04X ", mem_data_16[word_start + i]);
+                {
+                    uint32_t value = 0;
+                    if (ReadValue((word_start + i) * 2, 2, &value))
+                        fprintf(file, "%04X ", value);
+                    else
+                        fprintf(file, "???? ");
+                }
             }
             fprintf(file, "\n");
         }
@@ -1859,11 +1980,22 @@ void MemEditor::SaveToBinaryFile(const char* file_path)
 
     if (file)
     {
-        size_t bytes = (size_t)size;
-        if (fwrite(m_mem_data, 1, bytes, file) != bytes)
+        uint8_t buffer[4096];
+        int offset = 0;
+        while (offset < size)
         {
-            fclose(file);
-            return;
+            int count = MIN((int)sizeof(buffer), size - offset);
+            for (int i = 0; i < count; i++)
+            {
+                buffer[i] = 0xFF;
+                ReadByte(offset + i, &buffer[i]);
+            }
+            if (fwrite(buffer, 1, (size_t)count, file) != (size_t)count)
+            {
+                fclose(file);
+                return;
+            }
+            offset += count;
         }
         fclose(file);
     }
@@ -1871,7 +2003,7 @@ void MemEditor::SaveToBinaryFile(const char* file_path)
 
 void MemEditor::LoadFromBinaryFile(const char* file_path)
 {
-    if (!IsValidPointer(m_mem_data) || m_mem_size <= 0 || m_mem_word <= 0)
+    if (!HasMemory() || m_mem_word <= 0)
         return;
 
     int size = m_mem_size * m_mem_word;
@@ -1880,12 +2012,18 @@ void MemEditor::LoadFromBinaryFile(const char* file_path)
     if (file)
     {
         size_t bytes = (size_t)size;
-        if (fread(m_mem_data, 1, bytes, file) != bytes)
+        uint8_t* data = new uint8_t[bytes];
+        if (fread(data, 1, bytes, file) != bytes)
         {
+            SafeDeleteArray(data);
             fclose(file);
             return;
         }
         fclose(file);
+
+        for (int i = 0; i < size; i++)
+            WriteByte(i, data[i]);
+        SafeDeleteArray(data);
     }
 }
 
@@ -2022,7 +2160,7 @@ void MemEditor::FindBytesNext(int start_offset)
     if (!ParseFindPattern(value, m_find_text, pattern, &pattern_len, 512))
         return;
 
-    if (pattern_len == 0 || !IsValidPointer(m_mem_data) || m_mem_size <= 0)
+    if ((pattern_len == 0) || !HasMemory())
         return;
 
     int total_bytes = m_mem_size * m_mem_word;
@@ -2037,7 +2175,9 @@ void MemEditor::FindBytesNext(int start_offset)
         bool match = true;
         for (int j = 0; j < pattern_len; j++)
         {
-            if (!FindByteMatches(m_mem_data[offset + j], pattern[j], m_find_text,
+            uint8_t data = 0;
+            if (!ReadByte(offset + j, &data) ||
+                !FindByteMatches(data, pattern[j], m_find_text,
                     m_find_text_case_sensitive))
             {
                 match = false;
@@ -2168,7 +2308,7 @@ void MemEditor::CalculateFindBytesResults()
 {
     m_find_bytes_results.clear();
 
-    if (!IsValidPointer(m_mem_data) || m_mem_size <= 0)
+    if (!HasMemory())
         return;
 
     uint8_t pattern[512];
@@ -2187,7 +2327,9 @@ void MemEditor::CalculateFindBytesResults()
         bool match = true;
         for (int j = 0; j < pattern_len; j++)
         {
-            if (!FindByteMatches(m_mem_data[offset + j], pattern[j], m_find_text,
+            uint8_t data = 0;
+            if (!ReadByte(offset + j, &data) ||
+                !FindByteMatches(data, pattern[j], m_find_text,
                     m_find_text_case_sensitive))
             {
                 match = false;
@@ -2210,7 +2352,7 @@ int MemEditor::FindSequence(const char* value, bool text, bool case_sensitive, i
     if (!ParseFindPattern(value, text, pattern, &pattern_len, 512))
         return -1;
 
-    if (pattern_len == 0 || !IsValidPointer(m_mem_data) || m_mem_size <= 0)
+    if ((pattern_len == 0) || !HasMemory())
         return 0;
 
     int total_bytes = m_mem_size * m_mem_word;
@@ -2221,7 +2363,9 @@ int MemEditor::FindSequence(const char* value, bool text, bool case_sensitive, i
         bool match = true;
         for (int j = 0; j < pattern_len; j++)
         {
-            if (!FindByteMatches(m_mem_data[offset + j], pattern[j], text, case_sensitive))
+            uint8_t data = 0;
+            if (!ReadByte(offset + j, &data) ||
+                !FindByteMatches(data, pattern[j], text, case_sensitive))
             {
                 match = false;
                 break;
@@ -2279,7 +2423,7 @@ bool MemEditor::AddWatchDirect(int address, const char* notes, int size)
 
 bool MemEditor::CanWatchRangeFit(int address, int size)
 {
-    if (!IsValidPointer(m_mem_data) || m_mem_size <= 0 || m_mem_word <= 0)
+    if (!HasMemory() || m_mem_word <= 0)
         return false;
 
     int bytes = WatchSizeBytes(size);
@@ -2298,7 +2442,7 @@ bool MemEditor::CanWatchRangeFit(int address, int size)
 
 bool MemEditor::CanSearchAddressFit(int address)
 {
-    return IsValidPointer(m_mem_data) && IsValidPointer(m_search_data) && m_mem_size > 0 && address >= 0 && address < m_mem_size;
+    return HasMemory() && IsValidPointer(m_search_data) && (address >= 0) && (address < m_mem_size);
 }
 
 uint32_t MemEditor::ReadWatchValue(const Watch& watch)
@@ -2308,17 +2452,8 @@ uint32_t MemEditor::ReadWatchValue(const Watch& watch)
 
     int bytes = WatchSizeBytes(watch.size);
     int byte_offset = (watch.address - m_mem_base_addr) * m_mem_word;
-    int total_bytes = m_mem_size * m_mem_word;
     uint32_t value = 0;
-
-    if (byte_offset < 0 || byte_offset >= total_bytes)
-        return 0;
-
-    for (int i = 0; i < bytes && (byte_offset + i) < total_bytes; i++)
-    {
-        value |= (uint32_t)m_mem_data[byte_offset + i] << (i * 8);
-    }
-
+    ReadValue(byte_offset, bytes, &value);
     return value;
 }
 
@@ -2329,12 +2464,7 @@ void MemEditor::WriteWatchValue(const Watch& watch, uint32_t value)
 
     int bytes = WatchSizeBytes(watch.size);
     int byte_offset = (watch.address - m_mem_base_addr) * m_mem_word;
-    int total_bytes = m_mem_size * m_mem_word;
-
-    for (int i = 0; i < bytes && (byte_offset + i) < total_bytes; i++)
-    {
-        m_mem_data[byte_offset + i] = (uint8_t)((value >> (i * 8)) & 0xFF);
-    }
+    WriteValue(byte_offset, bytes, value);
 }
 
 int MemEditor::WatchSizeBytes(int size)
