@@ -32,6 +32,7 @@
 
 #define GUI_IMPORT
 #include "gui.h"
+#include "gui_adam.h"
 #include "gui_menus.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
@@ -176,6 +177,7 @@ void gui_render(void)
         main_window();
 
     gui_debug_windows();
+    gui_adam_windows();
 
     if (config_emulator.show_info)
         gui_show_info();

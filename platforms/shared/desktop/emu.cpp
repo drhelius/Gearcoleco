@@ -121,13 +121,14 @@ static bool prepare_adam_firmware_paths(void);
 static bool load_adam_firmware_paths(void);
 static bool load_adam_content(const char* file_path);
 static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const char* file_path, bool primary);
+    const char* file_path, bool primary, bool discard_current_changes);
 static bool resolve_adam_playlist(const char* playlist_path, char* media_path,
     size_t media_path_size, GC_AdamMediaType* type);
 static GC_AdamMediaType adam_media_type_from_path(const char* path);
 static GC_AdamMediaType detect_adam_media_path(const char* path);
 static bool read_adam_media_path(const char* path, u8** data, size_t* size,
     GC_AdamMediaType* type);
+static bool write_adam_working_copy(GC_AdamMediaSlot slot);
 static bool write_adam_media_file(AdamMedia* media, const char* file_path);
 static void clear_adam_host_media(GC_AdamMediaSlot slot);
 static void clear_all_adam_host_media(void);
@@ -670,7 +671,7 @@ static void make_adam_working_path(const char* source_path, GC_AdamMediaType typ
 }
 
 static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const char* file_path, bool primary)
+    const char* file_path, bool primary, bool discard_current_changes)
 {
     bool disk_slot = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
     if ((disk_slot && (type != GC_ADAM_MEDIA_DISK)) ||
@@ -713,6 +714,13 @@ static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
     {
         mounted_data = working;
         Log("Loading ADAM working copy: %s", working_path);
+    }
+
+    if (!primary && !discard_current_changes && !write_adam_working_copy(slot))
+    {
+        SafeDeleteArray(working);
+        SafeDeleteArray(source);
+        return false;
     }
 
     bool write_protected = !persistence || configured_write_protected;
@@ -777,7 +785,7 @@ static bool load_adam_content(const char* file_path)
         clear_all_adam_host_media();
         GC_AdamMediaSlot slot = media_type == GC_ADAM_MEDIA_DATA_PACK ?
             GC_ADAM_MEDIA_DATA_PACK_1 : GC_ADAM_MEDIA_DISK_1;
-        if (!load_adam_media_path(slot, media_type, media_path, true))
+        if (!load_adam_media_path(slot, media_type, media_path, true, false))
             return false;
 
         if (ends_with_no_case(file_path, ".m3u"))
@@ -949,6 +957,12 @@ u32 emu_get_adam_firmware_crc(GC_AdamFirmware firmware)
 
 bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path)
 {
+    return emu_replace_adam_media(slot, file_path, false);
+}
+
+bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
+    bool discard_current_changes)
+{
     if ((loading_state.load() != Loading_State_None) ||
         (gearcoleco->GetMachine() != GC_MACHINE_ADAM) ||
         (slot < GC_ADAM_MEDIA_DISK_1) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
@@ -960,10 +974,8 @@ bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path)
         (!disk_slot && (type != GC_ADAM_MEDIA_DATA_PACK)))
         return false;
 
-    if (!write_adam_working_copy(slot))
-        return false;
-
-    bool loaded = load_adam_media_path(slot, type, file_path, false);
+    bool loaded = load_adam_media_path(slot, type, file_path, false,
+        discard_current_changes);
     if (loaded)
     {
         rewind_reset();
@@ -1003,6 +1015,23 @@ bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path)
     strncpy_fit(record->source_path, file_path, sizeof(record->source_path));
     strncpy_fit(record->working_path, file_path, sizeof(record->working_path));
     record->base_crc = media->GetBaseCRC();
+    rewind_reset();
+    runahead_reset();
+    return true;
+}
+
+bool emu_discard_adam_media_changes(GC_AdamMediaSlot slot)
+{
+    if ((loading_state.load() != Loading_State_None) ||
+        (slot < GC_ADAM_MEDIA_DISK_1) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
+    {
+        return false;
+    }
+
+    AdamMedia* media = gearcoleco->GetAdamMedia(slot);
+    if (!IsValidPointer(media) || !media->IsInserted())
+        return false;
+    media->ClearDirty();
     rewind_reset();
     runahead_reset();
     return true;

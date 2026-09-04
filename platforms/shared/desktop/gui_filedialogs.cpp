@@ -76,6 +76,7 @@ static std::string pending_dialog_path;
 static bool dialog_active = false;
 static bool pending_refocus_window = false;
 static int pending_dialog_int_param1 = 0;
+static bool pending_dialog_bool_param1 = false;
 #if !defined(__APPLE__)
 static bool was_exclusive_fullscreen = false;
 #endif
@@ -364,12 +365,13 @@ void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware)
         filters, 2, NULL, false);
 }
 
-void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot)
+void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot, bool discard_current_changes)
 {
     if (!begin_dialog())
         return;
 
     pending_dialog_int_param1 = slot;
+    pending_dialog_bool_param1 = discard_current_changes;
     bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
     SDL_DialogFileFilter filters[] = {
         { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk" : "ddp" }
@@ -637,7 +639,7 @@ static void process_dialog_result(FileDialogID id, const char* path)
         case FileDialog_InsertAdamMedia:
         {
             GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
-            if (!emu_insert_adam_media(slot, path))
+            if (!emu_replace_adam_media(slot, path, pending_dialog_bool_param1))
                 gui_set_error_message("Unable to insert ADAM media. Check the image type, exact size, slot, and working-copy status.");
             else
             {

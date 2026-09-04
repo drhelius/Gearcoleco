@@ -52,7 +52,8 @@ EXTERN void gui_file_dialog_choose_saves_path(void);
 EXTERN void gui_file_dialog_choose_trace_path(void);
 EXTERN void gui_file_dialog_load_bios(void);
 EXTERN void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware);
-EXTERN void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot);
+EXTERN void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot,
+    bool discard_current_changes = false);
 EXTERN void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot);
 EXTERN void gui_file_dialog_save_adam_printer(void);
 EXTERN void gui_file_dialog_process_results(void);

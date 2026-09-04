@@ -108,8 +108,11 @@ EXTERN bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_pa
 EXTERN bool emu_is_adam_firmware_loaded(GC_AdamFirmware firmware);
 EXTERN u32 emu_get_adam_firmware_crc(GC_AdamFirmware firmware);
 EXTERN bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path);
+EXTERN bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
+    bool discard_current_changes);
 EXTERN bool emu_save_adam_media(GC_AdamMediaSlot slot);
 EXTERN bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path);
+EXTERN bool emu_discard_adam_media_changes(GC_AdamMediaSlot slot);
 EXTERN bool emu_eject_adam_media(GC_AdamMediaSlot slot);
 EXTERN bool emu_set_adam_media_write_protected(GC_AdamMediaSlot slot, bool write_protected);
 EXTERN bool emu_get_adam_media_info(GC_AdamMediaSlot slot, Emu_AdamMediaInfo* info);

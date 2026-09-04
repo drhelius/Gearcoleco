@@ -20,6 +20,7 @@
 #define GUI_MENUS_IMPORT
 #include "gui_menus.h"
 #include "gui.h"
+#include "gui_adam.h"
 #include "gui_filedialogs.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
@@ -54,8 +55,6 @@ static bool open_bios = false;
 static bool open_bios_warning = false;
 static bool open_adam_eos = false;
 static bool open_adam_smartwriter = false;
-static int open_adam_media_slot = -1;
-static int save_adam_media_slot = -1;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
 static bool open_machine_change = false;
@@ -85,7 +84,6 @@ static void gamepad_configuration_item(const char* text, int* button, int player
 static void hotkey_configuration_item(const char* text, config_Hotkey* hotkey);
 static void gamepad_device_selector(int player);
 static void draw_savestate_slot_info(int slot);
-static void draw_adam_media_slots(void);
 static void draw_adam_keyboard_map(void);
 static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc);
 static void draw_machine_change_popup(void);
@@ -115,8 +113,6 @@ void gui_main_menu(void)
     open_bios_warning = false;
     open_adam_eos = false;
     open_adam_smartwriter = false;
-    open_adam_media_slot = -1;
-    save_adam_media_slot = -1;
     save_debug_settings = false;
     load_debug_settings = false;
 
@@ -193,12 +189,9 @@ static void menu_gearcoleco(void)
                 gui_set_error_message("Unable to boot ADAM. Configure valid OS-7, EOS, and SmartWriter firmware first.");
         }
 
-        if ((config_emulator.machine == GC_MACHINE_ADAM || emu_get_machine() == GC_MACHINE_ADAM) &&
-            ImGui::BeginMenu("ADAM Media"))
-        {
-            draw_adam_media_slots();
-            ImGui::EndMenu();
-        }
+        if (ImGui::MenuItem("ADAM Media...", NULL, false,
+            !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM)))
+            gui_adam_open_media();
 
         ImGui::Separator();
         ImGui::MenuItem("Enable Softpatching", "", &config_emulator.softpatching);
@@ -758,80 +751,6 @@ static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc)
         ImGui::TextColored(service_mcp_http_color, "Known revision (CRC32 %08X)", crc);
     else
         ImGui::TextColored(service_mcp_stdio_color, "Unknown revision (CRC32 %08X)", crc);
-}
-
-static void draw_adam_media_slots(void)
-{
-    ImGui::MenuItem("Working-copy persistence", NULL,
-        &config_emulator.adam_media_persistence);
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Writes are stored in complete .gearcoleco working-copy images next to the source.\nThe source image is never overwritten. This setting applies to newly inserted media.");
-
-    ImGui::Separator();
-    static const char* labels[GC_ADAM_MEDIA_SLOT_COUNT] = {
-        "Disk 1", "Disk 2", "Data Pack 1", "Data Pack 2"
-    };
-
-    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
-    {
-        GC_AdamMediaSlot slot = (GC_AdamMediaSlot)i;
-        Emu_AdamMediaInfo info;
-        emu_get_adam_media_info(slot, &info);
-
-        if (ImGui::BeginMenu(labels[i]))
-        {
-            if (info.inserted)
-            {
-                ImGui::Text("%s", info.path[0] ? get_filename(info.path) : "State media");
-                ImGui::Text("Capacity: %zu KiB", info.size / 1024);
-                ImGui::Text("Base CRC32: %08X", info.base_crc);
-                if (info.dirty)
-                    ImGui::TextColored(service_mcp_stdio_color, "Modified");
-                else if (info.state_owned)
-                    ImGui::TextDisabled("Read-only state snapshot");
-                else
-                    ImGui::TextDisabled("Unmodified");
-                if (info.working_path[0])
-                {
-                    ImGui::TextDisabled("Working copy:");
-                    ImGui::TextWrapped("%s", info.working_path);
-                }
-
-                bool write_protected = info.write_protected;
-                if (ImGui::MenuItem("Write protected", NULL, &write_protected))
-                {
-                    if (emu_set_adam_media_write_protected(slot, write_protected))
-                        config_emulator.adam_media_write_protected[slot] = write_protected;
-                }
-                if (info.state_owned && ImGui::IsItemHovered())
-                    ImGui::SetTooltip("State-restored media has no host destination and remains read-only.");
-
-                if (info.state_owned && ImGui::MenuItem("Save As..."))
-                {
-                    save_adam_media_slot = i;
-                }
-                else if (!info.state_owned && ImGui::MenuItem("Save working copy", NULL, false,
-                    info.dirty && info.working_path[0]))
-                {
-                    if (!emu_save_adam_media(slot))
-                        gui_set_error_message("Unable to save the ADAM working copy. The media remains mounted and dirty.");
-                }
-
-                if (ImGui::MenuItem("Eject"))
-                {
-                    if (!emu_eject_adam_media(slot))
-                        gui_set_error_message("Unable to save the ADAM working copy. The media remains mounted and dirty.");
-                }
-            }
-            else
-                ImGui::TextDisabled("Empty");
-
-            if (ImGui::MenuItem(info.inserted ? "Replace..." : "Insert..."))
-                open_adam_media_slot = i;
-
-            ImGui::EndMenu();
-        }
-    }
 }
 
 static void draw_adam_keyboard_map(void)
@@ -1876,10 +1795,6 @@ static void file_dialogs(void)
         gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_EOS);
     if (open_adam_smartwriter)
         gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER);
-    if (open_adam_media_slot >= 0)
-        gui_file_dialog_insert_adam_media((GC_AdamMediaSlot)open_adam_media_slot);
-    if (save_adam_media_slot >= 0)
-        gui_file_dialog_save_adam_media((GC_AdamMediaSlot)save_adam_media_slot);
     if (save_debug_settings)
         gui_file_dialog_save_debug_settings();
     if (load_debug_settings)
