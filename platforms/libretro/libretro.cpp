@@ -111,6 +111,16 @@ struct RetroAdamState
     u8 reserved;
 };
 
+struct RetroAdamMediaBackup
+{
+    u8* data;
+    size_t size;
+    u32 base_crc;
+    GC_AdamMediaType type;
+    bool inserted;
+    bool write_protected;
+};
+
 static RetroAdamHostMedia adam_host_media[GC_ADAM_MEDIA_SLOT_COUNT];
 static RetroAdamDiskSet adam_disk_set;
 static unsigned adam_initial_image_index = 0;
@@ -186,6 +196,9 @@ static bool flush_adam_media(GC_AdamMediaSlot slot);
 static bool flush_all_adam_media(void);
 static void clear_adam_host_media(void);
 static void clear_adam_disk_set(void);
+static void capture_adam_media(RetroAdamMediaBackup* backup);
+static bool prepare_adam_media(const RetroAdamMediaBackup* backup);
+static void clear_adam_media_backup(RetroAdamMediaBackup* backup);
 static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMediaType type);
 static bool load_disk_set_image(unsigned index);
 static bool setup_loaded_game(void);
@@ -991,6 +1004,51 @@ static void clear_adam_disk_set(void)
 static void clear_adam_host_media(void)
 {
     memset(adam_host_media, 0, sizeof(adam_host_media));
+}
+
+static void capture_adam_media(RetroAdamMediaBackup* backup)
+{
+    memset(backup, 0, sizeof(RetroAdamMediaBackup) * GC_ADAM_MEDIA_SLOT_COUNT);
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        AdamMedia* media = core->GetAdamMedia((GC_AdamMediaSlot)i);
+        if (!media || !media->IsInserted())
+            continue;
+
+        backup[i].data = new u8[media->GetSize()];
+        memcpy(backup[i].data, media->GetData(), media->GetSize());
+        backup[i].size = media->GetSize();
+        backup[i].base_crc = media->GetBaseCRC();
+        backup[i].type = media->GetType();
+        backup[i].inserted = true;
+        backup[i].write_protected = media->IsWriteProtected();
+    }
+}
+
+static bool prepare_adam_media(const RetroAdamMediaBackup* backup)
+{
+    bool prepared = true;
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        if (backup[i].inserted)
+        {
+            if (!core->LoadAdamMediaFromBuffer((GC_AdamMediaSlot)i, backup[i].type,
+                backup[i].data, backup[i].size, backup[i].write_protected,
+                backup[i].base_crc))
+            {
+                prepared = false;
+            }
+        }
+        else
+            core->EjectAdamMedia((GC_AdamMediaSlot)i);
+    }
+    return prepared;
+}
+
+static void clear_adam_media_backup(RetroAdamMediaBackup* backup)
+{
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        SafeDeleteArray(backup[i].data);
 }
 
 static bool copy_disk_image(RetroAdamDiskImage* image, const struct retro_game_info* info)
@@ -2330,58 +2388,137 @@ bool retro_serialize(void *data, size_t size)
 
 bool retro_unserialize(const void *data, size_t size)
 {
-    if (!content_loaded || !data || (size != retro_serialize_size()) ||
-        (size < sizeof(GC_SaveState_Header_Libretro) + sizeof(RetroAdamState)))
+    if (!content_loaded || !data || !IsValidPointer(core))
+        return false;
+
+    bool colecovision = core->GetMachine() == GC_MACHINE_COLECOVISION;
+    bool legacy_colecovision_size = colecovision &&
+        (size == GC_LIBRETRO_SAVESTATE_SIZE_ADAM);
+    if (((size != retro_serialize_size()) && !legacy_colecovision_size) ||
+        (size < sizeof(GC_SaveState_Header_Libretro)))
         return false;
 
     GC_SaveState_Header_Libretro header = {};
     memcpy(&header, reinterpret_cast<const u8*>(data) + size - sizeof(header),
         sizeof(header));
-    if ((header.magic != GC_SAVESTATE_MAGIC) || (header.version < GC_SAVESTATE_MIN_VERSION) ||
-        (header.version > GC_SAVESTATE_VERSION))
+    bool current_header = header.magic == GC_SAVESTATE_MAGIC &&
+        header.version >= GC_SAVESTATE_MIN_VERSION &&
+        header.version <= GC_SAVESTATE_VERSION;
+    if ((header.magic != GC_SAVESTATE_MAGIC) || (!current_header && !colecovision))
         return false;
 
     RetroAdamState state = {};
-    size_t offset = size - sizeof(GC_SaveState_Header_Libretro) - sizeof(state);
-    memcpy(&state, reinterpret_cast<const u8*>(data) + offset, sizeof(state));
-    bool valid_disk_state = state.magic == RETRO_ADAM_STATE_MAGIC && state.version == 1 &&
-        state.ejected <= 1 && state.count == adam_disk_set.count &&
-        state.index <= state.count && state.type == (u8)adam_disk_set.type &&
-        state.slot == (u8)adam_disk_set.slot;
+    bool valid_disk_state = false;
+    if (size >= sizeof(GC_SaveState_Header_Libretro) + sizeof(state))
+    {
+        size_t offset = size - sizeof(GC_SaveState_Header_Libretro) - sizeof(state);
+        memcpy(&state, reinterpret_cast<const u8*>(data) + offset, sizeof(state));
+        bool valid_index = state.ejected ? state.index <= state.count :
+            ((state.count > 0) && (state.index < state.count));
+        valid_disk_state = state.magic == RETRO_ADAM_STATE_MAGIC && state.version == 1 &&
+            state.reserved == 0 && state.ejected <= 1 && valid_index &&
+            state.count == adam_disk_set.count && state.type == (u8)adam_disk_set.type &&
+            state.slot == (u8)adam_disk_set.slot;
+    }
+
+    bool adam_state = current_header && (core->GetMachine() == GC_MACHINE_ADAM);
+    if (adam_state && !valid_disk_state)
+        return false;
+
+    u32 selected_base_crc = 0;
+    size_t selected_size = 0;
+    char selected_working_path[4096] = "";
+    u8* selected_data = NULL;
+    if (adam_state && (state.count > 0) && !state.ejected)
+    {
+        RetroAdamDiskImage* image = &adam_disk_set.images[state.index];
+        GC_AdamMediaType selected_type = GC_ADAM_MEDIA_NONE;
+        if (!read_disk_image(image, &selected_data, &selected_size, &selected_type) ||
+            (selected_type != adam_disk_set.type))
+        {
+            SafeDeleteArray(selected_data);
+            return false;
+        }
+        selected_base_crc = calculate_crc32(selected_data, selected_size);
+
+        bool writable = adam_writable_media && vfs_interface && vfs_interface->write &&
+            vfs_interface->flush && vfs_interface->rename && vfs_interface->remove;
+        if (writable)
+            make_working_path(image->path, adam_disk_set.type, adam_disk_set.slot,
+                selected_base_crc, selected_working_path, sizeof(selected_working_path));
+    }
 
     unsigned previous_index = adam_disk_set.index;
     bool previous_ejected = adam_disk_set.ejected;
-    bool prepared = false;
-    if (valid_disk_state && (adam_disk_set.count > 0))
+    RetroAdamHostMedia previous_host_media[GC_ADAM_MEDIA_SLOT_COUNT];
+    memcpy(previous_host_media, adam_host_media, sizeof(previous_host_media));
+    RetroAdamMediaBackup previous_media[GC_ADAM_MEDIA_SLOT_COUNT];
+    memset(previous_media, 0, sizeof(previous_media));
+    size_t backup_size = retro_serialize_size();
+    u8* backup = new u8[backup_size];
+    size_t saved_backup_size = backup_size;
+    if (!core->SaveState(backup, saved_backup_size))
     {
-        if (!adam_disk_set.ejected && !disk_set_eject_state(true))
-            return false;
-        if (!disk_set_image_index(state.index))
-            return false;
-        if (!state.ejected && !disk_set_eject_state(false))
-            return false;
-        prepared = true;
+        SafeDeleteArray(selected_data);
+        SafeDeleteArray(backup);
+        return false;
     }
 
-    if (core->LoadState(reinterpret_cast<const u8*>(data), size))
+    if (adam_state)
+        capture_adam_media(previous_media);
+
+    bool prepared = true;
+    if (adam_state && (state.count > 0) && !state.ejected)
     {
-        if (valid_disk_state)
+        RetroAdamDiskImage* image = &adam_disk_set.images[state.index];
+        prepared = mount_adam_media(adam_disk_set.slot, adam_disk_set.type, selected_data,
+            selected_size, image->path);
+    }
+    SafeDeleteArray(selected_data);
+
+    bool loaded = prepared && core->LoadState(reinterpret_cast<const u8*>(data), size);
+    if (loaded && adam_state)
+    {
+        AdamMedia* media = core->GetAdamMedia(adam_disk_set.slot);
+        bool media_matches = state.ejected ? (!media || !media->IsInserted()) :
+            (media && media->IsInserted() && (media->GetType() == adam_disk_set.type) &&
+            (media->GetSize() == selected_size) &&
+            (media->GetBaseCRC() == selected_base_crc));
+        if (!media_matches)
+            loaded = false;
+        else
         {
             adam_disk_set.index = state.index;
             adam_disk_set.ejected = state.ejected != 0;
+            memset(&adam_host_media[adam_disk_set.slot], 0,
+                sizeof(adam_host_media[adam_disk_set.slot]));
+            if (!state.ejected && selected_working_path[0])
+            {
+                snprintf(adam_host_media[adam_disk_set.slot].working_path,
+                    sizeof(adam_host_media[adam_disk_set.slot].working_path), "%s",
+                    selected_working_path);
+                adam_host_media[adam_disk_set.slot].base_crc = selected_base_crc;
+            }
         }
+    }
+
+    if (loaded)
+    {
+        clear_adam_media_backup(previous_media);
+        SafeDeleteArray(backup);
         clear_input_state();
         return true;
     }
 
-    if (prepared)
-    {
-        if (!adam_disk_set.ejected)
-            disk_set_eject_state(true);
-        disk_set_image_index(previous_index);
-        if (!previous_ejected)
-            disk_set_eject_state(false);
-    }
+    if (adam_state && !prepare_adam_media(previous_media))
+        log_cb(RETRO_LOG_ERROR, "Failed to prepare media while restoring rejected save state.\n");
+    if (!core->LoadState(backup, saved_backup_size))
+        log_cb(RETRO_LOG_ERROR, "Failed to restore core after rejected save state.\n");
+    clear_adam_media_backup(previous_media);
+    SafeDeleteArray(backup);
+    adam_disk_set.index = previous_index;
+    adam_disk_set.ejected = previous_ejected;
+    memcpy(adam_host_media, previous_host_media, sizeof(adam_host_media));
     return false;
 }
 
