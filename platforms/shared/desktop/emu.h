@@ -115,6 +115,12 @@ EXTERN bool emu_are_adam_firmware_paths_valid(void);
 EXTERN bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path);
 EXTERN bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
     bool discard_current_changes);
+EXTERN int emu_get_adam_playlist_count(GC_AdamMediaSlot slot);
+EXTERN int emu_get_adam_playlist_index(GC_AdamMediaSlot slot);
+EXTERN const char* emu_get_adam_playlist_name(GC_AdamMediaSlot slot, int index);
+EXTERN const char* emu_get_adam_playlist_path(GC_AdamMediaSlot slot);
+EXTERN bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index,
+    bool discard_current_changes);
 EXTERN bool emu_save_adam_media(GC_AdamMediaSlot slot);
 EXTERN bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path);
 EXTERN bool emu_discard_adam_media_changes(GC_AdamMediaSlot slot);

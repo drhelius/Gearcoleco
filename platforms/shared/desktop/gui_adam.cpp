@@ -36,7 +36,8 @@ enum AdamMediaPendingAction
 {
     AdamMediaPendingNone = 0,
     AdamMediaPendingReplace,
-    AdamMediaPendingEject
+    AdamMediaPendingEject,
+    AdamMediaPendingSwap
 };
 
 struct AdamFirmwareInspection
@@ -59,6 +60,7 @@ static bool pending_insert_discard_changes = false;
 static int pending_save_as_slot = -1;
 static int pending_firmware_browse = -1;
 static int pending_dirty_slot = -1;
+static int pending_swap_index = -1;
 static AdamMediaPendingAction pending_dirty_action = AdamMediaPendingNone;
 static AdamFirmwareInspection firmware_inspections[GC_ADAM_FIRMWARE_COUNT];
 
@@ -466,6 +468,38 @@ static void draw_media_row(GC_AdamMediaSlot slot, const char* label)
             ImGui::Text("Base CRC32: %08X", info.base_crc);
             ImGui::EndTooltip();
         }
+
+        int playlist_count = emu_get_adam_playlist_count(slot);
+        if (playlist_count > 0)
+        {
+            int current = emu_get_adam_playlist_index(slot);
+            ImGui::TextDisabled("M3U: %s", get_filename(emu_get_adam_playlist_path(slot)));
+            ImGui::SetNextItemWidth(-1.0f);
+            if (ImGui::BeginCombo("##playlist_entry",
+                emu_get_adam_playlist_name(slot, current)))
+            {
+                for (int i = 0; i < playlist_count; i++)
+                {
+                    bool selected = i == current;
+                    if (ImGui::Selectable(emu_get_adam_playlist_name(slot, i), selected) &&
+                        !selected)
+                    {
+                        if (info.dirty)
+                        {
+                            pending_dirty_slot = slot;
+                            pending_swap_index = i;
+                            pending_dirty_action = AdamMediaPendingSwap;
+                            open_dirty_confirmation = true;
+                        }
+                        else if (!emu_select_adam_playlist_entry(slot, i, false))
+                            gui_set_error_message("Unable to load the selected ADAM playlist entry.");
+                    }
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+        }
     }
     else
         ImGui::TextDisabled("Empty");
@@ -581,6 +615,7 @@ static void draw_dirty_confirmation(void)
     if (ImGui::Button("Cancel", ImVec2(100, 0)))
     {
         pending_dirty_slot = -1;
+        pending_swap_index = -1;
         pending_dirty_action = AdamMediaPendingNone;
         gui_dialog_in_use = false;
         ImGui::CloseCurrentPopup();
@@ -610,15 +645,26 @@ static void complete_pending_action(bool save)
         else
             ready = emu_discard_adam_media_changes(slot) && emu_eject_adam_media(slot);
     }
+    else if (pending_dirty_action == AdamMediaPendingSwap)
+    {
+        if (save)
+            ready = emu_save_adam_media(slot);
+        if (ready)
+            ready = emu_select_adam_playlist_entry(slot, pending_swap_index, !save);
+    }
 
     if (!ready)
     {
-        gui_set_error_message(save ? "Unable to save the ADAM working copy." :
-            "Unable to discard ADAM media changes.");
+        if (pending_dirty_action == AdamMediaPendingSwap)
+            gui_set_error_message("Unable to load the selected ADAM playlist entry.");
+        else
+            gui_set_error_message(save ? "Unable to save the ADAM working copy." :
+                "Unable to discard ADAM media changes.");
         return;
     }
 
     pending_dirty_slot = -1;
+    pending_swap_index = -1;
     pending_dirty_action = AdamMediaPendingNone;
     gui_dialog_in_use = false;
     ImGui::CloseCurrentPopup();
