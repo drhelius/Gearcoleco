@@ -326,7 +326,7 @@ static void draw_media_window(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
     ImGui::SetNextWindowPos(ImVec2(80, 80), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(900, 300), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(1200, 320), ImGuiCond_FirstUseEver);
     ImGui::Begin("ADAM Media", &show_adam_media);
     ImGui::PushFont(gui_default_font);
 
@@ -334,11 +334,12 @@ static void draw_media_window(void)
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Applies to newly inserted media. Source images are never overwritten.");
 
-    if (ImGui::BeginTable("##adam_media", 6,
+    if (ImGui::BeginTable("##adam_media", 7,
         ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
     {
         ImGui::TableSetupColumn("Slot", ImGuiTableColumnFlags_WidthFixed, 105.0f);
         ImGui::TableSetupColumn("Media");
+        ImGui::TableSetupColumn("Working copy");
         ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 95.0f);
         ImGui::TableSetupColumn("Write protect", ImGuiTableColumnFlags_WidthFixed, 100.0f);
@@ -390,6 +391,16 @@ static void draw_media_row(GC_AdamMediaSlot slot, const char* label)
     }
     else
         ImGui::TextDisabled("Empty");
+
+    ImGui::TableNextColumn();
+    if (!info.inserted)
+        ImGui::TextDisabled("-");
+    else if (info.working_path[0])
+        ImGui::TextWrapped("%s", info.working_path);
+    else if (info.state_owned)
+        ImGui::TextDisabled("Save As required");
+    else
+        ImGui::TextDisabled("Disabled");
 
     ImGui::TableNextColumn();
     if (info.inserted)

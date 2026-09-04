@@ -81,6 +81,8 @@ static GC_Machine loading_machine;
 static int loading_adam_boot_mode;
 static bool loading_adam_media_persistence;
 static bool loading_adam_media_write_protected[GC_ADAM_MEDIA_SLOT_COUNT];
+static int loading_savefiles_dir_option;
+static char loading_savefiles_path[4096];
 static char loading_bios_path[4096];
 static char loading_adam_eos_path[4096];
 static char loading_adam_smartwriter_path[4096];
@@ -132,10 +134,11 @@ static bool read_adam_media_path(const char* path, u8** data, size_t* size,
     GC_AdamMediaType* type);
 static bool write_adam_working_copy(GC_AdamMediaSlot slot);
 static bool write_adam_media_file(AdamMedia* media, const char* file_path);
+static bool check_adam_working_path(const char* file_path);
 static void clear_adam_host_media(GC_AdamMediaSlot slot);
 static void clear_all_adam_host_media(void);
 static void make_adam_working_path(const char* source_path, GC_AdamMediaType type,
-    GC_AdamMediaSlot slot, u32 base_crc, char* path, size_t path_size);
+    GC_AdamMediaSlot slot, u32 base_crc, bool primary, char* path, size_t path_size);
 static bool flush_all_adam_media(void);
 static bool get_adam_state_path(int index, char* path, size_t path_size);
 
@@ -268,6 +271,9 @@ bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     loading_adam_media_persistence = config_emulator.adam_media_persistence;
     memcpy(loading_adam_media_write_protected, config_emulator.adam_media_write_protected,
         sizeof(loading_adam_media_write_protected));
+    loading_savefiles_dir_option = config_emulator.savefiles_dir_option;
+    strncpy_fit(loading_savefiles_path, config_emulator.savefiles_path.c_str(),
+        sizeof(loading_savefiles_path));
     if (!prepare_adam_firmware_paths())
         return false;
     gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
@@ -675,12 +681,28 @@ static void clear_all_adam_host_media(void)
 }
 
 static void make_adam_working_path(const char* source_path, GC_AdamMediaType type,
-    GC_AdamMediaSlot slot, u32 base_crc, char* path, size_t path_size)
+    GC_AdamMediaSlot slot, u32 base_crc, bool primary, char* path, size_t path_size)
 {
     char directory[4096];
     char name[1024];
     char filename[1400];
-    get_directory(source_path, directory, sizeof(directory));
+    int directory_option = primary ? loading_savefiles_dir_option :
+        config_emulator.savefiles_dir_option;
+    const char* custom_directory = primary ? loading_savefiles_path :
+        config_emulator.savefiles_path.c_str();
+    switch ((Directory_Location)directory_option)
+    {
+        case Directory_Location_ROM:
+            get_directory(source_path, directory, sizeof(directory));
+            break;
+        case Directory_Location_Custom:
+            strncpy_fit(directory, custom_directory, sizeof(directory));
+            break;
+        default:
+        case Directory_Location_Default:
+            strncpy_fit(directory, config_root_path, sizeof(directory));
+            break;
+    }
     get_filename_without_extension(source_path, name, sizeof(name));
     const char* extension = type == GC_ADAM_MEDIA_DATA_PACK ? "ddp" : "dsk";
     snprintf(filename, sizeof(filename), "%s.%08x.slot%d.gearcoleco.%s", name, base_crc,
@@ -720,7 +742,8 @@ static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
 
     u32 base_crc = calculate_crc32(source, size);
     char working_path[4096];
-    make_adam_working_path(file_path, type, slot, base_crc, working_path, sizeof(working_path));
+    make_adam_working_path(file_path, type, slot, base_crc, primary, working_path,
+        sizeof(working_path));
 
     u8* mounted_data = source;
     u8* working = NULL;
@@ -728,6 +751,11 @@ static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
         config_emulator.adam_media_persistence;
     bool configured_write_protected = primary ? loading_adam_media_write_protected[slot] :
         config_emulator.adam_media_write_protected[slot];
+    if (persistence && !check_adam_working_path(working_path))
+    {
+        SafeDeleteArray(source);
+        return false;
+    }
     if (persistence && read_binary_file_exact(working_path, &working, size))
     {
         mounted_data = working;
@@ -841,6 +869,29 @@ static bool write_adam_working_copy(GC_AdamMediaSlot slot)
         return false;
 
     return write_adam_media_file(media, record->working_path);
+}
+
+static bool check_adam_working_path(const char* file_path)
+{
+    if (!IsValidPointer(file_path) || (file_path[0] == '\0'))
+        return false;
+
+    std::string probe_path(file_path);
+    probe_path += ".write-test";
+    std::ofstream probe;
+    open_ofstream_utf8(probe, probe_path.c_str(), std::ios::out | std::ios::binary |
+        std::ios::trunc);
+    if (!probe.is_open())
+    {
+        Error("ADAM working-copy destination is not writable: %s", file_path);
+        return false;
+    }
+
+    probe.close();
+    bool writable = probe.good() && SDL_RemovePath(probe_path.c_str());
+    if (!writable)
+        Error("ADAM working-copy destination is not writable: %s", file_path);
+    return writable;
 }
 
 static bool write_adam_media_file(AdamMedia* media, const char* file_path)
