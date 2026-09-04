@@ -119,6 +119,8 @@ static bool read_binary_file_exact(const char* path, u8** data, size_t expected_
 static u32 calculate_crc32(const u8* data, size_t size);
 static bool prepare_adam_firmware_paths(void);
 static bool load_adam_firmware_paths(void);
+static void resolve_adam_firmware_path(GC_AdamFirmware firmware, char* path,
+    size_t path_size);
 static bool load_adam_content(const char* file_path);
 static bool load_adam_media_path(GC_AdamMediaSlot slot, GC_AdamMediaType type,
     const char* file_path, bool primary, bool discard_current_changes);
@@ -403,41 +405,57 @@ static bool file_has_size(const char* path, size_t expected_size)
 
 static bool prepare_adam_firmware_paths(void)
 {
-    strncpy_fit(loading_bios_path, config_emulator.bios_path.c_str(), sizeof(loading_bios_path));
-    strncpy_fit(loading_adam_eos_path, config_emulator.adam_eos_path.c_str(),
+    resolve_adam_firmware_path(GC_ADAM_FIRMWARE_OS7, loading_bios_path,
+        sizeof(loading_bios_path));
+    resolve_adam_firmware_path(GC_ADAM_FIRMWARE_EOS, loading_adam_eos_path,
         sizeof(loading_adam_eos_path));
-    strncpy_fit(loading_adam_smartwriter_path, config_emulator.adam_smartwriter_path.c_str(),
-        sizeof(loading_adam_smartwriter_path));
-
-    char directory[4096];
-    get_directory(loading_bios_path, directory, sizeof(directory));
-
-    if ((loading_adam_eos_path[0] == '\0') && (loading_bios_path[0] != '\0'))
-        join_path(directory, Adam::GetFirmwareMetadata(GC_ADAM_FIRMWARE_EOS)->aliases[0],
-            loading_adam_eos_path, sizeof(loading_adam_eos_path));
-
-    if ((loading_adam_smartwriter_path[0] == '\0') && (loading_bios_path[0] != '\0'))
-    {
-        const Adam::FirmwareMetadata* metadata =
-            Adam::GetFirmwareMetadata(GC_ADAM_FIRMWARE_SMARTWRITER);
-        for (int i = 0; i < 3; i++)
-        {
-            char candidate[4096];
-            join_path(directory, metadata->aliases[i], candidate, sizeof(candidate));
-            if (file_has_size(candidate, Adam::kSmartWriterROMSize))
-            {
-                strncpy_fit(loading_adam_smartwriter_path, candidate,
-                    sizeof(loading_adam_smartwriter_path));
-                break;
-            }
-        }
-
-        if (loading_adam_smartwriter_path[0] == '\0')
-            join_path(directory, metadata->aliases[0], loading_adam_smartwriter_path,
-                sizeof(loading_adam_smartwriter_path));
-    }
+    resolve_adam_firmware_path(GC_ADAM_FIRMWARE_SMARTWRITER,
+        loading_adam_smartwriter_path, sizeof(loading_adam_smartwriter_path));
 
     return true;
+}
+
+static void resolve_adam_firmware_path(GC_AdamFirmware firmware, char* path,
+    size_t path_size)
+{
+    if (!IsValidPointer(path) || (path_size == 0))
+        return;
+
+    path[0] = '\0';
+    const std::string* configured = NULL;
+    if (firmware == GC_ADAM_FIRMWARE_OS7)
+        configured = &config_emulator.bios_path;
+    else if (firmware == GC_ADAM_FIRMWARE_EOS)
+        configured = &config_emulator.adam_eos_path;
+    else if (firmware == GC_ADAM_FIRMWARE_SMARTWRITER)
+        configured = &config_emulator.adam_smartwriter_path;
+    else
+        return;
+
+    if (!configured->empty())
+    {
+        strncpy_fit(path, configured->c_str(), path_size);
+        return;
+    }
+
+    if ((firmware == GC_ADAM_FIRMWARE_OS7) || config_emulator.bios_path.empty())
+        return;
+
+    char directory[4096];
+    get_directory(config_emulator.bios_path.c_str(), directory, sizeof(directory));
+    const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+    for (int i = 0; i < 4 && metadata->aliases[i]; i++)
+    {
+        char candidate[4096];
+        join_path(directory, metadata->aliases[i], candidate, sizeof(candidate));
+        if (file_has_size(candidate, metadata->size))
+        {
+            strncpy_fit(path, candidate, path_size);
+            return;
+        }
+    }
+
+    join_path(directory, metadata->aliases[0], path, path_size);
 }
 
 static bool load_adam_firmware_paths(void)
@@ -922,6 +940,7 @@ bool emu_unload_content(void)
 bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_path)
 {
     if ((loading_state.load() != Loading_State_None) ||
+        (!emu_is_empty() && (gearcoleco->GetMachine() == GC_MACHINE_ADAM)) ||
         (firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
         return false;
 
@@ -953,6 +972,46 @@ u32 emu_get_adam_firmware_crc(GC_AdamFirmware firmware)
         (firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
         return 0;
     return gearcoleco->GetAdam()->GetFirmwareCRC(firmware);
+}
+
+void emu_get_adam_firmware_path(GC_AdamFirmware firmware, char* path, size_t path_size)
+{
+    resolve_adam_firmware_path(firmware, path, path_size);
+}
+
+bool emu_inspect_adam_firmware(GC_AdamFirmware firmware, const char* file_path,
+    size_t* actual_size, u32* crc)
+{
+    if (!IsValidPointer(actual_size) || !IsValidPointer(crc) ||
+        (firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
+    {
+        return false;
+    }
+
+    *actual_size = 0;
+    *crc = 0;
+    u8* data = NULL;
+    if (!read_binary_file(file_path, &data, actual_size))
+        return false;
+
+    *crc = calculate_crc32(data, *actual_size);
+    SafeDeleteArray(data);
+    return *actual_size == (size_t)Adam::GetFirmwareMetadata(firmware)->size;
+}
+
+bool emu_are_adam_firmware_paths_valid(void)
+{
+    for (int i = 0; i < GC_ADAM_FIRMWARE_COUNT; i++)
+    {
+        char path[4096];
+        size_t actual_size = 0;
+        u32 crc = 0;
+        GC_AdamFirmware firmware = (GC_AdamFirmware)i;
+        resolve_adam_firmware_path(firmware, path, sizeof(path));
+        if (!emu_inspect_adam_firmware(firmware, path, &actual_size, &crc))
+            return false;
+    }
+    return true;
 }
 
 bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path)

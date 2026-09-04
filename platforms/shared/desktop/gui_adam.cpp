@@ -17,15 +17,19 @@
  *
  */
 
+#include <stdio.h>
+#include <string.h>
 #include "gui_adam.h"
 
 #include "imgui.h"
 #include "config.h"
 #include "emu.h"
 #include "gui.h"
+#include "gui_menus.h"
 #include "gui_filedialogs.h"
 #include "gui_debug_constants.h"
 #include "utils.h"
+#include "Adam.h"
 
 enum AdamMediaPendingAction
 {
@@ -34,34 +38,72 @@ enum AdamMediaPendingAction
     AdamMediaPendingEject
 };
 
+struct AdamFirmwareInspection
+{
+    char path[4096];
+    size_t actual_size;
+    u32 crc;
+    bool readable;
+    bool valid;
+};
+
 static bool show_adam_media = false;
+static bool show_adam_firmware = false;
+static bool open_missing_firmware = false;
+static bool missing_adam_firmware = false;
 static bool open_dirty_confirmation = false;
 static int pending_insert_slot = -1;
 static bool pending_insert_discard_changes = false;
 static int pending_save_as_slot = -1;
+static int pending_firmware_browse = -1;
 static int pending_dirty_slot = -1;
 static AdamMediaPendingAction pending_dirty_action = AdamMediaPendingNone;
+static AdamFirmwareInspection firmware_inspections[GC_ADAM_FIRMWARE_COUNT];
 
 static void draw_media_window(void);
 static void draw_media_row(GC_AdamMediaSlot slot, const char* label);
 static void draw_dirty_confirmation(void);
 static void complete_pending_action(bool save);
+static void draw_firmware_window(void);
+static void draw_firmware_row(GC_AdamFirmware firmware, char* path, size_t path_size);
+static void draw_missing_firmware(void);
+static void reset_firmware_paths(void);
+static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* path);
+static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path);
 
 void gui_adam_open_media(void)
 {
     show_adam_media = true;
 }
 
+void gui_adam_open_firmware(void)
+{
+    reset_firmware_paths();
+    show_adam_firmware = true;
+}
+
+void gui_adam_open_missing_firmware(bool adam)
+{
+    missing_adam_firmware = adam;
+    open_missing_firmware = true;
+}
+
 void gui_adam_windows(void)
 {
     if ((emu_get_machine() != GC_MACHINE_ADAM) || emu_is_empty())
-    {
         show_adam_media = false;
-        return;
-    }
 
     if (show_adam_media)
         draw_media_window();
+    if (show_adam_firmware)
+        draw_firmware_window();
+
+    if (open_missing_firmware)
+    {
+        open_missing_firmware = false;
+        ImGui::OpenPopup("Firmware Required");
+    }
+    draw_missing_firmware();
 
     if (pending_insert_slot >= 0)
     {
@@ -77,6 +119,207 @@ void gui_adam_windows(void)
         pending_save_as_slot = -1;
         gui_file_dialog_save_adam_media((GC_AdamMediaSlot)slot);
     }
+    if (pending_firmware_browse >= 0)
+    {
+        GC_AdamFirmware firmware = (GC_AdamFirmware)pending_firmware_browse;
+        pending_firmware_browse = -1;
+        if (firmware == GC_ADAM_FIRMWARE_OS7)
+            gui_file_dialog_load_bios();
+        else
+            gui_file_dialog_load_adam_firmware(firmware);
+    }
+}
+
+static void reset_firmware_paths(void)
+{
+    emu_get_adam_firmware_path(GC_ADAM_FIRMWARE_OS7, gui_bios_path,
+        sizeof(gui_bios_path));
+    emu_get_adam_firmware_path(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path,
+        sizeof(gui_adam_eos_path));
+    emu_get_adam_firmware_path(GC_ADAM_FIRMWARE_SMARTWRITER,
+        gui_adam_smartwriter_path, sizeof(gui_adam_smartwriter_path));
+
+    memset(firmware_inspections, 0, sizeof(firmware_inspections));
+    refresh_firmware_inspection(GC_ADAM_FIRMWARE_OS7, gui_bios_path);
+    refresh_firmware_inspection(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
+    refresh_firmware_inspection(GC_ADAM_FIRMWARE_SMARTWRITER,
+        gui_adam_smartwriter_path);
+}
+
+static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* path)
+{
+    AdamFirmwareInspection* inspection = &firmware_inspections[firmware];
+    strncpy_fit(inspection->path, path, sizeof(inspection->path));
+    inspection->actual_size = 0;
+    inspection->crc = 0;
+    inspection->valid = emu_inspect_adam_firmware(firmware, path,
+        &inspection->actual_size, &inspection->crc);
+    inspection->readable = inspection->actual_size > 0;
+}
+
+static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path)
+{
+    if (!emu_load_adam_firmware(firmware, path))
+    {
+        const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+        char message[256];
+        snprintf(message, sizeof(message),
+            "Invalid %s firmware. Expected exactly %d bytes.", metadata->role_name,
+            metadata->size);
+        gui_set_error_message(message);
+        return false;
+    }
+
+    if (firmware == GC_ADAM_FIRMWARE_OS7)
+        config_emulator.bios_path.assign(path);
+    else if (firmware == GC_ADAM_FIRMWARE_EOS)
+        config_emulator.adam_eos_path.assign(path);
+    else
+        config_emulator.adam_smartwriter_path.assign(path);
+
+    const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+    char message[128];
+    snprintf(message, sizeof(message), "%s firmware configured", metadata->role_name);
+    gui_set_status_message(message, 3000);
+    return true;
+}
+
+static void draw_firmware_window(void)
+{
+    bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(1020, 280), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Firmware Setup", &show_adam_firmware);
+    ImGui::PushFont(gui_default_font);
+
+    if (adam_running)
+        ImGui::TextColored(orange,
+            "ADAM firmware cannot be replaced while ADAM is running. Unload or switch content first.");
+    else
+        ImGui::TextDisabled("Press Enter or Apply to commit a validated path. Unknown revisions are allowed.");
+
+    if (ImGui::BeginTable("##adam_firmware", 7,
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+    {
+        ImGui::TableSetupColumn("Role", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+        ImGui::TableSetupColumn("Path");
+        ImGui::TableSetupColumn("Expected", ImGuiTableColumnFlags_WidthFixed, 75.0f);
+        ImGui::TableSetupColumn("Actual", ImGuiTableColumnFlags_WidthFixed, 65.0f);
+        ImGui::TableSetupColumn("CRC32", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn("Revision", ImGuiTableColumnFlags_WidthFixed, 105.0f);
+        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 135.0f);
+        ImGui::TableHeadersRow();
+
+        ImGui::BeginDisabled(adam_running);
+        draw_firmware_row(GC_ADAM_FIRMWARE_OS7, gui_bios_path, sizeof(gui_bios_path));
+        draw_firmware_row(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path,
+            sizeof(gui_adam_eos_path));
+        draw_firmware_row(GC_ADAM_FIRMWARE_SMARTWRITER, gui_adam_smartwriter_path,
+            sizeof(gui_adam_smartwriter_path));
+        ImGui::EndDisabled();
+        ImGui::EndTable();
+    }
+
+    ImGui::PopFont();
+    ImGui::End();
+    ImGui::PopStyleVar();
+}
+
+static void draw_firmware_row(GC_AdamFirmware firmware, char* path, size_t path_size)
+{
+    const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+    AdamFirmwareInspection* inspection = &firmware_inspections[firmware];
+
+    ImGui::PushID((int)firmware);
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(metadata->role_name);
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(-1.0f);
+    bool apply = ImGui::InputText("##path", path, path_size,
+        ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue);
+    if ((apply || !ImGui::IsItemActive()) && strcmp(inspection->path, path))
+        refresh_firmware_inspection(firmware, path);
+
+    ImGui::TableNextColumn();
+    ImGui::Text("%d B", metadata->size);
+    ImGui::TableNextColumn();
+    if (inspection->readable)
+        ImGui::Text("%zu B", inspection->actual_size);
+    else
+        ImGui::TextDisabled("-");
+    ImGui::TableNextColumn();
+    if (inspection->readable)
+        ImGui::Text("%08X", inspection->crc);
+    else
+        ImGui::TextDisabled("-");
+    ImGui::TableNextColumn();
+    if (!inspection->readable)
+        ImGui::TextColored(red, "Missing");
+    else if (!inspection->valid)
+        ImGui::TextColored(red, "Invalid size");
+    else if (inspection->crc == metadata->crc)
+        ImGui::TextColored(green, "Known");
+    else
+        ImGui::TextColored(orange, "Unknown");
+
+    ImGui::TableNextColumn();
+    if (ImGui::Button("Browse..."))
+        pending_firmware_browse = firmware;
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!inspection->valid);
+    if ((ImGui::Button("Apply") || apply) && apply_firmware_path(firmware, path))
+        refresh_firmware_inspection(firmware, path);
+    ImGui::EndDisabled();
+    ImGui::PopID();
+}
+
+static void draw_missing_firmware(void)
+{
+    if (!ImGui::BeginPopupModal("Firmware Required", NULL,
+        ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        return;
+    }
+
+    gui_dialog_in_use = true;
+    if (missing_adam_firmware)
+    {
+        ImGui::TextUnformatted("ADAM requires valid OS-7, EOS, and SmartWriter firmware.");
+        for (int i = 0; i < GC_ADAM_FIRMWARE_COUNT; i++)
+        {
+            GC_AdamFirmware firmware = (GC_AdamFirmware)i;
+            const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+            char path[4096];
+            size_t actual_size = 0;
+            u32 crc = 0;
+            emu_get_adam_firmware_path(firmware, path, sizeof(path));
+            bool valid = emu_inspect_adam_firmware(firmware, path, &actual_size, &crc);
+            ImGui::BulletText("%s: %s", metadata->role_name,
+                valid ? get_filename(path) : "missing or invalid");
+        }
+    }
+    else
+    {
+        ImGui::TextUnformatted("ColecoVision requires a valid 8 KiB OS-7 BIOS.");
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Configure Firmware...", ImVec2(175, 0)))
+    {
+        gui_adam_open_firmware();
+        gui_dialog_in_use = false;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(100, 0)))
+    {
+        gui_dialog_in_use = false;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
 }
 
 static void draw_media_window(void)

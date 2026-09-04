@@ -21,6 +21,8 @@
 #define GUI_ADAM_H
 
 void gui_adam_open_media(void);
+void gui_adam_open_firmware(void);
+void gui_adam_open_missing_firmware(bool adam);
 void gui_adam_windows(void);
 
 #endif /* GUI_ADAM_H */

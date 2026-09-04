@@ -51,10 +51,6 @@ static bool save_vgm = false;
 static bool choose_savestates_path = false;
 static bool choose_screenshots_path = false;
 static bool choose_backup_ram_path = false;
-static bool open_bios = false;
-static bool open_bios_warning = false;
-static bool open_adam_eos = false;
-static bool open_adam_smartwriter = false;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
 static bool open_machine_change = false;
@@ -85,7 +81,6 @@ static void hotkey_configuration_item(const char* text, config_Hotkey* hotkey);
 static void gamepad_device_selector(int player);
 static void draw_savestate_slot_info(int slot);
 static void draw_adam_keyboard_map(void);
-static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc);
 static void draw_machine_change_popup(void);
 
 void gui_init_menus(void)
@@ -109,10 +104,6 @@ void gui_main_menu(void)
     choose_screenshots_path = false;
     gui_main_menu_hovered = false;
     choose_backup_ram_path = false;
-    open_bios = false;
-    open_bios_warning = false;
-    open_adam_eos = false;
-    open_adam_smartwriter = false;
     save_debug_settings = false;
     load_debug_settings = false;
 
@@ -156,7 +147,7 @@ static void menu_gearcoleco(void)
             if (emu_is_bios_loaded())
                 open_rom = true;
             else
-                open_bios_warning = true;
+                gui_adam_open_missing_firmware(config_emulator.machine == GC_MACHINE_ADAM);
         }
 
         if (ImGui::BeginMenu("Open Recent"))
@@ -175,7 +166,8 @@ static void menu_gearcoleco(void)
                             gui_load_rom(rom_path);
                         }
                         else
-                            open_bios_warning = true;
+                            gui_adam_open_missing_firmware(
+                                config_emulator.machine == GC_MACHINE_ADAM);
                     }
                 }
             }
@@ -185,7 +177,9 @@ static void menu_gearcoleco(void)
 
         if (ImGui::MenuItem("Start ADAM..."))
         {
-            if (!gui_start_adam())
+            if (!emu_are_adam_firmware_paths_valid())
+                gui_adam_open_missing_firmware(true);
+            else if (!gui_start_adam())
                 gui_set_error_message("Unable to boot ADAM. Configure valid OS-7, EOS, and SmartWriter firmware first.");
         }
 
@@ -524,57 +518,8 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Firmware"))
-        {
-            ImGui::TextDisabled("OS-7 / ColecoVision BIOS");
-            if (ImGui::MenuItem("Load OS-7..."))
-            {
-                open_bios = true;
-            }
-            ImGui::PushItemWidth(350);
-            if (ImGui::InputText("##bios_path", gui_bios_path, IM_ARRAYSIZE(gui_bios_path),
-                ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-            {
-                if (emu_load_bios(gui_bios_path))
-                    config_emulator.bios_path.assign(gui_bios_path);
-            }
-            ImGui::PopItemWidth();
-
-            draw_adam_firmware_status(GC_ADAM_FIRMWARE_OS7, 0x3AA93EF3);
-
-            ImGui::Separator();
-            ImGui::TextDisabled("ADAM EOS");
-            if (ImGui::MenuItem("Load EOS..."))
-                open_adam_eos = true;
-            ImGui::PushItemWidth(350);
-            if (ImGui::InputText("##adam_eos_path", gui_adam_eos_path,
-                IM_ARRAYSIZE(gui_adam_eos_path), ImGuiInputTextFlags_AutoSelectAll |
-                ImGuiInputTextFlags_EnterReturnsTrue))
-            {
-                config_emulator.adam_eos_path.assign(gui_adam_eos_path);
-                emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
-            }
-            ImGui::PopItemWidth();
-            draw_adam_firmware_status(GC_ADAM_FIRMWARE_EOS, 0x05A37A34);
-
-            ImGui::Separator();
-            ImGui::TextDisabled("ADAM SmartWriter");
-            if (ImGui::MenuItem("Load SmartWriter..."))
-                open_adam_smartwriter = true;
-            ImGui::PushItemWidth(350);
-            if (ImGui::InputText("##adam_smartwriter_path", gui_adam_smartwriter_path,
-                IM_ARRAYSIZE(gui_adam_smartwriter_path), ImGuiInputTextFlags_AutoSelectAll |
-                ImGuiInputTextFlags_EnterReturnsTrue))
-            {
-                config_emulator.adam_smartwriter_path.assign(gui_adam_smartwriter_path);
-                emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER,
-                    gui_adam_smartwriter_path);
-            }
-            ImGui::PopItemWidth();
-            draw_adam_firmware_status(GC_ADAM_FIRMWARE_SMARTWRITER, 0x58D86A2A);
-
-            ImGui::EndMenu();
-        }
+        if (ImGui::MenuItem("Firmware..."))
+            gui_adam_open_firmware();
 
         ImGui::Separator();
 
@@ -736,21 +681,6 @@ static void draw_machine_change_popup(void)
     }
 
     ImGui::EndPopup();
-}
-
-static void draw_adam_firmware_status(GC_AdamFirmware firmware, u32 known_crc)
-{
-    if (!emu_is_adam_firmware_loaded(firmware))
-    {
-        ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "Missing or invalid");
-        return;
-    }
-
-    u32 crc = emu_get_adam_firmware_crc(firmware);
-    if (crc == known_crc)
-        ImGui::TextColored(service_mcp_http_color, "Known revision (CRC32 %08X)", crc);
-    else
-        ImGui::TextColored(service_mcp_stdio_color, "Unknown revision (CRC32 %08X)", crc);
 }
 
 static void draw_adam_keyboard_map(void)
@@ -1769,7 +1699,7 @@ static void file_dialogs(void)
         if (emu_is_bios_loaded())
             gui_file_dialog_open_rom();
         else
-            open_bios_warning = true;
+            gui_adam_open_missing_firmware(config_emulator.machine == GC_MACHINE_ADAM);
     }
     if (open_ram)
         gui_file_dialog_load_ram();
@@ -1789,12 +1719,6 @@ static void file_dialogs(void)
         gui_file_dialog_choose_screenshot_path();
     if (choose_backup_ram_path)
         gui_file_dialog_choose_saves_path();
-    if (open_bios)
-        gui_file_dialog_load_bios();
-    if (open_adam_eos)
-        gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_EOS);
-    if (open_adam_smartwriter)
-        gui_file_dialog_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER);
     if (save_debug_settings)
         gui_file_dialog_save_debug_settings();
     if (load_debug_settings)
@@ -1811,15 +1735,8 @@ static void file_dialogs(void)
         ImGui::OpenPopup("Load Default Settings");
     }
 
-    if (open_bios_warning)
-    {
-        gui_dialog_in_use = true;
-        ImGui::OpenPopup("BIOS not found");
-    }
-
     gui_popup_modal_about();
     gui_popup_modal_load_defaults();
-    gui_popup_modal_bios();
 }
 
 static void keyboard_configuration_item(const char* text, SDL_Scancode* key, int player)
