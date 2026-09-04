@@ -354,6 +354,9 @@ static void menu_emulator(void)
     if (ImGui::BeginMenu("Emulator"))
     {
         gui_in_use = true;
+        bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+        bool cartridge_options = !adam_running ||
+            (emu_get_core()->GetContentType() == GC_CONTENT_CARTRIDGE);
 
         ImGui::PushItemWidth(160.0f);
         int selected_machine = config_emulator.machine;
@@ -385,7 +388,8 @@ static void menu_emulator(void)
             (emu_get_machine() == GC_MACHINE_ADAM))
         {
             ImGui::PushItemWidth(160.0f);
-            ImGui::Combo("ADAM Boot", &config_emulator.adam_boot_mode,
+            ImGui::Combo(adam_running ? "ADAM Boot (next load)" : "ADAM Boot",
+                &config_emulator.adam_boot_mode,
                 "Auto\0Computer\0Cartridge\0\0");
             ImGui::PopItemWidth();
         }
@@ -529,6 +533,7 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
+        ImGui::BeginDisabled(!cartridge_options);
         if (ImGui::BeginMenu("Mapper"))
         {
             ImGui::PushItemWidth(160.0f);
@@ -536,7 +541,11 @@ static void menu_emulator(void)
             ImGui::PopItemWidth();
             ImGui::EndMenu();
         }
+        ImGui::EndDisabled();
+        if (!cartridge_options && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("Mapper selection applies to cartridge content, not ADAM media or SmartWriter.");
 
+        ImGui::BeginDisabled(!cartridge_options);
         if (ImGui::BeginMenu("Refresh Rate"))
         {
             ImGui::PushItemWidth(130.0f);
@@ -551,6 +560,9 @@ static void menu_emulator(void)
             ImGui::PopItemWidth();
             ImGui::EndMenu();
         }
+        ImGui::EndDisabled();
+        if (!cartridge_options && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("ADAM always uses its native NTSC timing.");
 
         ImGui::Separator();
 
@@ -747,7 +759,9 @@ static void menu_video(void)
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Video Chip"))
+        bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+        ImGui::BeginDisabled(adam_running);
+        if (ImGui::BeginMenu(adam_running ? "Video Chip: TMS9918A" : "Video Chip"))
         {
             ImGui::PushItemWidth(150.0f);
             ImGui::Combo("##video_chip", &config_video.video_chip,
@@ -755,6 +769,9 @@ static void menu_video(void)
             ImGui::PopItemWidth();
             ImGui::EndMenu();
         }
+        ImGui::EndDisabled();
+        if (adam_running && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("ADAM uses the TMS9918A video chip.");
 
         if (ImGui::BeginMenu("Scale"))
         {
@@ -1144,7 +1161,8 @@ static void menu_input(void)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("ADAM Keyboard Map"))
+        if (((config_emulator.machine == GC_MACHINE_ADAM) ||
+            (emu_get_machine() == GC_MACHINE_ADAM)) && ImGui::BeginMenu("ADAM Keyboard Map"))
         {
             draw_adam_keyboard_map();
             ImGui::EndMenu();
@@ -1599,7 +1617,11 @@ static void menu_debug(void)
         if (ImGui::BeginMenu("Audio", config_debug.debug))
         {
             ImGui::MenuItem("Show PSG", "", &config_debug.show_psg, config_debug.debug);
-            ImGui::MenuItem("Show AY-3-8910 (SGM)", "", &config_debug.show_ay8910, config_debug.debug);
+            bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+            ImGui::MenuItem("Show AY-3-8910 (SGM)", "", &config_debug.show_ay8910,
+                config_debug.debug && !adam_running);
+            if (adam_running && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("The SGM AY-3-8910 is not part of the ADAM runtime.");
             ImGui::EndMenu();
         }
 

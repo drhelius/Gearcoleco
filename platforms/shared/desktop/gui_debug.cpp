@@ -81,8 +81,10 @@ void gui_debug_update(void)
 void gui_debug_windows(void)
 {
     gui_debug_update();
+    bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
     emu_get_core()->GetAudio()->EnablePSGDebug(config_debug.debug && config_debug.show_psg);
-    emu_get_core()->GetAudio()->EnableAY8910Debug(config_debug.debug && config_debug.show_ay8910);
+    emu_get_core()->GetAudio()->EnableAY8910Debug(config_debug.debug &&
+        config_debug.show_ay8910 && !adam_running);
 
     if (config_debug.debug)
     {
@@ -100,7 +102,7 @@ void gui_debug_windows(void)
             gui_debug_window_symbols();
         if (config_debug.show_psg)
             gui_debug_window_psg();
-        if (config_debug.show_ay8910)
+        if (config_debug.show_ay8910 && !adam_running)
             gui_debug_window_ay8910();
         if (config_debug.show_adam_printer)
             gui_debug_window_adam_printer();
