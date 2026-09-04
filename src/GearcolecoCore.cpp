@@ -544,7 +544,7 @@ void GearcolecoCore::SaveDisassembledROM()
 
 bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
-    bool pal = m_pCartridge->IsPAL();
+    bool pal = (m_machine != GC_MACHINE_ADAM) && m_pCartridge->IsPAL();
     double master_clock = pal ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
     int lines_per_frame = pal ? GC_LINES_PER_FRAME_PAL : GC_LINES_PER_FRAME_NTSC;
 
@@ -555,7 +555,6 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 
     if (IsReady())
     {
-        bool pal = (m_machine == GC_MACHINE_ADAM) ? false : m_pCartridge->IsPAL();
         if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull284))
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
         if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull320))
