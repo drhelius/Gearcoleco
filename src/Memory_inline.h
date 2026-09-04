@@ -161,6 +161,9 @@ inline GC_Disassembler_Record* Memory::GetDisassemblerRecord(u16 address, u8 ban
 {
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
+    if (IsValidPointer(m_pAdam) && m_pAdam->IsEnabled())
+        return GetDisassemblerRecord(address);
+
     if (address < 0x8000)
         return GetDisassemblerRecord(address);
 
@@ -179,6 +182,9 @@ inline GC_Disassembler_Record* Memory::GetDisassemblerRecord(u16 address, u8 ban
 
 inline u32 Memory::GetTracePhysicalAddress(u16 address, u8 bank)
 {
+    if (IsValidPointer(m_pAdam) && m_pAdam->IsEnabled())
+        return address;
+
     if (address < 0x8000)
         return address;
 

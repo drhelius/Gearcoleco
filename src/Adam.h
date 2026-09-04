@@ -29,6 +29,16 @@ class AdamMedia;
 class Adam : public IOPorts
 {
 public:
+    enum MemorySource
+    {
+        MemorySourceOpenBus = 0,
+        MemorySourceRAM,
+        MemorySourceOS7,
+        MemorySourceEOS,
+        MemorySourceSmartWriter,
+        MemorySourceCartridge
+    };
+
     struct FirmwareMetadata
     {
         const char* role_name;
@@ -88,6 +98,9 @@ public:
     u8 GetControl() const;
     GC_AdamBootMode GetBootMode() const;
     bool HandlesPort(u8 port) const;
+    MemorySource GetMemorySource(u16 address) const;
+    u32 GetMemorySourceOffset(u16 address) const;
+    u32 GetMemoryMapGeneration() const;
 
 private:
     enum PageType
@@ -102,14 +115,16 @@ private:
         const u8* read;
         u8* write;
         PageType type;
+        MemorySource source;
+        u32 source_offset;
     };
 
     void AllocateStorage();
     void InitializeRAM();
     void SetMemoryMap();
     void MapOpenBus(int page);
-    void MapReadOnly(int page, const u8* memory);
-    void MapReadWrite(int page, u8* memory);
+    void MapReadOnly(int page, const u8* memory, MemorySource source, u32 source_offset);
+    void MapReadWrite(int page, u8* memory, u32 source_offset);
     void MapCartridge(int page);
     void WriteMIOC(u8 value);
     void WriteControl(u8 value);
@@ -129,6 +144,7 @@ private:
     u8 m_MIOC;
     u8 m_Control;
     GC_AdamBootMode m_BootMode;
+    u32 m_MemoryMapGeneration;
 };
 
 #endif /* ADAM_H */

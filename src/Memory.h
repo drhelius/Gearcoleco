@@ -66,6 +66,7 @@ public:
     GC_Disassembler_Record** GetDisassemblerRamMap();
     GC_Disassembler_Record** GetDisassemblerBiosMap();
     GC_Disassembler_Record** GetDisassemblerSGMRamMap();
+    GC_Disassembler_Record** GetDisassemblerAdamMap();
     u32 GetPhysicalAddress(u16 address);
     u8 GetBank(u16 address);
     bool IsSGMUpperEnabled() { return m_bSGMUpper; }
@@ -75,6 +76,11 @@ public:
     Mapper* GetMapper();
     void Tick(unsigned int cycles) { m_iTotalCycles += cycles; }
     u64 GetTotalCycles() const { return m_iTotalCycles; }
+
+private:
+    void SyncAdamDisassemblerMap();
+    GC_Disassembler_Record* GetOrCreateDisassemblerRecord(GC_Disassembler_Record** map,
+        int offset, int bank);
 
 private:
     Processor* m_pProcessor;
@@ -88,6 +94,9 @@ private:
     GC_Disassembler_Record** m_pDisassembledRamMap;
     GC_Disassembler_Record** m_pDisassembledBiosMap;
     GC_Disassembler_Record** m_pDisassembledSGMRamMap;
+    GC_Disassembler_Record** m_pDisassembledAdamMap;
+    u32* m_pDisassembledAdamGeneration;
+    u32 m_AdamDisassemblerGeneration;
     bool m_bBiosLoaded;
     bool m_bSGMUpper;
     bool m_bSGMLower;

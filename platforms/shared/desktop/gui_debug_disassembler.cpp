@@ -2507,6 +2507,13 @@ static void save_full_disassembler(FILE* file)
     Memory* memory = emu_get_core()->GetMemory();
     bool assembler_syntax = disassembler_uses_assembler_syntax();
 
+    if (emu_get_core()->GetMachine() == GC_MACHINE_ADAM)
+    {
+        save_full_disassembler_map(file, assembler_syntax ? "" : "ADAM",
+            memory->GetDisassemblerAdamMap(), 0x10000);
+        return;
+    }
+
     save_full_disassembler_map(file, assembler_syntax ? "" : "BIOS", memory->GetDisassemblerBiosMap(), 0x2000);
     save_full_disassembler_map(file, assembler_syntax ? "" : "RAM", memory->GetDisassemblerRamMap(), 0x400);
     save_full_disassembler_map(file, assembler_syntax ? "" : "SGM", memory->GetDisassemblerSGMRamMap(), 0x8000);

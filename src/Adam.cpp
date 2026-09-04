@@ -79,6 +79,7 @@ Adam::Adam()
     m_MIOC = 0;
     m_Control = 0;
     m_BootMode = GC_ADAM_BOOT_COMPUTER;
+    m_MemoryMapGeneration = 0;
 
     for (int i = 0; i < kPageCount; i++)
         MapOpenBus(i);
@@ -140,6 +141,7 @@ void Adam::SetEnabled(bool enabled)
     {
         for (int i = 0; i < kPageCount; i++)
             MapOpenBus(i);
+        m_MemoryMapGeneration++;
     }
 }
 
@@ -425,15 +427,19 @@ void Adam::Out(u8 port, u8 value)
 
 void Adam::WriteMIOC(u8 value)
 {
+    bool mapping_changed = (m_MIOC & 0x0F) != (value & 0x0F);
     m_MIOC = value;
-    SetMemoryMap();
+    if (mapping_changed)
+        SetMemoryMap();
 }
 
 void Adam::WriteControl(u8 value)
 {
     bool reset = (m_Control & 0x01) && !(value & 0x01);
+    bool mapping_changed = (m_Control & 0x02) != (value & 0x02);
     m_Control = value;
-    SetMemoryMap();
+    if (mapping_changed)
+        SetMemoryMap();
 
     if (reset && IsValidPointer(m_pAdamNet))
         m_pAdamNet->Reset(false);
@@ -444,20 +450,26 @@ void Adam::MapOpenBus(int page)
     m_Pages[page].read = NULL;
     m_Pages[page].write = NULL;
     m_Pages[page].type = PageOpenBus;
+    m_Pages[page].source = MemorySourceOpenBus;
+    m_Pages[page].source_offset = 0;
 }
 
-void Adam::MapReadOnly(int page, const u8* memory)
+void Adam::MapReadOnly(int page, const u8* memory, MemorySource source, u32 source_offset)
 {
     m_Pages[page].read = memory;
     m_Pages[page].write = NULL;
     m_Pages[page].type = PageMemory;
+    m_Pages[page].source = source;
+    m_Pages[page].source_offset = source_offset;
 }
 
-void Adam::MapReadWrite(int page, u8* memory)
+void Adam::MapReadWrite(int page, u8* memory, u32 source_offset)
 {
     m_Pages[page].read = memory;
     m_Pages[page].write = memory;
     m_Pages[page].type = PageMemory;
+    m_Pages[page].source = MemorySourceRAM;
+    m_Pages[page].source_offset = source_offset;
 }
 
 void Adam::MapCartridge(int page)
@@ -465,10 +477,14 @@ void Adam::MapCartridge(int page)
     m_Pages[page].read = NULL;
     m_Pages[page].write = NULL;
     m_Pages[page].type = PageCartridge;
+    m_Pages[page].source = MemorySourceCartridge;
+    m_Pages[page].source_offset = 0;
 }
 
 void Adam::SetMemoryMap()
 {
+    m_MemoryMapGeneration++;
+
     if (!m_Enabled || !IsValidPointer(m_pMainRAM))
     {
         for (int i = 0; i < kPageCount; i++)
@@ -479,23 +495,26 @@ void Adam::SetMemoryMap()
     switch (m_MIOC & 0x03)
     {
         case 0:
-            MapReadOnly(0, m_pSmartWriterROM + 0x0000);
-            MapReadOnly(1, m_pSmartWriterROM + 0x2000);
-            MapReadOnly(2, m_pSmartWriterROM + 0x4000);
-            MapReadOnly(3, (m_Control & 0x02) ? m_pEOSROM : m_pSmartWriterROM + 0x6000);
+            MapReadOnly(0, m_pSmartWriterROM + 0x0000, MemorySourceSmartWriter, 0x0000);
+            MapReadOnly(1, m_pSmartWriterROM + 0x2000, MemorySourceSmartWriter, 0x2000);
+            MapReadOnly(2, m_pSmartWriterROM + 0x4000, MemorySourceSmartWriter, 0x4000);
+            if (m_Control & 0x02)
+                MapReadOnly(3, m_pEOSROM, MemorySourceEOS, 0x0000);
+            else
+                MapReadOnly(3, m_pSmartWriterROM + 0x6000, MemorySourceSmartWriter, 0x6000);
             break;
         case 1:
             for (int i = 0; i < 4; i++)
-                MapReadWrite(i, m_pMainRAM + (i * kPageSize));
+                MapReadWrite(i, m_pMainRAM + (i * kPageSize), i * kPageSize);
             break;
         case 2:
             for (int i = 0; i < 4; i++)
                 MapOpenBus(i);
             break;
         case 3:
-            MapReadOnly(0, m_pOS7ROM);
+            MapReadOnly(0, m_pOS7ROM, MemorySourceOS7, 0x0000);
             for (int i = 1; i < 4; i++)
-                MapReadWrite(i, m_pMainRAM + (i * kPageSize));
+                MapReadWrite(i, m_pMainRAM + (i * kPageSize), i * kPageSize);
             break;
     }
 
@@ -503,7 +522,7 @@ void Adam::SetMemoryMap()
     {
         case 0:
             for (int i = 4; i < 8; i++)
-                MapReadWrite(i, m_pMainRAM + (i * kPageSize));
+                MapReadWrite(i, m_pMainRAM + (i * kPageSize), i * kPageSize);
             break;
         case 1:
         case 2:
@@ -610,4 +629,20 @@ u8 Adam::GetControl() const
 GC_AdamBootMode Adam::GetBootMode() const
 {
     return m_BootMode;
+}
+
+Adam::MemorySource Adam::GetMemorySource(u16 address) const
+{
+    return m_Pages[address >> 13].source;
+}
+
+u32 Adam::GetMemorySourceOffset(u16 address) const
+{
+    const MemoryPage* page = &m_Pages[address >> 13];
+    return page->source_offset + (address & 0x1FFF);
+}
+
+u32 Adam::GetMemoryMapGeneration() const
+{
+    return m_MemoryMapGeneration;
 }
