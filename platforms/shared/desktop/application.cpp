@@ -23,6 +23,7 @@
 #include "gearcoleco.h"
 #include "config.h"
 #include "gui.h"
+#include "gui_adam.h"
 #include "gui_filedialogs.h"
 #include "gui_debug_disassembler.h"
 #include "ogl_renderer.h"
@@ -43,6 +44,7 @@
 #endif
 
 static bool running = true;
+static bool quit_pending = false;
 static bool paused_when_focus_lost = false;
 static Uint64 mouse_last_motion_time = 0;
 static const Uint64 mouse_hide_timeout_ms = 1500;
@@ -54,6 +56,7 @@ static bool sdl_init(void);
 static void sdl_destroy(void);
 static void sdl_events(void);
 static void sdl_events_quit(const SDL_Event* event);
+static void request_quit(void);
 static void sdl_events_app(const SDL_Event* event);
 static void handle_mouse_cursor(void);
 static void handle_menu(void);
@@ -185,6 +188,8 @@ void application_mainloop(void)
         handle_single_instance();
         run_emulator();
         display_render();
+        if (quit_pending && !gui_is_rom_loading())
+            request_quit();
         display_frame_throttle();
     }
 }
@@ -195,6 +200,12 @@ void application_trigger_quit(void)
     SDL_zero(event);
     event.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&event);
+}
+
+void application_confirm_quit(void)
+{
+    quit_pending = false;
+    running = false;
 }
 
 #if defined(__APPLE__)
@@ -499,15 +510,30 @@ static void sdl_events_quit(const SDL_Event* event)
 {
     if (event->type == SDL_EVENT_QUIT)
     {
-        running = false;
+        request_quit();
         return;
     }
 
     if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event->window.windowID == SDL_GetWindowID(application_sdl_window))
     {
-        running = false;
+        request_quit();
         return;
     }
+}
+
+static void request_quit(void)
+{
+    if (gui_is_rom_loading())
+    {
+        quit_pending = true;
+        return;
+    }
+
+    quit_pending = false;
+    if (emu_flush_adam_media())
+        running = false;
+    else
+        gui_adam_open_quit_confirmation();
 }
 
 static void sdl_events_app(const SDL_Event* event)

@@ -118,6 +118,8 @@ EXTERN bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
 EXTERN bool emu_save_adam_media(GC_AdamMediaSlot slot);
 EXTERN bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path);
 EXTERN bool emu_discard_adam_media_changes(GC_AdamMediaSlot slot);
+EXTERN bool emu_discard_all_adam_media_changes(void);
+EXTERN bool emu_flush_adam_media(void);
 EXTERN bool emu_eject_adam_media(GC_AdamMediaSlot slot);
 EXTERN bool emu_set_adam_media_write_protected(GC_AdamMediaSlot slot, bool write_protected);
 EXTERN bool emu_get_adam_media_info(GC_AdamMediaSlot slot, Emu_AdamMediaInfo* info);

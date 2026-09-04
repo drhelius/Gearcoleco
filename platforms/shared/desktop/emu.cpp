@@ -139,7 +139,6 @@ static void clear_adam_host_media(GC_AdamMediaSlot slot);
 static void clear_all_adam_host_media(void);
 static void make_adam_working_path(const char* source_path, GC_AdamMediaType type,
     GC_AdamMediaSlot slot, u32 base_crc, bool primary, char* path, size_t path_size);
-static bool flush_all_adam_media(void);
 static bool get_adam_state_path(int index, char* path, size_t path_size);
 
 bool emu_init(void)
@@ -198,7 +197,7 @@ void emu_destroy(void)
     loading_state.store(Loading_State_None);
 
     save_ram();
-    if (!flush_all_adam_media())
+    if (!emu_flush_adam_media())
         Error("Unable to flush one or more ADAM working copies during shutdown");
     SafeDelete(mcp_manager);
     rewind_destroy();
@@ -249,7 +248,7 @@ bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     if (!IsValidPointer(file_path) || (file_path[0] == '\0'))
         return false;
 
-    if (!flush_all_adam_media())
+    if (!emu_flush_adam_media())
     {
         Error("Unable to flush dirty ADAM media; current content was kept loaded");
         return false;
@@ -935,8 +934,11 @@ static bool write_adam_media_file(AdamMedia* media, const char* file_path)
     return true;
 }
 
-static bool flush_all_adam_media(void)
+bool emu_flush_adam_media(void)
 {
+    if (loading_state.load() != Loading_State_None)
+        return false;
+
     bool flushed = true;
     for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
     {
@@ -948,7 +950,7 @@ static bool flush_all_adam_media(void)
 
 bool emu_start_adam(void)
 {
-    if ((loading_state.load() != Loading_State_None) || !flush_all_adam_media())
+    if ((loading_state.load() != Loading_State_None) || !emu_flush_adam_media())
         return false;
 
     prepare_adam_firmware_paths();
@@ -974,7 +976,7 @@ bool emu_start_adam(void)
 
 bool emu_unload_content(void)
 {
-    if ((loading_state.load() != Loading_State_None) || !flush_all_adam_media())
+    if ((loading_state.load() != Loading_State_None) || !emu_flush_adam_media())
         return false;
 
     save_ram();
@@ -1144,6 +1146,30 @@ bool emu_discard_adam_media_changes(GC_AdamMediaSlot slot)
     media->ClearDirty();
     rewind_reset();
     runahead_reset();
+    return true;
+}
+
+bool emu_discard_all_adam_media_changes(void)
+{
+    if (loading_state.load() != Loading_State_None)
+        return false;
+
+    bool discarded = false;
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        AdamMedia* media = gearcoleco->GetAdamMedia((GC_AdamMediaSlot)i);
+        if (IsValidPointer(media) && media->IsInserted() && media->IsDirty())
+        {
+            media->ClearDirty();
+            discarded = true;
+        }
+    }
+
+    if (discarded)
+    {
+        rewind_reset();
+        runahead_reset();
+    }
     return true;
 }
 

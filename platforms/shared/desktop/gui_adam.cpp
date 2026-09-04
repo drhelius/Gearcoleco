@@ -25,6 +25,7 @@
 #include "config.h"
 #include "emu.h"
 #include "gui.h"
+#include "application.h"
 #include "gui_menus.h"
 #include "gui_filedialogs.h"
 #include "gui_debug_constants.h"
@@ -51,6 +52,7 @@ static bool show_adam_media = false;
 static bool show_adam_firmware = false;
 static bool open_missing_firmware = false;
 static bool missing_adam_firmware = false;
+static bool open_quit_confirmation = false;
 static bool open_dirty_confirmation = false;
 static int pending_insert_slot = -1;
 static bool pending_insert_discard_changes = false;
@@ -67,6 +69,7 @@ static void complete_pending_action(bool save);
 static void draw_firmware_window(void);
 static void draw_firmware_row(GC_AdamFirmware firmware, char* path, size_t path_size);
 static void draw_missing_firmware(void);
+static void draw_quit_confirmation(void);
 static void reset_firmware_paths(void);
 static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* path);
 static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path);
@@ -88,6 +91,11 @@ void gui_adam_open_missing_firmware(bool adam)
     open_missing_firmware = true;
 }
 
+void gui_adam_open_quit_confirmation(void)
+{
+    open_quit_confirmation = true;
+}
+
 void gui_adam_windows(void)
 {
     if ((emu_get_machine() != GC_MACHINE_ADAM) || emu_is_empty())
@@ -104,6 +112,13 @@ void gui_adam_windows(void)
         ImGui::OpenPopup("Firmware Required");
     }
     draw_missing_firmware();
+
+    if (open_quit_confirmation)
+    {
+        open_quit_confirmation = false;
+        ImGui::OpenPopup("Unsaved ADAM Media on Quit");
+    }
+    draw_quit_confirmation();
 
     if (pending_insert_slot >= 0)
     {
@@ -312,6 +327,69 @@ static void draw_missing_firmware(void)
         gui_adam_open_firmware();
         gui_dialog_in_use = false;
         ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(100, 0)))
+    {
+        gui_dialog_in_use = false;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+}
+
+static void draw_quit_confirmation(void)
+{
+    if (!ImGui::BeginPopupModal("Unsaved ADAM Media on Quit", NULL,
+        ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        return;
+    }
+
+    gui_dialog_in_use = true;
+    ImGui::TextUnformatted("One or more ADAM working copies could not be saved.");
+    ImGui::TextUnformatted("Choose Save As for affected media, then retry quitting.");
+    ImGui::Separator();
+
+    static const char* labels[GC_ADAM_MEDIA_SLOT_COUNT] = {
+        "Disk 1", "Disk 2", "Data Pack 1", "Data Pack 2"
+    };
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        Emu_AdamMediaInfo info;
+        emu_get_adam_media_info((GC_AdamMediaSlot)i, &info);
+        if (!info.dirty)
+            continue;
+
+        ImGui::PushID(i);
+        ImGui::Text("%s: %s", labels[i],
+            info.path[0] ? get_filename(info.path) : "State snapshot");
+        ImGui::SameLine();
+        if (ImGui::Button("Save As..."))
+            pending_save_as_slot = i;
+        ImGui::PopID();
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Retry", ImVec2(100, 0)))
+    {
+        if (emu_flush_adam_media())
+        {
+            gui_dialog_in_use = false;
+            ImGui::CloseCurrentPopup();
+            application_confirm_quit();
+        }
+        else
+            gui_set_error_message("Unable to save one or more ADAM working copies.");
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Discard and Quit", ImVec2(140, 0)))
+    {
+        if (emu_discard_all_adam_media_changes())
+        {
+            gui_dialog_in_use = false;
+            ImGui::CloseCurrentPopup();
+            application_confirm_quit();
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Cancel", ImVec2(100, 0)))
