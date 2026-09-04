@@ -176,7 +176,7 @@ static void menu_gearcoleco(void)
             ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Boot ADAM", NULL, false, config_emulator.machine == GC_MACHINE_ADAM))
+        if (ImGui::MenuItem("Start ADAM..."))
         {
             if (emu_start_adam())
                 application_update_title_with_rom("ADAM");
@@ -386,9 +386,19 @@ static void menu_emulator(void)
         }
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Auto selects ColecoVision cartridges and ADAM .ddp/.dsk/.m3u media.\nADAM without content requires explicit ADAM selection.");
+            ImGui::SetTooltip("Auto selects ColecoVision cartridges and ADAM .ddp/.dsk/.m3u media.\nUse Start ADAM in the Gearcoleco menu for a no-content SmartWriter boot.");
 
-        if (config_emulator.machine == GC_MACHINE_ADAM)
+        if (emu_is_empty())
+            ImGui::TextDisabled("Running: None");
+        else if (emu_get_machine() == GC_MACHINE_ADAM)
+            ImGui::TextDisabled("Running: ADAM / %s",
+                emu_get_core()->GetAdamBootMode() == GC_ADAM_BOOT_CARTRIDGE ?
+                "Cartridge" : "Computer");
+        else
+            ImGui::TextDisabled("Running: ColecoVision");
+
+        if ((config_emulator.machine == GC_MACHINE_ADAM) ||
+            (emu_get_machine() == GC_MACHINE_ADAM))
         {
             ImGui::PushItemWidth(160.0f);
             ImGui::Combo("ADAM Boot", &config_emulator.adam_boot_mode,
