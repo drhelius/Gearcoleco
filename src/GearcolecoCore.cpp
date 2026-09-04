@@ -944,6 +944,9 @@ bool GearcolecoCore::SaveState(const char* path, int index, bool screenshot)
 bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
 {
     using namespace std;
+#if defined(__LIBRETRO__)
+    size_t fixed_size = GetLibretroSaveStateSize();
+#endif
 
     Debug("Saving state to buffer [%d bytes]...", size);
 
@@ -956,7 +959,7 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
     if (!IsValidPointer(buffer))
     {
 #if defined(__LIBRETRO__)
-        size = GC_LIBRETRO_SAVESTATE_SIZE;
+        size = fixed_size;
         return true;
 #else
         stringstream stream;
@@ -971,7 +974,7 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
     else
     {
 #if defined(__LIBRETRO__)
-        if (size < GC_LIBRETRO_SAVESTATE_SIZE)
+        if (size < fixed_size)
         {
             Error("Failed to save state to buffer: output buffer is too small");
             return false;
@@ -993,17 +996,17 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
         }
 
 #if defined(__LIBRETRO__)
-        if ((size < sizeof(GC_SaveState_Header_Libretro)) || (size > GC_LIBRETRO_SAVESTATE_SIZE))
+        if ((size < sizeof(GC_SaveState_Header_Libretro)) || (size > fixed_size))
         {
             Error("Invalid libretro save-state size: %zu", size);
             return false;
         }
 
         size_t source_header = size - sizeof(GC_SaveState_Header_Libretro);
-        size_t destination_header = GC_LIBRETRO_SAVESTATE_SIZE - sizeof(GC_SaveState_Header_Libretro);
+        size_t destination_header = fixed_size - sizeof(GC_SaveState_Header_Libretro);
         memmove(buffer + destination_header, buffer + source_header, sizeof(GC_SaveState_Header_Libretro));
-        memset(buffer + source_header, 0, GC_LIBRETRO_SAVESTATE_SIZE - size);
-        size = GC_LIBRETRO_SAVESTATE_SIZE;
+        memset(buffer + source_header, 0, fixed_size - size);
+        size = fixed_size;
 #else
         size = direct_stream.size();
 #endif
@@ -1049,9 +1052,10 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
 
         size_t data_size = static_cast<size_t>(stream.tellp());
 
-        if ((data_size + sizeof(header)) > GC_LIBRETRO_SAVESTATE_SIZE)
+        size_t fixed_size = GetLibretroSaveStateSize();
+        if ((data_size + sizeof(header)) > fixed_size)
         {
-            Error("Libretro save state exceeds fixed %d-byte size", GC_LIBRETRO_SAVESTATE_SIZE);
+            Error("Libretro save state exceeds fixed %zu-byte size", fixed_size);
             return false;
         }
 #else
@@ -1110,6 +1114,12 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
     Log("Invalid rom.");
 
     return false;
+}
+
+size_t GearcolecoCore::GetLibretroSaveStateSize() const
+{
+    return m_machine == GC_MACHINE_ADAM ? GC_LIBRETRO_SAVESTATE_SIZE_ADAM :
+        GC_LIBRETRO_SAVESTATE_SIZE_COLECOVISION;
 }
 
 bool GearcolecoCore::LoadState(const char* path, int index)

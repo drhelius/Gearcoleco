@@ -2302,12 +2302,14 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 size_t retro_serialize_size(void)
 {
-    return GC_LIBRETRO_SAVESTATE_SIZE;
+    return IsValidPointer(core) ? core->GetLibretroSaveStateSize() :
+        GC_LIBRETRO_SAVESTATE_SIZE_COLECOVISION;
 }
 
 bool retro_serialize(void *data, size_t size)
 {
-    if (!content_loaded || !data || (size < GC_LIBRETRO_SAVESTATE_SIZE) ||
+    size_t required_size = retro_serialize_size();
+    if (!content_loaded || !data || (size < required_size) ||
         !core->SaveState(reinterpret_cast<u8*>(data), size))
         return false;
 
@@ -2328,7 +2330,7 @@ bool retro_serialize(void *data, size_t size)
 
 bool retro_unserialize(const void *data, size_t size)
 {
-    if (!content_loaded || !data || (size != GC_LIBRETRO_SAVESTATE_SIZE) ||
+    if (!content_loaded || !data || (size != retro_serialize_size()) ||
         (size < sizeof(GC_SaveState_Header_Libretro) + sizeof(RetroAdamState)))
         return false;
 

@@ -36,11 +36,16 @@ static bool storage_dirty = true;
 static int seek_age = -1;
 static size_t slot_size = 0;
 static size_t allocated_size = 0;
+static size_t estimated_size = 0;
+static int estimated_capacity = 0;
+static bool capacity_limited = false;
 static int snapshot_width = 0;
 static int snapshot_height = 0;
+static const size_t kAdamRewindMemoryLimit = 512U * 1024U * 1024U;
 
 static int slot_at(int age);
 static int get_target_capacity(void);
+static int get_effective_capacity(size_t target_slot_size);
 static size_t get_target_slot_size(void);
 static bool ensure_storage(void);
 static void release_storage(void);
@@ -62,6 +67,9 @@ void rewind_destroy(void)
     active = false;
     storage_dirty = true;
     seek_age = -1;
+    estimated_size = 0;
+    estimated_capacity = 0;
+    capacity_limited = false;
 }
 
 void rewind_reset(void)
@@ -72,6 +80,9 @@ void rewind_reset(void)
     active = false;
     storage_dirty = true;
     seek_age = -1;
+    estimated_size = 0;
+    estimated_capacity = 0;
+    capacity_limited = false;
     for (int i = 0; i < REWIND_MAX_SNAPSHOTS; i++)
         sizes[i] = 0;
 
@@ -80,6 +91,10 @@ void rewind_reset(void)
         release_storage();
         return;
     }
+
+    size_t target_slot_size = get_target_slot_size();
+    if (target_slot_size > 0)
+        get_effective_capacity(target_slot_size);
 }
 
 void rewind_push(void)
@@ -182,6 +197,16 @@ size_t rewind_get_memory_usage(void)
     return allocated_size;
 }
 
+size_t rewind_get_estimated_memory_usage(void)
+{
+    return estimated_size;
+}
+
+bool rewind_is_capacity_limited(void)
+{
+    return capacity_limited;
+}
+
 bool rewind_seek(int age)
 {
     if (age < 0 || age >= count)
@@ -207,7 +232,7 @@ bool rewind_seek(int age)
 
 int rewind_get_capacity(void)
 {
-    return get_target_capacity();
+    return estimated_capacity;
 }
 
 int rewind_get_frames_per_snapshot(void)
@@ -238,6 +263,22 @@ static int get_target_capacity(void)
     return target;
 }
 
+static int get_effective_capacity(size_t target_slot_size)
+{
+    int target = get_target_capacity();
+    capacity_limited = false;
+    if ((emu_get_machine() == GC_MACHINE_ADAM) && (target_slot_size > 0) &&
+        ((size_t)target > (kAdamRewindMemoryLimit / target_slot_size)))
+    {
+        target = (int)(kAdamRewindMemoryLimit / target_slot_size);
+        capacity_limited = true;
+    }
+
+    estimated_capacity = target;
+    estimated_size = target > 0 ? (size_t)target * target_slot_size : 0;
+    return target;
+}
+
 static size_t get_target_slot_size(void)
 {
     if (emu_is_empty())
@@ -258,13 +299,21 @@ static bool ensure_storage(void)
         return false;
     }
 
-    int target_capacity = get_target_capacity();
+    int target_capacity = get_effective_capacity(slot_size);
     if (!storage_dirty && IsValidPointer(buffer) && (capacity == target_capacity))
         return true;
 
     size_t target_slot_size = get_target_slot_size();
     if (target_slot_size == 0)
         return false;
+    target_capacity = get_effective_capacity(target_slot_size);
+    if (target_capacity < 1)
+    {
+        Log("Rewind: ADAM state exceeds the %zu MB rewind memory limit",
+            kAdamRewindMemoryLimit / (1024U * 1024U));
+        release_storage();
+        return false;
+    }
 
     GC_RuntimeInfo runtime;
     bool runtime_valid = emu_get_core()->GetRuntimeInfo(runtime);

@@ -93,6 +93,7 @@ public:
     bool SaveState(u8* buffer, size_t& size, bool screenshot = false);
     bool LoadState(const char* path = NULL, int index = -1);
     bool LoadState(const u8* buffer, size_t size);
+    size_t GetLibretroSaveStateSize() const;
     bool GetSaveStateHeader(int index, const char* path, GC_SaveState_Header* header);
     bool GetSaveStateScreenshot(int index, const char* path, GC_SaveState_Screenshot* screenshot);
     Memory* GetMemory();

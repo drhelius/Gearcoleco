@@ -233,8 +233,11 @@ static void menu_gearcoleco(void)
 
         if (ImGui::BeginMenu("Run-Ahead"))
         {
+            bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
             ImGui::PushItemWidth(140.0f);
+            ImGui::BeginDisabled(adam_running);
             ImGui::Combo("##runahead", &config_emulator.runahead, "Disabled\0" "1 Frame\0" "2 Frames\0" "3 Frames\0\0");
+            ImGui::EndDisabled();
             ImGui::PopItemWidth();
 
             if (ImGui::IsItemHovered())
@@ -245,6 +248,9 @@ static void menu_gearcoleco(void)
                 ImGui::Text("Ignored while fast-forwarding.");
                 ImGui::EndTooltip();
             }
+
+            if (adam_running)
+                ImGui::TextDisabled("Unavailable for ADAM because states include mounted media.");
 
             ImGui::EndMenu();
         }
