@@ -376,7 +376,8 @@ void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot, bool discard_curre
     pending_dialog_bool_param1 = discard_current_changes;
     bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
     SDL_DialogFileFilter filters[] = {
-        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk" : "ddp" }
+        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images",
+            disk ? "dsk;zip" : "ddp;zip" }
     };
     const char* default_path = config_emulator.last_open_path.empty() ? NULL :
         config_emulator.last_open_path.c_str();
@@ -645,7 +646,6 @@ static void process_dialog_result(FileDialogID id, const char* path)
                 gui_set_error_message("Unable to insert ADAM media. Check the image type, exact size, slot, and working-copy status.");
             else
             {
-                config_push_recent_media(path);
                 std::string str_path = path;
                 std::string::size_type pos = str_path.find_last_of("\\/");
                 config_emulator.last_open_path.assign(str_path.substr(0, pos + 1));
