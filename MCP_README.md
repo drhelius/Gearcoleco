@@ -372,6 +372,8 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `get_psg_status` | Get SN76489 PSG channel state |
 | `get_ay8910_status` | Get AY-3-8910 SGM sound chip state |
 | `get_media_info` | Get the active machine, cartridge, firmware, and ADAM media information |
+| `get_adam_printer_output` | Read the captured ADAM printer spool as text and hex |
+| `clear_adam_printer_output` | Clear the captured ADAM printer spool |
 
 ### Sprites & Screen
 | Tool | Description |

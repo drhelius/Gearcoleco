@@ -29,6 +29,7 @@
 #include "gui_debug_rewind.h"
 #include "gui_debug_psg.h"
 #include "gui_debug_ay8910.h"
+#include "gui_debug_adam.h"
 #include "gui_debug_tms9918.h"
 #include "gui_debug_f18a.h"
 #include "gui_debug_trace_logger.h"
@@ -101,6 +102,8 @@ void gui_debug_windows(void)
             gui_debug_window_psg();
         if (config_debug.show_ay8910)
             gui_debug_window_ay8910();
+        if (config_debug.show_adam_printer)
+            gui_debug_window_adam_printer();
         if (emu_get_core()->GetVideoChip() == GC_VIDEO_CHIP_F18A)
         {
             if (config_debug.show_f18a_nametables)

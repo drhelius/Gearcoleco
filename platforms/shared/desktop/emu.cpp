@@ -29,6 +29,7 @@
 #include "gearcoleco.h"
 #include "Adam.h"
 #include "AdamMedia.h"
+#include "AdamNet.h"
 #include "F18A.h"
 #include "sound_queue.h"
 #include "config.h"
@@ -1086,6 +1087,30 @@ void emu_reconcile_adam_media_after_state_load(void)
         media->SetWriteProtected(true);
         media->ClearDirty();
     }
+}
+
+bool emu_save_adam_printer(const char* file_path)
+{
+    if (!IsValidPointer(file_path) || (file_path[0] == '\0') ||
+        (gearcoleco->GetMachine() != GC_MACHINE_ADAM))
+    {
+        return false;
+    }
+
+    AdamNet* adam_net = gearcoleco->GetAdam()->GetAdamNet();
+    if (!IsValidPointer(adam_net))
+        return false;
+
+    std::ofstream file;
+    open_ofstream_utf8(file, file_path, std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!file.is_open())
+        return false;
+
+    int size = adam_net->GetPrinterSize();
+    if (size > 0)
+        file.write(reinterpret_cast<const char*>(adam_net->GetPrinterData()), size);
+    file.close();
+    return file.good();
 }
 
 void emu_adam_key_pressed(GC_AdamKey key)

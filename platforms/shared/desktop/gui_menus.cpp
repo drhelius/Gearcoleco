@@ -1691,6 +1691,13 @@ static void menu_debug(void)
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("ADAM", config_debug.debug &&
+            (emu_get_machine() == GC_MACHINE_ADAM)))
+        {
+            ImGui::MenuItem("Show Printer", "", &config_debug.show_adam_printer);
+            ImGui::EndMenu();
+        }
+
         ImGui::MenuItem("Show Trace Logger", "", &config_debug.show_trace_logger, config_debug.debug);
         ImGui::MenuItem("Show Rewind", "", &config_debug.show_rewind, config_debug.debug);
 

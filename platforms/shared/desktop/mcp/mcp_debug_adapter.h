@@ -128,6 +128,8 @@ public:
 
     // Media and state management
     json GetMediaInfo();
+    json GetAdamPrinterOutput();
+    json ClearAdamPrinterOutput();
     json ListRecentMedia();
     json StartLoadMedia(const std::string& file_path);
     bool IsMediaLoading() const;

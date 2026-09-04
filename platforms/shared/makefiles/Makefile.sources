@@ -38,6 +38,7 @@ SOURCES_CXX := \
     $(DESKTOP_SRC_DIR)/sound_queue.cpp \
     $(DESKTOP_SRC_DIR)/single_instance.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug.cpp \
+    $(DESKTOP_SRC_DIR)/gui_debug_adam.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_disassembler.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_memory.cpp \
     $(DESKTOP_SRC_DIR)/gui_debug_memeditor.cpp \

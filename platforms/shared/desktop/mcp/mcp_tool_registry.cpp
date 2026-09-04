@@ -264,7 +264,8 @@ static const char* const kMcpAudioTools[] =
 
 static const char* const kMcpMediaTools[] =
 {
-    "load_media", "get_media_info", "list_recent_media"
+    "load_media", "get_media_info", "list_recent_media", "get_adam_printer_output",
+    "clear_adam_printer_output"
 };
 
 static const char* const kMcpCaptureTools[] =

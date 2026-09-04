@@ -751,6 +751,30 @@ json McpServer::BuildToolList()
     });
 
     tools.push_back({
+        {"name", "get_adam_printer_output"},
+        {"title", "Get ADAM Printer Output"},
+        {"description", "Read the captured ADAM printer spool as text and hexadecimal bytes."},
+        {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "clear_adam_printer_output"},
+        {"title", "Clear ADAM Printer Output"},
+        {"description", "Clear the captured ADAM printer spool."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
         {"name", "list_recent_media"},
         {"title", "List Recent Media"},
         {"description", "List recent cartridge or ADAM media paths for load_media."},
@@ -2425,6 +2449,14 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     else if (normalizedTool == "get_media_info")
     {
         return m_debugAdapter.GetMediaInfo();
+    }
+    else if (normalizedTool == "get_adam_printer_output")
+    {
+        return m_debugAdapter.GetAdamPrinterOutput();
+    }
+    else if (normalizedTool == "clear_adam_printer_output")
+    {
+        return m_debugAdapter.ClearAdamPrinterOutput();
     }
     else if (normalizedTool == "list_recent_media")
     {

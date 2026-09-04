@@ -19,6 +19,7 @@
 
 #include "mcp_debug_adapter.h"
 #include "Adam.h"
+#include "AdamNet.h"
 #include "F18AGPU.h"
 #include "Input.h"
 #include "log.h"
@@ -682,6 +683,48 @@ json DebugAdapter::GetMediaInfo()
         info["cartridge_type"] = "Unknown";
 
     return info;
+}
+
+json DebugAdapter::GetAdamPrinterOutput()
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    AdamNet* adam_net = m_core->GetAdam()->GetAdamNet();
+    const u8* data = adam_net->GetPrinterData();
+    int size = adam_net->GetPrinterSize();
+    std::string text;
+    std::ostringstream hex;
+    text.reserve((size_t)size);
+    for (int i = 0; i < size; i++)
+    {
+        u8 value = data[i];
+        if (value == '\r')
+        {
+            if ((i + 1 >= size) || (data[i + 1] != '\n'))
+                text.push_back('\n');
+        }
+        else if ((value == '\n') || (value == '\t') || ((value >= 0x20) && (value < 0x7F)))
+            text.push_back((char)value);
+        else
+            text.push_back('.');
+
+        if (i > 0)
+            hex << ' ';
+        hex << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (int)value;
+    }
+
+    return {{"size", size}, {"capacity", AdamNet::kPrinterSpoolSize},
+        {"text", text}, {"hex", hex.str()}};
+}
+
+json DebugAdapter::ClearAdamPrinterOutput()
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    m_core->GetAdam()->GetAdamNet()->ClearPrinter();
+    return {{"success", true}};
 }
 
 json DebugAdapter::ListRecentMedia()

@@ -132,7 +132,6 @@ void AdamNet::Init(Adam* adam)
 
 void AdamNet::Reset(bool cold)
 {
-    UNUSED(cold);
     m_State = ControllerInitializing;
     memset(&m_Transfer, 0, sizeof(m_Transfer));
     m_PCBAddress = kInitialPCBAddress;
@@ -140,6 +139,11 @@ void AdamNet::Reset(bool cold)
     m_CyclesUntilEvent = kResetCycles;
     ResetMediaCache();
     ResetKeyboard();
+    if (cold)
+    {
+        memset(m_PrinterSpool, 0, sizeof(m_PrinterSpool));
+        m_PrinterSize = 0;
+    }
 }
 
 void AdamNet::ResetKeyboard()

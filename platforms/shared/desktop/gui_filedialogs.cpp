@@ -68,6 +68,7 @@ enum FileDialogID
     FileDialog_InsertAdamMedia,
     FileDialog_SaveAdamDisk,
     FileDialog_SaveAdamDataPack,
+    FileDialog_SaveAdamPrinter,
 };
 
 static FileDialogID pending_dialog_id = FileDialog_None;
@@ -121,6 +122,7 @@ static const char* get_save_file_extension(FileDialogID id)
         case FileDialog_SaveDisassemblerFull:
         case FileDialog_SaveDisassemblerVisible:
         case FileDialog_SaveLog:
+        case FileDialog_SaveAdamPrinter:
             return ".txt";
         case FileDialog_SaveDebugSettings:
             return ".ggdebug";
@@ -395,6 +397,18 @@ void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
         filters, 1, default_path);
 }
 
+void gui_file_dialog_save_adam_printer(void)
+{
+    if (!begin_dialog())
+        return;
+
+    SDL_DialogFileFilter filters[] = { { "Text Files", "txt" } };
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
+        config_emulator.last_open_path.c_str();
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveAdamPrinter,
+        application_sdl_window, filters, 1, default_path);
+}
+
 void gui_file_dialog_process_results(void)
 {
     bool refocus_window = pending_refocus_window && !dialog_active;
@@ -642,6 +656,14 @@ static void process_dialog_result(FileDialogID id, const char* path)
                 gui_set_error_message("Unable to save the ADAM state media image.");
             else
                 gui_set_status_message("ADAM media image saved", 3000);
+            break;
+        }
+        case FileDialog_SaveAdamPrinter:
+        {
+            if (!emu_save_adam_printer(path))
+                gui_set_error_message("Unable to save ADAM printer output.");
+            else
+                gui_set_status_message("ADAM printer output saved", 3000);
             break;
         }
         default:
