@@ -727,26 +727,28 @@ void emu_load_ram(const char* file_path, Cartridge::ForceConfiguration config)
     }
 }
 
-void emu_save_state_slot(int index)
+bool emu_save_state_slot(int index)
 {
     if (!emu_is_empty())
     {
         if (gearcoleco->GetMachine() == GC_MACHINE_ADAM)
         {
             char state_path[4096];
-            if (emu_adam_get_state_path(index, state_path, sizeof(state_path)))
+            bool saved = emu_adam_get_state_path(index, state_path, sizeof(state_path)) &&
                 gearcoleco->SaveState(state_path, -1, true);
             update_savestates_data();
-            return;
+            return saved;
         }
 
         const char* dir = get_configurated_dir(config_emulator.savestates_dir_option, config_emulator.savestates_path.c_str());
-        gearcoleco->SaveState(dir, index, true);
+        bool saved = gearcoleco->SaveState(dir, index, true);
         update_savestates_data();
+        return saved;
     }
+    return false;
 }
 
-void emu_load_state_slot(int index)
+bool emu_load_state_slot(int index)
 {
     if (!emu_is_empty())
     {
@@ -760,8 +762,9 @@ void emu_load_state_slot(int index)
                 events_sync_input();
                 rewind_reset();
                 runahead_reset();
+                return true;
             }
-            return;
+            return false;
         }
 
         const char* dir = get_configurated_dir(config_emulator.savestates_dir_option, config_emulator.savestates_path.c_str());
@@ -770,8 +773,10 @@ void emu_load_state_slot(int index)
             events_sync_input();
             rewind_reset();
             runahead_reset();
+            return true;
         }
     }
+    return false;
 }
 
 void emu_save_state_file(const char* file_path)
