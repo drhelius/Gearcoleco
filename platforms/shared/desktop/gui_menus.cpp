@@ -1629,7 +1629,10 @@ static void menu_debug(void)
         if (ImGui::BeginMenu("ADAM", config_debug.debug &&
             (emu_get_machine() == GC_MACHINE_ADAM)))
         {
-            ImGui::MenuItem("Show Printer", "", &config_debug.show_adam_printer);
+            ImGui::MenuItem("Show ADAM System", "", &config_debug.show_adam_system);
+            ImGui::MenuItem("Show ADAMnet", "", &config_debug.show_adam_net);
+            ImGui::MenuItem("Show ADAM Media and Printer", "",
+                &config_debug.show_adam_printer);
             ImGui::EndMenu();
         }
 

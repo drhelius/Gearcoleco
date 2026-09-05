@@ -243,6 +243,8 @@ struct config_Debug
     bool show_f18a_extended_regs;
     bool show_psg;
     bool show_ay8910;
+    bool show_adam_system;
+    bool show_adam_net;
     bool show_adam_printer;
     bool show_trace_logger;
     bool show_rewind;

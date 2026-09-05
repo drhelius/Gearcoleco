@@ -20,6 +20,10 @@
 #ifndef GUI_DEBUG_ADAM_H
 #define GUI_DEBUG_ADAM_H
 
-void gui_debug_window_adam_printer(void);
+struct GC_AdamDebugState;
+
+void gui_debug_window_adam_system(const GC_AdamDebugState* state);
+void gui_debug_window_adam_net(const GC_AdamDebugState* state);
+void gui_debug_window_adam_media_printer(const GC_AdamDebugState* state);
 
 #endif /* GUI_DEBUG_ADAM_H */

@@ -133,6 +133,7 @@ EXTERN bool emu_set_adam_media_write_protected(GC_AdamMediaSlot slot, bool write
 EXTERN bool emu_get_adam_media_info(GC_AdamMediaSlot slot, Emu_AdamMediaInfo* info);
 EXTERN void emu_reconcile_adam_media_after_state_load(void);
 EXTERN bool emu_save_adam_printer(const char* file_path);
+EXTERN void emu_clear_adam_printer(void);
 EXTERN void emu_adam_key_pressed(GC_AdamKey key);
 EXTERN void emu_adam_key_released(GC_AdamKey key);
 EXTERN void emu_adam_release_all_keys(void);

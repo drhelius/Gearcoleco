@@ -49,6 +49,8 @@ static inline void process(config_Operation operation)
     CONFIG_BOOL("Debug", "F18AExtendedRegs", config_debug.show_f18a_extended_regs, false);
     CONFIG_BOOL("Debug", "PSG", config_debug.show_psg, false);
     CONFIG_BOOL("Debug", "AY8910", config_debug.show_ay8910, false);
+    CONFIG_BOOL("Debug", "AdamSystem", config_debug.show_adam_system, false);
+    CONFIG_BOOL("Debug", "AdamNet", config_debug.show_adam_net, false);
     CONFIG_BOOL("Debug", "AdamPrinter", config_debug.show_adam_printer, false);
     CONFIG_BOOL("Debug", "TraceLogger", config_debug.show_trace_logger, false);
     CONFIG_BOOL("Debug", "Rewind", config_debug.show_rewind, false);

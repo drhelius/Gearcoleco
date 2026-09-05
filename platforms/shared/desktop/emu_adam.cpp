@@ -1228,6 +1228,12 @@ bool emu_save_adam_printer(const char* file_path)
     return file.good();
 }
 
+void emu_clear_adam_printer(void)
+{
+    if (!emu_is_busy() && (emu_get_core()->GetMachine() == GC_MACHINE_ADAM))
+        emu_get_core()->GetAdam()->GetAdamNet()->ClearPrinter();
+}
+
 void emu_adam_key_pressed(GC_AdamKey key)
 {
     if (!emu_is_busy())
