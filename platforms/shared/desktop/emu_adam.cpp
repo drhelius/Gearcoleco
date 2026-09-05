@@ -589,8 +589,8 @@ static bool classify_playlist(const char* path, EmuDesktopContent* content)
 
             EmuDesktopContent entry_content;
             init_content(&entry_content);
-            bool valid = emu_adam_classify_content(resolved, GC_MACHINE_ADAM,
-                &entry_content);
+            bool valid = !ends_with_no_case(resolved, ".m3u") &&
+                emu_adam_classify_content(resolved, GC_MACHINE_ADAM, &entry_content);
             bool adam_media = entry_content.type == EmuDesktopContentAdamDisk ||
                 entry_content.type == EmuDesktopContentAdamDataPack;
             if (!valid || !adam_media || entry_content.playlist ||
@@ -712,15 +712,13 @@ static bool mount_content(GC_AdamMediaSlot slot, const EmuDesktopContent* conten
         config_emulator.adam_media_write_protected[slot];
     if (persistence && !check_working_path(working_path))
         return false;
+    if (!primary && !discard_current_changes && !write_working_copy(slot))
+        return false;
+
     if (persistence && read_binary_file_exact(working_path, &working, content->size))
     {
         mounted_data = working;
         Log("Loading ADAM working copy: %s", working_path);
-    }
-    if (!primary && !discard_current_changes && !write_working_copy(slot))
-    {
-        SafeDeleteArray(working);
-        return false;
     }
 
     bool write_protected = !persistence || configured_write_protected;
