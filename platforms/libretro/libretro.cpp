@@ -186,6 +186,7 @@ static bool read_game_info(const struct retro_game_info* info, u8** data, size_t
 static bool read_adam_game_info(const struct retro_game_info* info, u8** data, size_t* size,
     GC_AdamMediaType* type);
 static bool ends_with_no_case(const char* text, const char* suffix);
+static bool join_path(const char* directory, const char* name, char* path, size_t size);
 static u32 calculate_crc32(const u8* data, size_t size);
 static GC_AdamMediaType adam_media_type_from_path(const char* path);
 static bool load_colecovision_firmware(void);
@@ -740,14 +741,21 @@ static bool find_firmware(const char* const* names, int name_count, size_t expec
     located_path[0] = '\0';
     for (int directory = 0; directory < 2; directory++)
     {
+        const char* search_directory = retro_system_directory;
+        char subdirectory[4096];
+        if (directory != 0)
+        {
+            if (!join_path(retro_system_directory, "gearcoleco", subdirectory,
+                sizeof(subdirectory)))
+                continue;
+            search_directory = subdirectory;
+        }
+
         for (int i = 0; i < name_count; i++)
         {
             char path[4096];
-            if (directory == 0)
-                snprintf(path, sizeof(path), "%s%c%s", retro_system_directory, slash, names[i]);
-            else
-                snprintf(path, sizeof(path), "%s%cgearcoleco%c%s", retro_system_directory,
-                    slash, slash, names[i]);
+            if (!join_path(search_directory, names[i], path, sizeof(path)))
+                continue;
 
             u8* candidate = NULL;
             size_t size = 0;
