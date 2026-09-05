@@ -628,7 +628,7 @@ inline void Processor::OPCodes_AND(u8 number)
 inline void Processor::OPCodes_CP(u8 number)
 {
     int result = AF.GetHigh() - number;
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     SetFlag(FLAG_NEGATIVE);
     ToggleZeroFlagFromResult(final_result);
@@ -646,7 +646,7 @@ inline void Processor::OPCodes_CPI()
 {
     u8 number = m_pMemory->Read(HL.GetValue());
     int result = AF.GetHigh() - number;
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     ToggleFlag(FLAG_NEGATIVE);
     ToggleZeroFlagFromResult(final_result);
@@ -677,7 +677,7 @@ inline void Processor::OPCodes_CPD()
 {
     u8 number = m_pMemory->Read(HL.GetValue());
     int result = AF.GetHigh() - number;
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     ToggleFlag(FLAG_NEGATIVE);
     ToggleZeroFlagFromResult(final_result);
@@ -767,7 +767,7 @@ inline void Processor::OPCodes_DEC_HL()
 inline void Processor::OPCodes_ADD(u8 number)
 {
     int result = AF.GetHigh() + number;
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     AF.SetHigh(final_result);
     ClearAllFlags();
@@ -785,7 +785,7 @@ inline void Processor::OPCodes_ADD(u8 number)
 inline void Processor::OPCodes_ADC(u8 number)
 {
     int result = AF.GetHigh() + number + (IsSetFlag(FLAG_CARRY) ? 1 : 0);
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     AF.SetHigh(final_result);
     ClearAllFlags();
@@ -803,7 +803,7 @@ inline void Processor::OPCodes_ADC(u8 number)
 inline void Processor::OPCodes_SUB(u8 number)
 {
     int result = AF.GetHigh() - number;
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     AF.SetHigh(final_result);
     SetFlag(FLAG_NEGATIVE);
@@ -821,7 +821,7 @@ inline void Processor::OPCodes_SUB(u8 number)
 inline void Processor::OPCodes_SBC(u8 number)
 {
     int result = AF.GetHigh() - number - (IsSetFlag(FLAG_CARRY) ? 1 : 0);
-    int carrybits = AF.GetHigh() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(AF.GetHigh() ^ number ^ result);
     u8 final_result = static_cast<u8> (result);
     AF.SetHigh(final_result);
     SetFlag(FLAG_NEGATIVE);
@@ -841,7 +841,7 @@ inline void Processor::OPCodes_ADD_HL(u16 number)
     SixteenBitRegister* reg = GetPrefixedRegister();
     WZ.SetValue(reg->GetValue() + 1);
     int result = reg->GetValue() + number;
-    int carrybits = reg->GetValue() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(reg->GetValue() ^ number ^ result);
     reg->SetValue(static_cast<u16> (result));
     ClearFlag(FLAG_NEGATIVE);
     ToggleXYFlagsFromResult(reg->GetHigh());
@@ -859,7 +859,7 @@ inline void Processor::OPCodes_ADC_HL(u16 number)
 {
     WZ.SetValue(HL.GetValue() + 1);
     int result = HL.GetValue() + number + (IsSetFlag(FLAG_CARRY) ? 1 : 0);
-    int carrybits = HL.GetValue() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(HL.GetValue() ^ number ^ result);
     u16 final_result = static_cast<u16> (result);
     HL.SetValue(final_result);
     ClearAllFlags();
@@ -878,7 +878,7 @@ inline void Processor::OPCodes_SBC_HL(u16 number)
 {
     WZ.SetValue(HL.GetValue() + 1);
     int result = HL.GetValue() - number - (IsSetFlag(FLAG_CARRY) ? 1 : 0);
-    int carrybits = HL.GetValue() ^ number ^ result;
+    u32 carrybits = static_cast<u32>(HL.GetValue() ^ number ^ result);
     u16 final_result = static_cast<u16> (result);
     HL.SetValue(final_result);
     SetFlag(FLAG_NEGATIVE);
