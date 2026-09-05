@@ -128,6 +128,9 @@ public:
 
     // Media and state management
     json GetMediaInfo();
+    json GetAdamStatus();
+    json GetAdamNetStatus();
+    json ListAdamMedia();
     json GetAdamPrinterOutput();
     json ClearAdamPrinterOutput();
     json ListRecentMedia();

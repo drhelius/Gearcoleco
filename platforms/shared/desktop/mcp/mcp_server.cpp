@@ -751,6 +751,42 @@ json McpServer::BuildToolList()
     });
 
     tools.push_back({
+        {"name", "get_adam_status"},
+        {"title", "Get ADAM Status"},
+        {"description", "Read ADAM boot mode, firmware identity, MIOC/control latches, and the live eight-page CPU memory map."},
+        {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "get_adamnet_status"},
+        {"title", "Get ADAMnet Status"},
+        {"description", "Read ADAMnet controller, PCB/DCB, active transfer, timing, and keyboard state."},
+        {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "list_adam_media"},
+        {"title", "List ADAM Media"},
+        {"description", "List all four ADAM core media slots with geometry, position, cache, generation, dirty state, and desktop persistence paths."},
+        {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
         {"name", "get_adam_printer_output"},
         {"title", "Get ADAM Printer Output"},
         {"description", "Read the captured ADAM printer spool as text and hexadecimal bytes."},
@@ -2486,6 +2522,18 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     else if (normalizedTool == "get_media_info")
     {
         return m_debugAdapter.GetMediaInfo();
+    }
+    else if (normalizedTool == "get_adam_status")
+    {
+        return m_debugAdapter.GetAdamStatus();
+    }
+    else if (normalizedTool == "get_adamnet_status")
+    {
+        return m_debugAdapter.GetAdamNetStatus();
+    }
+    else if (normalizedTool == "list_adam_media")
+    {
+        return m_debugAdapter.ListAdamMedia();
     }
     else if (normalizedTool == "get_adam_printer_output")
     {

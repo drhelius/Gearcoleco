@@ -49,6 +49,108 @@ struct DisassemblerBookmark
     char name[32];
 };
 
+static std::string AdamHex(u64 value, int width)
+{
+    std::ostringstream text;
+    text << std::hex << std::uppercase << std::setfill('0') << std::setw(width) << value;
+    return text.str();
+}
+
+static const char* AdamMemorySourceName(int source)
+{
+    switch ((Adam::MemorySource)source)
+    {
+        case Adam::MemorySourceRAM: return "ram";
+        case Adam::MemorySourceOS7: return "os7";
+        case Adam::MemorySourceEOS: return "eos";
+        case Adam::MemorySourceSmartWriter: return "smartwriter";
+        case Adam::MemorySourceCartridge: return "cartridge";
+        case Adam::MemorySourceOpenBus:
+        default: return "open_bus";
+    }
+}
+
+static const char* AdamControllerStateName(int state)
+{
+    switch ((GC_AdamNetControllerState)state)
+    {
+        case GC_ADAMNET_CONTROLLER_INITIALIZING: return "initializing";
+        case GC_ADAMNET_CONTROLLER_IDLE: return "idle";
+        case GC_ADAMNET_CONTROLLER_BUSY: return "busy";
+        default: return "unknown";
+    }
+}
+
+static const char* AdamCommandStatusName(u8 value)
+{
+    switch (value)
+    {
+        case AdamNet::CommandIdle: return "idle";
+        case AdamNet::CommandStatus: return "status";
+        case AdamNet::CommandSoftReset: return "soft_reset";
+        case AdamNet::CommandWrite: return "write";
+        case AdamNet::CommandRead: return "read";
+        case AdamNet::ResponseSuccess: return "success";
+        case AdamNet::ResponsePrinterBusy: return "printer_busy";
+        case AdamNet::ResponseKeyboardEmpty: return "keyboard_empty";
+        case AdamNet::ResponseDeviceError: return "device_error";
+        case AdamNet::ResponseTimeout: return "timeout";
+        default: return (value >= 0x80) && (value <= 0x85) ? "pcb_response" : "unknown";
+    }
+}
+
+static const char* AdamMediaTypeName(int type)
+{
+    switch ((GC_AdamMediaType)type)
+    {
+        case GC_ADAM_MEDIA_DATA_PACK: return "data_pack";
+        case GC_ADAM_MEDIA_DISK: return "disk";
+        case GC_ADAM_MEDIA_NONE:
+        default: return "none";
+    }
+}
+
+static const char* AdamContentTypeName(int type)
+{
+    switch ((GC_ContentType)type)
+    {
+        case GC_CONTENT_CARTRIDGE: return "cartridge";
+        case GC_CONTENT_ADAM_DATA_PACK: return "data_pack";
+        case GC_CONTENT_ADAM_DISK: return "disk";
+        case GC_CONTENT_NONE:
+        default: return "none";
+    }
+}
+
+static const char* AdamMediaSlotName(int slot)
+{
+    static const char* names[GC_ADAM_MEDIA_SLOT_COUNT] =
+    {
+        "disk_1", "disk_2", "data_pack_1", "data_pack_2"
+    };
+    return (slot >= 0) && (slot < GC_ADAM_MEDIA_SLOT_COUNT) ? names[slot] : "none";
+}
+
+static std::string AdamKeyName(int key)
+{
+    static const char* names[] =
+    {
+        "space", "minus", "plus", "caret", "semicolon", "quote", "open_bracket",
+        "close_bracket", "backslash", "comma", "period", "slash", "return", "escape",
+        "backspace", "tab", "home", "smart_1", "smart_2", "smart_3", "smart_4",
+        "smart_5", "smart_6", "wild_card", "undo", "move", "store", "insert", "print",
+        "clear", "delete", "up", "right", "down", "left", "shift", "control", "lock"
+    };
+
+    if ((key >= GC_ADAM_KEY_A) && (key <= GC_ADAM_KEY_Z))
+        return std::string(1, (char)('a' + key - GC_ADAM_KEY_A));
+    if ((key >= GC_ADAM_KEY_0) && (key <= GC_ADAM_KEY_9))
+        return std::string(1, (char)('0' + key - GC_ADAM_KEY_0));
+    if ((key >= GC_ADAM_KEY_SPACE) && (key < GC_ADAM_KEY_COUNT))
+        return names[key - GC_ADAM_KEY_SPACE];
+    return "none";
+}
+
 static json AdamFirmwareError(bool adam)
 {
     json result;
@@ -741,6 +843,204 @@ json DebugAdapter::GetMediaInfo()
         info["cartridge_type"] = "Unknown";
 
     return info;
+}
+
+json DebugAdapter::GetAdamStatus()
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    GC_AdamDebugState state;
+    if (!m_core->GetAdamDebugState(&state))
+        return {{"error", "Unable to read ADAM state"}};
+
+    json result = {
+        {"machine", "ADAM"},
+        {"boot_mode", state.boot_mode == GC_ADAM_BOOT_CARTRIDGE ? "cartridge" : "computer"},
+        {"content_type", AdamContentTypeName(state.content_type)},
+        {"master_clock_cycles", state.master_clock_cycles},
+        {"mapping_generation", state.mapping_generation},
+        {"mioc", {
+            {"value", state.mioc},
+            {"hex", AdamHex(state.mioc, 2)},
+            {"lower_selector", state.mioc & 0x03},
+            {"upper_selector", (state.mioc >> 2) & 0x03}
+        }},
+        {"control", {
+            {"value", state.control},
+            {"hex", AdamHex(state.control, 2)},
+            {"adamnet_reset", state.adamnet_reset},
+            {"eos_enabled", state.eos_enabled}
+        }}
+    };
+
+    json firmware = json::array();
+    for (int index = 0; index < GC_ADAM_FIRMWARE_COUNT; index++)
+    {
+        const Adam::FirmwareMetadata* metadata =
+            Adam::GetFirmwareMetadata((GC_AdamFirmware)index);
+        const GC_AdamDebugFirmwareState* debug_firmware = &state.firmware[index];
+        firmware.push_back({
+            {"role", metadata->role_name},
+            {"loaded", debug_firmware->loaded},
+            {"size", debug_firmware->size},
+            {"crc32", AdamHex(debug_firmware->crc, 8)},
+            {"known_revision", debug_firmware->known}
+        });
+    }
+    result["firmware"] = firmware;
+
+    json memory_map = json::array();
+    for (int index = 0; index < GC_ADAM_DEBUG_PAGE_COUNT; index++)
+    {
+        const GC_AdamDebugMemoryPage* page = &state.pages[index];
+        json mapped_page = {
+            {"start", AdamHex(page->start, 4)},
+            {"end", AdamHex(page->end, 4)},
+            {"read_source", AdamMemorySourceName(page->read_source)},
+            {"read_offset", AdamHex(page->read_offset, 4)},
+            {"write_destination", page->write_source == Adam::MemorySourceOpenBus ?
+                "none" : AdamMemorySourceName(page->write_source)},
+            {"debug_writable", page->writable}
+        };
+        if (page->write_source == Adam::MemorySourceRAM)
+            mapped_page["write_offset"] = AdamHex(page->write_offset, 4);
+        if (page->cartridge_bank >= 0)
+            mapped_page["cartridge_bank"] = page->cartridge_bank;
+        memory_map.push_back(mapped_page);
+    }
+    result["memory_map"] = memory_map;
+    return result;
+}
+
+json DebugAdapter::GetAdamNetStatus()
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    GC_AdamDebugState state;
+    if (!m_core->GetAdamDebugState(&state))
+        return {{"error", "Unable to read ADAM state"}};
+
+    json result = {
+        {"controller_state", AdamControllerStateName(state.controller_state)},
+        {"pcb", {
+            {"address", AdamHex(state.pcb_address, 4)},
+            {"command_status", state.pcb_command_status},
+            {"command_status_hex", AdamHex(state.pcb_command_status, 2)},
+            {"command_status_name", AdamCommandStatusName(state.pcb_command_status)},
+            {"configured_dcb_count", state.configured_dcb_count}
+        }},
+        {"next_scan_index", state.next_scan_index},
+        {"cycles_until_event", state.cycles_until_event}
+    };
+
+    json transfer = {
+        {"active", state.transfer_active}
+    };
+    if (state.transfer_active)
+    {
+        transfer["kind"] = state.transfer_pcb ? "pcb" : "dcb";
+        transfer["command"] = state.transfer_command;
+        transfer["command_hex"] = AdamHex(state.transfer_command, 2);
+        transfer["command_name"] = AdamCommandStatusName(state.transfer_command);
+        transfer["error"] = state.transfer_error;
+        if (state.transfer_pcb)
+        {
+            transfer["target_pcb_address"] = AdamHex(state.transfer_pcb_address, 4);
+            transfer["configured_dcb_count"] = state.transfer_pcb_count;
+        }
+        else
+        {
+            const AdamNet::DeviceMetadata* device =
+                AdamNet::GetDeviceMetadata(state.transfer_device);
+            transfer["dcb"] = state.transfer_dcb;
+            transfer["device_id"] = AdamHex(state.transfer_device, 2);
+            transfer["device_name"] = IsValidPointer(device) ? device->name : "Unknown";
+            transfer["media_slot"] = IsValidPointer(device) ?
+                AdamMediaSlotName(device->slot) : "none";
+            transfer["block"] = state.transfer_block;
+            transfer["dma_buffer"] = AdamHex(state.transfer_buffer, 4);
+            transfer["length"] = state.transfer_length;
+            transfer["captured_media_generation"] = state.transfer_media_generation;
+        }
+    }
+    result["active_transfer"] = transfer;
+
+    json dcbs = json::array();
+    for (int index = 0; index < GC_ADAM_DEBUG_DCB_COUNT; index++)
+    {
+        const GC_AdamDebugDCB* dcb = &state.dcbs[index];
+        const AdamNet::DeviceMetadata* device = AdamNet::GetDeviceMetadata(dcb->device);
+        dcbs.push_back({
+            {"index", index},
+            {"command_status", dcb->command_status},
+            {"command_status_hex", AdamHex(dcb->command_status, 2)},
+            {"command_status_name", AdamCommandStatusName(dcb->command_status)},
+            {"device_id", AdamHex(dcb->device, 2)},
+            {"device_name", IsValidPointer(device) ? device->name : "Unknown"},
+            {"buffer", AdamHex(dcb->buffer, 4)},
+            {"length", dcb->length},
+            {"block", dcb->block},
+            {"retry", dcb->retry},
+            {"max_length", dcb->max_length},
+            {"device_type", dcb->device_type},
+            {"node_status", AdamHex(dcb->node_status, 2)}
+        });
+    }
+    result["dcbs"] = dcbs;
+    result["keyboard"] = {
+        {"fifo_count", state.keyboard_fifo_count},
+        {"fifo_capacity", AdamNet::kKeyboardFIFOSize},
+        {"overflow", state.keyboard_overflow},
+        {"lock", state.keyboard_lock},
+        {"modifiers", {
+            {"shift", state.keyboard_shift},
+            {"control", state.keyboard_control},
+            {"home", state.keyboard_home}
+        }},
+        {"repeat_key", AdamKeyName(state.keyboard_repeat_key)},
+        {"repeat_cycles", state.keyboard_repeat_cycles}
+    };
+    return result;
+}
+
+json DebugAdapter::ListAdamMedia()
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    GC_AdamDebugState state;
+    if (!m_core->GetAdamDebugState(&state))
+        return {{"error", "Unable to read ADAM state"}};
+
+    json media = json::array();
+    for (int slot = 0; slot < GC_ADAM_MEDIA_SLOT_COUNT; slot++)
+    {
+        const GC_AdamDebugMediaState* core_media = &state.media[slot];
+        Emu_AdamMediaInfo host_media = {};
+        emu_get_adam_media_info((GC_AdamMediaSlot)slot, &host_media);
+        media.push_back({
+            {"slot", AdamMediaSlotName(slot)},
+            {"inserted", core_media->inserted},
+            {"type", AdamMediaTypeName(core_media->type)},
+            {"capacity", core_media->size},
+            {"block_count", core_media->block_count},
+            {"position", core_media->position},
+            {"generation", core_media->generation},
+            {"cache_valid", core_media->cache_valid},
+            {"cached_block", core_media->cached_block},
+            {"cached_generation", core_media->cached_generation},
+            {"write_protected", core_media->write_protected},
+            {"dirty", core_media->dirty},
+            {"base_crc32", AdamHex(core_media->base_crc, 8)},
+            {"source_path", host_media.path},
+            {"working_path", host_media.working_path},
+            {"state_owned", host_media.state_owned}
+        });
+    }
+
+    return {{"count", GC_ADAM_MEDIA_SLOT_COUNT}, {"media", media}};
 }
 
 json DebugAdapter::GetAdamPrinterOutput()

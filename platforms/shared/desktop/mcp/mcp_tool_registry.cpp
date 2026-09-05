@@ -205,6 +205,7 @@ static const McpToolCategory kMcpToolCategories[] =
     {"symbols", "Symbols", "Add, remove, load, list, and look up debug symbols or labels."},
     {"hardware_video", "Video Hardware", "Inspect TMS9918A VDP registers, display timing, status, sprites, scanlines, and video state."},
     {"hardware_audio", "Audio Hardware", "Inspect ColecoVision PSG and AY-3-8910 audio state, channels, mixer, and sound registers."},
+    {"hardware_adam", "ADAM Hardware", "Inspect ADAM firmware, MIOC/control mapping, ADAMnet PCB/DCBs, transfers, timing, and keyboard state."},
     {"media", "Media", "Start ADAM, load cartridges or ADAM media, list recent media, load symbols, and inspect the active machine and slots."},
     {"capture", "Capture", "Capture current screenshots and ColecoVision sprite images or sprite metadata."},
     {"state", "Save States", "List save slots, select a slot, save emulator state, and load emulator state."},
@@ -262,10 +263,15 @@ static const char* const kMcpAudioTools[] =
     "get_psg_status", "get_ay8910_status"
 };
 
+static const char* const kMcpAdamTools[] =
+{
+    "get_adam_status", "get_adamnet_status"
+};
+
 static const char* const kMcpMediaTools[] =
 {
-    "start_adam", "load_media", "get_media_info", "list_recent_media", "get_adam_printer_output",
-    "clear_adam_printer_output"
+    "start_adam", "load_media", "get_media_info", "list_adam_media", "list_recent_media",
+    "get_adam_printer_output", "clear_adam_printer_output"
 };
 
 static const char* const kMcpCaptureTools[] =
@@ -304,6 +310,7 @@ static const McpToolCategoryTools kMcpToolCategoryTools[] =
     {"symbols", kMcpSymbolTools, MCP_ARRAY_COUNT(kMcpSymbolTools)},
     {"hardware_video", kMcpVideoTools, MCP_ARRAY_COUNT(kMcpVideoTools)},
     {"hardware_audio", kMcpAudioTools, MCP_ARRAY_COUNT(kMcpAudioTools)},
+    {"hardware_adam", kMcpAdamTools, MCP_ARRAY_COUNT(kMcpAdamTools)},
     {"media", kMcpMediaTools, MCP_ARRAY_COUNT(kMcpMediaTools)},
     {"capture", kMcpCaptureTools, MCP_ARRAY_COUNT(kMcpCaptureTools)},
     {"state", kMcpStateTools, MCP_ARRAY_COUNT(kMcpStateTools)},
@@ -647,6 +654,9 @@ bool McpToolRegistry::IsDirectToolName(const std::string& tool_name) const
     return (name == "load_media") ||
            (name == "start_adam") ||
            (name == "get_media_info") ||
+           (name == "get_adam_status") ||
+           (name == "get_adamnet_status") ||
+           (name == "list_adam_media") ||
            (name == "debug_pause") ||
            (name == "debug_continue") ||
            (name == "debug_step_into") ||
@@ -709,6 +719,8 @@ std::string McpToolRegistry::AliasesForTool(const std::string& tool_name) const
         aliases += " cartridge rom mapper bank save nonvolatile";
     if (StringContains(name, "cdrom") || StringContains(name, "adpcm"))
         aliases += " cd disc track audio pcm";
+    if (StringContains(name, "adam"))
+        aliases += " computer adamnet mioc pcb dcb keyboard disk data pack printer firmware";
 
     return aliases;
 }

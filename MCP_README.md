@@ -95,7 +95,7 @@ By default, Gearcoleco exposes every MCP tool directly. This avoids nested tool 
 
 Add `--mcp-router` to expose a compact set of high-frequency tools directly and route advanced debugger tools through lightweight discovery tools. This reduces MCP context while preserving access to the full debugger surface.
 
-Direct tools in routed mode: `load_media`, `get_media_info`, `debug_pause`, `debug_continue`, `debug_step_into`, `get_z80_status`, `read_memory`, `write_memory`, `get_disassembly`, `set_breakpoint`, `get_screenshot`, and `controller_button`.
+Direct tools in routed mode: `load_media`, `start_adam`, `get_media_info`, `get_adam_status`, `get_adamnet_status`, `list_adam_media`, `debug_pause`, `debug_continue`, `debug_step_into`, `get_z80_status`, `read_memory`, `write_memory`, `get_disassembly`, `set_breakpoint`, `get_screenshot`, `controller_button`, and `adam_keyboard`.
 
 Router tools:
 
@@ -371,7 +371,10 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `get_vdp_status` | Get VDP status flags, mode, render state |
 | `get_psg_status` | Get SN76489 PSG channel state |
 | `get_ay8910_status` | Get AY-3-8910 SGM sound chip state |
+| `get_adam_status` | Get ADAM firmware, MIOC/control, boot, and live CPU map state |
+| `get_adamnet_status` | Get ADAMnet controller, active transfer, PCB/DCBs, and keyboard state |
 | `get_media_info` | Get the active machine, cartridge, firmware, and ADAM media information |
+| `list_adam_media` | List four ADAM core media slots plus desktop persistence paths |
 | `get_adam_printer_output` | Read the captured ADAM printer spool as text and hex |
 | `clear_adam_printer_output` | Clear the captured ADAM printer spool |
 
@@ -386,6 +389,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | Tool | Description |
 |------|-------------|
 | `list_recent_media` | List the 10 most recent ROM files opened by Gearcoleco |
+| `start_adam` | Start a firmware-only ADAM SmartWriter session |
 | `load_media` | Load a cartridge or ADAM `.ddp`/`.dsk`/`.zip`/`.m3u` file |
 | `list_save_state_slots` | List save state slots |
 | `select_save_state_slot` | Select active slot |
@@ -412,6 +416,7 @@ Exact filters are `cpu.instructions`, `cpu.interrupts`, `vdp.registers`, `vdp.in
 | Tool | Description |
 |------|-------------|
 | `controller_button` | Press/release controller buttons (directional, keypad, yellow/red, blue/purple) |
+| `adam_keyboard` | Press, release, or tap a semantic ADAM keyboard key |
 | `controller_macro` | Run ordered `tap`, `press`, `release`, and `wait` input commands |
 | `get_input_state` | Get effective pressed buttons and pending tap releases |
 
