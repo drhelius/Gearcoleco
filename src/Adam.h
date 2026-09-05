@@ -82,7 +82,7 @@ public:
     AdamNet* GetAdamNet();
     const AdamNet* GetAdamNet() const;
     void SaveState(std::ostream& stream) const;
-    bool LoadState(std::istream& stream);
+    bool LoadState(std::istream& stream, int expected_boot_mode = -1);
     virtual u8 In(u8 port);
     virtual void Out(u8 port, u8 value);
     virtual void Reset();

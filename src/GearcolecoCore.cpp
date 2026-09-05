@@ -1081,6 +1081,15 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
         stream.write(reinterpret_cast<const char*>(&machine), sizeof(machine));
         stream.write(reinterpret_cast<const char*>(&content_type), sizeof(content_type));
         stream.write(reinterpret_cast<const char*>(&adam_boot_mode), sizeof(adam_boot_mode));
+        if (m_machine == GC_MACHINE_ADAM)
+        {
+            u32 cartridge_crc = m_pCartridge->GetCRC();
+            u32 cartridge_size = (u32)m_pCartridge->GetROMSize();
+            u32 cartridge_type = (u32)m_pCartridge->GetType();
+            stream.write(reinterpret_cast<const char*>(&cartridge_crc), sizeof(cartridge_crc));
+            stream.write(reinterpret_cast<const char*>(&cartridge_size), sizeof(cartridge_size));
+            stream.write(reinterpret_cast<const char*>(&cartridge_type), sizeof(cartridge_type));
+        }
         stream.write(reinterpret_cast<const char*>(&m_video_chip), sizeof(m_video_chip));
         if (m_machine == GC_MACHINE_ADAM)
             m_pAdam->SaveState(stream);
@@ -1361,6 +1370,30 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
                 return false;
             }
 
+            if (m_machine == GC_MACHINE_ADAM)
+            {
+                if (header.version < 108)
+                {
+                    Error("ADAM states before version 108 lack cartridge identity");
+                    return false;
+                }
+
+                u32 cartridge_crc = 0;
+                u32 cartridge_size = 0;
+                u32 cartridge_type = 0;
+                stream.read(reinterpret_cast<char*>(&cartridge_crc), sizeof(cartridge_crc));
+                stream.read(reinterpret_cast<char*>(&cartridge_size), sizeof(cartridge_size));
+                stream.read(reinterpret_cast<char*>(&cartridge_type), sizeof(cartridge_type));
+                if (!stream.good() || (cartridge_crc != m_pCartridge->GetCRC()) ||
+                    (cartridge_size != (u32)m_pCartridge->GetROMSize()) ||
+                    (cartridge_type != (u32)m_pCartridge->GetType()) ||
+                    ((state_adam_boot_mode == GC_ADAM_BOOT_CARTRIDGE) && !m_pCartridge->IsReady()))
+                {
+                    Error("Incompatible cartridge in ADAM save state");
+                    return false;
+                }
+            }
+
             if (header.version >= 106)
             {
                 GC_VideoChip video_chip;
@@ -1379,7 +1412,8 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
 
             if (m_machine == GC_MACHINE_ADAM)
             {
-                if (m_video_chip != GC_VIDEO_CHIP_TMS9918A || !m_pAdam->LoadState(stream))
+                if (m_video_chip != GC_VIDEO_CHIP_TMS9918A ||
+                    !m_pAdam->LoadState(stream, state_adam_boot_mode))
                 {
                     Error("Invalid or incompatible ADAM state");
                     return false;

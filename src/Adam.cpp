@@ -343,7 +343,7 @@ void Adam::SaveState(std::ostream& stream) const
     m_pAdamNet->SaveState(stream);
 }
 
-bool Adam::LoadState(std::istream& stream)
+bool Adam::LoadState(std::istream& stream, int expected_boot_mode)
 {
     u8 enabled = 0;
     u8 boot_mode = 0;
@@ -359,7 +359,8 @@ bool Adam::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*>(firmware_crc), sizeof(firmware_crc));
     stream.read(reinterpret_cast<char*>(ram), kMainRAMSize);
 
-    if (!stream.good() || (enabled != 1) || (boot_mode > GC_ADAM_BOOT_CARTRIDGE))
+    if (!stream.good() || (enabled != 1) || (boot_mode > GC_ADAM_BOOT_CARTRIDGE) ||
+        ((expected_boot_mode >= 0) && (boot_mode != expected_boot_mode)))
     {
         SafeDeleteArray(ram);
         return false;
