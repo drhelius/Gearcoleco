@@ -759,6 +759,7 @@ bool emu_load_state_slot(int index)
                 gearcoleco->LoadState(state_path, -1))
             {
                 emu_reconcile_adam_media_after_state_load();
+                emu_restore_adam_state_screenshot(state_path);
                 events_sync_input();
                 rewind_reset();
                 runahead_reset();
@@ -782,7 +783,7 @@ bool emu_load_state_slot(int index)
 void emu_save_state_file(const char* file_path)
 {
     if (!emu_is_empty())
-        gearcoleco->SaveState(file_path, -1);
+        gearcoleco->SaveState(file_path, -1, gearcoleco->GetMachine() == GC_MACHINE_ADAM);
 }
 
 void emu_load_state_file(const char* file_path)
@@ -792,6 +793,7 @@ void emu_load_state_file(const char* file_path)
         if (gearcoleco->LoadState(file_path, -1))
         {
             emu_reconcile_adam_media_after_state_load();
+            emu_restore_adam_state_screenshot(file_path);
             events_sync_input();
             rewind_reset();
             runahead_reset();

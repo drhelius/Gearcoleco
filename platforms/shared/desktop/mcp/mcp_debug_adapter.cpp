@@ -1820,7 +1820,7 @@ json DebugAdapter::SaveStateFile(const std::string& file_path)
         return result;
     }
 
-    if (!m_core->SaveState(file_path.c_str(), -1, false))
+    if (!m_core->SaveState(file_path.c_str(), -1, m_core->GetMachine() == GC_MACHINE_ADAM))
     {
         result["error"] = "Failed to save state file";
         Log("[MCP] SaveStateFile failed: %s", file_path.c_str());
@@ -1859,6 +1859,7 @@ json DebugAdapter::LoadStateFile(const std::string& file_path)
     }
 
     emu_reconcile_adam_media_after_state_load();
+    emu_restore_adam_state_screenshot(file_path.c_str());
     events_sync_input();
     rewind_reset();
     runahead_reset();

@@ -156,6 +156,7 @@ EXTERN bool emu_save_state_slot(int index);
 EXTERN bool emu_load_state_slot(int index);
 EXTERN void emu_save_state_file(const char* file_path);
 EXTERN void emu_load_state_file(const char* file_path);
+EXTERN void emu_restore_adam_state_screenshot(const char* file_path);
 EXTERN void emu_get_runtime(GC_RuntimeInfo& runtime);
 EXTERN double emu_get_frame_rate(void);
 EXTERN void emu_get_info(char* info, int buffer_size);

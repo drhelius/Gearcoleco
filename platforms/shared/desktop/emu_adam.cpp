@@ -1287,3 +1287,30 @@ bool emu_adam_get_state_path(int index, char* path, size_t path_size)
     snprintf(filename, sizeof(filename), "%s.state%d", name, index);
     return join_path(directory, filename, path, path_size);
 }
+
+void emu_restore_adam_state_screenshot(const char* file_path)
+{
+    GearcolecoCore* core = emu_get_core();
+    if (core->GetMachine() != GC_MACHINE_ADAM)
+        return;
+
+    GC_RuntimeInfo runtime;
+    GC_SaveState_Header header;
+    if (!core->GetRuntimeInfo(runtime) || !core->GetSaveStateHeader(-1, file_path, &header))
+        return;
+
+    size_t size = (size_t)runtime.screen_width * runtime.screen_height * 4;
+    if ((size > EMU_FRAME_BUFFER_SIZE) || (header.screenshot_size != size) ||
+        (header.screenshot_width != runtime.screen_width) ||
+        (header.screenshot_height != runtime.screen_height))
+    {
+        return;
+    }
+
+    GC_SaveState_Screenshot screenshot;
+    screenshot.data = new u8[size];
+    screenshot.size = size;
+    if (core->GetSaveStateScreenshot(-1, file_path, &screenshot))
+        memcpy(emu_frame_buffer, screenshot.data, size);
+    SafeDeleteArray(screenshot.data);
+}

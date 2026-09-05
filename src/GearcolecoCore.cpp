@@ -1555,7 +1555,7 @@ bool GearcolecoCore::GetSaveStateScreenshot(int index, const char* path, GC_Save
     stream.read(reinterpret_cast<char*>(screenshot->data), screenshot->size);
     stream.close();
 
-    return true;
+    return stream.good();
 }
 
 void GearcolecoCore::Reset(bool cold)
