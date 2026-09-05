@@ -374,6 +374,13 @@ static bool classify_zip(const char* path, const u8* data, size_t size,
             continue;
 
         size_t extracted_size = (size_t)file_stat.m_uncomp_size;
+        if ((cartridge && (extracted_size > 0x7FFFFFFF)) ||
+            ((media_type != GC_ADAM_MEDIA_NONE) &&
+            !AdamMedia::IsValidImageSize(media_type, extracted_size)))
+        {
+            continue;
+        }
+
         u8* extracted = new u8[extracted_size];
         if (!mz_zip_reader_extract_to_mem(&archive, i, extracted, extracted_size, 0))
         {
@@ -397,8 +404,7 @@ static bool classify_zip(const char* path, const u8* data, size_t size,
                 extracted = NULL;
             }
         }
-        else if ((media_type != GC_ADAM_MEDIA_NONE) &&
-            AdamMedia::IsValidImageSize(media_type, extracted_size))
+        else if (media_type != GC_ADAM_MEDIA_NONE)
         {
             adam_count++;
             append_zip_candidate(&candidates,
