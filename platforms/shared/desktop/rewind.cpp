@@ -21,6 +21,8 @@
 #include "emu.h"
 #include "config.h"
 #include "events.h"
+#include "Adam.h"
+#include "AdamNet.h"
 
 #define REWIND_IMPORT
 #include "rewind.h"
@@ -287,6 +289,13 @@ static size_t get_target_slot_size(void)
     size_t target_slot_size = 0;
     if (!emu_get_core()->SaveState(NULL, target_slot_size, true))
         return 0;
+
+    if (emu_get_machine() == GC_MACHINE_ADAM)
+    {
+        // Printing can grow a state without changing media or resetting rewind.
+        AdamNet* adam_net = emu_get_core()->GetAdam()->GetAdamNet();
+        target_slot_size += AdamNet::kPrinterSpoolSize - adam_net->GetPrinterSize();
+    }
 
     return target_slot_size;
 }
