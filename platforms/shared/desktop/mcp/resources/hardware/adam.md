@@ -15,6 +15,8 @@ Gearcoleco emulates the base Coleco ADAM with a cycle-scheduled high-level ADAMn
 
 Computer mode requires separate raw OS-7, EOS, and SmartWriter images. Firmware is identified by role, exact size, and CRC. Firmware bytes are not included in save states.
 
+ADAM save states validate firmware, cartridge CRC/size/mapper, and mounted-media identity. Experimental ADAM states before state version 108 are rejected because they lack cartridge identity. Raw media and working copies remain usable.
+
 MCP tool `start_adam` starts a firmware-only SmartWriter session and returns per-role path, size, and CRC details when firmware is missing or invalid.
 
 ## ADAMnet structures

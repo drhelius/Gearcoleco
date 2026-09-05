@@ -122,7 +122,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **ADAM Media**: Gearcoleco accepts 256 KiB `.ddp` images, 160/320 KiB `.dsk` images, ZIP archives containing exactly one valid ADAM image, and homogeneous `.m3u` playlists. Use **Gearcoleco > Start ADAM...** to boot SmartWriter without content. Loading ADAM media in `Auto` mode selects ADAM automatically.
 - **ADAM Writes**: The desktop application stores changes in checksum-named complete images under the configured **Save Files** directory policy; source images remain immutable. Use **Gearcoleco > ADAM Media...** to inspect slots, swap playlists, toggle write protection, save or eject. A failed save leaves the image mounted and dirty.
 - **ADAM Save States**: States validate firmware, cartridge and mounted-media identity. Experimental ADAM states older than state version 108 are incompatible and must be recreated; disk/data-pack images and working copies remain usable.
-- **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing `F12`. It is also recommended to disable spinners for software that don't use them.
+- **Spinners**: Use **Input > Spinners > Capture Mouse** or the configured Capture Mouse shortcut. Disable spinners for software that does not use them.
 - **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
