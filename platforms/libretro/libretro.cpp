@@ -1437,8 +1437,11 @@ static bool disk_set_eject_state(bool ejected)
         return true;
     }
 
-    if ((adam_disk_set.index < adam_disk_set.count) && !load_disk_set_image(adam_disk_set.index))
+    if ((adam_disk_set.index >= adam_disk_set.count) ||
+        !load_disk_set_image(adam_disk_set.index))
+    {
         return false;
+    }
     adam_disk_set.ejected = false;
     return true;
 }
@@ -1455,7 +1458,7 @@ static unsigned disk_get_image_index(void)
 
 static bool disk_set_image_index(unsigned index)
 {
-    if (!adam_disk_set.ejected || (index > adam_disk_set.count))
+    if (!adam_disk_set.ejected || (index >= adam_disk_set.count))
         return false;
     adam_disk_set.index = index;
     return true;
@@ -1480,8 +1483,10 @@ static bool disk_replace_image_index(unsigned index, const struct retro_game_inf
             memset(&adam_disk_set.images[i + 1], 0, sizeof(adam_disk_set.images[i + 1]));
         }
         adam_disk_set.count--;
-        if (adam_disk_set.index >= adam_disk_set.count)
-            adam_disk_set.index = adam_disk_set.count;
+        if (adam_disk_set.count == 0)
+            adam_disk_set.index = 0;
+        else if (adam_disk_set.index >= adam_disk_set.count)
+            adam_disk_set.index = adam_disk_set.count - 1;
         return true;
     }
 
