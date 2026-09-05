@@ -39,6 +39,23 @@
 #include "memory_stream.h"
 #include "random.h"
 
+static bool IsValidStateScreenshot(const GC_SaveState_Header& header, size_t file_size)
+{
+    if ((file_size < sizeof(header)) || (header.screenshot_size > file_size - sizeof(header)))
+        return false;
+    if (header.screenshot_size == 0)
+        return true;
+    if ((header.screenshot_width == 0) || (header.screenshot_height == 0) ||
+        (header.screenshot_width > GC_VIDEO_MAX_WIDTH) ||
+        (header.screenshot_height > GC_VIDEO_MAX_HEIGHT))
+    {
+        return false;
+    }
+
+    size_t pixels = (size_t)header.screenshot_width * header.screenshot_height;
+    return (header.screenshot_size == pixels * 2) || (header.screenshot_size == pixels * 4);
+}
+
 static bool IsValidStateIdentity(u8 machine, u8 content_type, u8 adam_boot_mode)
 {
     if ((machine < GC_MACHINE_COLECOVISION) || (machine > GC_MACHINE_ADAM) ||
@@ -1338,9 +1355,9 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
                     Error("Invalid save state size: %d", desktop_header.size);
                     return false;
                 }
-                if (desktop_header.screenshot_size > size - sizeof(desktop_header))
+                if (!IsValidStateScreenshot(desktop_header, size))
                 {
-                    Error("Invalid save state screenshot size: %u", desktop_header.screenshot_size);
+                    Error("Invalid save state screenshot metadata");
                     return false;
                 }
                 state_data_size = size - sizeof(desktop_header) - desktop_header.screenshot_size;
@@ -1521,6 +1538,9 @@ bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveStat
 {
     using namespace std;
 
+    if (!IsValidPointer(header))
+        return false;
+
     string full_path = GetSaveStatePath(path, index);
     Debug("Loading state header from %s...", full_path.c_str());
 
@@ -1540,13 +1560,18 @@ bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveStat
 
     if (savestate_size >= sizeof(GC_SaveState_Header))
     {
+        GC_SaveState_Header candidate = {};
         stream.seekg(savestate_size - sizeof(GC_SaveState_Header), ios::beg);
-        stream.read(reinterpret_cast<char*>(header), sizeof(GC_SaveState_Header));
+        stream.read(reinterpret_cast<char*>(&candidate), sizeof(candidate));
 
-        if ((header->magic == GC_SAVESTATE_MAGIC) && (header->size == savestate_size))
+        if (stream.good() && (candidate.magic == GC_SAVESTATE_MAGIC) &&
+            (candidate.size == savestate_size))
         {
+            bool valid = IsValidStateScreenshot(candidate, savestate_size);
+            if (valid)
+                *header = candidate;
             stream.close();
-            return true;
+            return valid;
         }
     }
 
@@ -1561,7 +1586,7 @@ bool GearcolecoCore::GetSaveStateHeader(int index, const char* path, GC_SaveStat
         stream.read(reinterpret_cast<char*>(&v1_magic), sizeof(v1_magic));
         stream.read(reinterpret_cast<char*>(&v1_size), sizeof(v1_size));
 
-        if ((v1_magic == GC_SAVESTATE_MAGIC) && (v1_size == savestate_size))
+        if (stream.good() && (v1_magic == GC_SAVESTATE_MAGIC) && (v1_size == savestate_size))
         {
             memset(header, 0, sizeof(GC_SaveState_Header));
             header->magic = v1_magic;

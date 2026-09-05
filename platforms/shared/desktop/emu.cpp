@@ -1793,16 +1793,24 @@ void update_savestates_data(void)
             gearcoleco->GetSaveStateHeader(i + 1, dir, &emu_savestates[i])))
             continue;
 
-        if (emu_savestates[i].screenshot_size > 0)
+        if ((emu_savestates[i].screenshot_size > 0) &&
+            (emu_savestates[i].screenshot_size == (size_t)emu_savestates[i].screenshot_width *
+            emu_savestates[i].screenshot_height * 4))
         {
             emu_savestates_screenshots[i].data = new u8[emu_savestates[i].screenshot_size];
             emu_savestates_screenshots[i].size = emu_savestates[i].screenshot_size;
+            bool loaded;
             if (adam)
-                gearcoleco->GetSaveStateScreenshot(-1, adam_state_path,
+                loaded = gearcoleco->GetSaveStateScreenshot(-1, adam_state_path,
                     &emu_savestates_screenshots[i]);
             else
-                gearcoleco->GetSaveStateScreenshot(i + 1, dir,
+                loaded = gearcoleco->GetSaveStateScreenshot(i + 1, dir,
                     &emu_savestates_screenshots[i]);
+            if (!loaded || (emu_savestates_screenshots[i].size !=
+                (size_t)emu_savestates_screenshots[i].width * emu_savestates_screenshots[i].height * 4))
+            {
+                SafeDeleteArray(emu_savestates_screenshots[i].data);
+            }
         }
     }
 }
