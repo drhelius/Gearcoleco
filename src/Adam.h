@@ -105,6 +105,7 @@ public:
     MemorySource GetMemorySource(u16 address) const;
     u32 GetMemorySourceOffset(u16 address) const;
     u32 GetMemoryMapGeneration() const;
+    void GetDebugState(GC_AdamDebugState* state) const;
 
 private:
     enum PageType

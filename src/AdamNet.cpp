@@ -127,7 +127,7 @@ AdamNet::AdamNet()
 {
     InitPointer(m_pAdam);
     InitPointer(m_pTraceLogger);
-    m_State = ControllerInitializing;
+    m_State = GC_ADAMNET_CONTROLLER_INITIALIZING;
     memset(&m_Transfer, 0, sizeof(m_Transfer));
     m_PCBAddress = kInitialPCBAddress;
     m_ScanIndex = 0;
@@ -175,7 +175,7 @@ const AdamNet::DeviceMetadata* AdamNet::GetDeviceMetadata(u8 id)
 
 void AdamNet::Reset(bool cold)
 {
-    m_State = ControllerInitializing;
+    m_State = GC_ADAMNET_CONTROLLER_INITIALIZING;
     memset(&m_Transfer, 0, sizeof(m_Transfer));
     m_PCBAddress = kInitialPCBAddress;
     m_ScanIndex = 0;
@@ -254,24 +254,24 @@ void AdamNet::ProcessEvent()
 {
     switch (m_State)
     {
-        case ControllerInitializing:
+        case GC_ADAMNET_CONTROLLER_INITIALIZING:
             InitializePCB(true);
-            m_State = ControllerIdle;
+            m_State = GC_ADAMNET_CONTROLLER_IDLE;
             m_CyclesUntilEvent = kLinkByteCycles;
             break;
-        case ControllerIdle:
+        case GC_ADAMNET_CONTROLLER_IDLE:
             if (!ScanCommands())
                 m_CyclesUntilEvent = kLinkByteCycles;
             break;
-        case ControllerBusy:
+        case GC_ADAMNET_CONTROLLER_BUSY:
             if (m_Transfer.pcb)
                 CompletePCBCommand();
             else
                 CompleteDCBCommand();
             memset(&m_Transfer, 0, sizeof(m_Transfer));
-            if (m_State == ControllerBusy)
+            if (m_State == GC_ADAMNET_CONTROLLER_BUSY)
             {
-                m_State = ControllerIdle;
+                m_State = GC_ADAMNET_CONTROLLER_IDLE;
                 m_CyclesUntilEvent = kLinkByteCycles;
             }
             break;
@@ -315,7 +315,7 @@ void AdamNet::StartPCBCommand(u8 command)
     m_Transfer.command = command;
     m_Transfer.pcb_address = (u16)(GetPCB(PCBAddressLow) | (GetPCB(PCBAddressHigh) << 8));
     m_Transfer.pcb_count = GetPCB(PCBDeviceCount);
-    m_State = ControllerBusy;
+    m_State = GC_ADAMNET_CONTROLLER_BUSY;
     m_CyclesUntilEvent = kLinkByteCycles;
     TraceTransfer(TRACE_ADAM_COMMAND_ACCEPT);
 }
@@ -333,7 +333,7 @@ void AdamNet::StartDCBCommand(u8 dcb, u8 command)
     m_Transfer.block = GetDCB32(dcb, DCBBlock0);
     AdamMedia* media = GetDeviceMedia(m_Transfer.device);
     m_Transfer.media_generation = IsValidPointer(media) ? media->GetGeneration() : 0;
-    m_State = ControllerBusy;
+    m_State = GC_ADAMNET_CONTROLLER_BUSY;
     m_CyclesUntilEvent = GetTransferCycles(m_Transfer.device, command, m_Transfer.length);
     TraceTransfer(TRACE_ADAM_COMMAND_ACCEPT);
 }
@@ -971,7 +971,7 @@ int AdamNet::GetCyclesUntilEvent() const
 
 bool AdamNet::IsBusy() const
 {
-    return m_State == ControllerBusy;
+    return m_State == GC_ADAMNET_CONTROLLER_BUSY;
 }
 
 int AdamNet::GetKeyboardFIFOCount() const
@@ -982,6 +982,75 @@ int AdamNet::GetKeyboardFIFOCount() const
 bool AdamNet::DidKeyboardOverflow() const
 {
     return m_KeyboardOverflow;
+}
+
+void AdamNet::GetDebugState(GC_AdamDebugState* state) const
+{
+    if (!IsValidPointer(state) || !IsValidPointer(m_pAdam))
+        return;
+
+    state->controller_state = m_State;
+    state->pcb_address = m_PCBAddress;
+    state->pcb_command_status = GetPCB(PCBCommandStatus);
+    state->configured_dcb_count = GetPCB(PCBDeviceCount);
+    state->next_scan_index = m_ScanIndex;
+    state->cycles_until_event = m_CyclesUntilEvent;
+    state->transfer_active = m_Transfer.active;
+    state->transfer_pcb = m_Transfer.pcb;
+    state->transfer_dcb = m_Transfer.dcb;
+    state->transfer_device = m_Transfer.device;
+    state->transfer_command = m_Transfer.command;
+    state->transfer_error = m_Transfer.error;
+    state->transfer_buffer = m_Transfer.buffer;
+    state->transfer_length = m_Transfer.length;
+    state->transfer_pcb_address = m_Transfer.pcb_address;
+    state->transfer_pcb_count = m_Transfer.pcb_count;
+    state->transfer_block = m_Transfer.block;
+    state->transfer_media_generation = m_Transfer.media_generation;
+
+    for (int dcb = 0; dcb < kMaxDCBs; dcb++)
+    {
+        GC_AdamDebugDCB* debug_dcb = &state->dcbs[dcb];
+        debug_dcb->command_status = GetDCB((u8)dcb, DCBCommandStatus);
+        debug_dcb->device = GetDeviceID((u8)dcb);
+        debug_dcb->buffer = GetDCB16((u8)dcb, DCBBufferAddressLow);
+        debug_dcb->length = GetDCB16((u8)dcb, DCBBufferLengthLow);
+        debug_dcb->block = GetDCB32((u8)dcb, DCBBlock0);
+        debug_dcb->retry = GetDCB16((u8)dcb, DCBRetryLow);
+        debug_dcb->max_length = GetDCB16((u8)dcb, DCBMaxLengthLow);
+        debug_dcb->device_type = GetDCB((u8)dcb, DCBDeviceType);
+        debug_dcb->node_status = GetDCB((u8)dcb, DCBNodeStatus);
+    }
+
+    state->keyboard_fifo_count = m_KeyboardCount;
+    state->keyboard_overflow = m_KeyboardOverflow;
+    state->keyboard_lock = m_Lock;
+    state->keyboard_shift = m_KeyPressed[GC_ADAM_KEY_SHIFT];
+    state->keyboard_control = m_KeyPressed[GC_ADAM_KEY_CONTROL];
+    state->keyboard_home = m_KeyPressed[GC_ADAM_KEY_HOME];
+    state->keyboard_repeat_key = m_RepeatKey;
+    state->keyboard_repeat_cycles = m_RepeatCycles;
+
+    for (int slot = 0; slot < GC_ADAM_MEDIA_SLOT_COUNT; slot++)
+    {
+        const AdamMedia* media = &m_Media[slot];
+        GC_AdamDebugMediaState* debug_media = &state->media[slot];
+        debug_media->inserted = media->IsInserted();
+        debug_media->type = media->GetType();
+        debug_media->size = static_cast<u32>(media->GetSize());
+        debug_media->block_count = media->GetBlockCount();
+        debug_media->position = media->GetPosition();
+        debug_media->generation = media->GetGeneration();
+        debug_media->cache_valid = m_MediaCacheValid[slot];
+        debug_media->cached_block = m_MediaCacheBlock[slot];
+        debug_media->cached_generation = m_MediaCacheGeneration[slot];
+        debug_media->write_protected = media->IsWriteProtected();
+        debug_media->dirty = media->IsDirty();
+        debug_media->base_crc = media->GetBaseCRC();
+    }
+
+    state->printer_size = m_PrinterSize;
+    memcpy(state->printer_data, m_PrinterSpool, (size_t)m_PrinterSize);
 }
 
 void AdamNet::SaveState(std::ostream& stream) const
@@ -1096,8 +1165,9 @@ bool AdamNet::ReadState(std::istream& stream)
     bool transfer_active = (transfer_flags & 0x01) != 0;
     bool transfer_pcb = (transfer_flags & 0x02) != 0;
 
-    if (!stream.good() || (state > ControllerBusy) || (transfer_flags & ~0x03) ||
-        (transfer_pcb && !transfer_active) || ((state == ControllerBusy) != transfer_active) ||
+    if (!stream.good() || (state > GC_ADAMNET_CONTROLLER_BUSY) || (transfer_flags & ~0x03) ||
+        (transfer_pcb && !transfer_active) ||
+        ((state == GC_ADAMNET_CONTROLLER_BUSY) != transfer_active) ||
         (transfer_active && transfer_pcb && ((m_Transfer.command < 1) ||
         (m_Transfer.command > 5))) || (transfer_active && !transfer_pcb &&
         ((m_Transfer.command < CommandStatus) || (m_Transfer.command > CommandRead))) ||
@@ -1139,7 +1209,7 @@ bool AdamNet::ReadState(std::istream& stream)
         }
     }
 
-    m_State = (ControllerState)state;
+    m_State = (GC_AdamNetControllerState)state;
     m_Transfer.active = transfer_active;
     m_Transfer.pcb = transfer_pcb;
     m_CyclesUntilEvent = cycles_until_event;

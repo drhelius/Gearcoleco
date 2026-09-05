@@ -107,6 +107,7 @@ public:
     TraceLogger* GetTraceLogger();
     Adam* GetAdam();
     u64 GetMasterClockCycles();
+    bool GetAdamDebugState(GC_AdamDebugState* state);
     void RenderFrameBuffer(u8* finalFrameBuffer);
 
 private:

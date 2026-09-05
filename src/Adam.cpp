@@ -700,3 +700,49 @@ u32 Adam::GetMemoryMapGeneration() const
 {
     return m_MemoryMapGeneration;
 }
+
+void Adam::GetDebugState(GC_AdamDebugState* state) const
+{
+    if (!IsValidPointer(state))
+        return;
+
+    memset(state, 0, sizeof(*state));
+    state->valid = m_Enabled;
+    state->machine = GC_MACHINE_ADAM;
+    state->boot_mode = m_BootMode;
+    state->mioc = m_MIOC;
+    state->control = m_Control;
+    state->adamnet_reset = (m_Control & 0x01) == 0;
+    state->eos_enabled = (m_Control & 0x02) != 0;
+    state->mapping_generation = m_MemoryMapGeneration;
+
+    for (int firmware = 0; firmware < GC_ADAM_FIRMWARE_COUNT; firmware++)
+    {
+        const FirmwareMetadata* metadata = GetFirmwareMetadata((GC_AdamFirmware)firmware);
+        state->firmware[firmware].loaded = m_FirmwareLoaded[firmware];
+        state->firmware[firmware].size = metadata->size;
+        state->firmware[firmware].crc = m_FirmwareCRC[firmware];
+        state->firmware[firmware].known = m_FirmwareLoaded[firmware] &&
+            (m_FirmwareCRC[firmware] == metadata->crc);
+    }
+
+    for (int page = 0; page < kPageCount; page++)
+    {
+        const MemoryPage* mapped_page = &m_Pages[page];
+        GC_AdamDebugMemoryPage* debug_page = &state->pages[page];
+        debug_page->start = (u16)(page * kPageSize);
+        debug_page->end = (u16)(debug_page->start + kPageSize - 1);
+        debug_page->read_source = mapped_page->source;
+        debug_page->read_offset = mapped_page->source_offset;
+        debug_page->write_source = IsValidPointer(mapped_page->write) ?
+            MemorySourceRAM : (mapped_page->type == PageCartridge ?
+            MemorySourceCartridge : MemorySourceOpenBus);
+        debug_page->write_offset = IsValidPointer(mapped_page->write) ?
+            mapped_page->source_offset : 0;
+        debug_page->cartridge_bank = -1;
+        debug_page->writable = IsValidPointer(mapped_page->write);
+    }
+
+    if (IsValidPointer(m_pAdamNet))
+        m_pAdamNet->GetDebugState(state);
+}

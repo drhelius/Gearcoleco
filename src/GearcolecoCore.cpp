@@ -622,6 +622,35 @@ u64 GearcolecoCore::GetMasterClockCycles()
     return m_MasterClockCycles;
 }
 
+bool GearcolecoCore::GetAdamDebugState(GC_AdamDebugState* state)
+{
+    if (!IsValidPointer(state))
+        return false;
+
+    m_pAdam->GetDebugState(state);
+    state->machine = m_machine;
+    state->content_type = m_content_type;
+    state->master_clock_cycles = m_MasterClockCycles;
+
+    if (m_machine != GC_MACHINE_ADAM)
+    {
+        state->valid = false;
+        return false;
+    }
+
+    for (int page = 0; page < GC_ADAM_DEBUG_PAGE_COUNT; page++)
+    {
+        GC_AdamDebugMemoryPage* debug_page = &state->pages[page];
+        if (debug_page->read_source == Adam::MemorySourceCartridge)
+        {
+            debug_page->read_offset = m_pMemory->GetPhysicalAddress(debug_page->start);
+            debug_page->cartridge_bank = m_pMemory->GetBank(debug_page->start);
+        }
+    }
+
+    return state->valid;
+}
+
 void GearcolecoCore::KeyPressed(GC_Controllers controller, GC_Keys key)
 {
     m_pInput->KeyPressed(controller, key);

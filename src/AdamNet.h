@@ -150,17 +150,11 @@ public:
     bool IsBusy() const;
     int GetKeyboardFIFOCount() const;
     bool DidKeyboardOverflow() const;
+    void GetDebugState(GC_AdamDebugState* state) const;
     void SaveState(std::ostream& stream) const;
     bool LoadState(std::istream& stream);
 
 private:
-    enum ControllerState
-    {
-        ControllerInitializing = 0,
-        ControllerIdle,
-        ControllerBusy
-    };
-
     struct Transfer
     {
         bool active;
@@ -223,7 +217,7 @@ private:
     bool m_MediaCacheValid[GC_ADAM_MEDIA_SLOT_COUNT];
     u32 m_MediaCacheBlock[GC_ADAM_MEDIA_SLOT_COUNT];
     u32 m_MediaCacheGeneration[GC_ADAM_MEDIA_SLOT_COUNT];
-    ControllerState m_State;
+    GC_AdamNetControllerState m_State;
     Transfer m_Transfer;
     u16 m_PCBAddress;
     u8 m_ScanIndex;

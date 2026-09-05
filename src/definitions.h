@@ -336,6 +336,115 @@ enum GC_AdamKey
     GC_ADAM_KEY_COUNT
 };
 
+enum GC_AdamNetControllerState
+{
+    GC_ADAMNET_CONTROLLER_INITIALIZING = 0,
+    GC_ADAMNET_CONTROLLER_IDLE,
+    GC_ADAMNET_CONTROLLER_BUSY
+};
+
+enum GC_AdamDebugConstants
+{
+    GC_ADAM_DEBUG_PAGE_COUNT = 8,
+    GC_ADAM_DEBUG_DCB_COUNT = 15,
+    GC_ADAM_DEBUG_PRINTER_SIZE = 4096
+};
+
+struct GC_AdamDebugFirmwareState
+{
+    bool loaded;
+    int size;
+    u32 crc;
+    bool known;
+};
+
+struct GC_AdamDebugMemoryPage
+{
+    u16 start;
+    u16 end;
+    int read_source;
+    u32 read_offset;
+    int write_source;
+    u32 write_offset;
+    int cartridge_bank;
+    bool writable;
+};
+
+struct GC_AdamDebugDCB
+{
+    u8 command_status;
+    u8 device;
+    u16 buffer;
+    u16 length;
+    u32 block;
+    u16 retry;
+    u16 max_length;
+    u8 device_type;
+    u8 node_status;
+};
+
+struct GC_AdamDebugMediaState
+{
+    bool inserted;
+    int type;
+    u32 size;
+    u32 block_count;
+    u32 position;
+    u32 generation;
+    bool cache_valid;
+    u32 cached_block;
+    u32 cached_generation;
+    bool write_protected;
+    bool dirty;
+    u32 base_crc;
+};
+
+struct GC_AdamDebugState
+{
+    bool valid;
+    int machine;
+    int content_type;
+    int boot_mode;
+    u64 master_clock_cycles;
+    GC_AdamDebugFirmwareState firmware[GC_ADAM_FIRMWARE_COUNT];
+    u8 mioc;
+    u8 control;
+    bool adamnet_reset;
+    bool eos_enabled;
+    GC_AdamDebugMemoryPage pages[GC_ADAM_DEBUG_PAGE_COUNT];
+    u32 mapping_generation;
+    int controller_state;
+    u16 pcb_address;
+    u8 pcb_command_status;
+    u8 configured_dcb_count;
+    u8 next_scan_index;
+    int cycles_until_event;
+    bool transfer_active;
+    bool transfer_pcb;
+    u8 transfer_dcb;
+    u8 transfer_device;
+    u8 transfer_command;
+    u8 transfer_error;
+    u16 transfer_buffer;
+    u16 transfer_length;
+    u16 transfer_pcb_address;
+    u8 transfer_pcb_count;
+    u32 transfer_block;
+    u32 transfer_media_generation;
+    GC_AdamDebugDCB dcbs[GC_ADAM_DEBUG_DCB_COUNT];
+    u8 keyboard_fifo_count;
+    bool keyboard_overflow;
+    bool keyboard_lock;
+    bool keyboard_shift;
+    bool keyboard_control;
+    bool keyboard_home;
+    int keyboard_repeat_key;
+    int keyboard_repeat_cycles;
+    GC_AdamDebugMediaState media[GC_ADAM_MEDIA_SLOT_COUNT];
+    int printer_size;
+    u8 printer_data[GC_ADAM_DEBUG_PRINTER_SIZE];
+};
+
 enum GC_Keys
 {
     Keypad_8 = 0x01,
