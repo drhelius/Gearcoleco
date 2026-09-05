@@ -235,7 +235,7 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
-            if (m_machine == GC_MACHINE_ADAM)
+            if (unlikely(m_machine == GC_MACHINE_ADAM))
                 m_pAdam->Clock(clockCycles);
             totalClocks += clockCycles;
 
@@ -283,7 +283,7 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
             vblank = m_pVideo->Tick(clockCycles);
             m_pAudio->Tick(clockCycles);
             m_pMemory->Tick(clockCycles);
-            if (m_machine == GC_MACHINE_ADAM)
+            if (unlikely(m_machine == GC_MACHINE_ADAM))
                 m_pAdam->Clock(clockCycles);
             totalClocks += clockCycles;
 
