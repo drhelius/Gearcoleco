@@ -120,7 +120,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 `2c66f5911e5b42b8ebe113403548eee7` is recommended.
 - **ADAM Firmware**: ADAM mode additionally requires an 8192-byte `eos.rom` image and a 32768-byte SmartWriter image named `writer.rom`, `wp.rom` or `wp_r80.rom`. The known common CRC32 values are `05a37a34` for EOS and `58d86a2a` for SmartWriter. OS-7 may be named `colecovision.rom`, `coleco.rom` or `os7.u2`; its known CRC32 is `3aa93ef3`. Supply these as separate raw files: MAME's multi-ROM `adam.zip` and its 16384-byte U22 image are not firmware input formats. Firmware is not included with Gearcoleco.
 - **ADAM Media**: Gearcoleco accepts 256 KiB `.ddp` images, 160/320 KiB `.dsk` images, ZIP archives containing exactly one valid ADAM image, and homogeneous `.m3u` playlists. Use **Gearcoleco > Start ADAM...** to boot SmartWriter without content. Loading ADAM media in `Auto` mode selects ADAM automatically.
-- **ADAM Writes**: The desktop application stores changes in complete images named with `.gearcoleco.ddp` or `.gearcoleco.dsk` next to the immutable source. Use **Gearcoleco > ADAM Media** to inspect slots, toggle write protection, save or eject. A failed save leaves the image mounted and dirty.
+- **ADAM Writes**: The desktop application stores changes in checksum-named complete images under the configured **Save Files** directory policy; source images remain immutable. Use **Gearcoleco > ADAM Media...** to inspect slots, swap playlists, toggle write protection, save or eject. A failed save leaves the image mounted and dirty.
 - **Spinners**: When using any kind of spinner it is useful to capture the mouse by pressing `F12`. It is also recommended to disable spinners for software that don't use them.
 - **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
@@ -147,9 +147,10 @@ Place OS-7, EOS and SmartWriter firmware in the frontend system directory or its
 
 Writable libretro media is disabled by default. The `Save-directory working copy` option creates complete checksum-named images in the frontend save directory; source content is never overwritten. Disk-control swaps require the normal eject, select and close sequence.
 
-Current ADAM media limitations are logical DDP images only, 160/320 KiB 5.25-inch disk images, and high-level cycle-scheduled device timing. The desktop validates homogeneous `.m3u` playlists and starts with their first entry; additional desktop swaps use the media-slot menu. Physical tape audio, 3.5-inch disk geometries, modem/network devices and real-time printer output are not implemented.
+Current ADAM media limitations are logical DDP images only, 160/320 KiB 5.25-inch disk images, and high-level cycle-scheduled device timing. The desktop validates homogeneous `.m3u` playlists and exposes their entries in the **ADAM Media** window. Physical tape audio, 3.5-inch disk geometries, modem/network devices and host-printer pass-through are not implemented; printer output is captured in the debugger and MCP interfaces.
 
 ### Debugging Features
+- **ADAM Debugger**: Dedicated System, ADAMnet, and Media/Printer windows expose live firmware, mapping, controller, DCB, keyboard, media-cache, and printer-spool state.
 - **Docking Windows**: In debug mode, you can dock windows together by pressing SHIFT and dragging a window onto another.
 - **Multi-viewport**: In Windows or macOS, you can enable "multi-viewport" in the debug menu. You must restart the emulator for the change to take effect. Once enabled, you can drag debugger windows outside the main window.
 - **Single Instance**: You can enable "Single Instance" in the `Emulator` menu. When enabled, opening a ROM while another instance is running will send the ROM to the running instance instead of starting a new one.

@@ -388,7 +388,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 ### Media & State Management
 | Tool | Description |
 |------|-------------|
-| `list_recent_media` | List the 10 most recent ROM files opened by Gearcoleco |
+| `list_recent_media` | List the 15 most recent cartridge or ADAM media files opened by Gearcoleco |
 | `start_adam` | Start a firmware-only ADAM SmartWriter session |
 | `load_media` | Load a cartridge or ADAM `.ddp`/`.dsk`/`.zip`/`.m3u` file |
 | `list_save_state_slots` | List save state slots |
@@ -410,7 +410,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 
 `set_trace_log` accepts `output` (`memory` or `disk`), `memory_size` (`100K`, `500K`, `1M`, `2M`, `5M`), `disk_size` (`10MB`, `50MB`, `100MB`, `250MB`, `500MB`, `1GB`, `unbounded`), and an `output_path` directory. Omitting `filters` selects CPU instructions and interrupts. Disk capture uses a 100K staging ring, flushes continuously, stops on staging overflow or the configured complete-line size limit, and reports write/flush/close failures.
 
-Exact filters are `cpu.instructions`, `cpu.interrupts`, `vdp.registers`, `vdp.interrupts`, `vdp.status`, `vdp.sprites`, `vdp.timing`, `vdp.vram`, `psg.tone`, `psg.volume`, `psg.noise`, `ay8910.registers`, `ay8910.tone`, `ay8910.noise_mixer`, `ay8910.volume`, `ay8910.envelope`, `ay8910.io`, `io.reads`, `io.writes`, `input.reads`, `input.writes`, `sgm.control`, `mapper.banks`, `mapper.eeprom`, and `mapper.sram`. Filters must be non-empty, unique, and exact. Cycle values use the core master clock; `RESET` denotes a clock discontinuity while absolute sequence identity remains monotonic.
+Exact filters are `cpu.instructions`, `cpu.interrupts`, `vdp.registers`, `vdp.interrupts`, `vdp.status`, `vdp.sprites`, `vdp.timing`, `vdp.vram`, `psg.tone`, `psg.volume`, `psg.noise`, `ay8910.registers`, `ay8910.tone`, `ay8910.noise_mixer`, `ay8910.volume`, `ay8910.envelope`, `ay8910.io`, `io.reads`, `io.writes`, `input.reads`, `input.writes`, `sgm.control`, `adam.map`, `adam.commands`, `adam.dma`, `adam.errors`, `mapper.banks`, `mapper.eeprom`, and `mapper.sram`. Filters must be non-empty, unique, and exact. Cycle values use the core master clock; `RESET` denotes a clock discontinuity while absolute sequence identity remains monotonic.
 
 ### Controller Input
 | Tool | Description |
@@ -435,6 +435,7 @@ The MCP server also exposes hardware reference documents via `resources/list` an
 | Resource URI | Description |
 |--------------|-------------|
 | `gearcoleco://hardware/colecovision` | Memory map, I/O ports, controllers, SGM RAM windows, breakpoint areas |
+| `gearcoleco://hardware/adam` | ADAM firmware, MIOC/control map, ADAMnet PCB/DCBs, media, keyboard, and trace filters |
 | `gearcoleco://hardware/tms9918a` | VDP registers, status flags, VRAM tables, sprites |
 | `gearcoleco://hardware/sn76489` | Base SN76489 PSG channels and write model |
 | `gearcoleco://hardware/super_game_module` | SGM RAM mapping, ADAM compatibility, and AY-3-8910 port summary |
