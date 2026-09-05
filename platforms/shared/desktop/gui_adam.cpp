@@ -76,6 +76,51 @@ static void draw_quit_confirmation(void);
 static void reset_firmware_paths(void);
 static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* path);
 static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path);
+static void prepare_window(float width, float height);
+static void keep_window_visible(void);
+
+static void prepare_window(float width, float height)
+{
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    float available_width = viewport->WorkSize.x > 32.0f ? viewport->WorkSize.x - 32.0f : 1.0f;
+    float available_height = viewport->WorkSize.y > 32.0f ? viewport->WorkSize.y - 32.0f : 1.0f;
+    if (width > available_width)
+        width = available_width;
+    if (height > available_height)
+        height = available_height;
+    ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + 16.0f,
+        viewport->WorkPos.y + 16.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_FirstUseEver);
+    if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+    {
+        ImGui::SetNextWindowSizeConstraints(ImVec2(1.0f, 1.0f),
+            ImVec2(available_width, available_height));
+    }
+}
+
+static void keep_window_visible(void)
+{
+    if (ImGui::IsWindowDocked() || (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+        return;
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImVec2 position = ImGui::GetWindowPos();
+    ImVec2 original_position = position;
+    ImVec2 size = ImGui::GetWindowSize();
+    float x = viewport->WorkPos.x + 16.0f;
+    float y = viewport->WorkPos.y + 16.0f;
+    float max_x = viewport->WorkPos.x + viewport->WorkSize.x - size.x - 16.0f;
+    float max_y = viewport->WorkPos.y + viewport->WorkSize.y - size.y - 16.0f;
+    if (position.x < x)
+        position.x = x;
+    if (position.y < y)
+        position.y = y;
+    if (position.x > max_x && max_x >= x)
+        position.x = max_x;
+    if (position.y > max_y && max_y >= y)
+        position.y = max_y;
+    if ((position.x != original_position.x) || (position.y != original_position.y))
+        ImGui::SetWindowPos(position);
+}
 
 void gui_adam_open_media(void)
 {
@@ -207,27 +252,33 @@ static void draw_firmware_window(void)
     bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
-    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(1020, 280), ImGuiCond_FirstUseEver);
+    prepare_window(1020.0f, 280.0f);
     ImGui::Begin("Firmware Setup", &show_adam_firmware);
+    keep_window_visible();
     ImGui::PushFont(gui_default_font);
 
+    ImGui::PushTextWrapPos(0.0f);
     if (adam_running)
         ImGui::TextColored(orange,
             "ADAM firmware cannot be replaced while ADAM is running. Unload or switch content first.");
     else
         ImGui::TextDisabled("Press Enter or Apply to commit a validated path. Unknown revisions are allowed.");
+    ImGui::PopTextWrapPos();
 
-    if (ImGui::BeginTable("##adam_firmware", 7,
-        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+    bool scroll = ImGui::GetContentRegionAvail().x < 680.0f;
+    if (ImGui::BeginTable("##adam_firmware_roles", 7,
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+        (scroll ? ImGuiTableFlags_ScrollX : 0), ImVec2(0, 0), scroll ? 680.0f : 0.0f))
     {
         ImGui::TableSetupColumn("Role", ImGuiTableColumnFlags_WidthFixed, 100.0f);
         ImGui::TableSetupColumn("Path");
         ImGui::TableSetupColumn("Expected", ImGuiTableColumnFlags_WidthFixed, 75.0f);
         ImGui::TableSetupColumn("Actual", ImGuiTableColumnFlags_WidthFixed, 65.0f);
         ImGui::TableSetupColumn("CRC32", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-        ImGui::TableSetupColumn("Revision", ImGuiTableColumnFlags_WidthFixed, 105.0f);
-        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 135.0f);
+        ImGui::TableSetupColumn("Revision", ImGuiTableColumnFlags_WidthFixed, 75.0f);
+        float actions_width = ImGui::CalcTextSize("Browse...").x + ImGui::CalcTextSize("Apply").x +
+            ImGui::GetStyle().FramePadding.x * 4 + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, actions_width);
         ImGui::TableHeadersRow();
 
         ImGui::BeginDisabled(adam_running);
@@ -258,6 +309,8 @@ static void draw_firmware_row(GC_AdamFirmware firmware, char* path, size_t path_
     ImGui::SetNextItemWidth(-1.0f);
     bool apply = ImGui::InputText("##path", path, path_size,
         ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue);
+    if (path[0] && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("%s", path);
     if ((apply || !ImGui::IsItemActive()) && strcmp(inspection->path, path))
         refresh_firmware_inspection(firmware, path);
 
@@ -406,9 +459,9 @@ static void draw_quit_confirmation(void)
 static void draw_media_window(void)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
-    ImGui::SetNextWindowPos(ImVec2(80, 80), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(1200, 320), ImGuiCond_FirstUseEver);
+    prepare_window(900.0f, 400.0f);
     ImGui::Begin("ADAM Media", &show_adam_media);
+    keep_window_visible();
     ImGui::PushFont(gui_default_font);
 
     ImGui::Checkbox("Working-copy persistence", &config_emulator.adam_media_persistence);
@@ -416,7 +469,6 @@ static void draw_media_window(void)
         ImGui::SetTooltip("Applies to newly inserted media. Source images are never overwritten.");
 
     bool keyboard_capture = events_is_adam_keyboard_capture_enabled();
-    ImGui::SameLine();
     if (ImGui::Checkbox("Capture ADAM keyboard (F12)", &keyboard_capture))
         events_set_adam_keyboard_capture(keyboard_capture);
     ImGui::SameLine();
@@ -427,16 +479,18 @@ static void draw_media_window(void)
     else
         ImGui::TextDisabled("Released");
 
-    if (ImGui::BeginTable("##adam_media", 7,
-        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+    bool scroll = ImGui::GetContentRegionAvail().x < 640.0f;
+    if (ImGui::BeginTable("##adam_media_slots", 4,
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+        (scroll ? ImGuiTableFlags_ScrollX : 0), ImVec2(0, 0), scroll ? 640.0f : 0.0f))
     {
         ImGui::TableSetupColumn("Slot", ImGuiTableColumnFlags_WidthFixed, 105.0f);
         ImGui::TableSetupColumn("Media");
-        ImGui::TableSetupColumn("Working copy");
-        ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-        ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 95.0f);
         ImGui::TableSetupColumn("Write protect", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 235.0f);
+        float actions_width = ImGui::CalcTextSize("Replace...").x + ImGui::CalcTextSize("Save As...").x +
+            ImGui::CalcTextSize("Eject").x + ImGui::GetStyle().FramePadding.x * 6 +
+            ImGui::GetStyle().ItemSpacing.x * 2;
+        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, actions_width);
         ImGui::TableHeadersRow();
 
         draw_media_row(GC_ADAM_MEDIA_DISK_1, "Disk 1");
@@ -517,31 +571,21 @@ static void draw_media_row(GC_AdamMediaSlot slot, const char* label)
     else
         ImGui::TextDisabled("Empty");
 
-    ImGui::TableNextColumn();
-    if (!info.inserted)
-        ImGui::TextDisabled("-");
-    else if (info.working_path[0])
-        ImGui::TextWrapped("%s", info.working_path);
-    else if (info.state_owned)
-        ImGui::TextDisabled("Save As required");
-    else
-        ImGui::TextDisabled("Disabled");
-
-    ImGui::TableNextColumn();
     if (info.inserted)
-        ImGui::Text("%zu KiB", info.size / 1024);
-    else
-        ImGui::TextDisabled("-");
-
-    ImGui::TableNextColumn();
-    if (info.dirty)
-        ImGui::TextColored(orange, "Modified");
-    else if (info.state_owned)
-        ImGui::TextDisabled("State-owned");
-    else if (info.inserted)
-        ImGui::TextDisabled("Clean");
-    else
-        ImGui::TextDisabled("-");
+    {
+        ImGui::TextDisabled("%zu KiB", info.size / 1024);
+        ImGui::SameLine();
+        if (info.dirty)
+            ImGui::TextColored(orange, "Modified");
+        else if (info.state_owned)
+            ImGui::TextDisabled("State-owned");
+        else
+            ImGui::TextDisabled("Clean");
+        if (info.working_path[0])
+            ImGui::TextWrapped("%s", info.working_path);
+        else
+            ImGui::TextDisabled(info.state_owned ? "Save As required" : "Working copy disabled");
+    }
 
     ImGui::TableNextColumn();
     bool write_protected = info.write_protected;
