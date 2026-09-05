@@ -118,7 +118,6 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
     m_pAdam = new Adam();
     m_pAdam->Init(m_pColecoVisionIOPorts);
-    m_pMemory->SetAdam(m_pAdam);
 
     m_pMemory->Init();
     m_pProcessor->Init();
@@ -299,6 +298,7 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
         m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
         EjectAllAdamMedia();
         m_pAdam->SetEnabled(false);
+        m_pMemory->SetAdam(NULL);
         SelectVideoChipForCartridge();
         Reset();
 
@@ -332,6 +332,7 @@ bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size,
         m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
         EjectAllAdamMedia();
         m_pAdam->SetEnabled(false);
+        m_pMemory->SetAdam(NULL);
         SelectVideoChipForCartridge();
         Reset();
 
@@ -384,6 +385,7 @@ void GearcolecoCore::UnloadAdamFirmware()
     if (m_machine == GC_MACHINE_ADAM)
     {
         m_pAdam->SetEnabled(false);
+        m_pMemory->SetAdam(NULL);
         m_bPaused = true;
     }
 }
@@ -470,6 +472,7 @@ void GearcolecoCore::UnloadContent()
     m_pAdam->ReleaseAllKeys();
     EjectAllAdamMedia();
     m_pAdam->SetEnabled(false);
+    m_pMemory->SetAdam(NULL);
     m_pCartridge->Reset();
     m_pProcessor->SetIOPOrts(m_pColecoVisionIOPorts);
     m_machine = GC_MACHINE_COLECOVISION;
@@ -1564,6 +1567,7 @@ void GearcolecoCore::Reset(bool cold)
     m_pMemory->SetupMapper();
     m_pAdam->SetMapper(m_pMemory->GetMapper());
     m_pAdam->SetEnabled(m_machine == GC_MACHINE_ADAM);
+    m_pMemory->SetAdam(m_machine == GC_MACHINE_ADAM ? m_pAdam : NULL);
     m_pProcessor->SetIOPOrts(m_machine == GC_MACHINE_ADAM ? static_cast<IOPorts*>(m_pAdam) :
         static_cast<IOPorts*>(m_pColecoVisionIOPorts));
     m_pMemory->Reset();
