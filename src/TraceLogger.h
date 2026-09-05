@@ -34,6 +34,7 @@ enum GC_Trace_Type : u8
     TRACE_IO,
     TRACE_INPUT,
     TRACE_SGM,
+    TRACE_ADAM,
     TRACE_MAPPER,
     TRACE_TYPE_COUNT,
 };
@@ -52,6 +53,7 @@ static_assert(TRACE_TYPE_COUNT < 32, "Trace category count exceeds flag width");
 #define TRACE_FLAG_IO           (1U << TRACE_IO)
 #define TRACE_FLAG_INPUT        (1U << TRACE_INPUT)
 #define TRACE_FLAG_SGM          (1U << TRACE_SGM)
+#define TRACE_FLAG_ADAM         (1U << TRACE_ADAM)
 #define TRACE_FLAG_MAPPER       (1U << TRACE_MAPPER)
 #define TRACE_FLAG_ALL          ((1U << TRACE_TYPE_COUNT) - 1U)
 
@@ -160,6 +162,22 @@ enum GC_Trace_SGM_Event : u8
 #define TRACE_SGM_EVENT_CONTROL (1U << TRACE_SGM_CONTROL)
 #define TRACE_SGM_EVENT_ALL     TRACE_SGM_EVENT_CONTROL
 static_assert(TRACE_SGM_CONTROL < 32, "SGM trace events exceed u32 width");
+
+enum GC_Trace_ADAM_Event : u8
+{
+    TRACE_ADAM_MAP = 0,
+    TRACE_ADAM_COMMAND_ACCEPT,
+    TRACE_ADAM_COMMAND_COMPLETE,
+    TRACE_ADAM_DMA_COMPLETE,
+    TRACE_ADAM_ERROR,
+};
+
+#define TRACE_ADAM_EVENT_MAP      (1U << TRACE_ADAM_MAP)
+#define TRACE_ADAM_EVENT_COMMANDS ((1U << TRACE_ADAM_COMMAND_ACCEPT) | (1U << TRACE_ADAM_COMMAND_COMPLETE))
+#define TRACE_ADAM_EVENT_DMA      (1U << TRACE_ADAM_DMA_COMPLETE)
+#define TRACE_ADAM_EVENT_ERRORS   (1U << TRACE_ADAM_ERROR)
+#define TRACE_ADAM_EVENT_ALL      (TRACE_ADAM_EVENT_MAP | TRACE_ADAM_EVENT_COMMANDS | TRACE_ADAM_EVENT_DMA | TRACE_ADAM_EVENT_ERRORS)
+static_assert(TRACE_ADAM_ERROR < 32, "ADAM trace events exceed u32 width");
 
 enum GC_Trace_Mapper_Event : u8
 {
@@ -302,6 +320,23 @@ struct GC_Trace_Entry
             u16 banks[4];
             u16 auxiliary;
         } mapper;
+
+        struct
+        {
+            u8 event;
+            u8 target;
+            u8 command;
+            u8 response;
+            u8 device;
+            u8 dcb;
+            u8 old_value;
+            u8 new_value;
+            u8 error;
+            bool pcb;
+            u16 buffer;
+            u16 length;
+            u32 block;
+        } adam;
     };
 };
 

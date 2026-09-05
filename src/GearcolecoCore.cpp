@@ -120,6 +120,7 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pF18A->SetTraceLogger(m_pTraceLogger);
     m_pInput->SetTraceLogger(m_pTraceLogger);
     m_pColecoVisionIOPorts->SetTraceLogger(m_pTraceLogger);
+    m_pAdam->SetTraceLogger(m_pTraceLogger);
 #endif
 }
 

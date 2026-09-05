@@ -626,6 +626,11 @@ static void trace_logger_menu(void)
         const char* sgm_names[] = {"Control"};
         const u32 sgm_masks[] = {TRACE_SGM_EVENT_CONTROL};
         trace_submenu("SGM", &config_debug.trace_sgm, &config_debug.trace_sgm_events, sgm_names, sgm_masks, 1);
+        const char* adam_names[] = {"Memory map", "Commands", "DMA", "Errors"};
+        const u32 adam_masks[] = {TRACE_ADAM_EVENT_MAP, TRACE_ADAM_EVENT_COMMANDS,
+            TRACE_ADAM_EVENT_DMA, TRACE_ADAM_EVENT_ERRORS};
+        trace_submenu("ADAM", &config_debug.trace_adam, &config_debug.trace_adam_events,
+            adam_names, adam_masks, 4);
         const char* map_names[] = {"Banks", "EEPROM", "SRAM"};
         const u32 map_masks[] = {TRACE_MAPPER_EVENT_BANKS, TRACE_MAPPER_EVENT_EEPROM, TRACE_MAPPER_EVENT_SRAM};
         trace_submenu("Mapper", &config_debug.trace_mapper, &config_debug.trace_mapper_events, map_names, map_masks, 3);
@@ -656,6 +661,7 @@ static u32 trace_logger_get_config_flags(void)
     if (config_debug.trace_io) flags |= TRACE_FLAG_IO;
     if (config_debug.trace_input) flags |= TRACE_FLAG_INPUT;
     if (config_debug.trace_sgm) flags |= TRACE_FLAG_SGM;
+    if (config_debug.trace_adam) flags |= TRACE_FLAG_ADAM;
     if (config_debug.trace_mapper) flags |= TRACE_FLAG_MAPPER;
     return flags;
 }
@@ -671,6 +677,7 @@ static void trace_logger_set_config_flags(u32 flags)
     config_debug.trace_io = (flags & TRACE_FLAG_IO) != 0;
     config_debug.trace_input = (flags & TRACE_FLAG_INPUT) != 0;
     config_debug.trace_sgm = (flags & TRACE_FLAG_SGM) != 0;
+    config_debug.trace_adam = (flags & TRACE_FLAG_ADAM) != 0;
     config_debug.trace_mapper = (flags & TRACE_FLAG_MAPPER) != 0;
 }
 
@@ -684,6 +691,7 @@ static u32 trace_logger_get_config_event_filter(GC_Trace_Type type)
         case TRACE_IO: return (u32)config_debug.trace_io_events;
         case TRACE_INPUT: return (u32)config_debug.trace_input_events;
         case TRACE_SGM: return (u32)config_debug.trace_sgm_events;
+        case TRACE_ADAM: return (u32)config_debug.trace_adam_events;
         case TRACE_MAPPER: return (u32)config_debug.trace_mapper_events;
         default: return 0xFFFFFFFFU;
     }
@@ -699,6 +707,7 @@ static void trace_logger_set_config_event_filter(GC_Trace_Type type, u32 filter)
         case TRACE_IO: config_debug.trace_io_events = filter; break;
         case TRACE_INPUT: config_debug.trace_input_events = filter; break;
         case TRACE_SGM: config_debug.trace_sgm_events = filter; break;
+        case TRACE_ADAM: config_debug.trace_adam_events = filter; break;
         case TRACE_MAPPER: config_debug.trace_mapper_events = filter; break;
         default: break;
     }
@@ -862,6 +871,7 @@ static void render_entry_colored(const GC_Trace_Entry& entry, u64 index)
     else if (entry.type == TRACE_PSG) color = blue;
     else if (entry.type == TRACE_AY8910) color = violet;
     else if (entry.type == TRACE_SGM) color = cyan;
+    else if (entry.type == TRACE_ADAM) color = orange;
     else if (entry.type == TRACE_MAPPER) color = magenta;
     ImGui::TextColored(color, "%s", buffer);
 }

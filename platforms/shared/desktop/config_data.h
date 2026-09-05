@@ -258,6 +258,7 @@ struct config_Debug
     bool trace_psg;
     bool trace_ay8910;
     bool trace_sgm;
+    bool trace_adam;
     bool trace_vdp;
     bool trace_input;
     bool trace_io;
@@ -268,6 +269,7 @@ struct config_Debug
     int trace_io_events;
     int trace_input_events;
     int trace_sgm_events;
+    int trace_adam_events;
     int trace_mapper_events;
     int trace_output;
     int trace_capacity;

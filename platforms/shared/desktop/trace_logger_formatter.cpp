@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "trace_logger_formatter.h"
+#include "AdamNet.h"
 
 static void strip_tags(const char* source, char* destination, size_t size)
 {
@@ -163,6 +164,31 @@ static const char* mapper_name(u8 mapper)
 {
     static const char* names[] = {"STANDARD", "MEGACART", "ACTIVISION", "OCM"};
     return mapper < sizeof(names) / sizeof(names[0]) ? names[mapper] : "UNKNOWN";
+}
+
+static const char* adam_command_name(u8 command)
+{
+    static const char* names[] = {"IDLE", "STATUS", "SOFT_RESET", "WRITE", "READ"};
+    return command < sizeof(names) / sizeof(names[0]) ? names[command] : "PCB";
+}
+
+static const char* adam_device_name(u8 device)
+{
+    const AdamNet::DeviceMetadata* metadata = AdamNet::GetDeviceMetadata(device);
+    return metadata ? metadata->name : "Unknown";
+}
+
+static const char* adam_response_name(u8 response)
+{
+    switch (response)
+    {
+        case AdamNet::ResponseSuccess: return "SUCCESS";
+        case AdamNet::ResponsePrinterBusy: return "PRINTER_BUSY";
+        case AdamNet::ResponseKeyboardEmpty: return "KEYBOARD_EMPTY";
+        case AdamNet::ResponseDeviceError: return "DEVICE_ERROR";
+        case AdamNet::ResponseTimeout: return "TIMEOUT";
+        default: return "PCB_RESPONSE";
+    }
 }
 
 void trace_logger_format_entry(const GC_Trace_Entry& entry,
@@ -395,6 +421,53 @@ void trace_logger_format_entry(const GC_Trace_Entry& entry,
                 snprintf(text, sizeof(text), "[SGM] CONTROL Port:$%02X Write:$%02X",
                          entry.sgm.port, entry.sgm.raw);
             break;
+        case TRACE_ADAM:
+        {
+            if (entry.adam.event == TRACE_ADAM_MAP)
+            {
+                snprintf(text, sizeof(text), "[ADAM] %s Write:$%02X->$%02X%s",
+                    entry.adam.target == 0 ? "MIOC" : "CONTROL", entry.adam.old_value,
+                    entry.adam.new_value, entry.adam.error ? " ADAMnet reset" : "");
+            }
+            else if (entry.adam.pcb)
+            {
+                snprintf(text, sizeof(text), "[ADAM] PCB %s Command:$%02X Address:$%04X "
+                    "Count:%u%s%s", entry.adam.event == TRACE_ADAM_COMMAND_ACCEPT ?
+                    "ACCEPT" : (entry.adam.event == TRACE_ADAM_COMMAND_COMPLETE ?
+                    "COMPLETE" : "ERROR"), entry.adam.command, entry.adam.buffer,
+                    entry.adam.length, entry.adam.response ? " Response:" : "",
+                    entry.adam.response ? adam_response_name(entry.adam.response) : "");
+            }
+            else if (entry.adam.event == TRACE_ADAM_DMA_COMPLETE)
+            {
+                snprintf(text, sizeof(text), "[ADAM] DMA %s Device:%s($%02X) DCB:%u "
+                    "Block:%u Buffer:$%04X Length:%u", adam_command_name(entry.adam.command),
+                    adam_device_name(entry.adam.device), entry.adam.device, entry.adam.dcb,
+                    entry.adam.block, entry.adam.buffer, entry.adam.length);
+            }
+            else
+            {
+                if (entry.adam.event == TRACE_ADAM_COMMAND_ACCEPT)
+                {
+                    snprintf(text, sizeof(text), "[ADAM] DCB ACCEPT Device:%s($%02X) DCB:%u "
+                        "Command:%s Block:%u Buffer:$%04X Length:%u",
+                        adam_device_name(entry.adam.device), entry.adam.device, entry.adam.dcb,
+                        adam_command_name(entry.adam.command), entry.adam.block,
+                        entry.adam.buffer, entry.adam.length);
+                }
+                else
+                {
+                    snprintf(text, sizeof(text), "[ADAM] DCB %s Device:%s($%02X) DCB:%u "
+                        "Command:%s Block:%u Buffer:$%04X Length:%u Response:%s Error:%u",
+                        entry.adam.event == TRACE_ADAM_COMMAND_COMPLETE ? "COMPLETE" : "ERROR",
+                        adam_device_name(entry.adam.device), entry.adam.device, entry.adam.dcb,
+                        adam_command_name(entry.adam.command), entry.adam.block,
+                        entry.adam.buffer, entry.adam.length,
+                        adam_response_name(entry.adam.response), entry.adam.error);
+                }
+            }
+            break;
+        }
         case TRACE_MAPPER:
         {
             if (entry.mapper.event == TRACE_MAPPER_BANK)

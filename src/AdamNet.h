@@ -24,6 +24,7 @@
 #include <iostream>
 
 class Adam;
+class TraceLogger;
 
 class AdamNet
 {
@@ -87,6 +88,33 @@ public:
         ResponseTimeout = 0x9B
     };
 
+    enum DeviceType
+    {
+        DeviceKeyboard = 0,
+        DevicePrinter,
+        DeviceDisk,
+        DeviceDataPack
+    };
+
+    enum TimingClass
+    {
+        TimingKeyboard = 0,
+        TimingPrinter,
+        TimingFloppy,
+        TimingDataPack
+    };
+
+    struct DeviceMetadata
+    {
+        u8 id;
+        const char* name;
+        DeviceType type;
+        int slot;
+        u16 max_transfer;
+        TimingClass timing;
+        u8 status_shift;
+    };
+
     struct KeyDefinition
     {
         u8 normal;
@@ -100,6 +128,10 @@ public:
     AdamNet();
     ~AdamNet();
     void Init(Adam* adam);
+    void SetTraceLogger(TraceLogger* trace_logger);
+    static int GetDeviceCount();
+    static const DeviceMetadata* GetDeviceMetadataByIndex(int index);
+    static const DeviceMetadata* GetDeviceMetadata(u8 id);
     void Reset(bool cold);
     void Clock(unsigned int cycles);
     void KeyPressed(GC_AdamKey key);
@@ -136,6 +168,7 @@ private:
         u8 dcb;
         u8 command;
         u8 device;
+        u8 error;
         u16 buffer;
         u16 length;
         u16 pcb_address;
@@ -160,7 +193,7 @@ private:
     u32 GetDCB32(u8 dcb, int offset) const;
     void SetDCB16(u8 dcb, int offset, u16 value);
     u8 GetDeviceID(u8 dcb) const;
-    void ReportDevice(u8 dcb, u16 max_length, bool block_device);
+    void ReportDevice(u8 dcb, const DeviceMetadata* device);
     void SetDeviceStatus(u8 dcb, u8 device, u8 status);
     u8 GetMediaStatus(const AdamMedia* media) const;
     int GetMediaSlot(u8 device) const;
@@ -179,11 +212,13 @@ private:
     bool IsDirectionKey(GC_AdamKey key) const;
     u8 GetDiagonalCode(GC_AdamKey key) const;
     bool AppendPrinter(u8 value);
+    void TraceTransfer(u8 event, u8 response = 0, u8 error = 0) const;
     bool ReadState(std::istream& stream);
     bool IsMediaStateCompatible(const AdamNet& state) const;
 
 private:
     Adam* m_pAdam;
+    TraceLogger* m_pTraceLogger;
     AdamMedia m_Media[GC_ADAM_MEDIA_SLOT_COUNT];
     bool m_MediaCacheValid[GC_ADAM_MEDIA_SLOT_COUNT];
     u32 m_MediaCacheBlock[GC_ADAM_MEDIA_SLOT_COUNT];

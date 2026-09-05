@@ -20,6 +20,7 @@
 #include "Adam.h"
 #include "AdamNet.h"
 #include "Mapper.h"
+#include "TraceLogger.h"
 
 static const Adam::FirmwareMetadata kAdamFirmwareMetadata[GC_ADAM_FIRMWARE_COUNT] =
 {
@@ -68,6 +69,7 @@ Adam::Adam()
 {
     InitPointer(m_pSharedPorts);
     InitPointer(m_pMapper);
+    InitPointer(m_pTraceLogger);
     InitPointer(m_pAdamNet);
     InitPointer(m_pOS7ROM);
     InitPointer(m_pEOSROM);
@@ -129,6 +131,13 @@ void Adam::AllocateStorage()
 void Adam::SetMapper(Mapper* mapper)
 {
     m_pMapper = mapper;
+}
+
+void Adam::SetTraceLogger(TraceLogger* trace_logger)
+{
+    m_pTraceLogger = trace_logger;
+    if (IsValidPointer(m_pAdamNet))
+        m_pAdamNet->SetTraceLogger(trace_logger);
 }
 
 void Adam::SetEnabled(bool enabled)
@@ -427,22 +436,52 @@ void Adam::Out(u8 port, u8 value)
 
 void Adam::WriteMIOC(u8 value)
 {
-    bool mapping_changed = (m_MIOC & 0x0F) != (value & 0x0F);
+    u8 old_value = m_MIOC;
+    bool mapping_changed = (old_value & 0x0F) != (value & 0x0F);
     m_MIOC = value;
+    if (old_value != value)
+        TraceMapChange(0, old_value, value, false);
     if (mapping_changed)
         SetMemoryMap();
 }
 
 void Adam::WriteControl(u8 value)
 {
-    bool reset = (m_Control & 0x01) && !(value & 0x01);
-    bool mapping_changed = (m_Control & 0x02) != (value & 0x02);
+    u8 old_value = m_Control;
+    bool reset = (old_value & 0x01) && !(value & 0x01);
+    bool mapping_changed = (old_value & 0x02) != (value & 0x02);
     m_Control = value;
+    if (old_value != value)
+        TraceMapChange(1, old_value, value, reset);
     if (mapping_changed)
         SetMemoryMap();
 
     if (reset && IsValidPointer(m_pAdamNet))
         m_pAdamNet->Reset(false);
+}
+
+void Adam::TraceMapChange(u8 target, u8 old_value, u8 new_value, bool reset) const
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    if (!IsValidPointer(m_pTraceLogger) ||
+        !m_pTraceLogger->IsEventEnabled(TRACE_ADAM, TRACE_ADAM_MAP))
+    {
+        return;
+    }
+    GC_Trace_Entry entry = {};
+    entry.type = TRACE_ADAM;
+    entry.adam.event = TRACE_ADAM_MAP;
+    entry.adam.target = target;
+    entry.adam.old_value = old_value;
+    entry.adam.new_value = new_value;
+    entry.adam.error = reset ? 1 : 0;
+    m_pTraceLogger->TraceLog(entry);
+#else
+    UNUSED(target);
+    UNUSED(old_value);
+    UNUSED(new_value);
+    UNUSED(reset);
+#endif
 }
 
 void Adam::MapOpenBus(int page)

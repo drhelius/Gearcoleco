@@ -69,6 +69,7 @@ static inline void process(config_Operation operation)
     CONFIG_BOOL("Debug", "TraceIo", config_debug.trace_io, false);
     CONFIG_BOOL("Debug", "TraceInput", config_debug.trace_input, false);
     CONFIG_BOOL("Debug", "TraceSgm", config_debug.trace_sgm, false);
+    CONFIG_BOOL("Debug", "TraceAdam", config_debug.trace_adam, false);
     CONFIG_BOOL("Debug", "TraceMapper", config_debug.trace_mapper, false);
     CONFIG_INT_RANGE("Debug", "TraceVdpEvents", config_debug.trace_vdp_events, TRACE_VDP_EVENT_ALL, 0, TRACE_VDP_EVENT_ALL);
     CONFIG_INT_RANGE("Debug", "TracePsgEvents", config_debug.trace_psg_events, TRACE_PSG_EVENT_ALL, 0, TRACE_PSG_EVENT_ALL);
@@ -76,6 +77,7 @@ static inline void process(config_Operation operation)
     CONFIG_INT_RANGE("Debug", "TraceIoEvents", config_debug.trace_io_events, TRACE_IO_EVENT_ALL, 0, TRACE_IO_EVENT_ALL);
     CONFIG_INT_RANGE("Debug", "TraceInputEvents", config_debug.trace_input_events, TRACE_INPUT_EVENT_ALL, 0, TRACE_INPUT_EVENT_ALL);
     CONFIG_INT_RANGE("Debug", "TraceSgmEvents", config_debug.trace_sgm_events, TRACE_SGM_EVENT_ALL, 0, TRACE_SGM_EVENT_ALL);
+    CONFIG_INT_RANGE("Debug", "TraceAdamEvents", config_debug.trace_adam_events, TRACE_ADAM_EVENT_ALL, 0, TRACE_ADAM_EVENT_ALL);
     CONFIG_INT_RANGE("Debug", "TraceMapperEvents", config_debug.trace_mapper_events, TRACE_MAPPER_EVENT_ALL, 0, TRACE_MAPPER_EVENT_ALL);
     CONFIG_INT_RANGE("Debug", "TraceOutput", config_debug.trace_output, 0, 0, 1);
     CONFIG_INT_RANGE("Debug", "TraceCapacity", config_debug.trace_capacity, 0, 0, 4);

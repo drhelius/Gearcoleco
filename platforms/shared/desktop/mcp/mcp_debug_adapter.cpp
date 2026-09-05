@@ -661,6 +661,30 @@ json DebugAdapter::GetMediaInfo()
         }
         info["firmware"] = firmware;
 
+        json devices = json::array();
+        for (int i = 0; i < AdamNet::GetDeviceCount(); i++)
+        {
+            const AdamNet::DeviceMetadata* device = AdamNet::GetDeviceMetadataByIndex(i);
+            std::ostringstream id;
+            id << std::hex << std::uppercase << std::setfill('0') << std::setw(2)
+                << (int)device->id;
+            const char* type = device->type == AdamNet::DeviceKeyboard ? "keyboard" :
+                (device->type == AdamNet::DevicePrinter ? "printer" :
+                (device->type == AdamNet::DeviceDisk ? "disk" : "data_pack"));
+            const char* timing = device->timing == AdamNet::TimingKeyboard ? "keyboard" :
+                (device->timing == AdamNet::TimingPrinter ? "printer" :
+                (device->timing == AdamNet::TimingFloppy ? "floppy" : "data_pack"));
+            devices.push_back({
+                {"id", id.str()},
+                {"name", device->name},
+                {"type", type},
+                {"slot", device->slot},
+                {"max_transfer", device->max_transfer},
+                {"timing", timing}
+            });
+        }
+        info["adamnet_devices"] = devices;
+
         json media = json::array();
         for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
         {
@@ -2770,6 +2794,10 @@ json DebugAdapter::SetTraceLog(const json& arguments)
         else if (filter == "input.reads") { flags |= TRACE_FLAG_INPUT; masks[TRACE_INPUT] |= TRACE_INPUT_EVENT_READS; }
         else if (filter == "input.writes") { flags |= TRACE_FLAG_INPUT; masks[TRACE_INPUT] |= TRACE_INPUT_EVENT_WRITES; }
         else if (filter == "sgm.control") { flags |= TRACE_FLAG_SGM; masks[TRACE_SGM] |= TRACE_SGM_EVENT_CONTROL; }
+        else if (filter == "adam.map") { flags |= TRACE_FLAG_ADAM; masks[TRACE_ADAM] |= TRACE_ADAM_EVENT_MAP; }
+        else if (filter == "adam.commands") { flags |= TRACE_FLAG_ADAM; masks[TRACE_ADAM] |= TRACE_ADAM_EVENT_COMMANDS; }
+        else if (filter == "adam.dma") { flags |= TRACE_FLAG_ADAM; masks[TRACE_ADAM] |= TRACE_ADAM_EVENT_DMA; }
+        else if (filter == "adam.errors") { flags |= TRACE_FLAG_ADAM; masks[TRACE_ADAM] |= TRACE_ADAM_EVENT_ERRORS; }
         else if (filter == "mapper.banks") { flags |= TRACE_FLAG_MAPPER; masks[TRACE_MAPPER] |= TRACE_MAPPER_EVENT_BANKS; }
         else if (filter == "mapper.eeprom") { flags |= TRACE_FLAG_MAPPER; masks[TRACE_MAPPER] |= TRACE_MAPPER_EVENT_EEPROM; }
         else if (filter == "mapper.sram") { flags |= TRACE_FLAG_MAPPER; masks[TRACE_MAPPER] |= TRACE_MAPPER_EVENT_SRAM; }
@@ -2838,6 +2866,10 @@ json DebugAdapter::SetTraceLog(const json& arguments)
     if (masks[TRACE_INPUT] & TRACE_INPUT_EVENT_READS) active_filters.push_back("input.reads");
     if (masks[TRACE_INPUT] & TRACE_INPUT_EVENT_WRITES) active_filters.push_back("input.writes");
     if (masks[TRACE_SGM] & TRACE_SGM_EVENT_CONTROL) active_filters.push_back("sgm.control");
+    if (masks[TRACE_ADAM] & TRACE_ADAM_EVENT_MAP) active_filters.push_back("adam.map");
+    if (masks[TRACE_ADAM] & TRACE_ADAM_EVENT_COMMANDS) active_filters.push_back("adam.commands");
+    if (masks[TRACE_ADAM] & TRACE_ADAM_EVENT_DMA) active_filters.push_back("adam.dma");
+    if (masks[TRACE_ADAM] & TRACE_ADAM_EVENT_ERRORS) active_filters.push_back("adam.errors");
     if (masks[TRACE_MAPPER] & TRACE_MAPPER_EVENT_BANKS) active_filters.push_back("mapper.banks");
     if (masks[TRACE_MAPPER] & TRACE_MAPPER_EVENT_EEPROM) active_filters.push_back("mapper.eeprom");
     if (masks[TRACE_MAPPER] & TRACE_MAPPER_EVENT_SRAM) active_filters.push_back("mapper.sram");

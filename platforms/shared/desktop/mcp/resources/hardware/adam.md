@@ -22,6 +22,11 @@ MCP tool `start_adam` starts a firmware-only SmartWriter session and returns per
 - Up to 15 Device Control Blocks follow it; each DCB is 21 bytes.
 - DCB fields use little-endian buffer address, length, and block values.
 - Base device IDs are keyboard `$01`, printer `$02`, floppy drives `$04/$05`, and data packs `$08/$18`.
+- `get_media_info` exposes the same canonical device table with type, media slot, maximum transfer, and timing class.
+
+## Tracing
+
+ADAM tracing is disabled by default. `set_trace_log` accepts `adam.map`, `adam.commands`, `adam.dma`, and `adam.errors`. Events are emitted for mapping-latch changes and transfer boundaries, never per byte or per cycle.
 
 ## Media
 

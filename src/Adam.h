@@ -23,6 +23,7 @@
 #include "IOPorts.h"
 
 class Mapper;
+class TraceLogger;
 class AdamNet;
 class AdamMedia;
 
@@ -60,6 +61,7 @@ public:
     virtual ~Adam();
     void Init(IOPorts* shared_ports);
     void SetMapper(Mapper* mapper);
+    void SetTraceLogger(TraceLogger* trace_logger);
     void SetEnabled(bool enabled);
     INLINE bool IsEnabled() const { return m_Enabled; }
     bool IsFirmwareReady() const;
@@ -130,10 +132,12 @@ private:
     void MapCartridge(int page);
     void WriteMIOC(u8 value);
     void WriteControl(u8 value);
+    void TraceMapChange(u8 target, u8 old_value, u8 new_value, bool reset) const;
 
 private:
     IOPorts* m_pSharedPorts;
     Mapper* m_pMapper;
+    TraceLogger* m_pTraceLogger;
     AdamNet* m_pAdamNet;
     u8* m_pOS7ROM;
     u8* m_pEOSROM;
