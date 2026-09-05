@@ -122,6 +122,36 @@ static const char* AdamContentTypeName(int type)
     }
 }
 
+static const char* AdamDCBDeviceTypeName(u8 type)
+{
+    if (type == 0)
+        return "character";
+    if (type == 1)
+        return "block";
+    return "unknown";
+}
+
+static u8 AdamNodeStatusValue(u8 value, u8 device_id)
+{
+    const AdamNet::DeviceMetadata* device = AdamNet::GetDeviceMetadata(device_id);
+    u8 shift = IsValidPointer(device) ? device->status_shift : 0;
+    return (value >> shift) & 0x0F;
+}
+
+static const char* AdamNodeStatusName(u8 value)
+{
+    switch (value)
+    {
+        case 0: return "ready";
+        case 1: return "crc_error";
+        case 2: return "block_not_found";
+        case 3: return "no_media";
+        case 4: return "no_device";
+        case 5: return "write_protected";
+        default: return "unknown";
+    }
+}
+
 static const char* AdamMediaSlotName(int slot)
 {
     static const char* names[GC_ADAM_MEDIA_SLOT_COUNT] =
@@ -898,11 +928,12 @@ json DebugAdapter::GetAdamStatus()
             {"start", AdamHex(page->start, 4)},
             {"end", AdamHex(page->end, 4)},
             {"read_source", AdamMemorySourceName(page->read_source)},
-            {"read_offset", AdamHex(page->read_offset, 4)},
             {"write_destination", page->write_source == Adam::MemorySourceOpenBus ?
                 "none" : AdamMemorySourceName(page->write_source)},
             {"debug_writable", page->writable}
         };
+        if (page->read_source != Adam::MemorySourceOpenBus)
+            mapped_page["read_offset"] = AdamHex(page->read_offset, 4);
         if (page->write_source == Adam::MemorySourceRAM)
             mapped_page["write_offset"] = AdamHex(page->write_offset, 4);
         if (page->cartridge_bank >= 0)
@@ -972,6 +1003,7 @@ json DebugAdapter::GetAdamNetStatus()
     {
         const GC_AdamDebugDCB* dcb = &state.dcbs[index];
         const AdamNet::DeviceMetadata* device = AdamNet::GetDeviceMetadata(dcb->device);
+        u8 node_status = AdamNodeStatusValue(dcb->node_status, dcb->device);
         dcbs.push_back({
             {"index", index},
             {"command_status", dcb->command_status},
@@ -985,7 +1017,10 @@ json DebugAdapter::GetAdamNetStatus()
             {"retry", dcb->retry},
             {"max_length", dcb->max_length},
             {"device_type", dcb->device_type},
-            {"node_status", AdamHex(dcb->node_status, 2)}
+            {"device_type_name", AdamDCBDeviceTypeName(dcb->device_type)},
+            {"node_status", AdamHex(dcb->node_status, 2)},
+            {"node_status_value", node_status},
+            {"node_status_name", AdamNodeStatusName(node_status)}
         });
     }
     result["dcbs"] = dcbs;

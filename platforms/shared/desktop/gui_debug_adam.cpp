@@ -94,6 +94,31 @@ static const char* media_type_name(int type)
     }
 }
 
+static const char* dcb_device_type_name(u8 type)
+{
+    if (type == 0)
+        return "Character";
+    if (type == 1)
+        return "Block";
+    return "Unknown";
+}
+
+static const char* node_status_name(u8 value, u8 device_id)
+{
+    const AdamNet::DeviceMetadata* device = AdamNet::GetDeviceMetadata(device_id);
+    u8 shift = IsValidPointer(device) ? device->status_shift : 0;
+    switch ((value >> shift) & 0x0F)
+    {
+        case 0: return "Ready";
+        case 1: return "CRC error";
+        case 2: return "Block not found";
+        case 3: return "No media";
+        case 4: return "No device";
+        case 5: return "Write protected";
+        default: return "Unknown";
+    }
+}
+
 static void format_adam_key(int key, char* output, size_t output_size)
 {
     static const char* names[] =
@@ -203,7 +228,11 @@ void gui_debug_window_adam_system(const GC_AdamDebugState* state)
                 debug_page->end);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(
                 memory_source_name(debug_page->read_source));
-            ImGui::TableNextColumn(); ImGui::Text("$%05X", debug_page->read_offset);
+            ImGui::TableNextColumn();
+            if (debug_page->read_source == Adam::MemorySourceOpenBus)
+                ImGui::TextDisabled("-");
+            else
+                ImGui::Text("$%05X", debug_page->read_offset);
             ImGui::TableNextColumn();
             if (debug_page->write_source == Adam::MemorySourceOpenBus)
                 ImGui::TextDisabled("-");
@@ -271,9 +300,10 @@ void gui_debug_window_adam_net(const GC_AdamDebugState* state)
     {
         const AdamNet::DeviceMetadata* device =
             AdamNet::GetDeviceMetadata(state->transfer_device);
-        ImGui::Text("DCB %u, device $%02X (%s), slot %d, command $%02X (%s)",
+        ImGui::Text("DCB %u, device $%02X (%s), slot %s, command $%02X (%s)",
             state->transfer_dcb, state->transfer_device, device_name(state->transfer_device),
-            IsValidPointer(device) ? device->slot : -1, state->transfer_command,
+            IsValidPointer(device) && (device->slot >= 0) ?
+            kAdamMediaSlotNames[device->slot] : "None", state->transfer_command,
             command_status_name(state->transfer_command));
         ImGui::Text("Block %u, DMA $%04X, length %u, media generation %u, error %u",
             state->transfer_block, state->transfer_buffer, state->transfer_length,
@@ -295,8 +325,8 @@ void gui_debug_window_adam_net(const GC_AdamDebugState* state)
         ImGui::TableSetupColumn("Block", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableSetupColumn("Retry", ImGuiTableColumnFlags_WidthFixed, 55.0f);
         ImGui::TableSetupColumn("Max length", ImGuiTableColumnFlags_WidthFixed, 72.0f);
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 46.0f);
-        ImGui::TableSetupColumn("Node status", ImGuiTableColumnFlags_WidthFixed, 76.0f);
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 95.0f);
+        ImGui::TableSetupColumn("Node status", ImGuiTableColumnFlags_WidthFixed, 120.0f);
         ImGui::TableHeadersRow();
         for (int dcb = 0; dcb < GC_ADAM_DEBUG_DCB_COUNT; dcb++)
         {
@@ -312,8 +342,10 @@ void gui_debug_window_adam_net(const GC_AdamDebugState* state)
             ImGui::TableNextColumn(); ImGui::Text("%u", debug_dcb->block);
             ImGui::TableNextColumn(); ImGui::Text("%u", debug_dcb->retry);
             ImGui::TableNextColumn(); ImGui::Text("%u", debug_dcb->max_length);
-            ImGui::TableNextColumn(); ImGui::Text("$%02X", debug_dcb->device_type);
-            ImGui::TableNextColumn(); ImGui::Text("$%02X", debug_dcb->node_status);
+            ImGui::TableNextColumn(); ImGui::Text("$%02X %s", debug_dcb->device_type,
+                dcb_device_type_name(debug_dcb->device_type));
+            ImGui::TableNextColumn(); ImGui::Text("$%02X %s", debug_dcb->node_status,
+                node_status_name(debug_dcb->node_status, debug_dcb->device));
         }
         ImGui::EndTable();
     }
