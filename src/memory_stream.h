@@ -24,6 +24,61 @@
 #include <streambuf>
 #include <cstring>
 
+class counting_buffer : public std::streambuf
+{
+private:
+    size_t byte_count;
+
+public:
+    counting_buffer() : byte_count(0)
+    {
+    }
+
+    size_t size() const
+    {
+        return byte_count;
+    }
+
+protected:
+    std::streamsize xsputn(const char*, std::streamsize n) override
+    {
+        byte_count += (size_t)n;
+        return n;
+    }
+
+    int_type overflow(int_type value) override
+    {
+        if (!traits_type::eq_int_type(value, traits_type::eof()))
+            byte_count++;
+        return traits_type::not_eof(value);
+    }
+
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+        std::ios_base::openmode which = std::ios_base::out) override
+    {
+        if ((which & std::ios_base::out) && (dir == std::ios_base::cur) && (off == 0))
+            return pos_type(off_type(byte_count));
+        return pos_type(off_type(-1));
+    }
+};
+
+class counting_stream : public std::ostream
+{
+private:
+    counting_buffer buf;
+
+public:
+    counting_stream() : std::ostream(NULL)
+    {
+        rdbuf(&buf);
+    }
+
+    size_t size() const
+    {
+        return buf.size();
+    }
+};
+
 class memory_buffer : public std::streambuf
 {
 private:

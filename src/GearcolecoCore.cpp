@@ -1013,7 +1013,7 @@ bool GearcolecoCore::SaveState(u8* buffer, size_t& size, bool screenshot)
         size = fixed_size;
         return true;
 #else
-        stringstream stream;
+        counting_stream stream;
         if (!SaveState(stream, size, screenshot))
         {
             Error("Failed to save state to stream to calculate size");
@@ -1286,6 +1286,7 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
         GC_SaveState_Header_Libretro header = {};
 #if !defined(__LIBRETRO__)
         bool is_desktop_savestate = false;
+        size_t state_data_size = 0;
 #endif
 
         // Try desktop header first (larger, contains all info)
@@ -1337,6 +1338,12 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
                     Error("Invalid save state size: %d", desktop_header.size);
                     return false;
                 }
+                if (desktop_header.screenshot_size > size - sizeof(desktop_header))
+                {
+                    Error("Invalid save state screenshot size: %u", desktop_header.screenshot_size);
+                    return false;
+                }
+                state_data_size = size - sizeof(desktop_header) - desktop_header.screenshot_size;
             }
 #endif
 
@@ -1418,6 +1425,28 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
                     Error("Invalid or incompatible ADAM state");
                     return false;
                 }
+
+#if !defined(__LIBRETRO__)
+                if (is_desktop_savestate)
+                {
+                    // Version 108 ADAM has a fixed component layout once the cartridge matches.
+                    // A preview must never supply missing bytes from a truncated machine state.
+                    counting_stream remaining;
+                    m_pMemory->SaveState(remaining);
+                    m_pProcessor->SaveState(remaining);
+                    m_pAudio->SaveState(remaining);
+                    m_pVideo->SaveState(remaining);
+                    m_pInput->SaveState(remaining);
+                    std::streampos position = stream.tellg();
+                    if (!remaining.good() || (position < std::streampos(0)) ||
+                        ((size_t)position > state_data_size) ||
+                        (remaining.size() != state_data_size - (size_t)position))
+                    {
+                        Error("Invalid ADAM state data size");
+                        return false;
+                    }
+                }
+#endif
             }
 
             m_content_type = state_content_type;
