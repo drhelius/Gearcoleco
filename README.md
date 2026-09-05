@@ -150,6 +150,8 @@ Place OS-7, EOS and SmartWriter firmware in the frontend system directory or its
 
 Writable libretro media is disabled by default. The `Save-directory working copy` option creates complete checksum-named images in the frontend save directory; source content is never overwritten. Disk-control swaps require the normal eject, select and close sequence.
 
+ADAM keyboard input and no-content boot require support from the frontend. Writable media also requires the frontend's file-system interface; if the required operations or save directory are unavailable, the core mounts media write protected even when writable media is requested.
+
 Current ADAM media limitations are logical DDP images only, 160/320 KiB 5.25-inch disk images, and high-level cycle-scheduled device timing. The desktop validates homogeneous `.m3u` playlists and exposes their entries in the **ADAM Media** window. Physical tape audio, 3.5-inch disk geometries, modem/network devices and host-printer pass-through are not implemented; printer output is captured in the debugger and MCP interfaces.
 
 ### Debugging Features
