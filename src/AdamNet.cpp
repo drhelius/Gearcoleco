@@ -561,7 +561,14 @@ void AdamNet::CompleteMedia(u8 dcb, u8 device, u8 command, u8* response)
     if (command == CommandStatus)
     {
         ReportDevice(dcb, GetDeviceMetadata(device));
-        SetDeviceStatus(dcb, device, GetMediaStatus(media));
+        // Status reports both units; each floppy controller has no secondary drive.
+        u8 status = (u8)(GetMediaStatus(media) | 0x40);
+        if (metadata->type == DeviceDataPack)
+        {
+            status = (u8)(GetMediaStatus(&m_Media[GC_ADAM_MEDIA_DATA_PACK_1]) |
+                (GetMediaStatus(&m_Media[GC_ADAM_MEDIA_DATA_PACK_2]) << 4));
+        }
+        SetDCB(dcb, DCBNodeStatus, status);
         *response = ResponseSuccess;
         return;
     }
