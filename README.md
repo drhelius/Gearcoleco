@@ -142,6 +142,8 @@ Normal letters, digits, punctuation, Return, Escape, Backspace, Tab, Shift, Cont
 
 When ADAM owns keyboard focus, overlapping emulator hotkeys are available from the menus so SmartKeys and editing keys reach the emulated keyboard. Leaving the window releases every held ADAM key.
 
+In ADAM mode, `F12` releases or enables keyboard capture. If fullscreen also uses `F12`, use the fullscreen menu action or configure a different fullscreen shortcut.
+
 ### ADAM in Libretro
 
 Place OS-7, EOS and SmartWriter firmware in the frontend system directory or its `gearcoleco` subdirectory using the names above. The core supports ordinary `.ddp`, `.dsk`, `.zip` and `.m3u` loading, no-content SmartWriter boot, keyboard callbacks, disk control and an optional three-slot ADAM subsystem. Set **Machine** to `ADAM` before starting without content.

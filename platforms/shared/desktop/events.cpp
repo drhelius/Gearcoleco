@@ -87,16 +87,17 @@ bool events_shortcuts(const SDL_Event* event)
         return true;
     }
 
+    // ADAM capture owns F12 even when fullscreen uses its default F12 binding.
+    if (adam && (event->key.repeat == 0) && (event->key.scancode == SDL_SCANCODE_F12))
+    {
+        events_set_adam_keyboard_capture(!adam_keyboard_capture_enabled);
+        return true;
+    }
+
     if (adam && events_check_hotkey(event,
         config_hotkeys[config_HotkeyIndex_Fullscreen], false))
     {
         gui_shortcut(gui_ShortcutFullscreen);
-        return true;
-    }
-
-    if (adam && (event->key.repeat == 0) && (event->key.scancode == SDL_SCANCODE_F12))
-    {
-        events_set_adam_keyboard_capture(!adam_keyboard_capture_enabled);
         return true;
     }
 
