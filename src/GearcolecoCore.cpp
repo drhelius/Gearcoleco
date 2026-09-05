@@ -1184,7 +1184,7 @@ bool GearcolecoCore::LoadState(const char* path, int index)
 
     if (!file.fail())
     {
-        if (LoadState(file))
+        if (LoadStateTransactional(file))
         {
             Debug("Save state loaded");
             file.close();
@@ -1219,10 +1219,48 @@ bool GearcolecoCore::LoadState(const u8* buffer, size_t size)
     }
 
     memory_input_stream direct_stream(reinterpret_cast<const char*>(buffer), size);
-    return LoadState(direct_stream);
+    return LoadStateTransactional(direct_stream);
 }
 
-bool GearcolecoCore::LoadState(std::istream& stream)
+bool GearcolecoCore::LoadStateTransactional(std::istream& stream)
+{
+#if defined(__LIBRETRO__)
+    return LoadStateInternal(stream);
+#else
+    if (m_machine != GC_MACHINE_ADAM)
+        return LoadStateInternal(stream);
+
+    size_t backup_size = 0;
+    if (!SaveState((u8*)NULL, backup_size, false))
+    {
+        Error("Unable to preserve live state before loading");
+        return false;
+    }
+
+    u8* backup = new u8[backup_size];
+    size_t written_size = backup_size;
+    if (!SaveState(backup, written_size, false))
+    {
+        SafeDeleteArray(backup);
+        Error("Unable to preserve live state before loading");
+        return false;
+    }
+
+    bool loaded = LoadStateInternal(stream);
+    if (!loaded)
+    {
+        Debug("Restoring live state after failed load");
+        memory_input_stream backup_stream(reinterpret_cast<const char*>(backup), written_size);
+        if (!LoadStateInternal(backup_stream))
+            Error("Unable to restore live state after failed load");
+    }
+
+    SafeDeleteArray(backup);
+    return loaded;
+#endif
+}
+
+bool GearcolecoCore::LoadStateInternal(std::istream& stream)
 {
     if (IsReady())
     {

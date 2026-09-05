@@ -115,7 +115,8 @@ private:
     void SelectVideoChip(GC_VideoChip video_chip);
     void SelectVideoChipForCartridge();
     bool SaveState(std::ostream& stream, size_t& size, bool screenshot);
-    bool LoadState(std::istream& stream);
+    bool LoadStateTransactional(std::istream& stream);
+    bool LoadStateInternal(std::istream& stream);
     std::string GetSaveStatePath(const char* path, int index);
 
 private:
