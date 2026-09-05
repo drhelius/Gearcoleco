@@ -32,6 +32,7 @@
     <ClCompile Include="..\shared\desktop\config.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\display.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\emu.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\emu_adam.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\events.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gamepad.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui.cpp"><Filter>desktop</Filter></ClCompile>
@@ -113,6 +114,7 @@
     <ClInclude Include="..\shared\desktop\console_utils.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\display.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\emu.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\emu_adam.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\events.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gamepad.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui.h"><Filter>desktop</Filter></ClInclude>
