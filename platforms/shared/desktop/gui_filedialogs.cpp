@@ -78,17 +78,24 @@ static bool dialog_active = false;
 static bool pending_refocus_window = false;
 static int pending_dialog_int_param1 = 0;
 static bool pending_dialog_bool_param1 = false;
+
+struct FileDialogResult
+{
+    FileDialogID id;
+    const char* const* files;
+};
 #if !defined(__APPLE__)
 static bool was_exclusive_fullscreen = false;
 #endif
 
 static void SDLCALL file_dialog_callback(void* userdata, const char* const* filelist, int filter);
+static void SDLCALL finish_dialog(void* userdata);
 static const char* get_save_file_extension(FileDialogID id);
 static void process_dialog_result(FileDialogID id, const char* path);
 
 static bool begin_dialog(void)
 {
-    if (dialog_active)
+    if (dialog_active || (pending_dialog_id != FileDialog_None))
         return false;
     events_release_adam_keys();
     dialog_active = true;
@@ -450,17 +457,26 @@ bool gui_file_dialog_is_active(void)
 static void SDLCALL file_dialog_callback(void* userdata, const char* const* filelist, int filter)
 {
     (void)filter;
+    FileDialogResult result;
+    result.id = (FileDialogID)(intptr_t)userdata;
+    result.files = filelist;
+    // SDL may call from a worker; keep its file-list storage alive until the handoff finishes.
+    if (!SDL_RunOnMainThread(finish_dialog, &result, true))
+        Error("Unable to complete file dialog: %s", SDL_GetError());
+}
+
+static void SDLCALL finish_dialog(void* userdata)
+{
+    FileDialogResult* result = (FileDialogResult*)userdata;
     dialog_active = false;
     pending_refocus_window = true;
 
-    FileDialogID id = (FileDialogID)(intptr_t)userdata;
-
-    if (!filelist || !filelist[0])
+    if (!result->files || !result->files[0])
         return;
 
-    pending_dialog_id = id;
-    pending_dialog_path = filelist[0];
-    const char* extension = get_save_file_extension(id);
+    pending_dialog_id = result->id;
+    pending_dialog_path = result->files[0];
+    const char* extension = get_save_file_extension(result->id);
     if (extension)
         append_extension_if_missing(pending_dialog_path, extension);
 }
