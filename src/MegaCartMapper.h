@@ -128,8 +128,18 @@ inline void MegaCartMapper::SaveState(std::ostream& stream)
 
 inline void MegaCartMapper::LoadState(std::istream& stream)
 {
-    stream.read(reinterpret_cast<char*> (&m_RomBank), sizeof(m_RomBank));
-    stream.read(reinterpret_cast<char*> (&m_RomBankAddress), sizeof(m_RomBankAddress));
+    u8 bank = 0;
+    u32 bank_address = 0;
+    stream.read(reinterpret_cast<char*> (&bank), sizeof(bank));
+    stream.read(reinterpret_cast<char*> (&bank_address), sizeof(bank_address));
+    if (!stream.good() || (bank >= m_pCartridge->GetROMBankCount()) ||
+        (bank_address != ((u32)bank << 14)))
+    {
+        stream.setstate(std::ios::failbit);
+        return;
+    }
+    m_RomBank = bank;
+    m_RomBankAddress = bank_address;
 }
 
 #endif /* MEGACARTMAPPER_H */

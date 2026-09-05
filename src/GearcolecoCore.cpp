@@ -1424,6 +1424,11 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
             m_adam_boot_mode = state_adam_boot_mode;
 
             m_pMemory->LoadState(stream);
+            if (!stream.good())
+            {
+                Error("Invalid memory or cartridge mapper state");
+                return false;
+            }
             m_pProcessor->LoadState(stream, header.version);
 
             if (header.version <= 102)
@@ -1459,6 +1464,11 @@ bool GearcolecoCore::LoadStateInternal(std::istream& stream)
 
                 SelectVideoChip(GC_VIDEO_CHIP_TMS9918A);
                 m_pMemory->LoadState(stream);
+                if (!stream.good())
+                {
+                    Error("Invalid memory or cartridge mapper state");
+                    return false;
+                }
                 m_pProcessor->LoadState(stream, GC_SAVESTATE_VERSION_V1);
                 m_pAudio->LoadStateV1(stream);
                 m_pVideo->LoadState(stream, GC_SAVESTATE_VERSION_V1);
