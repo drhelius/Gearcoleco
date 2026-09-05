@@ -39,6 +39,24 @@
 #include "memory_stream.h"
 #include "random.h"
 
+static bool IsValidStateIdentity(u8 machine, u8 content_type, u8 adam_boot_mode)
+{
+    if ((machine < GC_MACHINE_COLECOVISION) || (machine > GC_MACHINE_ADAM) ||
+        (content_type > GC_CONTENT_ADAM_DISK) || (adam_boot_mode > GC_ADAM_BOOT_CARTRIDGE))
+    {
+        return false;
+    }
+
+    if (machine == GC_MACHINE_COLECOVISION)
+        return (content_type == GC_CONTENT_CARTRIDGE) &&
+            (adam_boot_mode == GC_ADAM_BOOT_COMPUTER);
+
+    if (adam_boot_mode == GC_ADAM_BOOT_CARTRIDGE)
+        return content_type == GC_CONTENT_CARTRIDGE;
+
+    return content_type != GC_CONTENT_CARTRIDGE;
+}
+
 GearcolecoCore::GearcolecoCore()
 {
     InitPointer(m_pMemory);
@@ -1286,11 +1304,10 @@ bool GearcolecoCore::LoadState(std::istream& stream)
                 stream.read(reinterpret_cast<char*>(&content_type), sizeof(content_type));
                 stream.read(reinterpret_cast<char*>(&adam_boot_mode), sizeof(adam_boot_mode));
 
-                if (!stream.good() || (machine < GC_MACHINE_COLECOVISION) ||
-                    (machine > GC_MACHINE_ADAM) || (content_type > GC_CONTENT_ADAM_DISK) ||
-                    (adam_boot_mode > GC_ADAM_BOOT_CARTRIDGE) || (machine != m_machine))
+                if (!stream.good() || !IsValidStateIdentity(machine, content_type,
+                    adam_boot_mode) || (machine != m_machine))
                 {
-                    Error("Incompatible machine in save state");
+                    Error("Incompatible machine, content, or boot mode in save state");
                     return false;
                 }
 
