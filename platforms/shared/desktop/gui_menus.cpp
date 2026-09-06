@@ -392,6 +392,13 @@ static void menu_adam(void)
         &config_emulator.adam_media_persistence);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Applies to newly inserted images. Changes are saved in a separate copy; original images are preserved.");
+
+    // ImGui::Separator();
+
+    // if (ImGui::MenuItem("Open Cartridge..."))
+    //     open_adam_cartridge = true;
+    // if (ImGui::IsItemHovered())
+    //     ImGui::SetTooltip("Run a ColecoVision cartridge using ADAM hardware.");
     ImGui::EndMenu();
 }
 
@@ -1554,14 +1561,9 @@ static void menu_debug(void)
 
         if (ImGui::BeginMenu("ADAM", config_debug.debug))
         {
-            if (ImGui::MenuItem("Run Cartridge on ADAM..."))
-                open_adam_cartridge = true;
-            ImGui::Separator();
             ImGui::BeginDisabled(emu_is_empty() || emu_get_machine() != GC_MACHINE_ADAM);
-            ImGui::MenuItem("Memory Map and Ports", "", &config_debug.show_adam_system);
-            ImGui::MenuItem("ADAMnet / EOS Requests", "", &config_debug.show_adam_net);
-            ImGui::MenuItem("Printer Output", "",
-                &config_debug.show_adam_printer);
+            ImGui::MenuItem("Show Ports", "", &config_debug.show_adam_system);
+            ImGui::MenuItem("Show ADAMnet", "", &config_debug.show_adam_net);
             ImGui::EndDisabled();
             ImGui::EndMenu();
         }
