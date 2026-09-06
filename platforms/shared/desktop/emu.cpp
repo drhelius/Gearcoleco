@@ -318,33 +318,40 @@ bool emu_start_adam(const char* const* media_paths)
     if ((loading_state.load() != Loading_State_None) || !emu_flush_adam_media())
         return false;
 
+    bool keep_media = gearcoleco->GetMachine() == GC_MACHINE_ADAM && !gearcoleco->IsReady() && !media_paths;
     emu_adam_prepare_load();
     if (!emu_adam_load_firmware())
         return false;
 
-    if (!emu_adam_prepare_session(media_paths))
-        return false;
-    save_ram();
-    gearcoleco->UnloadContent();
-    emu_adam_clear_host_media();
-    loaded_content_path[0] = '\0';
-    if (media_paths)
+    if (!keep_media)
     {
-        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        if (!emu_adam_prepare_session(media_paths))
+            return false;
+        save_ram();
+        gearcoleco->UnloadContent();
+        emu_adam_clear_host_media();
+        loaded_content_path[0] = '\0';
+        if (media_paths)
         {
-            if (media_paths[i] && media_paths[i][0])
+            for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
             {
-                strncpy_fit(loaded_content_path, media_paths[i], sizeof(loaded_content_path));
-                break;
+                if (media_paths[i] && media_paths[i][0])
+                {
+                    strncpy_fit(loaded_content_path, media_paths[i], sizeof(loaded_content_path));
+                    break;
+                }
             }
         }
+        if (!emu_adam_commit_session())
+            return false;
     }
-    if (!emu_adam_commit_session())
-        return false;
     reset_buffers();
     gearcoleco->SetVideoChip(GC_VIDEO_CHIP_TMS9918A);
     if (!gearcoleco->StartAdam(GC_ADAM_BOOT_COMPUTER))
         return false;
+    if (keep_media)
+        load_ram();
+    events_sync_input();
     set_debug_identity(GC_MACHINE_ADAM, loaded_content_path[0] ? get_filename(loaded_content_path) : NULL);
 
     emu_audio_reset();
@@ -352,6 +359,24 @@ bool emu_start_adam(const char* const* media_paths)
     update_savestates_data();
     rewind_reset();
     runahead_reset();
+    return true;
+}
+
+bool emu_power_off_adam(void)
+{
+    if (emu_is_busy() || gearcoleco->GetMachine() != GC_MACHINE_ADAM || !emu_flush_adam_media())
+        return false;
+    save_ram();
+    events_release_adam_keys();
+    gearcoleco->PowerOffAdam();
+    emu_debug_command = Debug_Command_None;
+    emu_debug_halt_step_frames_pending = 0;
+    emu_debug_step_frames_pending = 0;
+    reset_buffers();
+    emu_audio_reset();
+    rewind_reset();
+    runahead_reset();
+    update_savestates_data();
     return true;
 }
 

@@ -655,35 +655,17 @@ static void process_dialog_result(FileDialogID id, const char* path)
         }
         case FileDialog_LoadBios:
         {
-            if (emu_load_bios(path))
-            {
-                strncpy_fit(gui_bios_path, path, sizeof(gui_bios_path));
-                config_emulator.bios_path.assign(path);
-            }
-            else
-                gui_set_error_message("Invalid OS-7 firmware. Expected an 8192-byte colecovision.rom, coleco.rom, or os7.u2 image.");
+            gui_adam_apply_firmware_path(GC_ADAM_FIRMWARE_OS7, path);
             break;
         }
         case FileDialog_LoadAdamEOS:
         {
-            if (emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, path))
-            {
-                strncpy_fit(gui_adam_eos_path, path, sizeof(gui_adam_eos_path));
-                config_emulator.adam_eos_path.assign(path);
-            }
-            else
-                gui_set_error_message("Invalid ADAM EOS firmware. Expected an 8192-byte eos.rom image.");
+            gui_adam_apply_firmware_path(GC_ADAM_FIRMWARE_EOS, path);
             break;
         }
         case FileDialog_LoadAdamSmartWriter:
         {
-            if (emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER, path))
-            {
-                strncpy_fit(gui_adam_smartwriter_path, path, sizeof(gui_adam_smartwriter_path));
-                config_emulator.adam_smartwriter_path.assign(path);
-            }
-            else
-                gui_set_error_message("Invalid ADAM SmartWriter firmware. Expected a 32768-byte writer.rom, wp.rom, or wp_r80.rom image.");
+            gui_adam_apply_firmware_path(GC_ADAM_FIRMWARE_SMARTWRITER, path);
             break;
         }
         case FileDialog_SelectAdamMedia:

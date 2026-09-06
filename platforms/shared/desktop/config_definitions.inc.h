@@ -153,6 +153,8 @@ static inline void process(config_Operation operation)
             config_emulator.adam_keys[i], config_adam_keys[i].default_scancode);
     }
     CONFIG_BOOL("Emulator", "AdamMediaPersistence", config_emulator.adam_media_persistence, true);
+    CONFIG_INT_RANGE("ADAM", "Controller1", config_emulator.adam_controller[0], config_AdamController_Gamepad, config_AdamController_None, config_AdamController_Gamepad);
+    CONFIG_INT_RANGE("ADAM", "Controller2", config_emulator.adam_controller[1], config_AdamController_Gamepad, config_AdamController_None, config_AdamController_Gamepad);
     CONFIG_STRING_ARRAY("ADAM", "Disk1Recent%d", config_emulator.adam_recent_media[0], 5, "");
     CONFIG_STRING_ARRAY("ADAM", "Disk2Recent%d", config_emulator.adam_recent_media[1], 5, "");
     CONFIG_STRING_ARRAY("ADAM", "DataPack1Recent%d", config_emulator.adam_recent_media[2], 5, "");

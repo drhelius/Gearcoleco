@@ -61,6 +61,7 @@ public:
     bool LoadAdamFirmware(GC_AdamFirmware firmware, const u8* data, int size);
     void UnloadAdamFirmware();
     bool StartAdam(GC_AdamBootMode boot_mode = GC_ADAM_BOOT_COMPUTER);
+    void PowerOffAdam();
     bool LoadAdamMediaFromBuffer(GC_AdamMediaSlot slot, GC_AdamMediaType type,
         const u8* data, size_t size, bool write_protected = false, u32 base_crc = 0);
     void EjectAdamMedia(GC_AdamMediaSlot slot);

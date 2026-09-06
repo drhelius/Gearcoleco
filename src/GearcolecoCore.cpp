@@ -436,6 +436,17 @@ bool GearcolecoCore::StartAdam(GC_AdamBootMode boot_mode)
     return true;
 }
 
+void GearcolecoCore::PowerOffAdam()
+{
+    if (m_machine != GC_MACHINE_ADAM)
+        return;
+
+    m_pAdam->ReleaseAllKeys();
+    m_pAdam->SetEnabled(false);
+    m_pMemory->SetAdam(NULL);
+    m_bPaused = true;
+}
+
 bool GearcolecoCore::LoadAdamMediaFromBuffer(GC_AdamMediaSlot slot, GC_AdamMediaType type,
     const u8* data, size_t size, bool write_protected, u32 base_crc)
 {

@@ -1065,7 +1065,7 @@ bool emu_flush_adam_media(void)
 bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_path)
 {
     GearcolecoCore* core = emu_get_core();
-    if (emu_is_busy() || (!emu_is_empty() && (core->GetMachine() == GC_MACHINE_ADAM)) ||
+    if (emu_is_busy() ||
         (firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
     {
         return false;
@@ -1078,7 +1078,10 @@ bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_path)
         Error("Invalid ADAM firmware role %d: %s", firmware, file_path ? file_path : "");
         return false;
     }
-    bool loaded = core->LoadAdamFirmware(firmware, data, metadata->size);
+    bool loaded = true;
+    if (emu_is_empty() || core->GetMachine() != GC_MACHINE_ADAM)
+        loaded = core->LoadAdamFirmware(firmware, data, metadata->size);
+    // ADAM has its own OS-7 image; keep the inactive ColecoVision BIOS selection up to date.
     if (loaded && (firmware == GC_ADAM_FIRMWARE_OS7))
         loaded = core->GetMemory()->LoadBiosFromBuffer(data, metadata->size);
     SafeDeleteArray(data);

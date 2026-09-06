@@ -41,6 +41,7 @@ static KeyState input_last_state[GC_MAX_GAMEPADS][20] = { };
 static bool input_initialized = false;
 static bool roller_mouse_buttons[2] = { };
 static bool adam_scancode_down[SDL_SCANCODE_COUNT] = { };
+static bool adam_controller_keys[SDL_SCANCODE_COUNT] = { };
 static GC_AdamKey adam_pressed_keys[SDL_SCANCODE_COUNT];
 static int adam_key_references[GC_ADAM_KEY_COUNT] = { };
 
@@ -53,6 +54,7 @@ static void input_send_key(int controller, int index, GC_Keys key, bool pressed)
 static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode);
 static void send_adam_key(SDL_Scancode scancode, bool pressed);
 static bool adam_keyboard_captures_event(const SDL_Event* event);
+static bool adam_controller_uses_key(SDL_Scancode scancode);
 
 bool events_shortcuts(const SDL_Event* event)
 {
@@ -149,12 +151,26 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
         ((event->type == SDL_EVENT_KEY_DOWN) || (event->type == SDL_EVENT_KEY_UP)))
     {
         // Release keys already held by ADAM even when a menu has just taken focus.
+        SDL_Scancode scancode = event->key.scancode;
+        if (scancode <= SDL_SCANCODE_UNKNOWN || scancode >= SDL_SCANCODE_COUNT)
+            return;
         if (event->type == SDL_EVENT_KEY_UP)
-            send_adam_key(event->key.scancode, false);
+        {
+            adam_controller_keys[scancode] = false;
+            send_adam_key(scancode, false);
+        }
         else if (adam_keyboard_captures_event(event) && !shortcut_consumed && (event->key.repeat == 0))
-            send_adam_key(event->key.scancode, true);
+        {
+            adam_controller_keys[scancode] = true;
+            if (!adam_controller_uses_key(scancode))
+                send_adam_key(scancode, true);
+        }
         return;
     }
+
+    // ADAM hand controllers do not use ColecoVision's mouse/spinner settings.
+    if (emu_get_machine() == GC_MACHINE_ADAM)
+        return;
 
     if ((gui_in_use || shortcut_consumed) && (event->type != SDL_EVENT_MOUSE_BUTTON_UP))
         return;
@@ -294,8 +310,22 @@ void events_sync_input(void)
 void events_release_adam_keys(void)
 {
     memset(adam_scancode_down, 0, sizeof(adam_scancode_down));
+    memset(adam_controller_keys, 0, sizeof(adam_controller_keys));
     memset(adam_key_references, 0, sizeof(adam_key_references));
     emu_adam_release_all_keys();
+    if (emu_get_machine() == GC_MACHINE_ADAM)
+    {
+        for (int controller = 0; controller < 2; controller++)
+        {
+            if (config_emulator.adam_controller[controller] != config_AdamController_Keyboard)
+                continue;
+            for (int i = 0; i < 20; i++)
+            {
+                if (input_last_state[controller][i].pressed)
+                    input_force_key(controller, i, input_last_state[controller][i].key, false);
+            }
+        }
+    }
 }
 
 bool events_is_adam_keyboard_active(void)
@@ -324,6 +354,7 @@ bool events_input_updated(void)
 
 static void input_force_key(int controller, int index, GC_Keys key, bool pressed)
 {
+    input_last_state[controller][index].key = key;
     input_last_state[controller][index].pressed = pressed;
 
     if (pressed)
@@ -366,6 +397,30 @@ static void input_filter_opposing_directions(int controller, bool* left, bool* r
     }
 }
 
+static bool adam_controller_uses_key(SDL_Scancode scancode)
+{
+    for (int controller = 0; controller < 2; controller++)
+    {
+        if (config_emulator.adam_controller[controller] != config_AdamController_Keyboard)
+            continue;
+        const config_Input* input = &config_input[controller];
+        const SDL_Scancode keys[] =
+        {
+            input->key_left, input->key_right, input->key_up, input->key_down,
+            input->key_left_button, input->key_right_button, input->key_blue, input->key_purple,
+            input->key_0, input->key_1, input->key_2, input->key_3, input->key_4,
+            input->key_5, input->key_6, input->key_7, input->key_8, input->key_9,
+            input->key_asterisk, input->key_hash
+        };
+        for (int i = 0; i < 20; i++)
+        {
+            if (keys[i] == scancode)
+                return true;
+        }
+    }
+    return false;
+}
+
 static void input_poll_controller(int controller)
 {
     if (controller < 0 || controller >= 2)
@@ -378,13 +433,15 @@ static void input_poll_controller(int controller)
     }
 
     SDL_Keymod mods = SDL_GetModState();
-    bool adam_keyboard = (emu_get_machine() == GC_MACHINE_ADAM) && !emu_is_empty();
-    if ((mods & SDL_KMOD_CTRL) && !adam_keyboard)
+    bool adam = (emu_get_machine() == GC_MACHINE_ADAM) && !emu_is_empty();
+    if ((mods & SDL_KMOD_CTRL) && !adam)
         return;
 
-    const bool* keyboard_state = SDL_GetKeyboardState(NULL);
+    const bool* keyboard_state = adam ? adam_controller_keys : SDL_GetKeyboardState(NULL);
+    bool keyboard = !adam || config_emulator.adam_controller[controller] == config_AdamController_Keyboard;
     SDL_Gamepad* gamepad_ctrl = gamepad_controller[controller];
-    bool gp = IsValidPointer(gamepad_ctrl) && config_input[controller].gamepad;
+    bool gp = IsValidPointer(gamepad_ctrl) && (adam ?
+        config_emulator.adam_controller[controller] == config_AdamController_Gamepad : config_input[controller].gamepad);
 
     struct { SDL_Scancode key; GC_Keys gc_key; int gp_btn_field; } button_map[] = {
         { config_input[controller].key_left_button, Key_Left_Button, config_input[controller].gamepad_left_button },
@@ -406,10 +463,10 @@ static void input_poll_controller(int controller)
     };
 
     // Directional keys (index 0-3)
-    bool dir_left = !adam_keyboard && keyboard_state[config_input[controller].key_left];
-    bool dir_right = !adam_keyboard && keyboard_state[config_input[controller].key_right];
-    bool dir_up = !adam_keyboard && keyboard_state[config_input[controller].key_up];
-    bool dir_down = !adam_keyboard && keyboard_state[config_input[controller].key_down];
+    bool dir_left = keyboard && keyboard_state[config_input[controller].key_left];
+    bool dir_right = keyboard && keyboard_state[config_input[controller].key_right];
+    bool dir_up = keyboard && keyboard_state[config_input[controller].key_up];
+    bool dir_down = keyboard && keyboard_state[config_input[controller].key_down];
 
     if (gp)
     {
@@ -445,10 +502,10 @@ static void input_poll_controller(int controller)
     // Button + keypad keys (index 4-19)
     for (int i = 0; i < 16; i++)
     {
-        bool pressed = !adam_keyboard && keyboard_state[button_map[i].key];
+        bool pressed = keyboard && keyboard_state[button_map[i].key];
         if (gp)
             pressed |= gamepad_get_button(gamepad_ctrl, button_map[i].gp_btn_field);
-        if ((controller == 0) && (i < 2) && (config_emulator.spinner == 3) && !config_debug.debug)
+        if (!adam && (controller == 0) && (i < 2) && (config_emulator.spinner == 3) && !config_debug.debug)
             pressed |= roller_mouse_buttons[i];
         // Left/Right buttons also map from directional for non-keypad
         input_send_key(controller, 4 + i, button_map[i].gc_key, pressed);

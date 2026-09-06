@@ -105,6 +105,7 @@ EXTERN bool emu_is_debug_idle(void);
 EXTERN bool emu_is_empty(void);
 EXTERN bool emu_is_bios_loaded(void);
 EXTERN bool emu_start_adam(const char* const* media_paths = NULL);
+EXTERN bool emu_power_off_adam(void);
 EXTERN bool emu_unload_content(void);
 EXTERN bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_path);
 EXTERN bool emu_is_adam_firmware_loaded(GC_AdamFirmware firmware);

@@ -78,6 +78,13 @@ static const config_AdamKeyDefinition config_adam_keys[] =
 };
 static const int config_adam_key_count = sizeof(config_adam_keys) / sizeof(config_adam_keys[0]);
 
+enum config_AdamController
+{
+    config_AdamController_None = 0,
+    config_AdamController_Keyboard,
+    config_AdamController_Gamepad
+};
+
 struct config_Emulator
 {
     bool maximized;
@@ -106,6 +113,7 @@ struct config_Emulator
     bool adam_media_persistence;
     std::string adam_recent_media[GC_ADAM_MEDIA_SLOT_COUNT][5];
     bool adam_media_write_protected[GC_ADAM_MEDIA_SLOT_COUNT];
+    int adam_controller[2];
     int savefiles_dir_option;
     std::string savefiles_path;
     int savestates_dir_option;

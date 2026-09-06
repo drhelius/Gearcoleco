@@ -32,6 +32,7 @@
 #include "gui_filedialogs.h"
 #include "gui_debug_constants.h"
 #include "gui_debug_adam.h"
+#include "gui_debug.h"
 #include "events.h"
 #include "keyboard.h"
 #include "utils.h"
@@ -86,7 +87,6 @@ static void draw_missing_firmware(void);
 static void draw_quit_confirmation(void);
 static void reset_firmware_paths(void);
 static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* path);
-static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path);
 
 void gui_adam_prepare_window(float width, float height)
 {
@@ -263,7 +263,7 @@ static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* pa
     inspection->readable = inspection->actual_size > 0;
 }
 
-static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path)
+bool gui_adam_apply_firmware_path(GC_AdamFirmware firmware, const char* path)
 {
     if (!emu_load_adam_firmware(firmware, path))
     {
@@ -285,7 +285,8 @@ static bool apply_firmware_path(GC_AdamFirmware firmware, const char* path)
 
     const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
     char message[128];
-    snprintf(message, sizeof(message), "%s firmware configured", metadata->role_name);
+    bool running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
+    snprintf(message, sizeof(message), running ? "%s firmware selected for next power-on" : "%s firmware configured", metadata->role_name);
     gui_set_status_message(message, 3000);
     return true;
 }
@@ -301,7 +302,7 @@ void gui_adam_firmware_menu(const char* label, GC_AdamFirmware firmware)
     size_t path_size = firmware == GC_ADAM_FIRMWARE_OS7 ? sizeof(gui_bios_path) :
         (firmware == GC_ADAM_FIRMWARE_EOS ? sizeof(gui_adam_eos_path) : sizeof(gui_adam_smartwriter_path));
     bool adam_running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
-    ImGui::BeginDisabled(adam_running);
+    ImGui::BeginDisabled(emu_is_busy());
     if (ImGui::MenuItem(firmware == GC_ADAM_FIRMWARE_OS7 ? "Load BIOS..." : "Load ROM..."))
         pending_firmware_browse = firmware;
     ImGui::SetNextItemWidth(350.0f);
@@ -313,7 +314,7 @@ void gui_adam_firmware_menu(const char* label, GC_AdamFirmware firmware)
     if ((apply || !ImGui::IsItemActive()) && strcmp(inspection->path, path))
         refresh_firmware_inspection(firmware, path);
     if (apply && inspection->valid)
-        apply_firmware_path(firmware, path);
+        gui_adam_apply_firmware_path(firmware, path);
     ImGui::EndDisabled();
     ImGui::Separator();
     bool loaded = firmware == GC_ADAM_FIRMWARE_OS7 ? emu_is_bios_loaded() :
@@ -325,7 +326,7 @@ void gui_adam_firmware_menu(const char* label, GC_AdamFirmware firmware)
     if (!inspection->valid)
         ImGui::TextColored(orange, "Selected path is missing or invalid");
     if (adam_running)
-        ImGui::TextDisabled("Switch to ColecoVision to change firmware.");
+        ImGui::TextDisabled("Changes apply on the next Power On.");
     ImGui::EndMenu();
 }
 
@@ -639,13 +640,13 @@ static void process_media_queue(void)
 {
     if (pending_dirty_action != AdamMediaPendingNone || emu_is_busy())
         return;
-    bool running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
+    bool adam = emu_get_machine() == GC_MACHINE_ADAM;
     for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
     {
         if (!queued_media[i][0])
             continue;
         GC_AdamMediaSlot slot = (GC_AdamMediaSlot)i;
-        if (running)
+        if (adam)
         {
             Emu_AdamMediaInfo info;
             emu_get_adam_media_info(slot, &info);
@@ -679,13 +680,13 @@ void gui_adam_drop_media(const char* path, bool disk)
         return;
     }
     int first = disk ? GC_ADAM_MEDIA_DISK_1 : GC_ADAM_MEDIA_DATA_PACK_1;
-    bool running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
+    bool adam = emu_get_machine() == GC_MACHINE_ADAM;
     for (int i = first; i < first + 2; i++)
     {
         Emu_AdamMediaInfo info = {};
-        if (running)
+        if (adam)
             emu_get_adam_media_info((GC_AdamMediaSlot)i, &info);
-        bool occupied = running ? info.inserted : selected_media[i][0] != '\0';
+        bool occupied = adam ? info.inserted : selected_media[i][0] != '\0';
         if (!occupied && !queued_media[i][0])
         {
             if (!gui_adam_select_media((GC_AdamMediaSlot)i, path, NULL))
@@ -713,8 +714,56 @@ void gui_adam_start(void)
     const char* paths[GC_ADAM_MEDIA_SLOT_COUNT];
     for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
         paths[i] = selected_media[i];
-    if (!gui_start_adam(paths))
+    if (!gui_start_adam(emu_get_machine() == GC_MACHINE_ADAM ? NULL : paths))
         gui_set_error_message("Unable to start ADAM. Check the selected images and save directory.");
+}
+
+void gui_adam_power_off(void)
+{
+    gui_debug_auto_save_settings();
+    if (!emu_power_off_adam())
+    {
+        gui_set_error_message("Unable to power off ADAM because media changes could not be saved. Use Save As for modified images, then try again.");
+        return;
+    }
+    application_reset_title();
+    gui_set_status_message("ADAM powered off", 3000);
+}
+
+void gui_adam_controller_menu(void)
+{
+    static const char* names[] = { "Not Connected", "Hand Controller (Keyboard)", "Hand Controller (Gamepad)" };
+    static const char* sources[] = { "None", "Keyboard", "Gamepad" };
+    for (int controller = 0; controller < 2; controller++)
+    {
+        char label[32];
+        snprintf(label, sizeof(label), "Controller %d", controller + 1);
+        int selected = config_emulator.adam_controller[controller];
+        if (ImGui::BeginMenu(label))
+        {
+            ImGui::PushItemWidth(260.0f);
+            if (ImGui::Combo("##controller", &config_emulator.adam_controller[controller], names, IM_ARRAYSIZE(names)))
+            {
+                if (emu_get_machine() == GC_MACHINE_ADAM)
+                    events_sync_input();
+            }
+            selected = config_emulator.adam_controller[controller];
+            if (selected == config_AdamController_Keyboard && ImGui::IsItemHovered())
+            {
+                char keypad_key[64];
+                strncpy_fit(keypad_key, keyboard_key_name(config_input[controller].key_1), sizeof(keypad_key));
+                ImGui::SetTooltip("Uses Player %d bindings from Input > Keyboard Configuration.\nKeypad 1: %s. Fire: %s.\nMapped keys control this controller; other keys still type on ADAM.",
+                    controller + 1, keypad_key,
+                    keyboard_key_name(config_input[controller].key_left_button));
+            }
+            if (selected == config_AdamController_Gamepad && ImGui::IsItemHovered())
+                ImGui::SetTooltip("Uses the device and bindings selected in Input > Gamepads > Player %d.", controller + 1);
+            ImGui::PopItemWidth();
+            ImGui::EndMenu();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Port %d: %s", controller + 1, sources[selected]);
+    }
 }
 
 void gui_adam_media_menu(void)
@@ -725,7 +774,7 @@ void gui_adam_media_menu(void)
     draw_media_drive(GC_ADAM_MEDIA_DATA_PACK_2, "Data Pack 2");
     if (ImGui::MenuItem("Swap Disks 1 and 2"))
     {
-        if (!emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM)
+        if (emu_get_machine() == GC_MACHINE_ADAM)
         {
             if (!emu_swap_adam_disks())
                 gui_set_error_message("Unable to swap disks. Save any modified images first.");
@@ -745,19 +794,19 @@ void gui_adam_media_menu(void)
 
 static void draw_media_drive(GC_AdamMediaSlot slot, const char* label)
 {
-    bool running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
+    bool adam = emu_get_machine() == GC_MACHINE_ADAM;
     Emu_AdamMediaInfo info = {};
-    if (running)
+    if (adam)
         emu_get_adam_media_info(slot, &info);
-    const char* path = running ? info.path : selected_media[slot];
-    bool inserted = running ? info.inserted : path[0] != '\0';
+    const char* path = adam ? info.path : selected_media[slot];
+    bool inserted = adam ? info.inserted : path[0] != '\0';
     if (!ImGui::BeginMenu(label))
         return;
     if (ImGui::MenuItem("Insert..."))
         pending_insert_slot = slot;
     if (ImGui::MenuItem("Eject", NULL, false, inserted))
     {
-        if (!running)
+        if (!adam)
             selected_media[slot][0] = '\0';
         else if (info.dirty)
         {
@@ -781,18 +830,18 @@ static void draw_media_drive(GC_AdamMediaSlot slot, const char* label)
     else
         ImGui::TextDisabled("Empty");
     ImGui::Separator();
-    bool protected_media = running ? info.write_protected : config_emulator.adam_media_write_protected[slot];
+    bool protected_media = adam ? info.write_protected : config_emulator.adam_media_write_protected[slot];
     if (ImGui::MenuItem("Write Protected", NULL, &protected_media))
     {
-        if (!running || !inserted || emu_set_adam_media_write_protected(slot, protected_media))
+        if (!adam || !inserted || emu_set_adam_media_write_protected(slot, protected_media))
             config_emulator.adam_media_write_protected[slot] = protected_media;
     }
-    if (ImGui::MenuItem("Save Changes", NULL, false, running && info.dirty && info.working_path[0]))
+    if (ImGui::MenuItem("Save Changes", NULL, false, adam && info.dirty && info.working_path[0]))
     {
         if (!emu_save_adam_media(slot))
             gui_set_error_message("Unable to save ADAM media changes.");
     }
-    if (ImGui::MenuItem("Save As...", NULL, false, running && inserted))
+    if (ImGui::MenuItem("Save As...", NULL, false, adam && inserted))
         pending_save_as_slot = slot;
     if (ImGui::BeginMenu("Recent Images"))
     {
@@ -810,7 +859,7 @@ static void draw_media_drive(GC_AdamMediaSlot slot, const char* label)
         }
         ImGui::EndMenu();
     }
-    int count = running ? emu_get_adam_playlist_count(slot) : 0;
+    int count = adam ? emu_get_adam_playlist_count(slot) : 0;
     if (count > 0 && ImGui::BeginMenu("Playlist"))
     {
         int current = emu_get_adam_playlist_index(slot);

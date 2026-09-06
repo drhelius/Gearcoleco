@@ -368,14 +368,23 @@ static void menu_adam(void)
 
     gui_in_use = true;
     bool adam_running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
-    ImGui::BeginDisabled(gui_is_rom_loading() || gui_file_dialog_is_active());
+    ImGui::BeginDisabled(emu_is_busy() || gui_is_rom_loading() || gui_file_dialog_is_active());
     if (ImGui::MenuItem(adam_running ? "Computer Reset" : "Power On"))
         gui_adam_start();
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(adam_running ? "Resets the computer and boots from inserted media, keeping all drives mounted." :
             "Powers on ADAM. It boots from inserted media, or opens SmartWriter when none is bootable.");
+    if (adam_running)
+    {
+        if (ImGui::MenuItem("Power Off"))
+            gui_adam_power_off();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Stops ADAM and saves modified media. Images remain inserted for the next Power On.");
+    }
     ImGui::Separator();
     gui_adam_media_menu();
+    ImGui::Separator();
+    gui_adam_controller_menu();
     ImGui::EndDisabled();
     ImGui::Separator();
     ImGui::MenuItem("Printer Output", NULL, &config_debug.show_adam_printer, adam_running);
@@ -1036,6 +1045,7 @@ static void menu_input(void)
     if (ImGui::BeginMenu("Input"))
     {
         gui_in_use = true;
+        bool adam_running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
 
         if (ImGui::BeginMenu("Keyboard Configuration"))
         {
@@ -1108,7 +1118,10 @@ static void menu_input(void)
         {
             if (ImGui::BeginMenu("Player 1"))
             {
-                ImGui::MenuItem("Enable Gamepad P1", "", &config_input[0].gamepad);
+                if (adam_running)
+                    ImGui::TextDisabled("Connection: ADAM > Controller 1");
+                else
+                    ImGui::MenuItem("Enable Gamepad P1", "", &config_input[0].gamepad);
 
                 if (ImGui::BeginMenu("Device"))
                 {
@@ -1185,7 +1198,10 @@ static void menu_input(void)
 
             if (ImGui::BeginMenu("Player 2"))
             {
-                ImGui::MenuItem("Enable Gamepad P2", "", &config_input[1].gamepad);
+                if (adam_running)
+                    ImGui::TextDisabled("Connection: ADAM > Controller 2");
+                else
+                    ImGui::MenuItem("Enable Gamepad P2", "", &config_input[1].gamepad);
 
                 if (ImGui::BeginMenu("Device"))
                 {
@@ -1265,7 +1281,7 @@ static void menu_input(void)
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Spinners"))
+        if (ImGui::BeginMenu("Spinners", !adam_running))
         {
             ImGui::MenuItem("Capture Mouse", config_hotkeys[config_HotkeyIndex_CaptureMouse].str, &config_emulator.capture_mouse);
             if (ImGui::IsItemHovered())
