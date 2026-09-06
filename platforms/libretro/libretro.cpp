@@ -42,7 +42,7 @@ static const char slash = '/';
 #define MAX_PADS 2
 #define JOYPAD_BUTTONS 16
 #define MAX_ADAM_DISK_IMAGES 64
-#define RETRO_ADAM_SUBSYSTEM_ID 0xAD00
+#define RETRO_ADAM_SUBSYSTEM_ID 0xAD01
 #define RETRO_ADAM_STATE_MAGIC 0x4D414447
 
 #define RETRO_DEVICE_COLECOVISION RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0)
@@ -65,8 +65,10 @@ static int spinner_sensitivity = 1;
 static float aspect_ratio = 0.0f;
 static GC_VideoChip video_chip = GC_VIDEO_CHIP_AUTO;
 static bool categories_supported = false;
-static GC_Machine machine_option = GC_MACHINE_AUTO;
-static int adam_boot_option = 0;
+static bool adam_cartridge_hardware = false;
+static int adam_control_drive = -1;
+static unsigned adam_primary_slot = 0;
+static bool adam_computer_reset_latched = false;
 static bool adam_writable_media = false;
 static bool content_loaded = false;
 
@@ -122,7 +124,8 @@ struct RetroAdamMediaBackup
 };
 
 static RetroAdamHostMedia adam_host_media[GC_ADAM_MEDIA_SLOT_COUNT];
-static RetroAdamDiskSet adam_disk_set;
+static RetroAdamDiskSet adam_disk_sets[GC_ADAM_MEDIA_SLOT_COUNT];
+static RetroAdamDiskSet* adam_disk_set = &adam_disk_sets[0];
 static unsigned adam_initial_image_index = 0;
 static char adam_initial_image_path[4096];
 
@@ -179,6 +182,7 @@ static bool IsJoypadDevice(unsigned device)
 }
 
 static void clear_input_state(void);
+static void clear_adam_keyboard_state(void);
 static void reset_controller_devices(void);
 static void apply_controller_device(unsigned port, unsigned device, bool log_device);
 static bool read_file(const char* path, u8** data, size_t* size);
@@ -191,12 +195,11 @@ static u32 calculate_crc32(const u8* data, size_t size);
 static GC_AdamMediaType adam_media_type_from_path(const char* path);
 static bool load_colecovision_firmware(void);
 static bool load_adam_firmware(void);
-static bool load_adam_media_info(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const struct retro_game_info* info, bool initialize_disk_set);
 static bool flush_adam_media(GC_AdamMediaSlot slot);
 static bool flush_all_adam_media(void);
 static void clear_adam_host_media(void);
 static void clear_adam_disk_set(void);
+static void clear_adam_disk_sets(void);
 static void capture_adam_media(RetroAdamMediaBackup* backup);
 static bool prepare_adam_media(const RetroAdamMediaBackup* backup);
 static void clear_adam_media_backup(RetroAdamMediaBackup* backup);
@@ -265,7 +268,7 @@ void retro_init(void)
     retro_game_path[0] = '\0';
     content_loaded = false;
     clear_adam_host_media();
-    clear_adam_disk_set();
+    clear_adam_disk_sets();
 
     config.region = Cartridge::CartridgeUnknownRegion;
     config.type = Cartridge::CartridgeNotSupported;
@@ -287,7 +290,7 @@ void retro_deinit(void)
         core->AdamReleaseAllKeys();
         core->UnloadContent();
     }
-    clear_adam_disk_set();
+    clear_adam_disk_sets();
     clear_adam_host_media();
     SafeDeleteArray(frame_buffer);
     SafeDelete(core);
@@ -299,8 +302,10 @@ void retro_deinit(void)
     current_aspect_ratio = 0.0f;
     aspect_ratio = 0.0f;
     video_chip = GC_VIDEO_CHIP_AUTO;
-    machine_option = GC_MACHINE_AUTO;
-    adam_boot_option = 0;
+    adam_cartridge_hardware = false;
+    adam_control_drive = -1;
+    adam_primary_slot = 0;
+    adam_computer_reset_latched = false;
     adam_writable_media = false;
     content_loaded = false;
     retro_game_path[0] = '\0';
@@ -330,10 +335,17 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
     apply_controller_device(port, device, true);
 }
 
-static void clear_input_state(void)
+static void clear_adam_keyboard_state(void)
 {
     memset(adam_retro_key_down, 0, sizeof(adam_retro_key_down));
     memset(adam_key_references, 0, sizeof(adam_key_references));
+    if (core)
+        core->AdamReleaseAllKeys();
+}
+
+static void clear_input_state(void)
+{
+    clear_adam_keyboard_state();
     for (int i = 0; i < MAX_PADS; i++)
     {
         for (int j = 0; j < JOYPAD_BUTTONS; j++)
@@ -473,9 +485,6 @@ void retro_set_environment(retro_environment_t cb)
     bool support_no_game = true;
     environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
 
-    struct retro_keyboard_callback keyboard = { keyboard_event };
-    environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard);
-
     static const struct retro_disk_control_ext_callback disk_control = {
         disk_set_eject_state,
         disk_get_eject_state,
@@ -504,11 +513,13 @@ void retro_set_environment(retro_environment_t cb)
 
     static const struct retro_subsystem_rom_info adam_roms[] = {
         { "ADAM cartridge", "col|cv|bin|rom", false, false, false, NULL, 0 },
-        { "ADAM data pack", "ddp|zip", false, false, false, NULL, 0 },
-        { "ADAM disk", "dsk|zip", false, false, false, NULL, 0 }
+        { "Disk 1", "dsk|zip|m3u", false, false, false, NULL, 0 },
+        { "Disk 2", "dsk|zip|m3u", false, false, false, NULL, 0 },
+        { "Data Pack 1", "ddp|zip|m3u", false, false, false, NULL, 0 },
+        { "Data Pack 2", "ddp|zip|m3u", false, false, false, NULL, 0 }
     };
     static const struct retro_subsystem_info subsystems[] = {
-        { "Coleco ADAM", "adam", adam_roms, 3, RETRO_ADAM_SUBSYSTEM_ID },
+        { "ADAM", "adam", adam_roms, 5, RETRO_ADAM_SUBSYSTEM_ID },
         { NULL, NULL, NULL, 0, 0 }
     };
     environ_cb(RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO, (void*)subsystems);
@@ -1009,11 +1020,24 @@ static void clear_disk_image(RetroAdamDiskImage* image)
 
 static void clear_adam_disk_set(void)
 {
+    unsigned slot = (unsigned)(adam_disk_set - adam_disk_sets);
     for (int i = 0; i < MAX_ADAM_DISK_IMAGES; i++)
-        clear_disk_image(&adam_disk_set.images[i]);
-    memset(&adam_disk_set, 0, sizeof(adam_disk_set));
-    adam_disk_set.index = 0;
-    adam_disk_set.ejected = true;
+        clear_disk_image(&adam_disk_set->images[i]);
+    memset(adam_disk_set, 0, sizeof(*adam_disk_set));
+    adam_disk_set->slot = (GC_AdamMediaSlot)slot;
+    adam_disk_set->type = slot <= GC_ADAM_MEDIA_DISK_2 ? GC_ADAM_MEDIA_DISK : GC_ADAM_MEDIA_DATA_PACK;
+    adam_disk_set->ejected = true;
+}
+
+static void clear_adam_disk_sets(void)
+{
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        adam_disk_set = &adam_disk_sets[i];
+        clear_adam_disk_set();
+    }
+    adam_primary_slot = 0;
+    adam_disk_set = &adam_disk_sets[0];
 }
 
 static void clear_adam_host_media(void)
@@ -1114,9 +1138,9 @@ static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMedia
     bool playlist = info->path && ends_with_no_case(info->path, ".m3u");
     if (!playlist)
     {
-        if ((type == GC_ADAM_MEDIA_NONE) || !copy_disk_image(&adam_disk_set.images[0], info))
+        if ((type == GC_ADAM_MEDIA_NONE) || !copy_disk_image(&adam_disk_set->images[0], info))
             return false;
-        RetroAdamDiskImage* image = &adam_disk_set.images[0];
+        RetroAdamDiskImage* image = &adam_disk_set->images[0];
         u8* validation = NULL;
         size_t validation_size = 0;
         GC_AdamMediaType validation_type = GC_ADAM_MEDIA_NONE;
@@ -1132,12 +1156,10 @@ static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMedia
             clear_adam_disk_set();
             return false;
         }
-        adam_disk_set.count = 1;
-        adam_disk_set.index = 0;
-        adam_disk_set.type = type;
-        adam_disk_set.slot = type == GC_ADAM_MEDIA_DATA_PACK ? GC_ADAM_MEDIA_DATA_PACK_1 :
-            GC_ADAM_MEDIA_DISK_1;
-        adam_disk_set.ejected = false;
+        adam_disk_set->count = 1;
+        adam_disk_set->index = 0;
+        adam_disk_set->type = type;
+        adam_disk_set->ejected = false;
         return true;
     }
 
@@ -1151,7 +1173,7 @@ static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMedia
     size_t position = 0;
     GC_AdamMediaType playlist_type = GC_ADAM_MEDIA_NONE;
 
-    while ((position < text_size) && (adam_disk_set.count < MAX_ADAM_DISK_IMAGES))
+    while ((position < text_size) && (adam_disk_set->count < MAX_ADAM_DISK_IMAGES))
     {
         size_t end = position;
         while ((end < text_size) && (text[end] != '\n'))
@@ -1177,7 +1199,7 @@ static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMedia
             char entry[4096];
             memcpy(entry, text + position, end - position);
             entry[end - position] = '\0';
-            RetroAdamDiskImage* image = &adam_disk_set.images[adam_disk_set.count];
+            RetroAdamDiskImage* image = &adam_disk_set->images[adam_disk_set->count];
             if (!join_path(directory, entry, image->path, sizeof(image->path)))
             {
                 SafeDeleteArray(text);
@@ -1201,29 +1223,32 @@ static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMedia
             SafeDeleteArray(validation);
             playlist_type = entry_type;
             make_image_label(image->path, image->label, sizeof(image->label));
-            adam_disk_set.count++;
+            adam_disk_set->count++;
         }
         position = next;
     }
 
     SafeDeleteArray(text);
-    if ((adam_disk_set.count == 0) || ((position < text_size) &&
-        (adam_disk_set.count == MAX_ADAM_DISK_IMAGES)))
+    if ((adam_disk_set->count == 0) || ((position < text_size) &&
+        (adam_disk_set->count == MAX_ADAM_DISK_IMAGES)))
     {
         clear_adam_disk_set();
         return false;
     }
 
-    adam_disk_set.type = playlist_type;
-    adam_disk_set.slot = playlist_type == GC_ADAM_MEDIA_DATA_PACK ? GC_ADAM_MEDIA_DATA_PACK_1 :
-        GC_ADAM_MEDIA_DISK_1;
-    adam_disk_set.index = 0;
-    if ((adam_initial_image_index < adam_disk_set.count) && adam_initial_image_path[0] &&
-        (strcmp(adam_disk_set.images[adam_initial_image_index].path, adam_initial_image_path) == 0))
-        adam_disk_set.index = adam_initial_image_index;
+    adam_disk_set->type = playlist_type;
+    if (type != GC_ADAM_MEDIA_NONE && playlist_type != type)
+    {
+        clear_adam_disk_set();
+        return false;
+    }
+    adam_disk_set->index = 0;
+    if ((adam_initial_image_index < adam_disk_set->count) && adam_initial_image_path[0] &&
+        (strcmp(adam_disk_set->images[adam_initial_image_index].path, adam_initial_image_path) == 0))
+        adam_disk_set->index = adam_initial_image_index;
     adam_initial_image_index = 0;
     adam_initial_image_path[0] = '\0';
-    adam_disk_set.ejected = false;
+    adam_disk_set->ejected = false;
     return true;
 }
 
@@ -1356,47 +1381,22 @@ static bool mount_adam_media(GC_AdamMediaSlot slot, GC_AdamMediaType type, const
 
 static bool load_disk_set_image(unsigned index)
 {
-    if (index >= adam_disk_set.count)
+    if (index >= adam_disk_set->count)
         return false;
-    RetroAdamDiskImage* image = &adam_disk_set.images[index];
+    RetroAdamDiskImage* image = &adam_disk_set->images[index];
     u8* data = NULL;
     size_t size = 0;
     GC_AdamMediaType type = GC_ADAM_MEDIA_NONE;
     if (!read_disk_image(image, &data, &size, &type))
         return false;
-    if (type != adam_disk_set.type)
+    if (type != adam_disk_set->type)
     {
         SafeDeleteArray(data);
         return false;
     }
 
-    bool loaded = mount_adam_media(adam_disk_set.slot, adam_disk_set.type, data, size,
+    bool loaded = mount_adam_media(adam_disk_set->slot, adam_disk_set->type, data, size,
         image->path);
-    SafeDeleteArray(data);
-    return loaded;
-}
-
-static bool load_adam_media_info(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const struct retro_game_info* info, bool initialize_set)
-{
-    if (initialize_set)
-    {
-        if (!initialize_disk_set(info, type))
-            return false;
-        return load_disk_set_image(adam_disk_set.index);
-    }
-
-    u8* data = NULL;
-    size_t size = 0;
-    GC_AdamMediaType source_type = GC_ADAM_MEDIA_NONE;
-    if (!read_adam_game_info(info, &data, &size, &source_type))
-        return false;
-    if (source_type != type)
-    {
-        SafeDeleteArray(data);
-        return false;
-    }
-    bool loaded = mount_adam_media(slot, type, data, size, info->path ? info->path : "");
     SafeDeleteArray(data);
     return loaded;
 }
@@ -1429,72 +1429,76 @@ static bool flush_all_adam_media(void)
 
 static bool disk_set_eject_state(bool ejected)
 {
-    if (adam_disk_set.count == 0)
+    if (!content_loaded || core->GetMachine() != GC_MACHINE_ADAM)
         return false;
-    if (adam_disk_set.ejected == ejected)
+    if (adam_disk_set->ejected == ejected)
         return true;
 
     if (ejected)
     {
-        if (!flush_adam_media(adam_disk_set.slot))
+        if (!flush_adam_media(adam_disk_set->slot))
             return false;
-        core->EjectAdamMedia(adam_disk_set.slot);
-        memset(&adam_host_media[adam_disk_set.slot], 0,
-            sizeof(adam_host_media[adam_disk_set.slot]));
-        adam_disk_set.ejected = true;
+        core->EjectAdamMedia(adam_disk_set->slot);
+        memset(&adam_host_media[adam_disk_set->slot], 0,
+            sizeof(adam_host_media[adam_disk_set->slot]));
+        adam_disk_set->ejected = true;
         return true;
     }
 
-    if ((adam_disk_set.index >= adam_disk_set.count) ||
-        !load_disk_set_image(adam_disk_set.index))
+    if ((adam_disk_set->index >= adam_disk_set->count) ||
+        !load_disk_set_image(adam_disk_set->index))
     {
         return false;
     }
-    adam_disk_set.ejected = false;
+    adam_disk_set->ejected = false;
     return true;
 }
 
 static bool disk_get_eject_state(void)
 {
-    return adam_disk_set.ejected;
+    return adam_disk_set->ejected;
 }
 
 static unsigned disk_get_image_index(void)
 {
-    return adam_disk_set.index;
+    return adam_disk_set->index;
 }
 
 static bool disk_set_image_index(unsigned index)
 {
-    if (!adam_disk_set.ejected || (index >= adam_disk_set.count))
+    if (!content_loaded || core->GetMachine() != GC_MACHINE_ADAM)
         return false;
-    adam_disk_set.index = index;
+    if (!adam_disk_set->ejected || (index >= adam_disk_set->count))
+        return false;
+    adam_disk_set->index = index;
     return true;
 }
 
 static unsigned disk_get_num_images(void)
 {
-    return adam_disk_set.count;
+    return adam_disk_set->count;
 }
 
 static bool disk_replace_image_index(unsigned index, const struct retro_game_info* info)
 {
-    if (!adam_disk_set.ejected || (index >= adam_disk_set.count))
+    if (!content_loaded || core->GetMachine() != GC_MACHINE_ADAM)
+        return false;
+    if (!adam_disk_set->ejected || (index >= adam_disk_set->count))
         return false;
 
     if (!info)
     {
-        clear_disk_image(&adam_disk_set.images[index]);
-        for (unsigned i = index; i + 1 < adam_disk_set.count; i++)
+        clear_disk_image(&adam_disk_set->images[index]);
+        for (unsigned i = index; i + 1 < adam_disk_set->count; i++)
         {
-            adam_disk_set.images[i] = adam_disk_set.images[i + 1];
-            memset(&adam_disk_set.images[i + 1], 0, sizeof(adam_disk_set.images[i + 1]));
+            adam_disk_set->images[i] = adam_disk_set->images[i + 1];
+            memset(&adam_disk_set->images[i + 1], 0, sizeof(adam_disk_set->images[i + 1]));
         }
-        adam_disk_set.count--;
-        if (adam_disk_set.count == 0)
-            adam_disk_set.index = 0;
-        else if (adam_disk_set.index >= adam_disk_set.count)
-            adam_disk_set.index = adam_disk_set.count - 1;
+        adam_disk_set->count--;
+        if (adam_disk_set->count == 0)
+            adam_disk_set->index = 0;
+        else if (adam_disk_set->index >= adam_disk_set->count)
+            adam_disk_set->index = adam_disk_set->count - 1;
         return true;
     }
 
@@ -1503,21 +1507,23 @@ static bool disk_replace_image_index(unsigned index, const struct retro_game_inf
     GC_AdamMediaType type = GC_ADAM_MEDIA_NONE;
     if (!read_adam_game_info(info, &validation, &validation_size, &type))
         return false;
-    bool valid = (type == adam_disk_set.type) &&
-        adam_media_size_valid(adam_disk_set.type, validation_size);
+    bool valid = (type == adam_disk_set->type) &&
+        adam_media_size_valid(adam_disk_set->type, validation_size);
     SafeDeleteArray(validation);
     if (!valid)
         return false;
-    return copy_disk_image(&adam_disk_set.images[index], info);
+    return copy_disk_image(&adam_disk_set->images[index], info);
 }
 
 static bool disk_add_image_index(void)
 {
-    if (!adam_disk_set.ejected || (adam_disk_set.count >= MAX_ADAM_DISK_IMAGES))
+    if (!content_loaded || core->GetMachine() != GC_MACHINE_ADAM)
         return false;
-    memset(&adam_disk_set.images[adam_disk_set.count], 0,
-        sizeof(adam_disk_set.images[adam_disk_set.count]));
-    adam_disk_set.count++;
+    if (!adam_disk_set->ejected || (adam_disk_set->count >= MAX_ADAM_DISK_IMAGES))
+        return false;
+    memset(&adam_disk_set->images[adam_disk_set->count], 0,
+        sizeof(adam_disk_set->images[adam_disk_set->count]));
+    adam_disk_set->count++;
     return true;
 }
 
@@ -1532,24 +1538,26 @@ static bool disk_set_initial_image(unsigned index, const char* path)
 
 static bool disk_get_image_path(unsigned index, char* path, size_t len)
 {
-    if (!path || (len == 0) || (index >= adam_disk_set.count) ||
-        !adam_disk_set.images[index].path[0])
+    if (!path || (len == 0) || (index >= adam_disk_set->count) ||
+        !adam_disk_set->images[index].path[0])
         return false;
-    snprintf(path, len, "%s", adam_disk_set.images[index].path);
+    snprintf(path, len, "%s", adam_disk_set->images[index].path);
     return true;
 }
 
 static bool disk_get_image_label(unsigned index, char* label, size_t len)
 {
-    if (!label || (len == 0) || (index >= adam_disk_set.count))
+    if (!label || (len == 0) || (index >= adam_disk_set->count))
         return false;
-    snprintf(label, len, "%s", adam_disk_set.images[index].label[0] ?
-        adam_disk_set.images[index].label : "ADAM media");
+    snprintf(label, len, "%s", adam_disk_set->images[index].label[0] ?
+        adam_disk_set->images[index].label : "ADAM media");
     return true;
 }
 
 static GC_AdamKey adam_key_from_retro_key(unsigned keycode)
 {
+    if (keycode == RETROK_UNKNOWN)
+        return GC_ADAM_KEY_COUNT;
     if ((keycode >= RETROK_a) && (keycode <= RETROK_z))
         return (GC_AdamKey)(GC_ADAM_KEY_A + (keycode - RETROK_a));
     if ((keycode >= RETROK_0) && (keycode <= RETROK_9))
@@ -1557,6 +1565,24 @@ static GC_AdamKey adam_key_from_retro_key(unsigned keycode)
 
     switch (keycode)
     {
+        // Full ADAM typing requires frontend Game Focus; even letters are RetroArch hotkeys.
+        // Keep Scroll Lock and F10-F12 free for frontend focus/menu controls.
+        case RETROK_F1: return GC_ADAM_KEY_SMART_1;
+        case RETROK_F2: return GC_ADAM_KEY_SMART_2;
+        case RETROK_F3: return GC_ADAM_KEY_SMART_3;
+        case RETROK_F4: return GC_ADAM_KEY_SMART_4;
+        case RETROK_F5: return GC_ADAM_KEY_SMART_5;
+        case RETROK_F6: return GC_ADAM_KEY_SMART_6;
+        case RETROK_F7: return GC_ADAM_KEY_UNDO;
+        case RETROK_F8: return GC_ADAM_KEY_WILD_CARD;
+        case RETROK_HOME: return GC_ADAM_KEY_HOME;
+        case RETROK_INSERT: return GC_ADAM_KEY_INSERT;
+        case RETROK_DELETE: return GC_ADAM_KEY_DELETE;
+        case RETROK_PAGEUP: return GC_ADAM_KEY_MOVE;
+        case RETROK_PAGEDOWN: return GC_ADAM_KEY_STORE;
+        case RETROK_END: return GC_ADAM_KEY_CLEAR;
+        case RETROK_PRINT: return GC_ADAM_KEY_PRINT;
+        case RETROK_ESCAPE: return GC_ADAM_KEY_ESCAPE;
         case RETROK_SPACE: return GC_ADAM_KEY_SPACE;
         case RETROK_MINUS: return GC_ADAM_KEY_MINUS;
         case RETROK_EQUALS:
@@ -1573,24 +1599,8 @@ static GC_AdamKey adam_key_from_retro_key(unsigned keycode)
         case RETROK_SLASH: return GC_ADAM_KEY_SLASH;
         case RETROK_RETURN:
         case RETROK_KP_ENTER: return GC_ADAM_KEY_RETURN;
-        case RETROK_ESCAPE: return GC_ADAM_KEY_ESCAPE;
         case RETROK_BACKSPACE: return GC_ADAM_KEY_BACKSPACE;
         case RETROK_TAB: return GC_ADAM_KEY_TAB;
-        case RETROK_F9: return GC_ADAM_KEY_HOME;
-        case RETROK_F1: return GC_ADAM_KEY_SMART_1;
-        case RETROK_F2: return GC_ADAM_KEY_SMART_2;
-        case RETROK_F3: return GC_ADAM_KEY_SMART_3;
-        case RETROK_F4: return GC_ADAM_KEY_SMART_4;
-        case RETROK_F5: return GC_ADAM_KEY_SMART_5;
-        case RETROK_F6: return GC_ADAM_KEY_SMART_6;
-        case RETROK_F7: return GC_ADAM_KEY_WILD_CARD;
-        case RETROK_F8: return GC_ADAM_KEY_UNDO;
-        case RETROK_INSERT: return GC_ADAM_KEY_MOVE;
-        case RETROK_HOME: return GC_ADAM_KEY_STORE;
-        case RETROK_DELETE: return GC_ADAM_KEY_INSERT;
-        case RETROK_END: return GC_ADAM_KEY_PRINT;
-        case RETROK_PAGEUP: return GC_ADAM_KEY_CLEAR;
-        case RETROK_PAGEDOWN: return GC_ADAM_KEY_DELETE;
         case RETROK_UP: return GC_ADAM_KEY_UP;
         case RETROK_RIGHT: return GC_ADAM_KEY_RIGHT;
         case RETROK_DOWN: return GC_ADAM_KEY_DOWN;
@@ -1616,7 +1626,6 @@ static void keyboard_event(bool down, unsigned keycode, uint32_t character,
     GC_AdamKey key = adam_key_from_retro_key(keycode);
     if (key >= GC_ADAM_KEY_COUNT)
         return;
-
     if (down)
     {
         if (adam_retro_key_down[keycode])
@@ -1847,28 +1856,38 @@ static void check_variables(void)
 {
     struct retro_variable var = { NULL, NULL };
 
-    var.key = "gearcoleco_machine";
-    var.value = NULL;
+    var.key = "gearcoleco_cartridge_hardware";
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (strcmp(var.value, "ColecoVision") == 0)
-            machine_option = GC_MACHINE_COLECOVISION;
-        else if (strcmp(var.value, "ADAM") == 0)
-            machine_option = GC_MACHINE_ADAM;
-        else
-            machine_option = GC_MACHINE_AUTO;
-    }
+        adam_cartridge_hardware = strcmp(var.value, "ADAM") == 0;
 
-    var.key = "gearcoleco_adam_boot";
+    var.key = "gearcoleco_adam_disk_drive";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (strcmp(var.value, "Computer") == 0)
-            adam_boot_option = 1;
-        else if (strcmp(var.value, "Cartridge") == 0)
-            adam_boot_option = 2;
-        else
-            adam_boot_option = 0;
+        const char* names[] = { "Disk 1", "Disk 2", "Data Pack 1", "Data Pack 2" };
+        adam_control_drive = -1;
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        {
+            if (strcmp(var.value, names[i]) == 0)
+                adam_control_drive = i;
+        }
+        if (content_loaded && core->GetMachine() == GC_MACHINE_ADAM)
+            adam_disk_set = &adam_disk_sets[adam_control_drive >= 0 ? adam_control_drive : adam_primary_slot];
+    }
+    var.key = "gearcoleco_adam_computer_reset";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        bool reset = strcmp(var.value, "Reset") == 0;
+        if (reset && !adam_computer_reset_latched && content_loaded && core->GetMachine() == GC_MACHINE_ADAM)
+        {
+            core->ResetAdamComputer();
+            clear_input_state();
+            struct retro_variable idle = { "gearcoleco_adam_computer_reset", "Idle" };
+            if (environ_cb(RETRO_ENVIRONMENT_SET_VARIABLE, &idle))
+                reset = false;
+        }
+        adam_computer_reset_latched = reset;
     }
 
     var.key = "gearcoleco_adam_writable_media";
@@ -2124,6 +2143,10 @@ static bool setup_loaded_game(void)
 {
     if (core->GetMachine() == GC_MACHINE_ADAM)
     {
+        // RetroArch treats keyboard registration as a request for Auto Game Focus (Detect).
+        // Register on ADAM load, so ordinary ColecoVision startup does not request it.
+        struct retro_keyboard_callback keyboard = { keyboard_event };
+        environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard);
         struct retro_memory_descriptor desc = {};
         desc.ptr = core->GetAdam()->GetMainRAM();
         desc.start = 0x0000;
@@ -2171,6 +2194,7 @@ static bool setup_loaded_game(void)
 
     clear_input_state();
     content_loaded = true;
+    adam_disk_set = &adam_disk_sets[adam_control_drive >= 0 ? adam_control_drive : adam_primary_slot];
     return true;
 }
 
@@ -2191,19 +2215,6 @@ static GC_AdamMediaType infer_media_type(const struct retro_game_info* info)
     return type;
 }
 
-static bool validate_adam_game_info(const struct retro_game_info* info,
-    GC_AdamMediaType type)
-{
-    u8* data = NULL;
-    size_t size = 0;
-    GC_AdamMediaType actual_type = GC_ADAM_MEDIA_NONE;
-    if (!read_adam_game_info(info, &data, &size, &actual_type))
-        return false;
-    bool valid = (actual_type == type) && adam_media_size_valid(type, size);
-    SafeDeleteArray(data);
-    return valid;
-}
-
 bool retro_load_game(const struct retro_game_info *info)
 {
     if (content_loaded)
@@ -2214,22 +2225,12 @@ bool retro_load_game(const struct retro_game_info *info)
 
     check_variables();
     core->SetVideoChip(video_chip);
-    clear_adam_disk_set();
+    clear_adam_disk_sets();
     clear_adam_host_media();
     retro_game_path[0] = '\0';
 
     if (!info)
     {
-        if (machine_option != GC_MACHINE_ADAM)
-        {
-            log_cb(RETRO_LOG_ERROR, "No-content boot requires the Machine option to be ADAM.\n");
-            return false;
-        }
-        if (adam_boot_option == 2)
-        {
-            log_cb(RETRO_LOG_ERROR, "ADAM cartridge boot requires a cartridge.\n");
-            return false;
-        }
         if (!load_adam_firmware())
             return false;
         core->UnloadContent();
@@ -2241,10 +2242,8 @@ bool retro_load_game(const struct retro_game_info *info)
     snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path ? info->path : "");
     bool playlist = info->path && ends_with_no_case(info->path, ".m3u");
     GC_AdamMediaType media_type = infer_media_type(info);
-    GC_Machine machine = machine_option;
-    if (machine == GC_MACHINE_AUTO)
-        machine = (playlist || (media_type != GC_ADAM_MEDIA_NONE)) ? GC_MACHINE_ADAM :
-            GC_MACHINE_COLECOVISION;
+    GC_Machine machine = (playlist || media_type != GC_ADAM_MEDIA_NONE || adam_cartridge_hardware) ?
+        GC_MACHINE_ADAM : GC_MACHINE_COLECOVISION;
 
     if (machine == GC_MACHINE_COLECOVISION)
     {
@@ -2263,26 +2262,32 @@ bool retro_load_game(const struct retro_game_info *info)
 
     if (playlist || (media_type != GC_ADAM_MEDIA_NONE))
     {
-        if (adam_boot_option == 2)
-        {
-            log_cb(RETRO_LOG_ERROR, "ADAM cartridge boot was selected without a cartridge.\n");
-            return false;
-        }
+        adam_disk_set = &adam_disk_sets[media_type == GC_ADAM_MEDIA_DATA_PACK ? 2 : 0];
         if (!initialize_disk_set(info, media_type))
         {
             log_cb(RETRO_LOG_ERROR, "Invalid or corrupted ADAM media.\n");
             return false;
         }
+        // A playlist's media type is only known after parsing it.
+        if (adam_disk_set->type == GC_ADAM_MEDIA_DATA_PACK && adam_disk_set->slot == GC_ADAM_MEDIA_DISK_1)
+        {
+            adam_disk_sets[2] = adam_disk_sets[0];
+            memset(&adam_disk_sets[0], 0, sizeof(adam_disk_sets[0]));
+            clear_adam_disk_set();
+            adam_disk_set = &adam_disk_sets[2];
+            adam_disk_set->slot = GC_ADAM_MEDIA_DATA_PACK_1;
+        }
+        adam_primary_slot = (unsigned)adam_disk_set->slot;
         if (!load_adam_firmware())
         {
-            clear_adam_disk_set();
+            clear_adam_disk_sets();
             return false;
         }
         core->UnloadContent();
-        if (!load_disk_set_image(adam_disk_set.index))
+        if (!load_disk_set_image(adam_disk_set->index))
         {
             log_cb(RETRO_LOG_ERROR, "Invalid or corrupted ADAM media.\n");
-            clear_adam_disk_set();
+            clear_adam_disk_sets();
             return false;
         }
     }
@@ -2295,9 +2300,7 @@ bool retro_load_game(const struct retro_game_info *info)
             log_cb(RETRO_LOG_ERROR, "Invalid or corrupted ADAM cartridge.\n");
             return false;
         }
-        GC_AdamBootMode boot = adam_boot_option == 1 ? GC_ADAM_BOOT_COMPUTER :
-            GC_ADAM_BOOT_CARTRIDGE;
-        if (!core->StartAdam(boot))
+        if (!core->StartAdam(GC_ADAM_BOOT_CARTRIDGE))
             return false;
     }
 
@@ -2312,7 +2315,7 @@ void retro_unload_game(void)
         log_cb(RETRO_LOG_ERROR, "Unable to flush one or more ADAM working copies during unload.\n");
     core->AdamReleaseAllKeys();
     core->UnloadContent();
-    clear_adam_disk_set();
+    clear_adam_disk_sets();
     clear_adam_host_media();
     clear_input_state();
     retro_game_path[0] = '\0';
@@ -2327,63 +2330,58 @@ unsigned retro_get_region(void)
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)
 {
-    if ((type != RETRO_ADAM_SUBSYSTEM_ID) || !info || (num != 3))
+    if (type != RETRO_ADAM_SUBSYSTEM_ID || !info || num != 5)
         return false;
     if (content_loaded)
         retro_unload_game();
     if (!set_pixel_format())
         return false;
-
     check_variables();
-    core->SetVideoChip(video_chip);
-    clear_adam_disk_set();
+    clear_adam_disk_sets();
     clear_adam_host_media();
-
     bool cartridge = (info[0].data && info[0].size) || (info[0].path && info[0].path[0]);
-    bool data_pack = (info[1].data && info[1].size) || (info[1].path && info[1].path[0]);
-    bool disk = (info[2].data && info[2].size) || (info[2].path && info[2].path[0]);
-    if (adam_boot_option == 2 && !cartridge)
-        return false;
-    if ((data_pack && !validate_adam_game_info(&info[1], GC_ADAM_MEDIA_DATA_PACK)) ||
-        (disk && !validate_adam_game_info(&info[2], GC_ADAM_MEDIA_DISK)))
-        return false;
+    bool have_media = false;
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        const struct retro_game_info* media = &info[i + 1];
+        if (!(media->data && media->size) && !(media->path && media->path[0]))
+            continue;
+        adam_disk_set = &adam_disk_sets[i];
+        if (!initialize_disk_set(media, i < 2 ? GC_ADAM_MEDIA_DISK : GC_ADAM_MEDIA_DATA_PACK))
+        {
+            clear_adam_disk_sets();
+            return false;
+        }
+        if (!have_media)
+            adam_primary_slot = i;
+        have_media = true;
+    }
     if (!load_adam_firmware())
+    {
+        clear_adam_disk_sets();
         return false;
-
+    }
     core->UnloadContent();
     if (cartridge && !load_rom(&info[0]))
+    {
+        clear_adam_disk_sets();
         return false;
-
-    if (data_pack)
-    {
-        if (!initialize_disk_set(&info[1], GC_ADAM_MEDIA_DATA_PACK) ||
-            !load_disk_set_image(adam_disk_set.index))
-            return false;
     }
-
-    if (disk)
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
     {
-        if (data_pack)
+        adam_disk_set = &adam_disk_sets[i];
+        if (adam_disk_set->count && !load_disk_set_image(adam_disk_set->index))
         {
-            if (!load_adam_media_info(GC_ADAM_MEDIA_DISK_1, GC_ADAM_MEDIA_DISK, &info[2],
-                false))
-                return false;
-        }
-        else if (!initialize_disk_set(&info[2], GC_ADAM_MEDIA_DISK) ||
-            !load_disk_set_image(adam_disk_set.index))
+            core->UnloadContent();
+            clear_adam_disk_sets();
+            clear_adam_host_media();
             return false;
+        }
     }
-
-    GC_AdamBootMode boot = GC_ADAM_BOOT_COMPUTER;
-    if (adam_boot_option == 2 || ((adam_boot_option == 0) && cartridge && !data_pack && !disk))
-        boot = GC_ADAM_BOOT_CARTRIDGE;
-    if (!core->StartAdam(boot))
+    if (!core->StartAdam(cartridge && !have_media ? GC_ADAM_BOOT_CARTRIDGE : GC_ADAM_BOOT_COMPUTER))
         return false;
-
-    const struct retro_game_info* primary = cartridge ? &info[0] : (data_pack ? &info[1] :
-        (disk ? &info[2] : NULL));
-    snprintf(retro_game_path, sizeof(retro_game_path), "%s",
-        primary && primary->path ? primary->path : "");
+    const struct retro_game_info* primary = cartridge ? &info[0] : (have_media ? &info[adam_primary_slot + 1] : NULL);
+    snprintf(retro_game_path, sizeof(retro_game_path), "%s", primary && primary->path ? primary->path : "");
     return setup_loaded_game();
 }
 
@@ -2393,25 +2391,36 @@ size_t retro_serialize_size(void)
         GC_LIBRETRO_SAVESTATE_SIZE_COLECOVISION;
 }
 
+static RetroAdamState disk_state(const RetroAdamDiskSet* set, u32 version)
+{
+    RetroAdamState state = {};
+    state.magic = RETRO_ADAM_STATE_MAGIC;
+    state.version = version;
+    state.count = set->count;
+    state.index = set->index;
+    state.type = (u8)set->type;
+    state.slot = (u8)set->slot;
+    state.ejected = set->ejected ? 1 : 0;
+    return state;
+}
+
 bool retro_serialize(void *data, size_t size)
 {
     size_t required_size = retro_serialize_size();
-    if (!content_loaded || !data || (size < required_size) ||
+    if (!content_loaded || !data || size < required_size ||
         !core->SaveState(reinterpret_cast<u8*>(data), size))
         return false;
-
-    if (size < sizeof(GC_SaveState_Header_Libretro) + sizeof(RetroAdamState))
+    if (core->GetMachine() != GC_MACHINE_ADAM)
+        return true;
+    RetroAdamState states[GC_ADAM_MEDIA_SLOT_COUNT + 1];
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        states[i] = disk_state(&adam_disk_sets[i], 2);
+    // Keep the identifying footer in its original location for version detection.
+    states[GC_ADAM_MEDIA_SLOT_COUNT] = disk_state(adam_disk_set, 2);
+    if (size < sizeof(GC_SaveState_Header_Libretro) + sizeof(states))
         return false;
-    RetroAdamState state = {};
-    state.magic = RETRO_ADAM_STATE_MAGIC;
-    state.version = 1;
-    state.count = adam_disk_set.count;
-    state.index = adam_disk_set.index;
-    state.type = (u8)adam_disk_set.type;
-    state.slot = (u8)adam_disk_set.slot;
-    state.ejected = adam_disk_set.ejected ? 1 : 0;
-    size_t offset = size - sizeof(GC_SaveState_Header_Libretro) - sizeof(state);
-    memcpy(reinterpret_cast<u8*>(data) + offset, &state, sizeof(state));
+    size_t offset = size - sizeof(GC_SaveState_Header_Libretro) - sizeof(states);
+    memcpy(reinterpret_cast<u8*>(data) + offset, states, sizeof(states));
     return true;
 }
 
@@ -2419,134 +2428,156 @@ bool retro_unserialize(const void *data, size_t size)
 {
     if (!content_loaded || !data || !IsValidPointer(core))
         return false;
-
     bool colecovision = core->GetMachine() == GC_MACHINE_COLECOVISION;
-    bool legacy_colecovision_size = colecovision &&
-        (size == GC_LIBRETRO_SAVESTATE_SIZE_ADAM);
-    if (((size != retro_serialize_size()) && !legacy_colecovision_size) ||
-        (size < sizeof(GC_SaveState_Header_Libretro)))
+    bool legacy_colecovision_size = colecovision && size == GC_LIBRETRO_SAVESTATE_SIZE_ADAM;
+    if ((size != retro_serialize_size() && !legacy_colecovision_size) ||
+        size < sizeof(GC_SaveState_Header_Libretro))
         return false;
-
     GC_SaveState_Header_Libretro header = {};
-    memcpy(&header, reinterpret_cast<const u8*>(data) + size - sizeof(header),
-        sizeof(header));
+    memcpy(&header, reinterpret_cast<const u8*>(data) + size - sizeof(header), sizeof(header));
     bool current_header = header.magic == GC_SAVESTATE_MAGIC &&
-        header.version >= GC_SAVESTATE_MIN_VERSION &&
-        header.version <= GC_SAVESTATE_VERSION;
-    if ((header.magic != GC_SAVESTATE_MAGIC) || (!current_header && !colecovision))
+        header.version >= GC_SAVESTATE_MIN_VERSION && header.version <= GC_SAVESTATE_VERSION;
+    if (header.magic != GC_SAVESTATE_MAGIC || (!current_header && !colecovision))
         return false;
 
-    RetroAdamState state = {};
-    bool valid_disk_state = false;
-    if (size >= sizeof(GC_SaveState_Header_Libretro) + sizeof(state))
+    RetroAdamState states[GC_ADAM_MEDIA_SLOT_COUNT];
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        states[i] = disk_state(&adam_disk_sets[i], 1);
+    bool adam_state = current_header && !colecovision;
+    if (adam_state)
     {
-        size_t offset = size - sizeof(GC_SaveState_Header_Libretro) - sizeof(state);
-        memcpy(&state, reinterpret_cast<const u8*>(data) + offset, sizeof(state));
-        bool valid_index = state.ejected ? state.index <= state.count :
-            ((state.count > 0) && (state.index < state.count));
-        valid_disk_state = state.magic == RETRO_ADAM_STATE_MAGIC && state.version == 1 &&
-            state.reserved == 0 && state.ejected <= 1 && valid_index &&
-            state.count == adam_disk_set.count && state.type == (u8)adam_disk_set.type &&
-            state.slot == (u8)adam_disk_set.slot;
-    }
-
-    bool adam_state = current_header && (core->GetMachine() == GC_MACHINE_ADAM);
-    if (adam_state && !valid_disk_state)
-        return false;
-
-    u32 selected_base_crc = 0;
-    size_t selected_size = 0;
-    char selected_working_path[4096] = "";
-    u8* selected_data = NULL;
-    if (adam_state && (state.count > 0) && !state.ejected)
-    {
-        RetroAdamDiskImage* image = &adam_disk_set.images[state.index];
-        GC_AdamMediaType selected_type = GC_ADAM_MEDIA_NONE;
-        if (!read_disk_image(image, &selected_data, &selected_size, &selected_type) ||
-            (selected_type != adam_disk_set.type))
-        {
-            SafeDeleteArray(selected_data);
+        RetroAdamState footer;
+        if (size < sizeof(header) + sizeof(footer))
             return false;
+        size_t offset = size - sizeof(header) - sizeof(footer);
+        memcpy(&footer, reinterpret_cast<const u8*>(data) + offset, sizeof(footer));
+        if (footer.magic != RETRO_ADAM_STATE_MAGIC || footer.slot >= GC_ADAM_MEDIA_SLOT_COUNT)
+            return false;
+        if (footer.version == 2)
+        {
+            if (offset < sizeof(states))
+                return false;
+            memcpy(states, reinterpret_cast<const u8*>(data) + offset - sizeof(states), sizeof(states));
+            if (memcmp(&footer, &states[footer.slot], sizeof(footer)))
+                return false;
         }
-        selected_base_crc = calculate_crc32(selected_data, selected_size);
-
-        bool writable = adam_writable_media && vfs_interface && vfs_interface->write &&
-            vfs_interface->flush && vfs_interface->rename && vfs_interface->remove;
-        if (writable)
-            make_working_path(image->path, adam_disk_set.type, adam_disk_set.slot,
-                selected_base_crc, selected_working_path, sizeof(selected_working_path));
+        else if (footer.version == 1)
+        {
+            // Version 1 recorded one controlled drive. Other mounts are still checked by the core.
+            if (footer.count == 0 && footer.type == GC_ADAM_MEDIA_NONE)
+                footer.type = (u8)adam_disk_sets[footer.slot].type;
+            states[footer.slot] = footer;
+        }
+        else
+            return false;
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        {
+            const RetroAdamState* state = &states[i];
+            bool index_valid = state->ejected ? state->index <= state->count :
+                (state->count > 0 && state->index < state->count);
+            if (state->magic != RETRO_ADAM_STATE_MAGIC || state->version != footer.version ||
+                state->reserved || state->ejected > 1 || !index_valid || state->slot != i ||
+                state->count != adam_disk_sets[i].count || state->type != adam_disk_sets[i].type)
+                return false;
+        }
     }
 
-    unsigned previous_index = adam_disk_set.index;
-    bool previous_ejected = adam_disk_set.ejected;
+    u8* selected_data[GC_ADAM_MEDIA_SLOT_COUNT] = {};
+    size_t selected_size[GC_ADAM_MEDIA_SLOT_COUNT] = {};
+    u32 selected_crc[GC_ADAM_MEDIA_SLOT_COUNT] = {};
+    bool prepared = true;
+    if (adam_state)
+    {
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        {
+            if (states[i].ejected)
+                continue;
+            GC_AdamMediaType type = GC_ADAM_MEDIA_NONE;
+            if (!read_disk_image(&adam_disk_sets[i].images[states[i].index], &selected_data[i],
+                &selected_size[i], &type) || type != adam_disk_sets[i].type)
+            {
+                prepared = false;
+                break;
+            }
+            selected_crc[i] = calculate_crc32(selected_data[i], selected_size[i]);
+        }
+    }
+    if (!prepared)
+    {
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+            SafeDeleteArray(selected_data[i]);
+        return false;
+    }
+
     RetroAdamHostMedia previous_host_media[GC_ADAM_MEDIA_SLOT_COUNT];
     memcpy(previous_host_media, adam_host_media, sizeof(previous_host_media));
-    RetroAdamMediaBackup previous_media[GC_ADAM_MEDIA_SLOT_COUNT];
-    memset(previous_media, 0, sizeof(previous_media));
+    RetroAdamMediaBackup previous_media[GC_ADAM_MEDIA_SLOT_COUNT] = {};
     size_t backup_size = retro_serialize_size();
     u8* backup = new u8[backup_size];
-    size_t saved_backup_size = backup_size;
-    if (!core->SaveState(backup, saved_backup_size))
+    if (!core->SaveState(backup, backup_size))
     {
-        SafeDeleteArray(selected_data);
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+            SafeDeleteArray(selected_data[i]);
         SafeDeleteArray(backup);
         return false;
     }
-
     if (adam_state)
+    {
         capture_adam_media(previous_media);
-
-    bool prepared = true;
-    if (adam_state && (state.count > 0) && !state.ejected)
-    {
-        RetroAdamDiskImage* image = &adam_disk_set.images[state.index];
-        prepared = mount_adam_media(adam_disk_set.slot, adam_disk_set.type, selected_data,
-            selected_size, image->path);
-    }
-    SafeDeleteArray(selected_data);
-
-    bool loaded = prepared && core->LoadState(reinterpret_cast<const u8*>(data), size);
-    if (loaded && adam_state)
-    {
-        AdamMedia* media = core->GetAdamMedia(adam_disk_set.slot);
-        bool media_matches = state.ejected ? (!media || !media->IsInserted()) :
-            (media && media->IsInserted() && (media->GetType() == adam_disk_set.type) &&
-            (media->GetSize() == selected_size) &&
-            (media->GetBaseCRC() == selected_base_crc));
-        if (!media_matches)
-            loaded = false;
-        else
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
         {
-            adam_disk_set.index = state.index;
-            adam_disk_set.ejected = state.ejected != 0;
-            memset(&adam_host_media[adam_disk_set.slot], 0,
-                sizeof(adam_host_media[adam_disk_set.slot]));
-            if (!state.ejected && selected_working_path[0])
+            if (states[i].ejected)
             {
-                snprintf(adam_host_media[adam_disk_set.slot].working_path,
-                    sizeof(adam_host_media[adam_disk_set.slot].working_path), "%s",
-                    selected_working_path);
-                adam_host_media[adam_disk_set.slot].base_crc = selected_base_crc;
+                core->EjectAdamMedia((GC_AdamMediaSlot)i);
+                memset(&adam_host_media[i], 0, sizeof(adam_host_media[i]));
+            }
+            else if (!mount_adam_media((GC_AdamMediaSlot)i, adam_disk_sets[i].type,
+                selected_data[i], selected_size[i], adam_disk_sets[i].images[states[i].index].path))
+            {
+                prepared = false;
+                break;
             }
         }
     }
-
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        SafeDeleteArray(selected_data[i]);
+    bool loaded = prepared && core->LoadState(reinterpret_cast<const u8*>(data), size);
+    if (loaded && adam_state)
+    {
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        {
+            AdamMedia* media = core->GetAdamMedia((GC_AdamMediaSlot)i);
+            bool matches = states[i].ejected ? !media->IsInserted() :
+                (media->IsInserted() && media->GetType() == adam_disk_sets[i].type &&
+                media->GetSize() == selected_size[i] && media->GetBaseCRC() == selected_crc[i]);
+            if (!matches)
+            {
+                loaded = false;
+                break;
+            }
+        }
+    }
     if (loaded)
     {
+        if (adam_state)
+        {
+            for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+            {
+                adam_disk_sets[i].index = states[i].index;
+                adam_disk_sets[i].ejected = states[i].ejected != 0;
+            }
+        }
         clear_adam_media_backup(previous_media);
         SafeDeleteArray(backup);
         clear_input_state();
         return true;
     }
-
     if (adam_state && !prepare_adam_media(previous_media))
         log_cb(RETRO_LOG_ERROR, "Failed to prepare media while restoring rejected save state.\n");
-    if (!core->LoadState(backup, saved_backup_size))
+    if (!core->LoadState(backup, backup_size))
         log_cb(RETRO_LOG_ERROR, "Failed to restore core after rejected save state.\n");
     clear_adam_media_backup(previous_media);
     SafeDeleteArray(backup);
-    adam_disk_set.index = previous_index;
-    adam_disk_set.ejected = previous_ejected;
     memcpy(adam_host_media, previous_host_media, sizeof(adam_host_media));
     return false;
 }

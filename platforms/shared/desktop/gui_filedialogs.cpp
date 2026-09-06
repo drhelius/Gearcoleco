@@ -24,6 +24,7 @@
 #include <string>
 #include <cstring>
 #include "gui.h"
+#include "gui_adam.h"
 #include "gui_actions.h"
 #include "gui_debug_memory.h"
 #include "gui_debug_disassembler.h"
@@ -40,6 +41,7 @@ enum FileDialogID
 {
     FileDialog_None = 0,
     FileDialog_OpenROM,
+    FileDialog_OpenAdamCartridge,
     FileDialog_LoadRAM,
     FileDialog_SaveRAM,
     FileDialog_LoadState,
@@ -67,6 +69,7 @@ enum FileDialogID
     FileDialog_LoadAdamEOS,
     FileDialog_LoadAdamSmartWriter,
     FileDialog_InsertAdamMedia,
+    FileDialog_SelectAdamMedia,
     FileDialog_SaveAdamDisk,
     FileDialog_SaveAdamDataPack,
     FileDialog_SaveAdamPrinter,
@@ -74,6 +77,8 @@ enum FileDialogID
 
 static FileDialogID pending_dialog_id = FileDialog_None;
 static std::string pending_dialog_path;
+static std::string pending_dialog_second_path;
+static bool pending_dialog_too_many = false;
 static bool dialog_active = false;
 static bool pending_refocus_window = false;
 static int pending_dialog_int_param1 = 0;
@@ -145,14 +150,14 @@ static const char* get_save_file_extension(FileDialogID id)
     }
 }
 
-void gui_file_dialog_open_rom(void)
+void gui_file_dialog_open_rom(bool adam_cartridge)
 {
     if (!begin_dialog())
         return;
 
-    SDL_DialogFileFilter filters[] = { { "Content Files", "col;cv;rom;bin;zip;ddp;dsk;m3u" } };
+    SDL_DialogFileFilter filters[] = { { "Cartridge ROMs", "col;cv;rom;bin;zip" } };
     const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_OpenROM, application_sdl_window, filters, 1, default_path, false);
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)(adam_cartridge ? FileDialog_OpenAdamCartridge : FileDialog_OpenROM), application_sdl_window, filters, 1, default_path, false);
 }
 
 void gui_file_dialog_load_ram(void)
@@ -392,6 +397,22 @@ void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot, bool discard_curre
         application_sdl_window, filters, 1, default_path, false);
 }
 
+void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple)
+{
+    if (!begin_dialog())
+        return;
+    pending_dialog_int_param1 = slot;
+    bool disk = slot <= GC_ADAM_MEDIA_DISK_2;
+    SDL_DialogFileFilter filters[] = {
+        { disk ? "ADAM Disks and Playlists" : "ADAM Data Packs and Playlists",
+            disk ? "dsk;zip;m3u" : "ddp;zip;m3u" }
+    };
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
+        config_emulator.last_open_path.c_str();
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SelectAdamMedia,
+        application_sdl_window, filters, 1, default_path, multiple);
+}
+
 void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
 {
     if (!begin_dialog())
@@ -471,9 +492,18 @@ static void SDLCALL finish_dialog(void* userdata)
     dialog_active = false;
     pending_refocus_window = true;
 
+    if (result->id == FileDialog_SelectAdamMedia)
+        gui_adam_request_menu();
     if (!result->files || !result->files[0])
         return;
 
+    pending_dialog_second_path.clear();
+    pending_dialog_too_many = false;
+    if (result->id == FileDialog_SelectAdamMedia && result->files[1])
+    {
+        pending_dialog_second_path = result->files[1];
+        pending_dialog_too_many = result->files[2] != NULL;
+    }
     pending_dialog_id = result->id;
     pending_dialog_path = result->files[0];
     const char* extension = get_save_file_extension(result->id);
@@ -486,11 +516,12 @@ static void process_dialog_result(FileDialogID id, const char* path)
     switch (id)
     {
         case FileDialog_OpenROM:
+        case FileDialog_OpenAdamCartridge:
         {
             std::string str_path = path;
             std::string::size_type pos = str_path.find_last_of("\\/");
             config_emulator.last_open_path.assign(str_path.substr(0, pos + 1));
-            gui_load_rom(path);
+            gui_open_rom(path, id == FileDialog_OpenAdamCartridge);
             break;
         }
         case FileDialog_LoadRAM:
@@ -653,6 +684,23 @@ static void process_dialog_result(FileDialogID id, const char* path)
             }
             else
                 gui_set_error_message("Invalid ADAM SmartWriter firmware. Expected a 32768-byte writer.rom, wp.rom, or wp_r80.rom image.");
+            break;
+        }
+        case FileDialog_SelectAdamMedia:
+        {
+            GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
+            if (pending_dialog_too_many)
+                gui_set_error_message("Select one or two images for the two drives. Use a playlist for a longer disk set.");
+            else if (!gui_adam_select_media(slot, path, pending_dialog_second_path.c_str()))
+                gui_set_error_message("Unable to select ADAM media. Check the image types, sizes, and playlist paths.");
+            else
+            {
+                char directory[4096];
+                get_directory(path, directory, sizeof(directory));
+                config_emulator.last_open_path = directory;
+            }
+            pending_dialog_second_path.clear();
+            pending_dialog_too_many = false;
             break;
         }
         case FileDialog_InsertAdamMedia:

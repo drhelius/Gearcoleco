@@ -21,6 +21,7 @@
 #include "gui_menus.h"
 #include "gui.h"
 #include "gui_adam.h"
+#include "emu_adam.h"
 #include "gui_filedialogs.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
@@ -53,14 +54,16 @@ static bool choose_screenshots_path = false;
 static bool choose_backup_ram_path = false;
 static bool save_debug_settings = false;
 static bool load_debug_settings = false;
-static bool open_machine_change = false;
-static int requested_machine = GC_MACHINE_AUTO;
+static bool open_adam_cartridge = false;
+static char checked_recent_roms[config_max_recent_roms][4096];
+static bool recent_is_cartridge[config_max_recent_roms];
 static const ImVec4 service_mcp_http_color(0.10f, 0.90f, 0.10f, 1.0f);
 static const ImVec4 service_mcp_stdio_color(0.90f, 0.70f, 0.10f, 1.0f);
 static ShaderPresetInfo shader_presets[SHADER_PRESET_MAX_DISCOVERED];
 static int shader_preset_count = 0;
 
 static void menu_gearcoleco(void);
+static void menu_adam(void);
 static void menu_emulator(void);
 static void menu_video(void);
 static void menu_shader(void);
@@ -80,8 +83,6 @@ static void gamepad_configuration_item(const char* text, int* button, int player
 static void hotkey_configuration_item(const char* text, config_Hotkey* hotkey);
 static void gamepad_device_selector(int player);
 static void draw_savestate_slot_info(int slot);
-static void draw_adam_keyboard_map(void);
-static void draw_machine_change_popup(void);
 
 void gui_init_menus(void)
 {
@@ -92,6 +93,7 @@ void gui_init_menus(void)
 void gui_main_menu(void)
 {
     open_rom = false;
+    open_adam_cartridge = false;
     open_ram = false;
     save_ram = false;
     open_state = false;
@@ -113,6 +115,7 @@ void gui_main_menu(void)
 
         menu_gearcoleco();
         menu_emulator();
+        menu_adam();
         menu_video();
         menu_input();
         menu_audio();
@@ -125,13 +128,6 @@ void gui_main_menu(void)
         ImGui::EndMainMenuBar();
     }
 
-    if (open_machine_change)
-    {
-        open_machine_change = false;
-        ImGui::OpenPopup("Change Machine");
-    }
-    draw_machine_change_popup();
-
     file_dialogs();
 }
 
@@ -142,50 +138,64 @@ static void menu_gearcoleco(void)
         gui_in_use = true;
         bool media_actions_enabled = !emu_is_empty();
 
-        if (ImGui::MenuItem("Open Media...", config_hotkeys[config_HotkeyIndex_OpenROM].str))
+        if (ImGui::MenuItem("Open ROM...", config_hotkeys[config_HotkeyIndex_OpenROM].str))
         {
             if (emu_is_bios_loaded())
                 open_rom = true;
             else
-                gui_adam_open_missing_firmware(config_emulator.machine == GC_MACHINE_ADAM);
+                gui_adam_open_missing_firmware(false);
         }
 
-        if (ImGui::BeginMenu("Open Recent"))
+        if (ImGui::BeginMenu("Open Recent ROM", !emu_is_busy()))
         {
             for (int i = 0; i < config_max_recent_roms; i++)
             {
                 if (config_emulator.recent_roms[i].length() > 0)
                 {
-                    const char* shortcut = (i == 0) ? config_hotkeys[config_HotkeyIndex_ReloadROM].str : NULL;
+                    const char* path = config_emulator.recent_roms[i].c_str();
+                    if (strcmp(checked_recent_roms[i], path))
+                    {
+                        strncpy_fit(checked_recent_roms[i], path, sizeof(checked_recent_roms[i]));
+                        EmuDesktopContent content = {};
+                        bool valid = emu_adam_classify_content(path, GC_MACHINE_AUTO, &content);
+                        recent_is_cartridge[i] = valid && content.type == EmuDesktopContentCartridge;
+                        if (valid && (content.type == EmuDesktopContentAdamDisk ||
+                            content.type == EmuDesktopContentAdamDataPack))
+                        {
+                            int slot = content.type == EmuDesktopContentAdamDisk ? 0 : 2;
+                            for (int recent = 0; recent < 5; recent++)
+                            {
+                                std::string& entry = config_emulator.adam_recent_media[slot][recent];
+                                if (entry == path)
+                                    break;
+                                if (entry.empty())
+                                {
+                                    entry = path;
+                                    break;
+                                }
+                            }
+                        }
+                        emu_adam_destroy_content(&content);
+                    }
+                    if (!recent_is_cartridge[i])
+                        continue;
+                    const char* shortcut = NULL;
                     if (ImGui::MenuItem(config_emulator.recent_roms[i].c_str(), shortcut))
                     {
                         if (emu_is_bios_loaded())
                         {
                             char rom_path[4096];
                             strncpy_fit(rom_path, config_emulator.recent_roms[i].c_str(), sizeof(rom_path));
-                            gui_load_rom(rom_path);
+                            gui_open_rom(rom_path);
                         }
                         else
-                            gui_adam_open_missing_firmware(
-                                config_emulator.machine == GC_MACHINE_ADAM);
+                            gui_adam_open_missing_firmware(false);
                     }
                 }
             }
 
             ImGui::EndMenu();
         }
-
-        if (ImGui::MenuItem("Start ADAM..."))
-        {
-            if (!emu_are_adam_firmware_paths_valid())
-                gui_adam_open_missing_firmware(true);
-            else if (!gui_start_adam())
-                gui_set_error_message("Unable to boot ADAM. Configure valid OS-7, EOS, and SmartWriter firmware first.");
-        }
-
-        if (ImGui::MenuItem("ADAM Media...", NULL, false,
-            !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM)))
-            gui_adam_open_media();
 
         ImGui::Separator();
         ImGui::MenuItem("Enable Softpatching", "", &config_emulator.softpatching);
@@ -349,6 +359,42 @@ static void menu_gearcoleco(void)
     }
 }
 
+static void menu_adam(void)
+{
+    if (gui_adam_menu_requested())
+        ImGui::OpenPopup("ADAM");
+    if (!ImGui::BeginMenu("ADAM"))
+        return;
+
+    gui_in_use = true;
+    bool adam_running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
+    ImGui::BeginDisabled(gui_is_rom_loading() || gui_file_dialog_is_active());
+    if (ImGui::MenuItem(adam_running ? "Computer Reset" : "Power On"))
+        gui_adam_start();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(adam_running ? "Resets the computer and boots from inserted media, keeping all drives mounted." :
+            "Powers on ADAM. It boots from inserted media, or opens SmartWriter when none is bootable.");
+    ImGui::Separator();
+    gui_adam_media_menu();
+    ImGui::EndDisabled();
+    ImGui::Separator();
+    ImGui::MenuItem("Printer Output", NULL, &config_debug.show_adam_printer, adam_running);
+    if (ImGui::BeginMenu("Keyboard"))
+    {
+        gui_adam_keyboard_menu();
+        ImGui::EndMenu();
+    }
+    ImGui::Separator();
+    gui_adam_firmware_menu("EOS ROM", GC_ADAM_FIRMWARE_EOS);
+    gui_adam_firmware_menu("SmartWriter ROM", GC_ADAM_FIRMWARE_SMARTWRITER);
+    ImGui::Separator();
+    ImGui::MenuItem("Remember Media Changes", NULL,
+        &config_emulator.adam_media_persistence);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Applies to newly inserted images. Changes are saved in a separate copy; original images are preserved.");
+    ImGui::EndMenu();
+}
+
 static void menu_emulator(void)
 {
     if (ImGui::BeginMenu("Emulator"))
@@ -357,44 +403,6 @@ static void menu_emulator(void)
         bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
         bool cartridge_options = !adam_running ||
             (emu_get_core()->GetContentType() == GC_CONTENT_CARTRIDGE);
-
-        ImGui::PushItemWidth(160.0f);
-        int selected_machine = config_emulator.machine;
-        if (ImGui::Combo("Machine", &selected_machine,
-            "Auto\0ColecoVision\0ADAM\0\0"))
-        {
-            if (emu_is_empty())
-                config_emulator.machine = selected_machine;
-            else
-            {
-                requested_machine = selected_machine;
-                open_machine_change = true;
-            }
-        }
-        ImGui::PopItemWidth();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Auto selects ColecoVision cartridges and ADAM .ddp/.dsk/.m3u media.\nUse Start ADAM in the Gearcoleco menu for a no-content SmartWriter boot.");
-
-        if (emu_is_empty())
-            ImGui::TextDisabled("Running: None");
-        else if (emu_get_machine() == GC_MACHINE_ADAM)
-            ImGui::TextDisabled("Running: ADAM / %s",
-                emu_get_core()->GetAdamBootMode() == GC_ADAM_BOOT_CARTRIDGE ?
-                "Cartridge" : "Computer");
-        else
-            ImGui::TextDisabled("Running: ColecoVision");
-
-        if ((config_emulator.machine == GC_MACHINE_ADAM) ||
-            (emu_get_machine() == GC_MACHINE_ADAM))
-        {
-            ImGui::PushItemWidth(160.0f);
-            ImGui::Combo(adam_running ? "ADAM Boot (next load)" : "ADAM Boot",
-                &config_emulator.adam_boot_mode,
-                "Auto\0Computer\0Cartridge\0\0");
-            ImGui::PopItemWidth();
-        }
-
-        ImGui::Separator();
 
         if (ImGui::BeginMenu("Save States Dir"))
         {
@@ -528,9 +536,7 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Firmware..."))
-            gui_adam_open_firmware();
-
+        gui_adam_firmware_menu("BIOS", GC_ADAM_FIRMWARE_OS7);
         ImGui::Separator();
 
         ImGui::BeginDisabled(!cartridge_options);
@@ -585,10 +591,10 @@ static void menu_emulator(void)
 
         if (ImGui::BeginMenu("Hotkeys"))
         {
-            hotkey_configuration_item("Open Media:", &config_hotkeys[config_HotkeyIndex_OpenROM]);
+            hotkey_configuration_item("Open ROM:", &config_hotkeys[config_HotkeyIndex_OpenROM]);
             hotkey_configuration_item("Quit:", &config_hotkeys[config_HotkeyIndex_Quit]);
             hotkey_configuration_item("Reset:", &config_hotkeys[config_HotkeyIndex_Reset]);
-            hotkey_configuration_item("Reload Media:", &config_hotkeys[config_HotkeyIndex_ReloadROM]);
+            hotkey_configuration_item("Reload ROM / Reset ADAM:", &config_hotkeys[config_HotkeyIndex_ReloadROM]);
             hotkey_configuration_item("Pause:", &config_hotkeys[config_HotkeyIndex_Pause]);
             hotkey_configuration_item("Fast Forward:", &config_hotkeys[config_HotkeyIndex_FFWD]);
             hotkey_configuration_item("Rewind:", &config_hotkeys[config_HotkeyIndex_Rewind]);
@@ -643,79 +649,6 @@ static void menu_emulator(void)
 
         ImGui::EndMenu();
     }
-}
-
-static void draw_machine_change_popup(void)
-{
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (!ImGui::BeginPopupModal("Change Machine", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-        return;
-
-    gui_dialog_in_use = true;
-    const char* machine_name = requested_machine == GC_MACHINE_ADAM ? "ADAM" :
-        (requested_machine == GC_MACHINE_COLECOVISION ? "ColecoVision" : "Auto");
-    GC_ContentType content_type = emu_get_core()->GetContentType();
-    bool incompatible_media = requested_machine == GC_MACHINE_COLECOVISION &&
-        ((content_type == GC_CONTENT_ADAM_DATA_PACK) || (content_type == GC_CONTENT_ADAM_DISK));
-
-    if (incompatible_media)
-        ImGui::Text("Current ADAM media cannot run as ColecoVision and will be unloaded.");
-    else
-        ImGui::Text("Reload current content using the %s machine setting?", machine_name);
-    ImGui::Separator();
-
-    if (ImGui::Button(incompatible_media ? "Unload" : "Reload", ImVec2(100, 0)))
-    {
-        bool changed = false;
-        const char* content_path = emu_get_content_path();
-        if (incompatible_media || (content_path[0] == '\0'))
-        {
-            changed = emu_unload_content();
-            if (changed)
-            {
-                config_emulator.machine = requested_machine;
-                gui_debug_reset();
-                application_reset_title();
-            }
-        }
-        else
-            changed = gui_load_rom_with_machine(content_path, requested_machine);
-
-        if (changed)
-        {
-            gui_dialog_in_use = false;
-            ImGui::CloseCurrentPopup();
-        }
-        else
-            gui_set_error_message("Unable to change machine. The configured machine setting was preserved.");
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(100, 0)))
-    {
-        gui_dialog_in_use = false;
-        ImGui::CloseCurrentPopup();
-    }
-
-    ImGui::EndPopup();
-}
-
-static void draw_adam_keyboard_map(void)
-{
-    ImGui::TextDisabled("ADAM keyboard defaults");
-    ImGui::Separator();
-    ImGui::Text("Host A-Z, 0-9 and punctuation -> ADAM keyboard");
-    ImGui::Text("F1-F6 -> SmartKey I-VI");
-    ImGui::Text("F7 / F8 / F9 -> Wild Card / Undo / ADAM Home");
-    ImGui::Text("Insert / Home -> Move-Copy / Store-Fetch");
-    ImGui::Text("Delete / End -> Insert / Print");
-    ImGui::Text("Page Up / Page Down -> Clear / Delete");
-    ImGui::Text("Arrow keys -> ADAM cursor keys");
-    ImGui::Text("Shift / Control / Caps Lock -> ADAM modifiers");
-    ImGui::Text("F12 -> Capture/release ADAM keyboard");
-    ImGui::Separator();
-    ImGui::TextWrapped("In ADAM mode the focused emulation viewport owns these keys. Emulator hotkeys remain available from the menus; fullscreen and quit retain their explicit shortcuts.");
 }
 
 static void menu_video(void)
@@ -1162,13 +1095,6 @@ static void menu_input(void)
             ImGui::EndMenu();
         }
 
-        if (((config_emulator.machine == GC_MACHINE_ADAM) ||
-            (emu_get_machine() == GC_MACHINE_ADAM)) && ImGui::BeginMenu("ADAM Keyboard Map"))
-        {
-            draw_adam_keyboard_map();
-            ImGui::EndMenu();
-        }
-
         ImGui::Separator();
 
         if (ImGui::BeginMenu("Gamepads"))
@@ -1490,7 +1416,7 @@ static void menu_debug(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Reload Media", config_hotkeys[config_HotkeyIndex_ReloadROM].str, false, config_debug.debug && !emu_is_empty()))
+        if (ImGui::MenuItem(emu_get_machine() == GC_MACHINE_ADAM ? "Computer Reset" : "Reload ROM", config_hotkeys[config_HotkeyIndex_ReloadROM].str, false, config_debug.debug && !emu_is_empty()))
         {
             gui_action_reload_rom();
         }
@@ -1626,13 +1552,17 @@ static void menu_debug(void)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("ADAM", config_debug.debug &&
-            (emu_get_machine() == GC_MACHINE_ADAM)))
+        if (ImGui::BeginMenu("ADAM", config_debug.debug))
         {
-            ImGui::MenuItem("Show ADAM System", "", &config_debug.show_adam_system);
-            ImGui::MenuItem("Show ADAMnet", "", &config_debug.show_adam_net);
-            ImGui::MenuItem("Show ADAM Media and Printer", "",
+            if (ImGui::MenuItem("Run Cartridge on ADAM..."))
+                open_adam_cartridge = true;
+            ImGui::Separator();
+            ImGui::BeginDisabled(emu_is_empty() || emu_get_machine() != GC_MACHINE_ADAM);
+            ImGui::MenuItem("Memory Map and Ports", "", &config_debug.show_adam_system);
+            ImGui::MenuItem("ADAMnet / EOS Requests", "", &config_debug.show_adam_net);
+            ImGui::MenuItem("Printer Output", "",
                 &config_debug.show_adam_printer);
+            ImGui::EndDisabled();
             ImGui::EndMenu();
         }
 
@@ -1731,8 +1661,10 @@ static void file_dialogs(void)
         if (emu_is_bios_loaded())
             gui_file_dialog_open_rom();
         else
-            gui_adam_open_missing_firmware(config_emulator.machine == GC_MACHINE_ADAM);
+            gui_adam_open_missing_firmware(false);
     }
+    if (open_adam_cartridge)
+        gui_file_dialog_open_rom(true);
     if (open_ram)
         gui_file_dialog_load_ram();
     if (save_ram)

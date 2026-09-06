@@ -64,7 +64,11 @@ static char loading_eos_path[4096];
 static char loading_smartwriter_path[4096];
 static AdamHostMediaRecord host_media[GC_ADAM_MEDIA_SLOT_COUNT];
 static AdamDesktopPlaylist loading_playlist;
-static AdamDesktopPlaylist playlist;
+static AdamDesktopPlaylist playlists[GC_ADAM_MEDIA_SLOT_COUNT];
+static EmuDesktopContent session_media[GC_ADAM_MEDIA_SLOT_COUNT];
+static AdamHostMediaRecord session_records[GC_ADAM_MEDIA_SLOT_COUNT];
+static AdamDesktopPlaylist session_playlists[GC_ADAM_MEDIA_SLOT_COUNT];
+static bool session_write_protected[GC_ADAM_MEDIA_SLOT_COUNT];
 
 static bool read_binary_file(const char* path, u8** data, size_t* size);
 static bool read_binary_file_exact(const char* path, u8** data, size_t expected_size);
@@ -93,7 +97,6 @@ static bool write_media_file(AdamMedia* media, const char* file_path);
 void emu_adam_init(void)
 {
     clear_playlist(&loading_playlist);
-    clear_playlist(&playlist);
     emu_adam_clear_host_media();
 }
 
@@ -300,9 +303,9 @@ static void clear_playlist(AdamDesktopPlaylist* target)
 
 static void commit_playlist(GC_AdamMediaSlot slot)
 {
-    playlist = loading_playlist;
-    playlist.slot = slot;
-    playlist.current = 0;
+    playlists[slot] = loading_playlist;
+    playlists[slot].slot = slot;
+    playlists[slot].current = 0;
     clear_playlist(&loading_playlist);
 }
 
@@ -654,8 +657,10 @@ static void clear_host_media(GC_AdamMediaSlot slot)
 void emu_adam_clear_host_media(void)
 {
     for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
         clear_host_media((GC_AdamMediaSlot)i);
-    clear_playlist(&playlist);
+        clear_playlist(&playlists[i]);
+    }
 }
 
 static void make_working_path(const char* source_path, GC_AdamMediaType type,
@@ -742,6 +747,157 @@ static bool mount_content(GC_AdamMediaSlot slot, const EmuDesktopContent* conten
     }
     SafeDeleteArray(working);
     return loaded;
+}
+
+bool emu_adam_validate_media(GC_AdamMediaSlot slot, const char* path)
+{
+    if (emu_is_busy() || (slot < 0) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
+        return false;
+    EmuDesktopContent content;
+    init_content(&content);
+    bool valid = emu_adam_classify_content(path, GC_MACHINE_ADAM, &content);
+    EmuDesktopContentType expected = slot <= GC_ADAM_MEDIA_DISK_2 ?
+        EmuDesktopContentAdamDisk : EmuDesktopContentAdamDataPack;
+    valid = valid && (content.type == expected);
+    emu_adam_destroy_content(&content);
+    return valid;
+}
+
+void emu_adam_clear_session(void)
+{
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        emu_adam_destroy_content(&session_media[i]);
+        memset(&session_records[i], 0, sizeof(session_records[i]));
+        clear_playlist(&session_playlists[i]);
+    }
+}
+
+bool emu_adam_prepare_session(const char* const* paths)
+{
+    emu_adam_clear_session();
+    if (!paths)
+        return true;
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        if (!paths[i] || !paths[i][0])
+            continue;
+        GC_AdamMediaSlot slot = (GC_AdamMediaSlot)i;
+        EmuDesktopContent* content = &session_media[i];
+        EmuDesktopContentType expected = i <= GC_ADAM_MEDIA_DISK_2 ?
+            EmuDesktopContentAdamDisk : EmuDesktopContentAdamDataPack;
+        if (!emu_adam_classify_content(paths[i], GC_MACHINE_ADAM, content) ||
+            (content->type != expected))
+        {
+            emu_adam_clear_session();
+            return false;
+        }
+        if (content->playlist)
+        {
+            session_playlists[i] = loading_playlist;
+            session_playlists[i].slot = slot;
+        }
+        AdamHostMediaRecord* record = &session_records[i];
+        strncpy_fit(record->source_path, content->source_path, sizeof(record->source_path));
+        record->base_crc = calculate_crc32(content->data, content->size);
+        session_write_protected[i] = !loading_media_persistence || loading_media_write_protected[i];
+        if (loading_media_persistence)
+        {
+            GC_AdamMediaType type = i <= GC_ADAM_MEDIA_DISK_2 ? GC_ADAM_MEDIA_DISK : GC_ADAM_MEDIA_DATA_PACK;
+            make_working_path(content->source_path, type, slot, record->base_crc, true,
+                record->working_path, sizeof(record->working_path));
+            if (!check_working_path(record->working_path))
+            {
+                emu_adam_clear_session();
+                return false;
+            }
+            u8* working = NULL;
+            if (read_binary_file_exact(record->working_path, &working, content->size))
+            {
+                SafeDeleteArray(content->data);
+                content->data = working;
+            }
+        }
+    }
+    return true;
+}
+
+bool emu_adam_commit_session(void)
+{
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        const EmuDesktopContent* content = &session_media[i];
+        if (!content->data)
+            continue;
+        GC_AdamMediaType type = i <= GC_ADAM_MEDIA_DISK_2 ? GC_ADAM_MEDIA_DISK : GC_ADAM_MEDIA_DATA_PACK;
+        if (!emu_get_core()->LoadAdamMediaFromBuffer((GC_AdamMediaSlot)i, type, content->data,
+            content->size, session_write_protected[i], session_records[i].base_crc))
+        {
+            emu_adam_clear_session();
+            return false;
+        }
+        host_media[i] = session_records[i];
+        playlists[i] = session_playlists[i];
+    }
+    emu_adam_clear_session();
+    return true;
+}
+
+bool emu_swap_adam_disks(void)
+{
+    if (emu_is_busy() || emu_get_core()->GetMachine() != GC_MACHINE_ADAM)
+        return false;
+    GearcolecoCore* core = emu_get_core();
+    AdamHostMediaRecord records[2] = { host_media[1], host_media[0] };
+    // Save each image at its new drive's destination before changing either drive.
+    for (int i = 0; i < 2; i++)
+    {
+        AdamMedia* media = core->GetAdamMedia((GC_AdamMediaSlot)(1 - i));
+        if (!media->IsInserted())
+            continue;
+        if (media->IsDirty() && !records[i].working_path[0])
+            return false;
+        if (records[i].working_path[0])
+        {
+            if (strcmp(records[i].source_path, records[i].working_path))
+                make_working_path(records[i].source_path, GC_ADAM_MEDIA_DISK, (GC_AdamMediaSlot)i,
+                    records[i].base_crc, false, records[i].working_path, sizeof(records[i].working_path));
+            if (!write_media_file(media, records[i].working_path))
+                return false;
+        }
+    }
+    AdamMedia* first = core->GetAdamMedia(GC_ADAM_MEDIA_DISK_1);
+    AdamMedia* second = core->GetAdamMedia(GC_ADAM_MEDIA_DISK_2);
+    size_t size = first->GetSize();
+    u32 crc = first->GetBaseCRC();
+    bool protected_media = first->IsWriteProtected();
+    u8* data = size ? new u8[size] : NULL;
+    if (size)
+        memcpy(data, first->GetData(), size);
+    if (second->IsInserted())
+        core->LoadAdamMediaFromBuffer(GC_ADAM_MEDIA_DISK_1, GC_ADAM_MEDIA_DISK,
+            second->GetData(), second->GetSize(), second->IsWriteProtected(), second->GetBaseCRC());
+    else
+        core->EjectAdamMedia(GC_ADAM_MEDIA_DISK_1);
+    if (size)
+        core->LoadAdamMediaFromBuffer(GC_ADAM_MEDIA_DISK_2, GC_ADAM_MEDIA_DISK, data, size, protected_media, crc);
+    else
+        core->EjectAdamMedia(GC_ADAM_MEDIA_DISK_2);
+    SafeDeleteArray(data);
+    host_media[0] = records[0];
+    host_media[1] = records[1];
+    AdamDesktopPlaylist* saved = new AdamDesktopPlaylist;
+    *saved = playlists[0];
+    playlists[0] = playlists[1];
+    playlists[1] = *saved;
+    delete saved;
+    playlists[0].slot = GC_ADAM_MEDIA_DISK_1;
+    playlists[1].slot = GC_ADAM_MEDIA_DISK_2;
+    config_emulator.adam_media_write_protected[0] = first->IsWriteProtected();
+    config_emulator.adam_media_write_protected[1] = second->IsWriteProtected();
+    rewind_reset();
+    runahead_reset();
+    return true;
 }
 
 bool emu_adam_load_content(const EmuDesktopContent* content, const char* requested_path,
@@ -979,8 +1135,8 @@ bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
     {
         if (content.playlist)
             commit_playlist(slot);
-        else if (playlist.slot == slot)
-            clear_playlist(&playlist);
+        else if (playlists[slot].slot == slot)
+            clear_playlist(&playlists[slot]);
     }
     emu_adam_destroy_content(&content);
     if (loaded)
@@ -993,44 +1149,44 @@ bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
 
 int emu_get_adam_playlist_count(GC_AdamMediaSlot slot)
 {
-    return !emu_is_busy() && (playlist.slot == slot) ? playlist.count : 0;
+    return !emu_is_busy() && (slot >= 0) && (slot < GC_ADAM_MEDIA_SLOT_COUNT) ? playlists[slot].count : 0;
 }
 
 int emu_get_adam_playlist_index(GC_AdamMediaSlot slot)
 {
-    return !emu_is_busy() && (playlist.slot == slot) ? playlist.current : -1;
+    return emu_get_adam_playlist_count(slot) > 0 ? playlists[slot].current : -1;
 }
 
 const char* emu_get_adam_playlist_name(GC_AdamMediaSlot slot, int index)
 {
-    if (emu_is_busy() || (playlist.slot != slot) || (index < 0) ||
-        (index >= playlist.count))
+    if (emu_is_busy() || (slot < 0) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT) || (playlists[slot].slot != slot) || (index < 0) ||
+        (index >= playlists[slot].count))
     {
         return "";
     }
-    return playlist.names[index];
+    return playlists[slot].names[index];
 }
 
 const char* emu_get_adam_playlist_path(GC_AdamMediaSlot slot)
 {
-    return !emu_is_busy() && (playlist.slot == slot) ? playlist.playlist_path : "";
+    return emu_get_adam_playlist_count(slot) > 0 ? playlists[slot].playlist_path : "";
 }
 
 bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index,
     bool discard_current_changes)
 {
     if (emu_is_busy() || (emu_get_core()->GetMachine() != GC_MACHINE_ADAM) ||
-        (playlist.slot != slot) || (index < 0) || (index >= playlist.count))
+        (slot < 0) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT) || (playlists[slot].slot != slot) || (index < 0) || (index >= playlists[slot].count))
     {
         return false;
     }
-    if (index == playlist.current)
+    if (index == playlists[slot].current)
         return true;
 
     EmuDesktopContent content;
     init_content(&content);
-    if (!emu_adam_classify_content(playlist.paths[index], GC_MACHINE_ADAM, &content) ||
-        (content.type != playlist.type))
+    if (!emu_adam_classify_content(playlists[slot].paths[index], GC_MACHINE_ADAM, &content) ||
+        (content.type != playlists[slot].type))
     {
         emu_adam_destroy_content(&content);
         return false;
@@ -1039,7 +1195,7 @@ bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index,
     emu_adam_destroy_content(&content);
     if (loaded)
     {
-        playlist.current = index;
+        playlists[slot].current = index;
         rewind_reset();
         runahead_reset();
     }
@@ -1130,8 +1286,8 @@ bool emu_eject_adam_media(GC_AdamMediaSlot slot)
     }
     emu_get_core()->EjectAdamMedia(slot);
     clear_host_media(slot);
-    if (playlist.slot == slot)
-        clear_playlist(&playlist);
+    if (playlists[slot].slot == slot)
+        clear_playlist(&playlists[slot]);
     rewind_reset();
     runahead_reset();
     return true;
@@ -1190,8 +1346,8 @@ void emu_reconcile_adam_media_after_state_load(void)
         if (!IsValidPointer(media) || !media->IsInserted())
         {
             clear_host_media((GC_AdamMediaSlot)i);
-            if (playlist.slot == (GC_AdamMediaSlot)i)
-                clear_playlist(&playlist);
+            if (playlists[i].slot == (GC_AdamMediaSlot)i)
+                clear_playlist(&playlists[i]);
             continue;
         }
         if ((record->source_path[0] != '\0') &&
@@ -1201,8 +1357,8 @@ void emu_reconcile_adam_media_after_state_load(void)
         }
 
         clear_host_media((GC_AdamMediaSlot)i);
-        if (playlist.slot == (GC_AdamMediaSlot)i)
-            clear_playlist(&playlist);
+        if (playlists[i].slot == (GC_AdamMediaSlot)i)
+            clear_playlist(&playlists[i]);
         record->state_owned = true;
         media->SetWriteProtected(true);
         media->ClearDirty();

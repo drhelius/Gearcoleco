@@ -90,8 +90,7 @@ void gui_debug_windows(void)
     {
         GC_AdamDebugState adam_state;
         bool have_adam_state = false;
-        if (adam_running && (config_debug.show_adam_system || config_debug.show_adam_net ||
-            config_debug.show_adam_printer))
+        if (adam_running && (config_debug.show_adam_system || config_debug.show_adam_net))
         {
             have_adam_state = emu_get_core()->GetAdamDebugState(&adam_state);
         }
@@ -116,8 +115,6 @@ void gui_debug_windows(void)
             gui_debug_window_adam_system(&adam_state);
         if (have_adam_state && config_debug.show_adam_net)
             gui_debug_window_adam_net(&adam_state);
-        if (have_adam_state && config_debug.show_adam_printer)
-            gui_debug_window_adam_media_printer(&adam_state);
         if (emu_get_core()->GetVideoChip() == GC_VIDEO_CHIP_F18A)
         {
             if (config_debug.show_f18a_nametables)

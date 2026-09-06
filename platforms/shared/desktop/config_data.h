@@ -49,6 +49,35 @@ enum config_VideoSync
     config_VideoSync_VRR = 2
 };
 
+struct config_AdamKeyDefinition
+{
+    const char* name;
+    const char* setting;
+    GC_AdamKey key;
+    SDL_Scancode default_scancode;
+};
+
+static const config_AdamKeyDefinition config_adam_keys[] =
+{
+    { "SmartKey I", "SmartKey1", GC_ADAM_KEY_SMART_1, SDL_SCANCODE_F1 },
+    { "SmartKey II", "SmartKey2", GC_ADAM_KEY_SMART_2, SDL_SCANCODE_F2 },
+    { "SmartKey III", "SmartKey3", GC_ADAM_KEY_SMART_3, SDL_SCANCODE_F3 },
+    { "SmartKey IV", "SmartKey4", GC_ADAM_KEY_SMART_4, SDL_SCANCODE_F4 },
+    { "SmartKey V", "SmartKey5", GC_ADAM_KEY_SMART_5, SDL_SCANCODE_F5 },
+    { "SmartKey VI", "SmartKey6", GC_ADAM_KEY_SMART_6, SDL_SCANCODE_F6 },
+    { "Wild Card", "WildCard", GC_ADAM_KEY_WILD_CARD, SDL_SCANCODE_F8 },
+    { "Undo", "Undo", GC_ADAM_KEY_UNDO, SDL_SCANCODE_F7 },
+    { "ADAM Home", "Home", GC_ADAM_KEY_HOME, SDL_SCANCODE_HOME },
+    { "Move / Copy", "Move", GC_ADAM_KEY_MOVE, SDL_SCANCODE_PAGEUP },
+    { "Store / Fetch", "Store", GC_ADAM_KEY_STORE, SDL_SCANCODE_PAGEDOWN },
+    { "Insert", "Insert", GC_ADAM_KEY_INSERT, SDL_SCANCODE_INSERT },
+    { "Print", "Print", GC_ADAM_KEY_PRINT, SDL_SCANCODE_PRINTSCREEN },
+    { "Clear", "Clear", GC_ADAM_KEY_CLEAR, SDL_SCANCODE_END },
+    { "Delete", "Delete", GC_ADAM_KEY_DELETE, SDL_SCANCODE_DELETE },
+    { "Escape / WP", "Escape", GC_ADAM_KEY_ESCAPE, SDL_SCANCODE_ESCAPE }
+};
+static const int config_adam_key_count = sizeof(config_adam_keys) / sizeof(config_adam_keys[0]);
+
 struct config_Emulator
 {
     bool maximized;
@@ -73,7 +102,9 @@ struct config_Emulator
     std::string bios_path;
     std::string adam_eos_path;
     std::string adam_smartwriter_path;
+    SDL_Scancode adam_keys[config_adam_key_count];
     bool adam_media_persistence;
+    std::string adam_recent_media[GC_ADAM_MEDIA_SLOT_COUNT][5];
     bool adam_media_write_protected[GC_ADAM_MEDIA_SLOT_COUNT];
     int savefiles_dir_option;
     std::string savefiles_path;

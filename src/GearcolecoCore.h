@@ -82,6 +82,7 @@ public:
     void Spinner2(int movement);
     void Pause(bool paused);
     bool IsPaused();
+    void ResetAdamComputer();
     void ResetROM(Cartridge::ForceConfiguration* config = NULL);
     void ResetROMPreservingRAM(Cartridge::ForceConfiguration* config = NULL);
     void ResetSound();

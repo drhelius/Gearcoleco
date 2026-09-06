@@ -117,10 +117,12 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 ## Tips
 
 ### Basic Usage
-- **BIOS**: Gearcoleco needs a BIOS to run. It is possible to load any BIOS but the original one with md5 `2c66f5911e5b42b8ebe113403548eee7` is recommended.
+- **BIOS**: Gearcoleco needs a BIOS to run. Select it under **Emulator > BIOS**. ADAM EOS and SmartWriter ROMs are configured under **ADAM > EOS ROM** and **ADAM > SmartWriter ROM**. It is possible to load any BIOS but the original one with md5 `2c66f5911e5b42b8ebe113403548eee7` is recommended.
 - **ADAM Firmware**: ADAM mode additionally requires an 8192-byte `eos.rom` image and a 32768-byte SmartWriter image named `writer.rom`, `wp.rom` or `wp_r80.rom`. The known common CRC32 values are `05a37a34` for EOS and `58d86a2a` for SmartWriter. OS-7 may be named `colecovision.rom`, `coleco.rom` or `os7.u2`; its known CRC32 is `3aa93ef3`. Supply these as separate raw files: MAME's multi-ROM `adam.zip` and its 16384-byte U22 image are not firmware input formats. Firmware is not included with Gearcoleco.
-- **ADAM Media**: Gearcoleco accepts 256 KiB `.ddp` images, 160/320 KiB `.dsk` images, ZIP archives containing exactly one valid ADAM image, and homogeneous `.m3u` playlists. Use **Gearcoleco > Start ADAM...** to boot SmartWriter without content. Loading ADAM media in `Auto` mode selects ADAM automatically.
-- **ADAM Writes**: The desktop application stores changes in checksum-named complete images under the configured **Save Files** directory policy; source images remain immutable. Use **Gearcoleco > ADAM Media...** to inspect slots, swap playlists, toggle write protection, save or eject. A failed save leaves the image mounted and dirty.
+- **ADAM Media**: Gearcoleco accepts 256 KiB `.ddp` images, 160/320 KiB `.dsk` images, ZIP archives containing exactly one valid ADAM image, and homogeneous `.m3u` playlists. Insert media through **ADAM > Disk 1/2** or **Data Pack 1/2**, then choose **Power On**. **Computer Reset** boots again from inserted media while retaining the drives. ADAM checks Disk 1, Disk 2, Data Pack 1, then Data Pack 2, and starts SmartWriter when none is bootable.
+- **ADAM Keyboard**: Typing goes to ADAM automatically during normal use. In the debugger, click **Output** to type and click a debugger tool to use its shortcuts. **ADAM > Keyboard** configures SmartKeys and special keys, with per-key clear/reset controls and Restore Defaults. Bindings map physical host keys to ADAM keys and are saved in the configuration. Reassigning another ADAM binding or a normal typing key requires confirmation; unmodified fullscreen/quit keys are reserved. F12 keeps its default fullscreen action. Escape/WP reaches ADAM while typing, including fullscreen. The desktop actions select the machine automatically; **Debug > ADAM > Run Cartridge on ADAM...** explicitly runs a cartridge on ADAM hardware.
+- **ADAM Debugger**: **Debug > ADAM** provides a CPU memory map with separate read/write mappings and an ADAMnet request inspector. Click memory ranges, PCB/DCB addresses, or buffers to inspect them in the memory editor. Trace **Presets** include **ADAM Program I/O** and **ADAM Errors**.
+- **ADAM Writes**: The desktop application stores changes in checksum-named complete images under the configured **Save Files** directory policy; source images remain immutable. The **ADAM** menu shows both disks and both data packs, even before startup. Use each drive's **Insert...** menu item to select its image, then choose **Power On**. During emulation, **Insert...** and **Eject** affect only that drive, and **Computer Reset** retains mounted media. Each drive submenu provides recent images, independent playlists, write protection, Save Changes, and Save As. **Swap Disks 1 and 2** exchanges the disk images and their playlists. **Gearcoleco > Open ROM...** starts ColecoVision cartridge software. Dropped disks and data packs go into an available matching drive without resetting; if both drives are occupied, choose the destination. **Open Recent ROM** contains cartridges; ADAM images are in each drive's **Recent Images** submenu. A failed save leaves the image mounted and dirty.
 - **ADAM Save States**: States validate firmware, cartridge and mounted-media identity. Experimental ADAM states older than state version 108 are incompatible and must be recreated; disk/data-pack images and working copies remain usable.
 - **Spinners**: Use **Input > Spinners > Capture Mouse** or the configured Capture Mouse shortcut. Disable spinners for software that does not use them.
 - **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
@@ -128,31 +130,56 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **Mouse Cursor**: Automatically hides when hovering over the main output window or when Main Menu is disabled.
 - **Portable Mode**: Run with `--portable`, or create an empty file named `portable.ini` in the same directory as the application binary. On macOS, place the file next to the `.app` bundle.
 
-### ADAM Keyboard
+### Desktop ADAM Keyboard
 
 Normal letters, digits, punctuation, Return, Escape, Backspace, Tab, Shift, Control, Caps Lock and arrow keys map directly. The dedicated ADAM keys use these defaults:
 
 | Host key | ADAM key |
 |---|---|
 | F1-F6 | SmartKey I-VI |
-| F7 / F8 / F9 | Wild Card / Undo / ADAM Home |
-| Insert / Home | Move-Copy / Store-Fetch |
-| Delete / End | Insert / Print |
-| Page Up / Page Down | Clear / Delete |
+| F7 / F8 | Undo / Wild Card |
+| Home / Insert / Delete | ADAM Home / Insert / Delete |
+| Page Up / Page Down | Move-Copy / Store-Fetch |
+| End | Clear |
+| Print Screen | Print |
+
+Saved keyboard mappings are preserved. Use **ADAM > Keyboard > Restore Defaults** to adopt this layout in an existing configuration.
 
 When ADAM owns keyboard focus, overlapping emulator hotkeys are available from the menus so SmartKeys and editing keys reach the emulated keyboard. Leaving the window releases every held ADAM key.
 
-In ADAM mode, `F12` releases or enables keyboard capture. If fullscreen also uses `F12`, use the fullscreen menu action or configure a different fullscreen shortcut.
+ADAM keyboard input follows focus automatically. In normal use, type directly; in debug mode, focus Output to type into ADAM or focus a debugger tool to use its shortcuts. `F12` remains the default fullscreen shortcut.
 
 ### ADAM in Libretro
 
-Place OS-7, EOS and SmartWriter firmware in the frontend system directory or its `gearcoleco` subdirectory using the names above. The core supports ordinary `.ddp`, `.dsk`, `.zip` and `.m3u` loading, no-content SmartWriter boot, keyboard callbacks, disk control and an optional three-slot ADAM subsystem. Set **Machine** to `ADAM` before starting without content.
+Place OS-7, EOS and SmartWriter firmware in the frontend system directory or its `gearcoleco` subdirectory using the names above. The core selects ADAM automatically for `.ddp`, `.dsk`, ADAM `.zip` and `.m3u` content, and when starting without content. Cartridges use ColecoVision unless **Cartridge Hardware** is explicitly set to ADAM; the old Machine and Boot Mode overrides are no longer used. With no bootable media inserted, ADAM starts SmartWriter.
 
-Writable libretro media is disabled by default. The `Save-directory working copy` option creates complete checksum-named images in the frontend save directory; source content is never overwritten. Disk-control swaps require the normal eject, select and close sequence.
+Writable libretro media is disabled by default. The `Save-directory working copy` option creates complete checksum-named images in the frontend save directory; source content is never overwritten. Use **ADAM Disk Control Drive** to choose Disk 1, Disk 2, Data Pack 1 or Data Pack 2 before using the frontend's Disk Control. Each drive has its own image list and can accept media after no-content startup. Disk-control swaps require the normal eject, select and close sequence; other drives remain mounted. The default **Loaded media** target selects the primary content drive.
+
+The single optional **ADAM** subsystem (`adam`) prepares several images before booting, like selecting drives before Power On on the desktop. Its five slots are **Cartridge, Disk 1, Disk 2, Data Pack 1, Data Pack 2**, in that order; every slot is optional and each drive can have its own playlist. Normal content loading remains the simplest way to start a single image or an M3U disk-swapping set. Older three-file subsystem launch configurations must be updated to the five-slot layout. Save-state support for compatible older single-drive metadata is unchanged.
+
+Libretro uses fixed ADAM keyboard defaults. In RetroArch, set **Settings > Input > Auto Enable 'Game Focus' Mode** to **Detect**, or toggle Game Focus manually (Scroll Lock by default) before typing. RetroArch normally uses letters, Space, Escape and function keys for its own shortcuts, so changing ADAM key assignments alone cannot prevent conflicts. ADAM requests keyboard input for Game Focus detection when loaded; ordinary ColecoVision startup does not. Toggle Game Focus off again to use RetroArch shortcuts. If the keyboard has no Scroll Lock, assign RetroArch's **Game Focus Toggle** hotkey to F10; Gearcoleco leaves F9-F12 and Scroll Lock unmapped in ADAM.
+
+| Host key | ADAM key |
+|----------|----------|
+| F1-F6 | SmartKey I-VI |
+| F7 | Undo |
+| F8 | Wild Card |
+| Home | ADAM Home |
+| Insert | Insert |
+| Delete | Delete |
+| Page Up | Move / Copy |
+| Page Down | Store / Fetch |
+| End | Clear |
+| Print Screen | Print |
+| Escape | Escape / WP |
+
+The editing-key assignments follow [ColEm's ADAM layout](https://fms.komkon.org/ColEm/ColEm.html#Buttons). Shift and Control retain their ADAM modifier roles. Per-key libretro core options have been removed; desktop keyboard mappings remain configurable.
+
+Normal frontend Reset retains the current boot mode. **ADAM Computer Reset** explicitly boots the computer from mounted media without ejecting them. It returns to Idle when supported by the frontend; otherwise select Idle before requesting Reset again.
 
 ADAM keyboard input and no-content boot require support from the frontend. Writable media also requires the frontend's file-system interface; if the required operations or save directory are unavailable, the core mounts media write protected even when writable media is requested.
 
-Current ADAM media limitations are logical DDP images only, 160/320 KiB 5.25-inch disk images, and high-level cycle-scheduled device timing. The desktop validates homogeneous `.m3u` playlists and exposes their entries in the **ADAM Media** window. Physical tape audio, 3.5-inch disk geometries, modem/network devices and host-printer pass-through are not implemented; printer output is captured in the debugger and MCP interfaces.
+Current ADAM media limitations are logical DDP images only, 160/320 KiB 5.25-inch disk images, and high-level cycle-scheduled device timing. The desktop validates homogeneous `.m3u` playlists and exposes their entries in each drive's **Playlist** submenu. Physical tape audio, 3.5-inch disk geometries, modem/network devices and host-printer pass-through are not implemented; printer output is available under **ADAM > Printer Output** and through MCP.
 
 ### Debugging Features
 - **ADAM Debugger**: Dedicated System, ADAMnet, and Media/Printer windows expose live firmware, mapping, controller, DCB, keyboard, media-cache, and printer-spool state.

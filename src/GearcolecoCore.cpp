@@ -727,6 +727,16 @@ bool GearcolecoCore::IsPaused()
     return m_bPaused;
 }
 
+void GearcolecoCore::ResetAdamComputer()
+{
+    if (m_machine != GC_MACHINE_ADAM || !IsReady())
+        return;
+    m_adam_boot_mode = GC_ADAM_BOOT_COMPUTER;
+    if (m_content_type == GC_CONTENT_CARTRIDGE)
+        m_content_type = GC_CONTENT_NONE;
+    ResetROM();
+}
+
 void GearcolecoCore::ResetROM(Cartridge::ForceConfiguration* config)
 {
     if (m_machine == GC_MACHINE_ADAM)

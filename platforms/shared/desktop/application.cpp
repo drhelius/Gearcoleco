@@ -543,7 +543,7 @@ static void sdl_events_app(const SDL_Event* event)
         case (SDL_EVENT_DROP_FILE):
         {
             const char* dropped_filedir = event->drop.data;
-            gui_load_rom(dropped_filedir);
+            gui_drop_media(dropped_filedir);
             application_refocus_window();
             break;
         }

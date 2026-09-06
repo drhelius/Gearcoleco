@@ -21,6 +21,7 @@
 #define EVENTS_H
 
 #include <SDL3/SDL.h>
+#include "definitions.h"
 
 #ifdef EVENTS_IMPORT
     #define EXTERN
@@ -33,9 +34,9 @@ EXTERN void events_handle_emu_event(const SDL_Event* event, bool shortcut_consum
 EXTERN void events_emu(void);
 EXTERN void events_sync_input(void);
 EXTERN void events_release_adam_keys(void);
-EXTERN void events_set_adam_keyboard_capture(bool enabled);
-EXTERN bool events_is_adam_keyboard_capture_enabled(void);
-EXTERN bool events_is_adam_keyboard_captured(void);
+EXTERN bool events_is_adam_keyboard_active(void);
+EXTERN GC_AdamKey events_adam_typing_key(SDL_Scancode scancode);
+EXTERN const char* events_adam_reserved_key(SDL_Scancode scancode);
 EXTERN void events_reset_input(void);
 EXTERN bool events_input_updated(void);
 

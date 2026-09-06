@@ -41,6 +41,11 @@ struct EmuDesktopContent
     bool playlist;
 };
 
+bool emu_adam_validate_media(GC_AdamMediaSlot slot, const char* path);
+bool emu_adam_prepare_session(const char* const* paths);
+bool emu_adam_commit_session(void);
+void emu_adam_clear_session(void);
+bool emu_swap_adam_disks(void);
 void emu_adam_init(void);
 void emu_adam_prepare_load(void);
 bool emu_adam_load_firmware(void);

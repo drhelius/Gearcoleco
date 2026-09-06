@@ -147,7 +147,16 @@ static inline void process(config_Operation operation)
     CONFIG_STRING("Emulator", "BiosPath", config_emulator.bios_path, "");
     CONFIG_STRING("Emulator", "AdamEOSPath", config_emulator.adam_eos_path, "");
     CONFIG_STRING("Emulator", "AdamSmartWriterPath", config_emulator.adam_smartwriter_path, "");
+    for (int i = 0; i < config_adam_key_count; i++)
+    {
+        CONFIG_SCANCODE("ADAM Keyboard", config_adam_keys[i].setting,
+            config_emulator.adam_keys[i], config_adam_keys[i].default_scancode);
+    }
     CONFIG_BOOL("Emulator", "AdamMediaPersistence", config_emulator.adam_media_persistence, true);
+    CONFIG_STRING_ARRAY("ADAM", "Disk1Recent%d", config_emulator.adam_recent_media[0], 5, "");
+    CONFIG_STRING_ARRAY("ADAM", "Disk2Recent%d", config_emulator.adam_recent_media[1], 5, "");
+    CONFIG_STRING_ARRAY("ADAM", "DataPack1Recent%d", config_emulator.adam_recent_media[2], 5, "");
+    CONFIG_STRING_ARRAY("ADAM", "DataPack2Recent%d", config_emulator.adam_recent_media[3], 5, "");
     CONFIG_BOOL("Emulator", "AdamDisk1WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DISK_1], false);
     CONFIG_BOOL("Emulator", "AdamDisk2WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DISK_2], false);
     CONFIG_BOOL("Emulator", "AdamDataPack1WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DATA_PACK_1], false);

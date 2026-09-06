@@ -593,6 +593,33 @@ static void trace_logger_menu(void)
         ImGui::EndMenu();
     }
 
+    if (ImGui::BeginMenu("Presets"))
+    {
+        if (ImGui::MenuItem("Z80 Instructions"))
+            trace_logger_set_config_flags(TRACE_FLAG_CPU | TRACE_FLAG_CPU_IRQ);
+        if (ImGui::MenuItem("Hardware I/O"))
+        {
+            trace_logger_set_config_flags(TRACE_FLAG_IO | TRACE_FLAG_MAPPER);
+            config_debug.trace_io_events = TRACE_IO_EVENT_READS | TRACE_IO_EVENT_WRITES;
+            config_debug.trace_mapper_events = TRACE_MAPPER_EVENT_BANKS |
+                TRACE_MAPPER_EVENT_EEPROM | TRACE_MAPPER_EVENT_SRAM;
+        }
+        if (ImGui::MenuItem("ADAM Program I/O", NULL, false, emu_get_machine() == GC_MACHINE_ADAM))
+        {
+            trace_logger_set_config_flags(TRACE_FLAG_ADAM);
+            config_debug.trace_adam_events = TRACE_ADAM_EVENT_MAP |
+                TRACE_ADAM_EVENT_COMMANDS | TRACE_ADAM_EVENT_ERRORS;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Memory banking and EOS device requests, without duplicate DMA completion events.");
+        if (ImGui::MenuItem("ADAM Errors", NULL, false, emu_get_machine() == GC_MACHINE_ADAM))
+        {
+            trace_logger_set_config_flags(TRACE_FLAG_ADAM);
+            config_debug.trace_adam_events = TRACE_ADAM_EVENT_ERRORS;
+        }
+        ImGui::EndMenu();
+    }
+
     if (ImGui::BeginMenu("Filters"))
     {
         if (ImGui::BeginMenu("CPU"))
@@ -626,7 +653,7 @@ static void trace_logger_menu(void)
         const char* sgm_names[] = {"Control"};
         const u32 sgm_masks[] = {TRACE_SGM_EVENT_CONTROL};
         trace_submenu("SGM", &config_debug.trace_sgm, &config_debug.trace_sgm_events, sgm_names, sgm_masks, 1);
-        const char* adam_names[] = {"Memory map", "Commands", "DMA", "Errors"};
+        const char* adam_names[] = {"Memory Banking / ROM Overlays", "EOS Device Requests", "DMA Completions", "Device Errors"};
         const u32 adam_masks[] = {TRACE_ADAM_EVENT_MAP, TRACE_ADAM_EVENT_COMMANDS,
             TRACE_ADAM_EVENT_DMA, TRACE_ADAM_EVENT_ERRORS};
         trace_submenu("ADAM", &config_debug.trace_adam, &config_debug.trace_adam_events,

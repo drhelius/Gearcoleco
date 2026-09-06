@@ -28,7 +28,7 @@
     #define EXTERN extern
 #endif
 
-EXTERN void gui_file_dialog_open_rom(void);
+EXTERN void gui_file_dialog_open_rom(bool adam_cartridge = false);
 EXTERN void gui_file_dialog_load_ram(void);
 EXTERN void gui_file_dialog_save_ram(void);
 EXTERN void gui_file_dialog_load_state(void);
@@ -52,6 +52,7 @@ EXTERN void gui_file_dialog_choose_saves_path(void);
 EXTERN void gui_file_dialog_choose_trace_path(void);
 EXTERN void gui_file_dialog_load_bios(void);
 EXTERN void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware);
+EXTERN void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple);
 EXTERN void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot,
     bool discard_current_changes = false);
 EXTERN void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot);

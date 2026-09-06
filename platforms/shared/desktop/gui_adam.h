@@ -20,8 +20,19 @@
 #ifndef GUI_ADAM_H
 #define GUI_ADAM_H
 
-void gui_adam_open_media(void);
-void gui_adam_open_firmware(void);
+#include "gearcoleco.h"
+
+void gui_adam_prepare_window(float width, float height);
+void gui_adam_keep_window_visible(void);
+void gui_adam_media_menu(void);
+void gui_adam_keyboard_menu(void);
+bool gui_adam_menu_requested(void);
+void gui_adam_request_menu(void);
+bool gui_adam_select_media(GC_AdamMediaSlot slot, const char* first, const char* second);
+void gui_adam_start(void);
+void gui_adam_drop_media(const char* path, bool disk);
+void gui_adam_remember_media(GC_AdamMediaSlot slot, const char* path);
+void gui_adam_firmware_menu(const char* label, GC_AdamFirmware firmware);
 void gui_adam_open_missing_firmware(bool adam);
 void gui_adam_open_quit_confirmation(void);
 void gui_adam_windows(void);

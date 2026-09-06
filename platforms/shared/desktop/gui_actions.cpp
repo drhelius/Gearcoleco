@@ -37,7 +37,7 @@ void gui_action_reset(void)
     gui_debug_trace_logger_clear();
 
     emu_resume();
-    emu_reset(gui_get_force_configuration());
+    emu_reset(gui_get_force_configuration(), emu_get_machine() == GC_MACHINE_ADAM);
 
     if (config_emulator.start_paused)
     {
@@ -54,11 +54,10 @@ void gui_action_reload_rom(void)
 {
     if (!emu_is_empty())
     {
-        const char* content_path = emu_get_content_path();
-        if (content_path[0] != '\0')
-            gui_load_rom(content_path);
-        else if (emu_get_machine() == GC_MACHINE_ADAM)
-            gui_start_adam();
+        if (emu_get_machine() == GC_MACHINE_ADAM)
+            gui_action_reset();
+        else
+            gui_open_rom(emu_get_content_path());
     }
 }
 

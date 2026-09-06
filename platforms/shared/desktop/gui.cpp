@@ -34,6 +34,7 @@
 #define GUI_IMPORT
 #include "gui.h"
 #include "gui_adam.h"
+#include "emu_adam.h"
 #include "gui_menus.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
@@ -52,7 +53,6 @@ static char error_message[4096] = "";
 static bool loading_rom_active = false;
 static char loading_rom_path[4096] = "";
 static char loading_symbol_path[4096] = "";
-static int loading_machine_commit = -1;
 
 
 static void main_window(void);
@@ -161,6 +161,7 @@ void gui_destroy(void)
 
 void gui_render(void)
 {
+    bool keyboard_was_active = events_is_adam_keyboard_active();
     ImGui::NewFrame();
 
     update_window_visibility_padding();
@@ -173,15 +174,11 @@ void gui_render(void)
     gui_main_menu();
 
     gui_main_window_hovered = false;
-    bool output_was_focused = gui_main_window_focused;
     gui_main_window_focused = false;
     gui_main_window_sdl_window_id = 0;
 
     if((!config_debug.debug && !emu_is_empty()) || (config_debug.debug && config_debug.show_screen))
         main_window();
-
-    if (output_was_focused && !gui_main_window_focused)
-        events_release_adam_keys();
 
     gui_debug_windows();
     gui_adam_windows();
@@ -192,6 +189,15 @@ void gui_render(void)
     show_loading_popup();
     show_status_message();
     show_error_window();
+
+    if (!config_debug.debug && !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        gui_main_window_focused = SDL_GetKeyboardFocus() == application_sdl_window &&
+            !io.WantCaptureKeyboard && !io.WantTextInput;
+    }
+    if (keyboard_was_active && !events_is_adam_keyboard_active())
+        events_release_adam_keys();
 
     ImGui::Render();
 }
@@ -342,28 +348,68 @@ bool gui_load_rom(const char* path, const char* symbol_path)
     return true;
 }
 
-bool gui_load_rom_with_machine(const char* path, int machine)
+bool gui_is_cartridge_file(const char* path)
 {
-    if ((machine < GC_MACHINE_AUTO) || (machine > GC_MACHINE_ADAM))
+    if (emu_is_busy())
         return false;
+    EmuDesktopContent content = {};
+    bool valid = emu_adam_classify_content(path, GC_MACHINE_AUTO, &content) &&
+        content.type == EmuDesktopContentCartridge;
+    emu_adam_destroy_content(&content);
+    return valid;
+}
 
+bool gui_open_rom(const char* path, bool adam_cartridge)
+{
+    if (loading_rom_active)
+        return false;
+    if (!gui_is_cartridge_file(path))
+    {
+        gui_set_error_message("Open ROM accepts cartridge images. Insert ADAM disks and data packs using the ADAM drive menus.");
+        return false;
+    }
+    if (!emu_is_bios_loaded() || (adam_cartridge && !emu_are_adam_firmware_paths_valid()))
+    {
+        gui_adam_open_missing_firmware(adam_cartridge);
+        return false;
+    }
     int previous_machine = config_emulator.machine;
-    config_emulator.machine = machine;
+    int previous_boot = config_emulator.adam_boot_mode;
+    config_emulator.machine = adam_cartridge ? GC_MACHINE_ADAM : GC_MACHINE_COLECOVISION;
+    config_emulator.adam_boot_mode = adam_cartridge ? 2 : 0;
     bool started = gui_load_rom(path);
     config_emulator.machine = previous_machine;
-    if (started)
-        loading_machine_commit = machine;
+    config_emulator.adam_boot_mode = previous_boot;
     return started;
 }
 
-bool gui_start_adam(void)
+void gui_drop_media(const char* path)
+{
+    if (emu_is_busy())
+        return;
+    EmuDesktopContent content = {};
+    if (!emu_adam_classify_content(path, GC_MACHINE_AUTO, &content))
+    {
+        emu_adam_destroy_content(&content);
+        gui_set_error_message("Unable to identify the dropped image. Use Open ROM or an ADAM drive's Insert menu.");
+        return;
+    }
+    EmuDesktopContentType type = content.type;
+    emu_adam_destroy_content(&content);
+    if (type == EmuDesktopContentCartridge)
+        gui_open_rom(path);
+    else
+        gui_adam_drop_media(path, type == EmuDesktopContentAdamDisk);
+}
+
+bool gui_start_adam(const char* const* media_paths)
 {
     if (loading_rom_active)
         return false;
 
     gui_debug_auto_save_settings();
     emu_resume();
-    if (!emu_start_adam())
+    if (!emu_start_adam(media_paths))
         return false;
     return finish_started_content(false);
 }
@@ -384,10 +430,13 @@ bool gui_finish_loading_rom(void)
 
     if (success)
     {
-        config_push_recent_media(loading_rom_path);
+        if (emu_get_machine() == GC_MACHINE_COLECOVISION)
+            config_push_recent_media(loading_rom_path);
+        else if (emu_get_core()->GetContentType() == GC_CONTENT_ADAM_DISK)
+            gui_adam_remember_media(GC_ADAM_MEDIA_DISK_1, loading_rom_path);
+        else if (emu_get_core()->GetContentType() == GC_CONTENT_ADAM_DATA_PACK)
+            gui_adam_remember_media(GC_ADAM_MEDIA_DATA_PACK_1, loading_rom_path);
         success = finish_started_content(true);
-        if (success && (loading_machine_commit >= GC_MACHINE_AUTO))
-            config_emulator.machine = loading_machine_commit;
     }
 
     else
@@ -397,7 +446,6 @@ bool gui_finish_loading_rom(void)
         gui_set_error_message(message.c_str());
     }
 
-    loading_machine_commit = -1;
 
     return success;
 }
@@ -634,21 +682,8 @@ static void main_window(void)
 
     ImGui::Image((ImTextureID)(intptr_t)ogl_renderer_get_screen_texture(), ImVec2(image_w, image_h), ImVec2(0, 0), ImVec2(tex_h, tex_v));
 
-    if (emu_get_machine() == GC_MACHINE_ADAM)
-    {
-        bool capture_enabled = events_is_adam_keyboard_capture_enabled();
-        bool captured = events_is_adam_keyboard_captured();
-        const char* message = captured ? "ADAM keyboard captured - F12 releases" :
-            (capture_enabled ? "ADAM keyboard not focused - click output" :
-            "ADAM keyboard released - F12 enables");
-        ImVec2 position = ImGui::GetItemRectMin() + ImVec2(8.0f, 8.0f);
-        ImVec2 text_size = ImGui::CalcTextSize(message);
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        draw_list->AddRectFilled(position - ImVec2(4.0f, 3.0f),
-            position + text_size + ImVec2(4.0f, 3.0f), IM_COL32(0, 0, 0, 190), 3.0f);
-        draw_list->AddText(position, captured ? IM_COL32(80, 240, 80, 255) :
-            IM_COL32(255, 180, 60, 255), message);
-    }
+    if (config_debug.debug && (emu_get_machine() == GC_MACHINE_ADAM) && ImGui::IsItemHovered())
+        ImGui::SetTooltip("Click Output to type on the ADAM keyboard.\nClick a debugger tool to use its keyboard shortcuts.");
 
     if (config_video.fps)
         gui_show_fps();

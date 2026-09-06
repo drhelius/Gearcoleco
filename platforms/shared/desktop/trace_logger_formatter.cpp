@@ -178,6 +178,21 @@ static const char* adam_device_name(u8 device)
     return metadata ? metadata->name : "Unknown";
 }
 
+static const char* adam_error_name(u8 error)
+{
+    switch (error)
+    {
+        case GC_ADAM_MEDIA_ERROR_NONE: return "none";
+        case GC_ADAM_MEDIA_ERROR_INVALID_ARGUMENT: return "invalid request";
+        case GC_ADAM_MEDIA_ERROR_INVALID_SIZE: return "invalid size";
+        case GC_ADAM_MEDIA_ERROR_NO_MEDIA: return "no media";
+        case GC_ADAM_MEDIA_ERROR_WRITE_PROTECTED: return "write protected";
+        case GC_ADAM_MEDIA_ERROR_OUT_OF_RANGE: return "block out of range";
+        case GC_ADAM_MEDIA_ERROR_CHANGED: return "media changed";
+        default: return "unknown";
+    }
+}
+
 static const char* adam_response_name(u8 response)
 {
     switch (response)
@@ -458,12 +473,13 @@ void trace_logger_format_entry(const GC_Trace_Entry& entry,
                 else
                 {
                     snprintf(text, sizeof(text), "[ADAM] DCB %s Device:%s($%02X) DCB:%u "
-                        "Command:%s Block:%u Buffer:$%04X Length:%u Response:%s Error:%u",
+                        "Command:%s Block:%u Buffer:$%04X Length:%u Response:%s($%02X) Error:%s",
                         entry.adam.event == TRACE_ADAM_COMMAND_COMPLETE ? "COMPLETE" : "ERROR",
                         adam_device_name(entry.adam.device), entry.adam.device, entry.adam.dcb,
                         adam_command_name(entry.adam.command), entry.adam.block,
                         entry.adam.buffer, entry.adam.length,
-                        adam_response_name(entry.adam.response), entry.adam.error);
+                        adam_response_name(entry.adam.response), entry.adam.response,
+                        adam_error_name(entry.adam.error));
                 }
             }
             break;

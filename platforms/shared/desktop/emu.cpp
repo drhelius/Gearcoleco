@@ -313,7 +313,7 @@ bool emu_finish_media_loading(void)
 }
 
 
-bool emu_start_adam(void)
+bool emu_start_adam(const char* const* media_paths)
 {
     if ((loading_state.load() != Loading_State_None) || !emu_flush_adam_media())
         return false;
@@ -322,15 +322,30 @@ bool emu_start_adam(void)
     if (!emu_adam_load_firmware())
         return false;
 
+    if (!emu_adam_prepare_session(media_paths))
+        return false;
     save_ram();
     gearcoleco->UnloadContent();
     emu_adam_clear_host_media();
     loaded_content_path[0] = '\0';
+    if (media_paths)
+    {
+        for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+        {
+            if (media_paths[i] && media_paths[i][0])
+            {
+                strncpy_fit(loaded_content_path, media_paths[i], sizeof(loaded_content_path));
+                break;
+            }
+        }
+    }
+    if (!emu_adam_commit_session())
+        return false;
     reset_buffers();
     gearcoleco->SetVideoChip(GC_VIDEO_CHIP_TMS9918A);
     if (!gearcoleco->StartAdam(GC_ADAM_BOOT_COMPUTER))
         return false;
-    set_debug_identity(GC_MACHINE_ADAM, NULL);
+    set_debug_identity(GC_MACHINE_ADAM, loaded_content_path[0] ? get_filename(loaded_content_path) : NULL);
 
     emu_audio_reset();
     apply_video_config();
@@ -646,7 +661,7 @@ bool emu_is_bios_loaded(void)
     return gearcoleco->GetMemory()->IsBiosLoaded();
 }
 
-void emu_reset(Cartridge::ForceConfiguration config)
+void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer)
 {
     gui_debug_trace_logger_reset();
     emu_debug_command = Debug_Command_None;
@@ -659,7 +674,10 @@ void emu_reset(Cartridge::ForceConfiguration config)
     emu_audio_reset();
     save_ram();
     gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
-    gearcoleco->ResetROM(&config);
+    if (adam_computer && gearcoleco->GetMachine() == GC_MACHINE_ADAM)
+        gearcoleco->ResetAdamComputer();
+    else
+        gearcoleco->ResetROM(&config);
     apply_video_config();
     load_ram();
     rewind_reset();

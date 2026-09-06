@@ -41,8 +41,8 @@ static KeyState input_last_state[GC_MAX_GAMEPADS][20] = { };
 static bool input_initialized = false;
 static bool roller_mouse_buttons[2] = { };
 static bool adam_scancode_down[SDL_SCANCODE_COUNT] = { };
+static GC_AdamKey adam_pressed_keys[SDL_SCANCODE_COUNT];
 static int adam_key_references[GC_ADAM_KEY_COUNT] = { };
-static bool adam_keyboard_capture_enabled = true;
 
 static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat);
 static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
@@ -87,13 +87,6 @@ bool events_shortcuts(const SDL_Event* event)
         return true;
     }
 
-    // ADAM capture owns F12 even when fullscreen uses its default F12 binding.
-    if (adam && (event->key.repeat == 0) && (event->key.scancode == SDL_SCANCODE_F12))
-    {
-        events_set_adam_keyboard_capture(!adam_keyboard_capture_enabled);
-        return true;
-    }
-
     if (adam && events_check_hotkey(event,
         config_hotkeys[config_HotkeyIndex_Fullscreen], false))
     {
@@ -102,17 +95,7 @@ bool events_shortcuts(const SDL_Event* event)
     }
 
     if (adam_captured)
-    {
-        if ((event->key.repeat == 0) && (event->key.scancode == SDL_SCANCODE_ESCAPE) &&
-            config_emulator.fullscreen && !config_emulator.always_show_menu)
-        {
-            config_emulator.fullscreen = false;
-            application_trigger_fullscreen(false);
-            return true;
-        }
-
         return false;
-    }
 
     // Check all hotkeys mapped to gui shortcuts
     for (int i = 0; i < GUI_HOTKEY_MAP_COUNT; i++)
@@ -165,9 +148,11 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
     if ((emu_get_machine() == GC_MACHINE_ADAM) &&
         ((event->type == SDL_EVENT_KEY_DOWN) || (event->type == SDL_EVENT_KEY_UP)))
     {
-        if (adam_keyboard_captures_event(event) && ((event->type == SDL_EVENT_KEY_UP) ||
-            (!shortcut_consumed && !gui_in_use && (event->key.repeat == 0))))
-            send_adam_key(event->key.scancode, event->type == SDL_EVENT_KEY_DOWN);
+        // Release keys already held by ADAM even when a menu has just taken focus.
+        if (event->type == SDL_EVENT_KEY_UP)
+            send_adam_key(event->key.scancode, false);
+        else if (adam_keyboard_captures_event(event) && !shortcut_consumed && (event->key.repeat == 0))
+            send_adam_key(event->key.scancode, true);
         return;
     }
 
@@ -313,28 +298,15 @@ void events_release_adam_keys(void)
     emu_adam_release_all_keys();
 }
 
-void events_set_adam_keyboard_capture(bool enabled)
+bool events_is_adam_keyboard_active(void)
 {
-    if (adam_keyboard_capture_enabled == enabled)
-        return;
-    adam_keyboard_capture_enabled = enabled;
-    events_release_adam_keys();
-}
-
-bool events_is_adam_keyboard_capture_enabled(void)
-{
-    return adam_keyboard_capture_enabled;
-}
-
-bool events_is_adam_keyboard_captured(void)
-{
-    return adam_keyboard_capture_enabled && gui_main_window_focused && !gui_dialog_in_use &&
+    return gui_main_window_focused && !gui_in_use && !gui_dialog_in_use &&
         !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
 }
 
 static bool adam_keyboard_captures_event(const SDL_Event* event)
 {
-    if (!events_is_adam_keyboard_captured())
+    if (!events_is_adam_keyboard_active())
         return false;
     return (gui_main_window_sdl_window_id == 0) ||
         (event->key.windowID == gui_main_window_sdl_window_id);
@@ -517,7 +489,7 @@ static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Ho
     return event->key.scancode == hotkey.key;
 }
 
-static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
+GC_AdamKey events_adam_typing_key(SDL_Scancode scancode)
 {
     switch (scancode)
     {
@@ -571,24 +543,8 @@ static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
         case SDL_SCANCODE_SLASH: return GC_ADAM_KEY_SLASH;
         case SDL_SCANCODE_RETURN:
         case SDL_SCANCODE_KP_ENTER: return GC_ADAM_KEY_RETURN;
-        case SDL_SCANCODE_ESCAPE: return GC_ADAM_KEY_ESCAPE;
         case SDL_SCANCODE_BACKSPACE: return GC_ADAM_KEY_BACKSPACE;
         case SDL_SCANCODE_TAB: return GC_ADAM_KEY_TAB;
-        case SDL_SCANCODE_F9: return GC_ADAM_KEY_HOME;
-        case SDL_SCANCODE_F1: return GC_ADAM_KEY_SMART_1;
-        case SDL_SCANCODE_F2: return GC_ADAM_KEY_SMART_2;
-        case SDL_SCANCODE_F3: return GC_ADAM_KEY_SMART_3;
-        case SDL_SCANCODE_F4: return GC_ADAM_KEY_SMART_4;
-        case SDL_SCANCODE_F5: return GC_ADAM_KEY_SMART_5;
-        case SDL_SCANCODE_F6: return GC_ADAM_KEY_SMART_6;
-        case SDL_SCANCODE_F7: return GC_ADAM_KEY_WILD_CARD;
-        case SDL_SCANCODE_F8: return GC_ADAM_KEY_UNDO;
-        case SDL_SCANCODE_INSERT: return GC_ADAM_KEY_MOVE;
-        case SDL_SCANCODE_HOME: return GC_ADAM_KEY_STORE;
-        case SDL_SCANCODE_DELETE: return GC_ADAM_KEY_INSERT;
-        case SDL_SCANCODE_END: return GC_ADAM_KEY_PRINT;
-        case SDL_SCANCODE_PAGEUP: return GC_ADAM_KEY_CLEAR;
-        case SDL_SCANCODE_PAGEDOWN: return GC_ADAM_KEY_DELETE;
         case SDL_SCANCODE_UP: return GC_ADAM_KEY_UP;
         case SDL_SCANCODE_RIGHT: return GC_ADAM_KEY_RIGHT;
         case SDL_SCANCODE_DOWN: return GC_ADAM_KEY_DOWN;
@@ -602,20 +558,58 @@ static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
     }
 }
 
+const char* events_adam_reserved_key(SDL_Scancode scancode)
+{
+    if (scancode == SDL_SCANCODE_UNKNOWN)
+        return NULL;
+    switch (scancode)
+    {
+        case SDL_SCANCODE_LSHIFT: case SDL_SCANCODE_RSHIFT:
+        case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL:
+        case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT:
+        case SDL_SCANCODE_LGUI: case SDL_SCANCODE_RGUI:
+        case SDL_SCANCODE_CAPSLOCK:
+            return "Keyboard modifier";
+        default: break;
+    }
+    if (config_hotkeys[config_HotkeyIndex_Fullscreen].key == scancode &&
+        config_hotkeys[config_HotkeyIndex_Fullscreen].mod == SDL_KMOD_NONE)
+        return "Fullscreen";
+    if (config_hotkeys[config_HotkeyIndex_Quit].key == scancode &&
+        config_hotkeys[config_HotkeyIndex_Quit].mod == SDL_KMOD_NONE)
+        return "Quit";
+    return NULL;
+}
+
+static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
+{
+    if (scancode == SDL_SCANCODE_UNKNOWN)
+        return GC_ADAM_KEY_COUNT;
+    if (!events_adam_reserved_key(scancode))
+    {
+        for (int i = 0; i < config_adam_key_count; i++)
+        {
+            if (config_emulator.adam_keys[i] == scancode)
+                return config_adam_keys[i].key;
+        }
+    }
+    return events_adam_typing_key(scancode);
+}
+
 static void send_adam_key(SDL_Scancode scancode, bool pressed)
 {
     if ((scancode < 0) || (scancode >= SDL_SCANCODE_COUNT))
-        return;
-
-    GC_AdamKey key = adam_key_from_scancode(scancode);
-    if (key >= GC_ADAM_KEY_COUNT)
         return;
 
     if (pressed)
     {
         if (adam_scancode_down[scancode])
             return;
+        GC_AdamKey key = adam_key_from_scancode(scancode);
+        if (key >= GC_ADAM_KEY_COUNT)
+            return;
         adam_scancode_down[scancode] = true;
+        adam_pressed_keys[scancode] = key;
         if (adam_key_references[key]++ == 0)
             emu_adam_key_pressed(key);
     }
@@ -624,6 +618,7 @@ static void send_adam_key(SDL_Scancode scancode, bool pressed)
         if (!adam_scancode_down[scancode])
             return;
         adam_scancode_down[scancode] = false;
+        GC_AdamKey key = adam_pressed_keys[scancode];
         if ((adam_key_references[key] > 0) && (--adam_key_references[key] == 0))
             emu_adam_key_released(key);
     }
