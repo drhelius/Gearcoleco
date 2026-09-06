@@ -90,7 +90,7 @@ public:
     Processor(Memory* pMemory);
     ~Processor();
     void Init();
-    void Reset();
+    void Reset(bool cold = true);
     unsigned int RunFor(unsigned int tstates);
     void InjectTStates(unsigned int tstates);
     void RequestINT(bool assert);

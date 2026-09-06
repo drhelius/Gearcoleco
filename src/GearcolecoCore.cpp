@@ -1682,14 +1682,16 @@ void GearcolecoCore::Reset(bool cold)
     if (m_machine == GC_MACHINE_ADAM)
         m_pAdam->Reset(cold, m_adam_boot_mode);
 
-    m_pProcessor->Reset();
+    m_pProcessor->Reset(cold || m_machine != GC_MACHINE_ADAM);
     bool pal = (m_machine == GC_MACHINE_ADAM) ? false : m_pCartridge->IsPAL();
-    m_pAudio->Reset(pal);
 
     if (cold || m_machine != GC_MACHINE_ADAM)
+    {
+        m_pAudio->Reset(pal);
         m_pVideo->Reset(pal);
+        m_pInput->Reset();
+    }
 
-    m_pInput->Reset();
     m_pColecoVisionIOPorts->Reset();
     m_bPaused = false;
 }

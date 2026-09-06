@@ -104,7 +104,7 @@ void Processor::Init()
     Reset();
 }
 
-void Processor::Reset()
+void Processor::Reset(bool cold)
 {
     m_bIFF1 = false;
     m_bIFF2 = false;
@@ -115,17 +115,22 @@ void Processor::Reset()
     m_bAfterEI = false;
     m_iInterruptMode = 0;
     PC.SetValue(0x0000);
-    SP.SetValue(0xDFF0);
-    IX.SetValue(0xFFFF);
-    IY.SetValue(0xFFFF);
-    AF.SetValue(0x0040);  // Zero flag set
-    BC.SetValue(0x0000);
-    DE.SetValue(0x0000);
-    HL.SetValue(0x0000);
-    AF2.SetValue(0x0000);
-    BC2.SetValue(0x0000);
-    DE2.SetValue(0x0000);
-    HL2.SetValue(0x0000);
+
+    if (cold)
+    {
+        SP.SetValue(0xDFF0);
+        IX.SetValue(0xFFFF);
+        IY.SetValue(0xFFFF);
+        AF.SetValue(0x0040);  // Zero flag set
+        BC.SetValue(0x0000);
+        DE.SetValue(0x0000);
+        HL.SetValue(0x0000);
+        AF2.SetValue(0x0000);
+        BC2.SetValue(0x0000);
+        DE2.SetValue(0x0000);
+        HL2.SetValue(0x0000);
+    }
+
     WZ.SetValue(0x0000);
     I = 0x00;
     R = 0x00;
