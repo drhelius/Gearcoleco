@@ -28,7 +28,8 @@ void gui_adam_media_menu(void);
 void gui_adam_keyboard_menu(void);
 bool gui_adam_menu_requested(void);
 void gui_adam_request_menu(void);
-bool gui_adam_select_media(GC_AdamMediaSlot slot, const char* first, const char* second);
+bool gui_adam_select_media(GC_AdamMediaSlot slot, const char* first, const char* second,
+    char* error = NULL, size_t error_size = 0);
 void gui_adam_start(void);
 void gui_adam_drop_media(const char* path, bool disk);
 void gui_adam_remember_media(GC_AdamMediaSlot slot, const char* path);

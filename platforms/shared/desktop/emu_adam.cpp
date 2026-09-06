@@ -80,7 +80,7 @@ static void init_content(EmuDesktopContent* content);
 static void clear_playlist(AdamDesktopPlaylist* target);
 static void commit_playlist(GC_AdamMediaSlot slot);
 static bool classify_zip(const char* path, const u8* data, size_t size,
-    GC_Machine machine, EmuDesktopContent* content);
+    GC_Machine machine, EmuDesktopContent* content, char* error, size_t error_size);
 static bool classify_playlist(const char* path, EmuDesktopContent* content);
 static bool valid_cartridge(const u8* data, size_t size);
 static void append_zip_candidate(std::string* candidates, const char* type,
@@ -327,8 +327,27 @@ static void append_zip_candidate(std::string* candidates, const char* type,
     candidates->append("'");
 }
 
+static void describe_invalid_media(const char* name, GC_AdamMediaType type, size_t size,
+    char* error, size_t error_size)
+{
+    if (!error || !error_size)
+        return;
+    if (type == GC_ADAM_MEDIA_DISK && size == AdamMedia::kDataPackSize)
+    {
+        snprintf(error, error_size,
+            "\"%s\" is named .dsk but is 256 KiB, the size of an ADAM data pack. "
+            "Use the .ddp version in Data Pack 1 or 2. Disk drives accept 160 or 320 KiB images.", name);
+    }
+    else
+    {
+        snprintf(error, error_size, "\"%s\" is %zu bytes. ADAM %s images must be %s.",
+            name, size, type == GC_ADAM_MEDIA_DISK ? "disk" : "data pack",
+            type == GC_ADAM_MEDIA_DISK ? "160 or 320 KiB" : "256 KiB");
+    }
+}
+
 static bool classify_zip(const char* path, const u8* data, size_t size,
-    GC_Machine machine, EmuDesktopContent* content)
+    GC_Machine machine, EmuDesktopContent* content, char* error, size_t error_size)
 {
     mz_zip_archive archive;
     memset(&archive, 0, sizeof(archive));
@@ -381,6 +400,8 @@ static bool classify_zip(const char* path, const u8* data, size_t size,
             ((media_type != GC_ADAM_MEDIA_NONE) &&
             !AdamMedia::IsValidImageSize(media_type, extracted_size)))
         {
+            if (media_type != GC_ADAM_MEDIA_NONE)
+                describe_invalid_media(file_stat.m_filename, media_type, extracted_size, error, error_size);
             continue;
         }
 
@@ -444,8 +465,12 @@ static bool classify_zip(const char* path, const u8* data, size_t size,
     if (compatible_count != 1)
     {
         if (compatible_count > 1)
+        {
+            if (error && error_size)
+                snprintf(error, error_size, "ZIP contains multiple compatible images. Extract them and select one image for each drive.");
             Error("Ambiguous ZIP content in %s. Candidates: %s", path,
                 candidates.empty() ? "none" : candidates.c_str());
+        }
         else
             Error("ZIP contains no compatible content for the selected machine: %s. "
                 "Recognized candidates: %s", path,
@@ -455,6 +480,8 @@ static bool classify_zip(const char* path, const u8* data, size_t size,
         return false;
     }
 
+    if (error && error_size)
+        error[0] = '\0';
     content->archive = true;
     strncpy_fit(content->source_path, path, sizeof(content->source_path));
     if (choose_adam)
@@ -478,8 +505,10 @@ static bool classify_zip(const char* path, const u8* data, size_t size,
 }
 
 bool emu_adam_classify_content(const char* path, GC_Machine machine,
-    EmuDesktopContent* content)
+    EmuDesktopContent* content, char* error, size_t error_size)
 {
+    if (error && error_size)
+        error[0] = '\0';
     if (!IsValidPointer(path) || !IsValidPointer(content))
         return false;
     init_content(content);
@@ -495,7 +524,7 @@ bool emu_adam_classify_content(const char* path, GC_Machine machine,
     }
     if (ends_with_no_case(path, ".zip"))
     {
-        bool classified = classify_zip(path, data, size, machine, content);
+        bool classified = classify_zip(path, data, size, machine, content, error, error_size);
         SafeDeleteArray(data);
         return classified;
     }
@@ -505,6 +534,7 @@ bool emu_adam_classify_content(const char* path, GC_Machine machine,
     {
         if (!AdamMedia::IsValidImageSize(media_type, size))
         {
+            describe_invalid_media(get_filename(path), media_type, size, error, error_size);
             Error("Invalid ADAM media size %zu: %s", size, path);
             SafeDeleteArray(data);
             return false;
@@ -749,16 +779,24 @@ static bool mount_content(GC_AdamMediaSlot slot, const EmuDesktopContent* conten
     return loaded;
 }
 
-bool emu_adam_validate_media(GC_AdamMediaSlot slot, const char* path)
+bool emu_adam_validate_media(GC_AdamMediaSlot slot, const char* path, char* error, size_t error_size)
 {
+    if (error && error_size)
+        error[0] = '\0';
     if (emu_is_busy() || (slot < 0) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
         return false;
     EmuDesktopContent content;
     init_content(&content);
-    bool valid = emu_adam_classify_content(path, GC_MACHINE_ADAM, &content);
+    bool valid = emu_adam_classify_content(path, GC_MACHINE_ADAM, &content, error, error_size);
     EmuDesktopContentType expected = slot <= GC_ADAM_MEDIA_DISK_2 ?
         EmuDesktopContentAdamDisk : EmuDesktopContentAdamDataPack;
-    valid = valid && (content.type == expected);
+    if (valid && content.type != expected)
+    {
+        if (error && error_size)
+            snprintf(error, error_size, "This drive requires an ADAM %s image. Select the matching drive for this media.",
+                expected == EmuDesktopContentAdamDisk ? "disk" : "data pack");
+        valid = false;
+    }
     emu_adam_destroy_content(&content);
     return valid;
 }

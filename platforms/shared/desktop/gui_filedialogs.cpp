@@ -689,10 +689,11 @@ static void process_dialog_result(FileDialogID id, const char* path)
         case FileDialog_SelectAdamMedia:
         {
             GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
+            char error[1024] = "";
             if (pending_dialog_too_many)
                 gui_set_error_message("Select one or two images for the two drives. Use a playlist for a longer disk set.");
-            else if (!gui_adam_select_media(slot, path, pending_dialog_second_path.c_str()))
-                gui_set_error_message("Unable to select ADAM media. Check the image types, sizes, and playlist paths.");
+            else if (!gui_adam_select_media(slot, path, pending_dialog_second_path.c_str(), error, sizeof(error)))
+                gui_set_error_message(error[0] ? error : "Unable to select ADAM media. Check the image types, sizes, and playlist paths.");
             else
             {
                 char directory[4096];

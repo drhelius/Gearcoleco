@@ -618,14 +618,15 @@ void gui_adam_remember_media(GC_AdamMediaSlot slot, const char* path)
     config_emulator.adam_recent_media[slot][0] = path;
 }
 
-bool gui_adam_select_media(GC_AdamMediaSlot slot, const char* first, const char* second)
+bool gui_adam_select_media(GC_AdamMediaSlot slot, const char* first, const char* second,
+    char* error, size_t error_size)
 {
-    if (!first || !first[0] || !emu_adam_validate_media(slot, first))
+    if (!first || !first[0] || !emu_adam_validate_media(slot, first, error, error_size))
         return false;
     if (second && second[0])
     {
         if ((slot != GC_ADAM_MEDIA_DISK_1 && slot != GC_ADAM_MEDIA_DATA_PACK_1) ||
-            !emu_adam_validate_media((GC_AdamMediaSlot)(slot + 1), second))
+            !emu_adam_validate_media((GC_AdamMediaSlot)(slot + 1), second, error, error_size))
             return false;
     }
     strncpy_fit(queued_media[slot], first, sizeof(queued_media[slot]));
