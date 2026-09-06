@@ -1676,15 +1676,19 @@ void GearcolecoCore::Reset(bool cold)
     m_pAdam->SetMapper(m_pMemory->GetMapper());
     m_pAdam->SetEnabled(m_machine == GC_MACHINE_ADAM);
     m_pMemory->SetAdam(m_machine == GC_MACHINE_ADAM ? m_pAdam : NULL);
-    m_pProcessor->SetIOPOrts(m_machine == GC_MACHINE_ADAM ? static_cast<IOPorts*>(m_pAdam) :
-        static_cast<IOPorts*>(m_pColecoVisionIOPorts));
+    m_pProcessor->SetIOPOrts(m_machine == GC_MACHINE_ADAM ? static_cast<IOPorts*>(m_pAdam) : static_cast<IOPorts*>(m_pColecoVisionIOPorts));
     m_pMemory->Reset();
+
     if (m_machine == GC_MACHINE_ADAM)
         m_pAdam->Reset(cold, m_adam_boot_mode);
+
     m_pProcessor->Reset();
     bool pal = (m_machine == GC_MACHINE_ADAM) ? false : m_pCartridge->IsPAL();
     m_pAudio->Reset(pal);
-    m_pVideo->Reset(pal);
+
+    if (cold || m_machine != GC_MACHINE_ADAM)
+        m_pVideo->Reset(pal);
+
     m_pInput->Reset();
     m_pColecoVisionIOPorts->Reset();
     m_bPaused = false;
