@@ -32,25 +32,22 @@ inline u8 Memory::Read(u16 address)
     m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, true);
     #endif
 
+    if (unlikely(IsValidPointer(m_pAdam)))
+        return m_pAdam->ReadMemory(address);
+
     switch (address & 0xE000)
     {
         case 0x0000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-                return m_pAdam->ReadMemory(address);
             return m_bSGMLower ? m_pSGMRam[address] : m_pBios[address];
         }
         case 0x2000:
         case 0x4000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-                return m_pAdam->ReadMemory(address);
             return m_bSGMUpper ? m_pSGMRam[address] : 0xFF;
         }
         case 0x6000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-                return m_pAdam->ReadMemory(address);
             return m_bSGMUpper ? m_pSGMRam[address] : m_pRam[address & 0x03FF];
         }
         case 0x8000:
@@ -58,8 +55,6 @@ inline u8 Memory::Read(u16 address)
         case 0xC000:
         case 0xE000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-                return m_pAdam->ReadMemory(address);
             if (IsValidPointer(m_pStandardMapper))
                 return m_pStandardMapper->ReadDirect(address);
             return m_pMapper->Read(address);
@@ -99,15 +94,16 @@ inline void Memory::Write(u16 address, u8 value)
     m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, false);
     #endif
 
+    if (unlikely(IsValidPointer(m_pAdam)))
+    {
+        m_pAdam->WriteMemory(address, value);
+        return;
+    }
+
     switch (address & 0xE000)
     {
         case 0x0000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-            {
-                m_pAdam->WriteMemory(address, value);
-                return;
-            }
             if (m_bSGMLower)
                 m_pSGMRam[address] = value;
             break;
@@ -115,22 +111,12 @@ inline void Memory::Write(u16 address, u8 value)
         case 0x2000:
         case 0x4000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-            {
-                m_pAdam->WriteMemory(address, value);
-                return;
-            }
             if (m_bSGMUpper)
                 m_pSGMRam[address] = value;
             break;
         }
         case 0x6000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-            {
-                m_pAdam->WriteMemory(address, value);
-                return;
-            }
             if (m_bSGMUpper)
                 m_pSGMRam[address] = value;
             else
@@ -142,11 +128,6 @@ inline void Memory::Write(u16 address, u8 value)
         case 0xC000:
         case 0xE000:
         {
-            if (unlikely(IsValidPointer(m_pAdam)))
-            {
-                m_pAdam->WriteMemory(address, value);
-                return;
-            }
             if (IsValidPointer(m_pStandardMapper))
                 m_pStandardMapper->WriteDirect(address, value);
             else
