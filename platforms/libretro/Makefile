@@ -376,8 +376,6 @@ else
 	$(CXX) $(fpic) $(SHARED) -o $@ $(OBJECTS) $(LDFLAGS)
 endif
 
-$(CORE_DIR)/libretro.o: $(CORE_DIR)/libretro_core_options.h
-
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -std=c++11 -c -o $@ $<
 

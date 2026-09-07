@@ -1122,7 +1122,7 @@ void AdamNet::SaveState(std::ostream& stream) const
         m_Media[i].SaveState(stream);
 }
 
-bool AdamNet::ReadState(std::istream& stream)
+bool AdamNet::ReadState(std::istream& stream, bool load_images)
 {
     u8 state = 0;
     u8 transfer_flags = 0;
@@ -1204,7 +1204,7 @@ bool AdamNet::ReadState(std::istream& stream)
 
     for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
     {
-        if (!m_Media[i].LoadState(stream))
+        if (!m_Media[i].LoadState(stream, load_images))
             return false;
         if ((cache_valid[i] > 1) ||
             (cache_valid[i] && (!m_Media[i].IsInserted() ||
@@ -1250,6 +1250,12 @@ bool AdamNet::IsMediaStateCompatible(const AdamNet& state) const
         const AdamMedia* current = &m_Media[i];
         const AdamMedia* saved = &state.m_Media[i];
 
+#if defined(__LIBRETRO__)
+        // The frontend prepares the saved disk selection before loading the core.
+        if (current->IsInserted() != saved->IsInserted())
+            return false;
+#endif
+
         if (current->IsInserted() && saved->IsInserted())
         {
             if ((current->GetType() != saved->GetType()) ||
@@ -1270,7 +1276,7 @@ bool AdamNet::LoadState(std::istream& stream)
     AdamNet state;
     state.m_pAdam = m_pAdam;
 
-    if (!state.ReadState(stream) || !IsMediaStateCompatible(state))
+    if (!state.ReadState(stream, false) || !IsMediaStateCompatible(state))
         return false;
 
     stream.clear();

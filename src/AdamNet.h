@@ -207,7 +207,7 @@ private:
     u8 GetDiagonalCode(GC_AdamKey key) const;
     bool AppendPrinter(u8 value);
     void TraceTransfer(u8 event, u8 response = 0, u8 error = 0) const;
-    bool ReadState(std::istream& stream);
+    bool ReadState(std::istream& stream, bool load_images = true);
     bool IsMediaStateCompatible(const AdamNet& state) const;
 
 private:

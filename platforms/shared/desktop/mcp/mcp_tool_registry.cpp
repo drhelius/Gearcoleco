@@ -655,7 +655,6 @@ bool McpToolRegistry::IsDirectToolName(const std::string& tool_name) const
            (name == "start_adam") ||
            (name == "get_media_info") ||
            (name == "get_adam_status") ||
-           (name == "get_adamnet_status") ||
            (name == "list_adam_media") ||
            (name == "debug_pause") ||
            (name == "debug_continue") ||

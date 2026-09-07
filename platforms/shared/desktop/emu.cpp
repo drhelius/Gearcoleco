@@ -133,6 +133,7 @@ bool emu_init(void)
     emu_debug_f18a_pattern_palette = 0;
     loaded_content_path[0] = '\0';
     loaded_debug_identity[0] = '\0';
+
     emu_adam_init();
 
     for (int i = 0; i < 5; i++)
@@ -157,8 +158,10 @@ void emu_destroy(void)
     loading_state.store(Loading_State_None);
 
     save_ram();
+
     if (!emu_flush_adam_media())
         Error("Unable to flush one or more ADAM working copies during shutdown");
+
     SafeDelete(mcp_manager);
     rewind_destroy();
     runahead_destroy();
@@ -183,15 +186,17 @@ static void load_media_thread_func(void)
     }
 
     GC_Machine machine = loading_machine;
+
     if (machine == GC_MACHINE_AUTO)
-        machine = content.type == EmuDesktopContentCartridge ? GC_MACHINE_COLECOVISION :
-            GC_MACHINE_ADAM;
+        machine = content.type == EmuDesktopContentCartridge ? GC_MACHINE_COLECOVISION : GC_MACHINE_ADAM;
+
     loading_detected_machine = machine;
 
     if (machine == GC_MACHINE_ADAM)
     {
         loading_result = emu_adam_load_content(&content, loading_file_path,
             loading_adam_boot_mode, &loading_config, loading_softpatching);
+
         if (loading_result)
         {
             strncpy_fit(loaded_content_path, loading_file_path,
@@ -208,6 +213,7 @@ static void load_media_thread_func(void)
     {
         loading_result = gearcoleco->LoadROMFromBuffer(content.data, (int)content.size,
             &loading_config, content.source_path, loading_softpatching);
+
         if (loading_result)
         {
             emu_adam_clear_host_media();
@@ -215,6 +221,7 @@ static void load_media_thread_func(void)
             set_debug_identity(machine, content.entry_name);
         }
     }
+
     emu_adam_destroy_content(&content);
     loading_state.store(Loading_State_Finished);
 }
@@ -244,6 +251,7 @@ bool emu_load_media_async(const char* file_path, Cartridge::ForceConfiguration c
     loading_result = false;
     loading_softpatching = config_emulator.softpatching;
     loading_config = config;
+    gearcoleco->SetAdamRegion(config.region);
     loading_machine = (GC_Machine)config_emulator.machine;
     loading_detected_machine = GC_MACHINE_AUTO;
     loading_adam_boot_mode = config_emulator.adam_boot_mode;
@@ -318,8 +326,14 @@ bool emu_start_adam(const char* const* media_paths)
     if ((loading_state.load() != Loading_State_None) || !emu_flush_adam_media())
         return false;
 
+    gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
+    gearcoleco->SetAdamRegion(config_emulator.region == 2 ? Cartridge::CartridgePAL :
+        (config_emulator.region == 1 ? Cartridge::CartridgeNTSC : Cartridge::CartridgeUnknownRegion));
+
     bool keep_media = gearcoleco->GetMachine() == GC_MACHINE_ADAM && !gearcoleco->IsReady() && !media_paths;
+
     emu_adam_prepare_load();
+
     if (!emu_adam_load_firmware())
         return false;
 
@@ -327,10 +341,13 @@ bool emu_start_adam(const char* const* media_paths)
     {
         if (!emu_adam_prepare_session(media_paths))
             return false;
+
         save_ram();
         gearcoleco->UnloadContent();
         emu_adam_clear_host_media();
+
         loaded_content_path[0] = '\0';
+
         if (media_paths)
         {
             for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
@@ -342,16 +359,21 @@ bool emu_start_adam(const char* const* media_paths)
                 }
             }
         }
+
         if (!emu_adam_commit_session())
             return false;
     }
+
     reset_buffers();
-    gearcoleco->SetVideoChip(GC_VIDEO_CHIP_TMS9918A);
+
     if (!gearcoleco->StartAdam(GC_ADAM_BOOT_COMPUTER))
         return false;
+
     if (keep_media)
         load_ram();
+
     events_sync_input();
+
     set_debug_identity(GC_MACHINE_ADAM, loaded_content_path[0] ? get_filename(loaded_content_path) : NULL);
 
     emu_audio_reset();
@@ -366,17 +388,22 @@ bool emu_power_off_adam(void)
 {
     if (emu_is_busy() || gearcoleco->GetMachine() != GC_MACHINE_ADAM || !emu_flush_adam_media())
         return false;
+
     save_ram();
     events_release_adam_keys();
+
     gearcoleco->PowerOffAdam();
+
     emu_debug_command = Debug_Command_None;
     emu_debug_halt_step_frames_pending = 0;
     emu_debug_step_frames_pending = 0;
+
     reset_buffers();
     emu_audio_reset();
     rewind_reset();
     runahead_reset();
     update_savestates_data();
+
     return true;
 }
 
@@ -388,12 +415,15 @@ bool emu_unload_content(void)
     save_ram();
     gearcoleco->UnloadContent();
     emu_adam_clear_host_media();
+
     loaded_content_path[0] = '\0';
     loaded_debug_identity[0] = '\0';
+
     reset_buffers();
     rewind_reset();
     runahead_reset();
     update_savestates_data();
+
     return true;
 }
 
@@ -419,19 +449,21 @@ bool emu_get_debug_identity(char* identity, size_t identity_size)
 {
     if (!IsValidPointer(identity) || (identity_size == 0))
         return false;
+
     identity[0] = '\0';
-    if ((loading_state.load() != Loading_State_None) || emu_is_empty() ||
-        (loaded_debug_identity[0] == '\0'))
-    {
+
+    if ((loading_state.load() != Loading_State_None) || emu_is_empty() || (loaded_debug_identity[0] == '\0'))
         return false;
-    }
+
     strncpy_fit(identity, loaded_debug_identity, identity_size);
+
     return true;
 }
 
 static void set_debug_identity(GC_Machine machine, const char* content_name)
 {
     const char* machine_name = machine == GC_MACHINE_ADAM ? "ADAM" : "ColecoVision";
+
     if (!IsValidPointer(content_name) || (content_name[0] == '\0'))
     {
         strncpy_fit(loaded_debug_identity, machine_name, sizeof(loaded_debug_identity));
@@ -440,8 +472,7 @@ static void set_debug_identity(GC_Machine machine, const char* content_name)
 
     char name[1024];
     get_filename_without_extension(content_name, name, sizeof(name));
-    snprintf(loaded_debug_identity, sizeof(loaded_debug_identity), "%s - %s", machine_name,
-        name);
+    snprintf(loaded_debug_identity, sizeof(loaded_debug_identity), "%s - %s", machine_name, name);
 }
 
 void emu_render_current_frame(void)
@@ -699,6 +730,7 @@ void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer)
     emu_audio_reset();
     save_ram();
     gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
+    gearcoleco->SetAdamRegion(config.region);
     if (adam_computer && gearcoleco->GetMachine() == GC_MACHINE_ADAM)
         gearcoleco->ResetAdamComputer();
     else
@@ -1186,8 +1218,7 @@ int emu_get_screenshot_png(unsigned char** out_buffer)
     int len = 0;
 
     *out_buffer = stbi_write_png_to_mem(emu_frame_buffer, stride,
-                                         runtime.screen_width, runtime.screen_height,
-                                         4, &len);
+                        runtime.screen_width, runtime.screen_height, 4, &len);
 
     return len;
 }

@@ -57,7 +57,7 @@ public:
     const u8* GetData() const;
     u8* GetData();
     void SaveState(std::ostream& stream) const;
-    bool LoadState(std::istream& stream);
+    bool LoadState(std::istream& stream, bool load_image = true);
 
 private:
     size_t GetByteOffset(u32 block, size_t byte_in_block) const;

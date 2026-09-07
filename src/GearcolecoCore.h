@@ -60,6 +60,7 @@ public:
         const u8* smartwriter, int smartwriter_size);
     bool LoadAdamFirmware(GC_AdamFirmware firmware, const u8* data, int size);
     void UnloadAdamFirmware();
+    void SetAdamRegion(Cartridge::CartridgeRegions region);
     bool StartAdam(GC_AdamBootMode boot_mode = GC_ADAM_BOOT_COMPUTER);
     void PowerOffAdam();
     bool LoadAdamMediaFromBuffer(GC_AdamMediaSlot slot, GC_AdamMediaType type,
@@ -113,7 +114,7 @@ public:
     void RenderFrameBuffer(u8* finalFrameBuffer);
 
 private:
-    void Reset(bool cold = true);
+    void Reset(bool cold = true, bool video_changed = false);
     void SelectVideoChip(GC_VideoChip video_chip);
     void SelectVideoChipForCartridge();
     bool SaveState(std::ostream& stream, size_t& size, bool screenshot);
@@ -134,6 +135,8 @@ private:
     Random* m_pRandom;
     TraceLogger* m_pTraceLogger;
     Adam* m_pAdam;
+    u8* m_pStateBackup;
+    size_t m_StateBackupCapacity;
     bool m_bPaused;
     GC_Color_Format m_pixelFormat;
     u8* m_pFrameBuffer;
@@ -143,6 +146,7 @@ private:
     GC_Machine m_machine;
     GC_ContentType m_content_type;
     GC_AdamBootMode m_adam_boot_mode;
+    Cartridge::CartridgeRegions m_adam_region;
 };
 
 #endif	/* CORE_H */

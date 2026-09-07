@@ -144,6 +144,7 @@ private:
     u8* m_pEOSROM;
     u8* m_pSmartWriterROM;
     u8* m_pMainRAM;
+    u8* m_pStateRAM;
     MemoryPage m_Pages[kPageCount];
     u32 m_FirmwareCRC[GC_ADAM_FIRMWARE_COUNT];
     bool m_FirmwareLoaded[GC_ADAM_FIRMWARE_COUNT];

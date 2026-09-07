@@ -371,7 +371,7 @@ void AdamMedia::SaveState(std::ostream& stream) const
         stream.write(reinterpret_cast<const char*>(m_pData), size);
 }
 
-bool AdamMedia::LoadState(std::istream& stream)
+bool AdamMedia::LoadState(std::istream& stream, bool load_image)
 {
     u8 type = 0;
     u8 flags = 0;
@@ -403,26 +403,38 @@ bool AdamMedia::LoadState(std::istream& stream)
         return false;
     }
 
-    u8* image = NULL;
+    if (inserted && m_Inserted && ((m_Type != media_type) ||
+        (m_Size != size) || (m_BaseCRC != base_crc)))
+        return false;
+
+    // Validate the image extent without allocating or copying its contents.
+    std::streampos image_start = stream.tellg();
     if (inserted)
     {
-        image = new u8[size];
-        stream.read(reinterpret_cast<char*>(image), size);
+        stream.seekg(size - 1, std::ios::cur);
+        char last_byte;
+        stream.read(&last_byte, 1);
         if (!stream.good())
-        {
-            SafeDeleteArray(image);
             return false;
-        }
+    }
 
-        if (m_Inserted && ((m_Type != media_type) || (m_Size != size) || (m_BaseCRC != base_crc)))
+    if (load_image)
+    {
+        if (size != m_Size)
         {
-            SafeDeleteArray(image);
-            return false;
+            SafeDeleteArray(m_pData);
+            if (inserted)
+                m_pData = new u8[size];
+        }
+        if (inserted)
+        {
+            stream.seekg(image_start);
+            stream.read(reinterpret_cast<char*>(m_pData), size);
+            if (!stream.good())
+                return false;
         }
     }
 
-    SafeDeleteArray(m_pData);
-    m_pData = image;
     m_Size = size;
     m_Type = media_type;
     m_BaseCRC = base_crc;

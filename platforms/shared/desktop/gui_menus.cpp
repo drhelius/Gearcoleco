@@ -243,11 +243,8 @@ static void menu_gearcoleco(void)
 
         if (ImGui::BeginMenu("Run-Ahead"))
         {
-            bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
             ImGui::PushItemWidth(140.0f);
-            ImGui::BeginDisabled(adam_running);
             ImGui::Combo("##runahead", &config_emulator.runahead, "Disabled\0" "1 Frame\0" "2 Frames\0" "3 Frames\0\0");
-            ImGui::EndDisabled();
             ImGui::PopItemWidth();
 
             if (ImGui::IsItemHovered())
@@ -258,9 +255,6 @@ static void menu_gearcoleco(void)
                 ImGui::Text("Ignored while fast-forwarding.");
                 ImGui::EndTooltip();
             }
-
-            if (adam_running)
-                ImGui::TextDisabled("Unavailable for ADAM because states include mounted media.");
 
             ImGui::EndMenu();
         }
@@ -567,7 +561,6 @@ static void menu_emulator(void)
         if (!cartridge_options && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             ImGui::SetTooltip("Mapper selection applies to cartridge content, not ADAM media or SmartWriter.");
 
-        ImGui::BeginDisabled(!cartridge_options);
         if (ImGui::BeginMenu("Refresh Rate"))
         {
             ImGui::PushItemWidth(130.0f);
@@ -582,9 +575,6 @@ static void menu_emulator(void)
             ImGui::PopItemWidth();
             ImGui::EndMenu();
         }
-        ImGui::EndDisabled();
-        if (!cartridge_options && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetTooltip("ADAM always uses its native NTSC timing.");
 
         ImGui::Separator();
 
@@ -709,9 +699,7 @@ static void menu_video(void)
 
         ImGui::Separator();
 
-        bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
-        ImGui::BeginDisabled(adam_running);
-        if (ImGui::BeginMenu(adam_running ? "Video Chip: TMS9918A" : "Video Chip"))
+        if (ImGui::BeginMenu("Video Chip"))
         {
             ImGui::PushItemWidth(150.0f);
             ImGui::Combo("##video_chip", &config_video.video_chip,
@@ -719,9 +707,6 @@ static void menu_video(void)
             ImGui::PopItemWidth();
             ImGui::EndMenu();
         }
-        ImGui::EndDisabled();
-        if (adam_running && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetTooltip("ADAM uses the TMS9918A video chip.");
 
         if (ImGui::BeginMenu("Scale"))
         {
@@ -1281,7 +1266,7 @@ static void menu_input(void)
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Spinners", !adam_running))
+        if (ImGui::BeginMenu("Spinners"))
         {
             ImGui::MenuItem("Capture Mouse", config_hotkeys[config_HotkeyIndex_CaptureMouse].str, &config_emulator.capture_mouse);
             if (ImGui::IsItemHovered())

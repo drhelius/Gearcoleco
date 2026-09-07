@@ -75,6 +75,7 @@ Adam::Adam()
     InitPointer(m_pEOSROM);
     InitPointer(m_pSmartWriterROM);
     InitPointer(m_pMainRAM);
+    InitPointer(m_pStateRAM);
     memset(m_FirmwareCRC, 0, sizeof(m_FirmwareCRC));
     memset(m_FirmwareLoaded, 0, sizeof(m_FirmwareLoaded));
     m_Enabled = false;
@@ -91,6 +92,7 @@ Adam::~Adam()
 {
     SafeDelete(m_pAdamNet);
     SafeDeleteArray(m_pMainRAM);
+    SafeDeleteArray(m_pStateRAM);
     SafeDeleteArray(m_pSmartWriterROM);
     SafeDeleteArray(m_pEOSROM);
     SafeDeleteArray(m_pOS7ROM);
@@ -350,19 +352,19 @@ bool Adam::LoadState(std::istream& stream, int expected_boot_mode)
     u8 mioc = 0;
     u8 control = 0;
     u32 firmware_crc[GC_ADAM_FIRMWARE_COUNT];
-    u8* ram = new u8[kMainRAMSize];
+    if (!IsValidPointer(m_pStateRAM))
+        m_pStateRAM = new u8[kMainRAMSize];
 
     stream.read(reinterpret_cast<char*>(&enabled), sizeof(enabled));
     stream.read(reinterpret_cast<char*>(&boot_mode), sizeof(boot_mode));
     stream.read(reinterpret_cast<char*>(&mioc), sizeof(mioc));
     stream.read(reinterpret_cast<char*>(&control), sizeof(control));
     stream.read(reinterpret_cast<char*>(firmware_crc), sizeof(firmware_crc));
-    stream.read(reinterpret_cast<char*>(ram), kMainRAMSize);
+    stream.read(reinterpret_cast<char*>(m_pStateRAM), kMainRAMSize);
 
     if (!stream.good() || (enabled != 1) || (boot_mode > GC_ADAM_BOOT_CARTRIDGE) ||
         ((expected_boot_mode >= 0) && (boot_mode != expected_boot_mode)))
     {
-        SafeDeleteArray(ram);
         return false;
     }
 
@@ -370,19 +372,16 @@ bool Adam::LoadState(std::istream& stream, int expected_boot_mode)
     {
         if (!m_FirmwareLoaded[i] || (firmware_crc[i] != m_FirmwareCRC[i]))
         {
-            SafeDeleteArray(ram);
             return false;
         }
     }
 
     if (!m_pAdamNet->LoadState(stream))
     {
-        SafeDeleteArray(ram);
         return false;
     }
 
-    memcpy(m_pMainRAM, ram, kMainRAMSize);
-    SafeDeleteArray(ram);
+    memcpy(m_pMainRAM, m_pStateRAM, kMainRAMSize);
     m_Enabled = true;
     m_BootMode = (GC_AdamBootMode)boot_mode;
     m_MIOC = mioc;

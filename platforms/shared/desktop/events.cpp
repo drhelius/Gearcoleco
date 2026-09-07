@@ -168,10 +168,6 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
         return;
     }
 
-    // ADAM hand controllers do not use ColecoVision's mouse/spinner settings.
-    if (emu_get_machine() == GC_MACHINE_ADAM)
-        return;
-
     if ((gui_in_use || shortcut_consumed) && (event->type != SDL_EVENT_MOUSE_BUTTON_UP))
         return;
 
@@ -505,7 +501,7 @@ static void input_poll_controller(int controller)
         bool pressed = keyboard && keyboard_state[button_map[i].key];
         if (gp)
             pressed |= gamepad_get_button(gamepad_ctrl, button_map[i].gp_btn_field);
-        if (!adam && (controller == 0) && (i < 2) && (config_emulator.spinner == 3) && !config_debug.debug)
+        if ((controller == 0) && (i < 2) && (config_emulator.spinner == 3) && !config_debug.debug)
             pressed |= roller_mouse_buttons[i];
         // Left/Right buttons also map from directional for non-keypad
         input_send_key(controller, 4 + i, button_map[i].gc_key, pressed);

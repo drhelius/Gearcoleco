@@ -48,7 +48,7 @@ This server provides tools for ColecoVision and Coleco ADAM development, ROM hac
 ## Features
 
 - Full debugger access: pause, continue, step into/over/out, step frame, reset
-- Memory inspection across machine-appropriate areas, including ADAM CPU-mapped memory and physical 64 KiB RAM
+- Memory inspection across all memory areas: BIOS, RAM, SGM RAM, VRAM, ROM
 - Just-in-time disassembly with symbols and bank resolution
 - Z80 CPU register read/write
 - Hardware state inspection: TMS9918 VDP registers/status, SN76489 PSG, AY-3-8910 (SGM)
@@ -95,7 +95,7 @@ By default, Gearcoleco exposes every MCP tool directly. This avoids nested tool 
 
 Add `--mcp-router` to expose a compact set of high-frequency tools directly and route advanced debugger tools through lightweight discovery tools. This reduces MCP context while preserving access to the full debugger surface.
 
-Direct tools in routed mode: `load_media`, `start_adam`, `get_media_info`, `get_adam_status`, `get_adamnet_status`, `list_adam_media`, `debug_pause`, `debug_continue`, `debug_step_into`, `get_z80_status`, `read_memory`, `write_memory`, `get_disassembly`, `set_breakpoint`, `get_screenshot`, `controller_button`, and `adam_keyboard`.
+Direct tools in routed mode: `load_media`, `start_adam`, `get_media_info`, `get_adam_status`, `list_adam_media`, `debug_pause`, `debug_continue`, `debug_step_into`, `get_z80_status`, `read_memory`, `write_memory`, `get_disassembly`, `set_breakpoint`, `get_screenshot`, `controller_button`, and `adam_keyboard`.
 
 Router tools:
 
