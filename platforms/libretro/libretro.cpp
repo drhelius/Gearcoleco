@@ -478,14 +478,9 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->timing.sample_rate    = 44100.0;
 }
 
-void retro_set_environment(retro_environment_t cb)
+static void register_disk_control(bool enabled, bool restore_initial_image)
 {
-    environ_cb = cb;
-
-    bool support_no_game = true;
-    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
-
-    static const struct retro_disk_control_ext_callback disk_control = {
+    struct retro_disk_control_ext_callback disk_control = {
         disk_set_eject_state,
         disk_get_eject_state,
         disk_get_image_index,
@@ -497,19 +492,34 @@ void retro_set_environment(retro_environment_t cb)
         disk_get_image_path,
         disk_get_image_label
     };
+    if (!enabled)
+        memset(&disk_control, 0, sizeof(disk_control));
+    else if (!restore_initial_image)
+        disk_control.set_initial_image = NULL;
+
     if (!environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE, (void*)&disk_control))
     {
-        static const struct retro_disk_control_callback disk_control_legacy = {
-            disk_set_eject_state,
-            disk_get_eject_state,
-            disk_get_image_index,
-            disk_set_image_index,
-            disk_get_num_images,
-            disk_replace_image_index,
-            disk_add_image_index
+        struct retro_disk_control_callback disk_control_legacy = {
+            disk_control.set_eject_state,
+            disk_control.get_eject_state,
+            disk_control.get_image_index,
+            disk_control.set_image_index,
+            disk_control.get_num_images,
+            disk_control.replace_image_index,
+            disk_control.add_image_index
         };
         environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, (void*)&disk_control_legacy);
     }
+}
+
+void retro_set_environment(retro_environment_t cb)
+{
+    environ_cb = cb;
+
+    bool support_no_game = true;
+    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
+
+    register_disk_control(true, true);
 
     static const struct retro_subsystem_rom_info adam_roms[] = {
         { "ADAM cartridge", "col|cv|bin|rom", false, false, false, NULL, 0 },
@@ -2195,6 +2205,11 @@ static bool setup_loaded_game(void)
     clear_input_state();
     content_loaded = true;
     adam_disk_set = &adam_disk_sets[adam_control_drive >= 0 ? adam_control_drive : adam_primary_slot];
+    // Cartridges have no disc path for the frontend to verify. Empty ADAM drives
+    // still need insertion controls, but have no last-used image to restore.
+    register_disk_control(core->GetMachine() == GC_MACHINE_ADAM, adam_disk_set->count > 0);
+    adam_initial_image_index = 0;
+    adam_initial_image_path[0] = '\0';
     return true;
 }
 
@@ -2320,6 +2335,8 @@ void retro_unload_game(void)
     clear_input_state();
     retro_game_path[0] = '\0';
     content_loaded = false;
+    // Restore the pre-load callback before the next content's initial image is supplied.
+    register_disk_control(true, true);
 }
 
 unsigned retro_get_region(void)
