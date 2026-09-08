@@ -308,6 +308,11 @@ void AdamMedia::ClearDirty()
     m_Dirty = false;
 }
 
+void AdamMedia::MarkDirty()
+{
+    m_Dirty = true;
+}
+
 GC_AdamMediaType AdamMedia::GetType() const
 {
     return m_Type;

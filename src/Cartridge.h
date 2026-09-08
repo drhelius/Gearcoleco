@@ -58,6 +58,7 @@ public:
     ~Cartridge();
     void Init();
     void Reset();
+    void Swap(Cartridge& cartridge);
     u32 GetCRC() const;
     bool IsPAL() const;
     bool IsF18ARequired() const;

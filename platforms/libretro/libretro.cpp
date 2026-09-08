@@ -868,12 +868,12 @@ static bool load_colecovision_firmware(void)
 
     if (crc != metadata->crc)
         log_cb(RETRO_LOG_WARN, "Unknown OS-7 revision CRC32 %08x: %s\n", crc, path);
-    
+
     bool loaded = core->GetMemory()->LoadBiosFromBuffer(os7, metadata->size);
 
     if (loaded)
         core->LoadAdamFirmware(GC_ADAM_FIRMWARE_OS7, os7, metadata->size);
-    
+
     SafeDeleteArray(os7);
     return loaded;
 }
@@ -2278,7 +2278,7 @@ static bool setup_loaded_game(void)
         struct retro_keyboard_callback keyboard = { keyboard_event };
         environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard);
         struct retro_memory_descriptor desc = {};
-    
+
         desc.ptr = core->GetAdam()->GetMainRAM();
         desc.start = 0x0000;
         desc.len = Adam::kMainRAMSize;
@@ -2763,7 +2763,7 @@ static bool restore_adam_disks(const void* data, size_t size, const RetroAdamDis
 
     if (!prepare_adam_media(previous_media))
         log_cb(RETRO_LOG_ERROR, "Failed to prepare media while restoring rejected save state.\n");
-    
+
     if (!core->LoadState(backup, backup_size))
         log_cb(RETRO_LOG_ERROR, "Failed to restore core after rejected save state.\n");
 

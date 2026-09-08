@@ -280,6 +280,11 @@ GC_Machine emu_get_last_load_machine(void)
     return loading_detected_machine;
 }
 
+bool emu_get_last_load_result(void)
+{
+    return loading_state.load() == Loading_State_None && loading_result;
+}
+
 static void apply_video_config(void)
 {
     emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);

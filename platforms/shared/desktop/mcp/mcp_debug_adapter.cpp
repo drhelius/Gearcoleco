@@ -1607,7 +1607,7 @@ json DebugAdapter::FinishLoadMedia(const std::string& file_path)
 {
     json result;
 
-    if (gui_is_rom_loading() && !gui_finish_loading_rom())
+    if ((gui_is_rom_loading() && !gui_finish_loading_rom()) || !emu_get_last_load_result())
     {
         if ((emu_get_last_load_machine() == GC_MACHINE_ADAM) &&
             !emu_are_adam_firmware_paths_valid())

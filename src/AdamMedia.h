@@ -48,6 +48,7 @@ public:
     bool IsWriteProtected() const;
     bool IsDirty() const;
     void ClearDirty();
+    void MarkDirty();
     GC_AdamMediaType GetType() const;
     size_t GetSize() const;
     u32 GetBlockCount() const;

@@ -92,7 +92,7 @@ static bool mount_content(GC_AdamMediaSlot slot, const EmuDesktopContent* conten
     bool primary, bool discard_current_changes);
 static bool write_working_copy(GC_AdamMediaSlot slot);
 static bool check_working_path(const char* file_path);
-static bool write_media_file(AdamMedia* media, const char* file_path);
+static bool write_media_file(AdamMedia* media, const char* file_path, bool clear_dirty = true);
 
 void emu_adam_init(void)
 {
@@ -763,6 +763,18 @@ static bool mount_content(GC_AdamMediaSlot slot, const EmuDesktopContent* conten
     }
 
     bool write_protected = !persistence || configured_write_protected;
+
+    if (primary)
+    {
+        if (!emu_adam_load_firmware())
+        {
+            SafeDeleteArray(working);
+            return false;
+        }
+        emu_get_core()->UnloadContent();
+        emu_adam_clear_host_media();
+    }
+
     bool loaded = emu_get_core()->LoadAdamMediaFromBuffer(slot, type, mounted_data,
         content->size, write_protected, base_crc);
     if (loaded)
@@ -887,21 +899,36 @@ bool emu_swap_adam_disks(void)
         return false;
     GearcolecoCore* core = emu_get_core();
     AdamHostMediaRecord records[2] = { host_media[1], host_media[0] };
-    // Save each image at its new drive's destination before changing either drive.
+
+    for (int i = 0; i < 2; i++)
+    {
+        AdamMedia* media = core->GetAdamMedia((GC_AdamMediaSlot)(1 - i));
+        if (media->IsDirty() && !records[i].working_path[0])
+            return false;
+    }
+
     for (int i = 0; i < 2; i++)
     {
         AdamMedia* media = core->GetAdamMedia((GC_AdamMediaSlot)(1 - i));
         if (!media->IsInserted())
             continue;
-        if (media->IsDirty() && !records[i].working_path[0])
-            return false;
         if (records[i].working_path[0])
         {
             if (strcmp(records[i].source_path, records[i].working_path))
                 make_working_path(records[i].source_path, GC_ADAM_MEDIA_DISK, (GC_AdamMediaSlot)i,
                     records[i].base_crc, false, records[i].working_path, sizeof(records[i].working_path));
-            if (!write_media_file(media, records[i].working_path))
+            if (!write_media_file(media, records[i].working_path, false))
+            {
+                for (int drive = 0; drive < 2; drive++)
+                {
+                    AdamMedia* current = core->GetAdamMedia((GC_AdamMediaSlot)drive);
+                    if (current->IsInserted() && host_media[drive].working_path[0])
+                        current->MarkDirty();
+                }
+                rewind_reset();
+                runahead_reset();
                 return false;
+            }
         }
     }
     AdamMedia* first = core->GetAdamMedia(GC_ADAM_MEDIA_DISK_1);
@@ -950,11 +977,6 @@ bool emu_adam_load_content(const EmuDesktopContent* content, const char* request
             Error("ADAM cartridge boot was selected but no cartridge was loaded");
             return false;
         }
-        if (!emu_adam_load_firmware())
-            return false;
-
-        core->UnloadContent();
-        emu_adam_clear_host_media();
         GC_AdamMediaSlot slot = content->type == EmuDesktopContentAdamDataPack ?
             GC_ADAM_MEDIA_DATA_PACK_1 : GC_ADAM_MEDIA_DISK_1;
         if (!mount_content(slot, content, true, false))
@@ -1012,7 +1034,7 @@ static bool check_working_path(const char* file_path)
     return writable;
 }
 
-static bool write_media_file(AdamMedia* media, const char* file_path)
+static bool write_media_file(AdamMedia* media, const char* file_path, bool clear_dirty)
 {
     if (!IsValidPointer(media) || !media->IsInserted() || !IsValidPointer(file_path) ||
         (file_path[0] == '\0'))
@@ -1044,7 +1066,8 @@ static bool write_media_file(AdamMedia* media, const char* file_path)
         Error("Unable to replace ADAM working copy %s: %s", file_path, SDL_GetError());
         return false;
     }
-    media->ClearDirty();
+    if (clear_dirty)
+        media->ClearDirty();
     Log("ADAM working copy saved: %s", file_path);
     return true;
 }

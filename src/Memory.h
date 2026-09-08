@@ -69,6 +69,7 @@ public:
     GC_Disassembler_Record** GetDisassemblerSGMRamMap();
     GC_Disassembler_Record** GetDisassemblerAdamMap();
     u32 GetPhysicalAddress(u16 address);
+    u32 GetCartridgeROMOffset(u16 address);
     u8 GetBank(u16 address);
     bool IsSGMUpperEnabled() { return m_bSGMUpper; }
     bool IsSGMLowerEnabled() { return m_bSGMLower; }
@@ -80,6 +81,8 @@ public:
 
 private:
     void SyncAdamDisassemblerMap();
+    NO_INLINE GC_Disassembler_Record* GetOrCreateAdamDisassemblerRecord(u16 address);
+    GC_Disassembler_Record* GetAdamDisassemblerRecord(u16 address, u8 bank);
     GC_Disassembler_Record* GetOrCreateDisassemblerRecord(GC_Disassembler_Record** map,
         int offset, int bank);
 

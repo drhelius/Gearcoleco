@@ -309,8 +309,20 @@ bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSam
 
 bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfiguration* config, bool softpatching)
 {
-    if (m_pCartridge->LoadFromFile(szFilePath, softpatching))
+    Cartridge pending;
+    Cartridge* cartridge = m_pCartridge;
+
+    if (m_machine == GC_MACHINE_ADAM)
     {
+        pending.Init();
+        cartridge = &pending;
+    }
+
+    if (cartridge->LoadFromFile(szFilePath, softpatching))
+    {
+        if (cartridge == &pending)
+            m_pCartridge->Swap(pending);
+
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
@@ -335,16 +347,28 @@ bool GearcolecoCore::LoadROM(const char* szFilePath, Cartridge::ForceConfigurati
 bool GearcolecoCore::LoadROMFromBuffer(const u8* buffer, int size,
     Cartridge::ForceConfiguration* config, const char* path, bool softpatching)
 {
+    Cartridge pending;
+    Cartridge* cartridge = m_pCartridge;
+
+    if (m_machine == GC_MACHINE_ADAM)
+    {
+        pending.Init();
+        cartridge = &pending;
+    }
+
     bool loaded;
     if (IsValidPointer(path))
-        loaded = m_pCartridge->LoadFromBuffer(buffer, size, path, softpatching);
+        loaded = cartridge->LoadFromBuffer(buffer, size, path, softpatching);
     else
     {
-        m_pCartridge->Reset();
-        loaded = m_pCartridge->LoadFromBuffer(buffer, size);
+        cartridge->Reset();
+        loaded = cartridge->LoadFromBuffer(buffer, size);
     }
     if (loaded)
     {
+        if (cartridge == &pending)
+            m_pCartridge->Swap(pending);
+
         if (IsValidPointer(config))
             m_pCartridge->ForceConfig(*config);
 
@@ -701,7 +725,7 @@ bool GearcolecoCore::GetAdamDebugState(GC_AdamDebugState* state)
         GC_AdamDebugMemoryPage* debug_page = &state->pages[page];
         if (debug_page->read_source == Adam::MemorySourceCartridge)
         {
-            debug_page->read_offset = m_pMemory->GetPhysicalAddress(debug_page->start);
+            debug_page->read_offset = m_pMemory->GetCartridgeROMOffset(debug_page->start);
             debug_page->cartridge_bank = m_pMemory->GetBank(debug_page->start);
         }
     }

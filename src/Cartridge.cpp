@@ -27,6 +27,7 @@
 #include "game_db.h"
 #include "common.h"
 #include "ips_patch.h"
+#include <utility>
 
 bool Cartridge::IsValidROMBuffer(const u8* buffer, int size)
 {
@@ -110,6 +111,28 @@ void Cartridge::Reset()
     m_softpatch_path[0] = 0;
     for (int j = 0; j < 0x400; j++)
         m_pEEPROM[j] = 0xFF;
+}
+
+void Cartridge::Swap(Cartridge& cartridge)
+{
+    std::swap(m_pROM, cartridge.m_pROM);
+    std::swap(m_iROMSize, cartridge.m_iROMSize);
+    std::swap(m_Type, cartridge.m_Type);
+    std::swap(m_bValidROM, cartridge.m_bValidROM);
+    std::swap(m_bReady, cartridge.m_bReady);
+    std::swap(m_bInGameDatabase, cartridge.m_bInGameDatabase);
+    std::swap(m_pGameDatabaseName, cartridge.m_pGameDatabaseName);
+    std::swap(m_szFilePath, cartridge.m_szFilePath);
+    std::swap(m_szFileName, cartridge.m_szFileName);
+    std::swap(m_szFileDirectory, cartridge.m_szFileDirectory);
+    std::swap(m_iROMBankCount, cartridge.m_iROMBankCount);
+    std::swap(m_bPAL, cartridge.m_bPAL);
+    std::swap(m_bF18ARequired, cartridge.m_bF18ARequired);
+    std::swap(m_iCRC, cartridge.m_iCRC);
+    std::swap(m_bSRAM, cartridge.m_bSRAM);
+    std::swap(m_pEEPROM, cartridge.m_pEEPROM);
+    std::swap(m_softpatch_applied, cartridge.m_softpatch_applied);
+    std::swap(m_softpatch_path, cartridge.m_softpatch_path);
 }
 
 u32 Cartridge::GetCRC() const
