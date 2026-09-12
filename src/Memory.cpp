@@ -111,6 +111,7 @@ Memory::~Memory()
         }
         SafeDeleteArray(m_pDisassembledAdamMap);
     }
+
     SafeDeleteArray(m_pDisassembledAdamGeneration);
 }
 
@@ -171,6 +172,7 @@ void Memory::Init()
     {
         InitPointer(m_pDisassembledAdamMap[i]);
     }
+
     m_pDisassembledAdamGeneration = new u32[0x10000];
     memset(m_pDisassembledAdamGeneration, 0, sizeof(u32) * 0x10000);
 #endif
@@ -286,11 +288,13 @@ void Memory::LoadBios(const char* szFilePath)
 
         u8 bios[0x2000];
         file.seekg(0, ios::beg);
+
         if (!file.read(reinterpret_cast<char*>(bios), size))
         {
             Log("There was a problem reading the BIOS file %s", szFilePath);
             return;
         }
+
         file.close();
 
         LoadBiosFromBuffer(bios, size);
@@ -408,11 +412,11 @@ void Memory::ResetRomDisassembledMemory()
             SafeDelete(m_pDisassembledAdamMap[i]);
         }
     }
+
     if (IsValidPointer(m_pDisassembledAdamGeneration))
         memset(m_pDisassembledAdamGeneration, 0, sizeof(u32) * 0x10000);
 
-    m_AdamDisassemblerGeneration = IsValidPointer(m_pAdam) ?
-        m_pAdam->GetMemoryMapGeneration() : 0;
+    m_AdamDisassemblerGeneration = IsValidPointer(m_pAdam) ? m_pAdam->GetMemoryMapGeneration() : 0;
 
     #endif
 }

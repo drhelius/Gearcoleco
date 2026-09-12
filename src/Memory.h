@@ -38,7 +38,6 @@ public:
     Memory(Cartridge* pCartridge, Random* pRandom);
     ~Memory();
     void SetProcessor(Processor* pProcessor);
-    // Connect only the active ADAM so ColecoVision accesses avoid its state entirely.
     void SetAdam(Adam* adam);
     void SetTraceLogger(TraceLogger* pTraceLogger);
     void Init();
