@@ -806,7 +806,9 @@ static bool finish_started_content(bool load_symbols)
         }
     }
 
-    if (!emu_is_empty())
+    if (emu_get_machine() == GC_MACHINE_ADAM)
+        gui_adam_update_title();
+    else if (!emu_is_empty())
         application_update_title_with_rom(emu_get_content_name());
 
     return true;

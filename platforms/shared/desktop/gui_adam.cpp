@@ -718,6 +718,32 @@ void gui_adam_start(void)
         gui_set_error_message("Unable to start ADAM. Check the selected images and save directory.");
 }
 
+void gui_adam_update_title(void)
+{
+    if (emu_is_busy() || emu_get_machine() != GC_MACHINE_ADAM)
+        return;
+    if (emu_is_empty())
+    {
+        application_reset_title();
+        return;
+    }
+    if (emu_get_core()->GetAdamBootMode() == GC_ADAM_BOOT_CARTRIDGE)
+    {
+        application_update_title_with_rom(emu_get_content_name());
+        return;
+    }
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        Emu_AdamMediaInfo info;
+        if (emu_get_adam_media_info((GC_AdamMediaSlot)i, &info) && info.inserted)
+        {
+            application_update_title_with_rom(info.path[0] ? get_filename(info.path) : "Saved-state image");
+            return;
+        }
+    }
+    application_update_title_with_rom("ADAM");
+}
+
 void gui_adam_power_off(void)
 {
     gui_debug_auto_save_settings();

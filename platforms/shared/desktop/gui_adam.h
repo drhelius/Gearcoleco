@@ -33,6 +33,7 @@ bool gui_adam_select_media(GC_AdamMediaSlot slot, const char* first, const char*
     char* error = NULL, size_t error_size = 0);
 void gui_adam_start(void);
 void gui_adam_power_off(void);
+void gui_adam_update_title(void);
 bool gui_adam_apply_firmware_path(GC_AdamFirmware firmware, const char* path);
 void gui_adam_drop_media(const char* path, bool disk);
 void gui_adam_remember_media(GC_AdamMediaSlot slot, const char* path);

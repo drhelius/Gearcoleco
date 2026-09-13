@@ -25,6 +25,7 @@
 #include <string.h>
 #include <SDL3/SDL.h>
 #include "emu.h"
+#include "gui_adam.h"
 #include "config.h"
 #include "rewind.h"
 #include "runahead.h"
@@ -960,6 +961,7 @@ bool emu_swap_adam_disks(void)
     playlists[1].slot = GC_ADAM_MEDIA_DISK_2;
     config_emulator.adam_media_write_protected[0] = first->IsWriteProtected();
     config_emulator.adam_media_write_protected[1] = second->IsWriteProtected();
+    gui_adam_update_title();
     rewind_reset();
     runahead_reset();
     return true;
@@ -1205,6 +1207,7 @@ bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
     emu_adam_destroy_content(&content);
     if (loaded)
     {
+        gui_adam_update_title();
         rewind_reset();
         runahead_reset();
     }
@@ -1260,6 +1263,7 @@ bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index,
     if (loaded)
     {
         playlists[slot].current = index;
+        gui_adam_update_title();
         rewind_reset();
         runahead_reset();
     }
@@ -1298,6 +1302,7 @@ bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path)
     strncpy_fit(record->source_path, file_path, sizeof(record->source_path));
     strncpy_fit(record->working_path, file_path, sizeof(record->working_path));
     record->base_crc = media->GetBaseCRC();
+    gui_adam_update_title();
     rewind_reset();
     runahead_reset();
     return true;
@@ -1352,6 +1357,7 @@ bool emu_eject_adam_media(GC_AdamMediaSlot slot)
     clear_host_media(slot);
     if (playlists[slot].slot == slot)
         clear_playlist(&playlists[slot]);
+    gui_adam_update_title();
     rewind_reset();
     runahead_reset();
     return true;
@@ -1427,6 +1433,7 @@ void emu_reconcile_adam_media_after_state_load(void)
         media->SetWriteProtected(true);
         media->ClearDirty();
     }
+    gui_adam_update_title();
 }
 
 bool emu_save_adam_printer(const char* file_path)
