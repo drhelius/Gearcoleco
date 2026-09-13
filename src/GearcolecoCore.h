@@ -114,6 +114,8 @@ public:
     void RenderFrameBuffer(u8* finalFrameBuffer);
 
 private:
+    static bool IsValidStateScreenshot(const GC_SaveState_Header& header, size_t file_size);
+    static bool IsValidStateIdentity(u8 machine, u8 content_type, u8 adam_boot_mode);
     void Reset(bool cold = true, bool video_changed = false);
     void SelectVideoChip(GC_VideoChip video_chip);
     void SelectVideoChipForCartridge();

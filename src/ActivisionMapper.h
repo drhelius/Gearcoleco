@@ -109,8 +109,7 @@ inline void ActivisionMapper::LoadState(std::istream& stream)
     u32 bank_address = 0;
     stream.read(reinterpret_cast<char*> (&bank), sizeof(bank));
     stream.read(reinterpret_cast<char*> (&bank_address), sizeof(bank_address));
-    if (!stream.good() || (bank >= m_pCartridge->GetROMBankCount()) ||
-        (bank_address != ((u32)bank << 14)))
+    if (!stream.good() || (bank >= m_pCartridge->GetROMBankCount()) || (bank_address != ((u32)bank << 14)))
     {
         stream.setstate(std::ios::failbit);
         return;

@@ -13,7 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see http://www.gnu.org/licenses/.
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
 #ifndef ADAM_NET_H
@@ -137,8 +138,7 @@ public:
     void KeyPressed(GC_AdamKey key);
     void KeyReleased(GC_AdamKey key);
     void ReleaseAllKeys();
-    GC_AdamMediaError InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-        const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
+    GC_AdamMediaError InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
     void EjectMedia(GC_AdamMediaSlot slot);
     AdamMedia* GetMedia(GC_AdamMediaSlot slot);
     const AdamMedia* GetMedia(GC_AdamMediaSlot slot) const;

@@ -2509,8 +2509,7 @@ static void save_full_disassembler(FILE* file)
 
     if (emu_get_core()->GetMachine() == GC_MACHINE_ADAM)
     {
-        save_full_disassembler_map(file, assembler_syntax ? "" : "ADAM",
-            memory->GetDisassemblerAdamMap(), 0x10000);
+        save_full_disassembler_map(file, assembler_syntax ? "" : "ADAM", memory->GetDisassemblerAdamMap(), 0x10000);
         return;
     }
 

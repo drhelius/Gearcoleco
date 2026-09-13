@@ -634,16 +634,13 @@ static void trace_logger_menu(void)
         }
 
         const char* vdp_names[] = {"Registers", "Interrupts", "Status", "Sprites", "Timing", "VRAM"};
-        const u32 vdp_masks[] = {TRACE_VDP_EVENT_REGISTERS, TRACE_VDP_EVENT_INTERRUPTS,
-            TRACE_VDP_EVENT_STATUS, TRACE_VDP_EVENT_SPRITES, TRACE_VDP_EVENT_TIMING, TRACE_VDP_EVENT_VRAM};
+        const u32 vdp_masks[] = {TRACE_VDP_EVENT_REGISTERS, TRACE_VDP_EVENT_INTERRUPTS, TRACE_VDP_EVENT_STATUS, TRACE_VDP_EVENT_SPRITES, TRACE_VDP_EVENT_TIMING, TRACE_VDP_EVENT_VRAM};
         trace_submenu("VDP", &config_debug.trace_vdp, &config_debug.trace_vdp_events, vdp_names, vdp_masks, 6);
         const char* psg_names[] = {"Tone", "Volume", "Noise"};
         const u32 psg_masks[] = {TRACE_PSG_EVENT_TONE, TRACE_PSG_EVENT_VOLUME, TRACE_PSG_EVENT_NOISE};
         trace_submenu("PSG", &config_debug.trace_psg, &config_debug.trace_psg_events, psg_names, psg_masks, 3);
         const char* ay_names[] = {"Registers", "Tone", "Noise / Mixer", "Volume", "Envelope", "I/O"};
-        const u32 ay_masks[] = {TRACE_AY8910_EVENT_REGISTERS, TRACE_AY8910_EVENT_TONE,
-            TRACE_AY8910_EVENT_NOISE_MIXER, TRACE_AY8910_EVENT_VOLUME,
-            TRACE_AY8910_EVENT_ENVELOPE, TRACE_AY8910_EVENT_IO};
+        const u32 ay_masks[] = {TRACE_AY8910_EVENT_REGISTERS, TRACE_AY8910_EVENT_TONE, TRACE_AY8910_EVENT_NOISE_MIXER, TRACE_AY8910_EVENT_VOLUME, TRACE_AY8910_EVENT_ENVELOPE, TRACE_AY8910_EVENT_IO};
         trace_submenu("AY-3-8910", &config_debug.trace_ay8910, &config_debug.trace_ay8910_events, ay_names, ay_masks, 6);
         const char* rw_names[] = {"Reads", "Writes"};
         const u32 io_masks[] = {TRACE_IO_EVENT_READS, TRACE_IO_EVENT_WRITES};
@@ -654,10 +651,8 @@ static void trace_logger_menu(void)
         const u32 sgm_masks[] = {TRACE_SGM_EVENT_CONTROL};
         trace_submenu("SGM", &config_debug.trace_sgm, &config_debug.trace_sgm_events, sgm_names, sgm_masks, 1);
         const char* adam_names[] = {"Memory Banking / ROM Overlays", "EOS Device Requests", "DMA Completions", "Device Errors"};
-        const u32 adam_masks[] = {TRACE_ADAM_EVENT_MAP, TRACE_ADAM_EVENT_COMMANDS,
-            TRACE_ADAM_EVENT_DMA, TRACE_ADAM_EVENT_ERRORS};
-        trace_submenu("ADAM", &config_debug.trace_adam, &config_debug.trace_adam_events,
-            adam_names, adam_masks, 4);
+        const u32 adam_masks[] = {TRACE_ADAM_EVENT_MAP, TRACE_ADAM_EVENT_COMMANDS, TRACE_ADAM_EVENT_DMA, TRACE_ADAM_EVENT_ERRORS};
+        trace_submenu("ADAM", &config_debug.trace_adam, &config_debug.trace_adam_events, adam_names, adam_masks, 4);
         const char* map_names[] = {"Banks", "EEPROM", "SRAM"};
         const u32 map_masks[] = {TRACE_MAPPER_EVENT_BANKS, TRACE_MAPPER_EVENT_EEPROM, TRACE_MAPPER_EVENT_SRAM};
         trace_submenu("Mapper", &config_debug.trace_mapper, &config_debug.trace_mapper_events, map_names, map_masks, 3);

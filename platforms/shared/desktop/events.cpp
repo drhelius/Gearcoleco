@@ -63,20 +63,19 @@ bool events_shortcuts(const SDL_Event* event)
 
     if (event->type == SDL_EVENT_KEY_UP)
     {
-        if (!adam_captured && events_match_hotkey_scancode(event,
-            config_hotkeys[config_HotkeyIndex_Rewind]))
+        if (!adam_captured && events_match_hotkey_scancode(event, config_hotkeys[config_HotkeyIndex_Rewind]))
         {
             gui_action_rewind_released();
             return true;
         }
+
         return false;
     }
 
     if (event->type != SDL_EVENT_KEY_DOWN)
         return false;
 
-    if (!adam_captured && events_check_hotkey(event,
-        config_hotkeys[config_HotkeyIndex_Rewind], false))
+    if (!adam_captured && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Rewind], false))
     {
         gui_action_rewind_pressed();
         return true;
@@ -89,8 +88,7 @@ bool events_shortcuts(const SDL_Event* event)
         return true;
     }
 
-    if (adam && events_check_hotkey(event,
-        config_hotkeys[config_HotkeyIndex_Fullscreen], false))
+    if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Fullscreen], false))
     {
         gui_shortcut(gui_ShortcutFullscreen);
         return true;
@@ -147,13 +145,14 @@ bool events_shortcuts(const SDL_Event* event)
 
 void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
 {
-    if ((emu_get_machine() == GC_MACHINE_ADAM) &&
-        ((event->type == SDL_EVENT_KEY_DOWN) || (event->type == SDL_EVENT_KEY_UP)))
+    if ((emu_get_machine() == GC_MACHINE_ADAM) && ((event->type == SDL_EVENT_KEY_DOWN) || (event->type == SDL_EVENT_KEY_UP)))
     {
-        // Release keys already held by ADAM even when a menu has just taken focus.
+        // Release keys already held by ADAM even when a menu has just taken focus
         SDL_Scancode scancode = event->key.scancode;
+
         if (scancode <= SDL_SCANCODE_UNKNOWN || scancode >= SDL_SCANCODE_COUNT)
             return;
+
         if (event->type == SDL_EVENT_KEY_UP)
         {
             adam_controller_keys[scancode] = false;
@@ -165,6 +164,7 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
             if (!adam_controller_uses_key(scancode))
                 send_adam_key(scancode, true);
         }
+
         return;
     }
 
@@ -308,13 +308,16 @@ void events_release_adam_keys(void)
     memset(adam_scancode_down, 0, sizeof(adam_scancode_down));
     memset(adam_controller_keys, 0, sizeof(adam_controller_keys));
     memset(adam_key_references, 0, sizeof(adam_key_references));
+
     emu_adam_release_all_keys();
+
     if (emu_get_machine() == GC_MACHINE_ADAM)
     {
         for (int controller = 0; controller < 2; controller++)
         {
             if (config_emulator.adam_controller[controller] != config_AdamController_Keyboard)
                 continue;
+
             for (int i = 0; i < 20; i++)
             {
                 if (input_last_state[controller][i].pressed)
@@ -326,16 +329,15 @@ void events_release_adam_keys(void)
 
 bool events_is_adam_keyboard_active(void)
 {
-    return gui_main_window_focused && !gui_in_use && !gui_dialog_in_use &&
-        !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+    return gui_main_window_focused && !gui_in_use && !gui_dialog_in_use && !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
 }
 
 static bool adam_keyboard_captures_event(const SDL_Event* event)
 {
     if (!events_is_adam_keyboard_active())
         return false;
-    return (gui_main_window_sdl_window_id == 0) ||
-        (event->key.windowID == gui_main_window_sdl_window_id);
+
+    return (gui_main_window_sdl_window_id == 0) || (event->key.windowID == gui_main_window_sdl_window_id);
 }
 
 void events_reset_input(void)
@@ -399,7 +401,9 @@ static bool adam_controller_uses_key(SDL_Scancode scancode)
     {
         if (config_emulator.adam_controller[controller] != config_AdamController_Keyboard)
             continue;
+
         const config_Input* input = &config_input[controller];
+
         const SDL_Scancode keys[] =
         {
             input->key_left, input->key_right, input->key_up, input->key_down,
@@ -408,12 +412,14 @@ static bool adam_controller_uses_key(SDL_Scancode scancode)
             input->key_5, input->key_6, input->key_7, input->key_8, input->key_9,
             input->key_asterisk, input->key_hash
         };
+
         for (int i = 0; i < 20; i++)
         {
             if (keys[i] == scancode)
                 return true;
         }
     }
+
     return false;
 }
 
@@ -430,14 +436,17 @@ static void input_poll_controller(int controller)
 
     SDL_Keymod mods = SDL_GetModState();
     bool adam = (emu_get_machine() == GC_MACHINE_ADAM) && !emu_is_empty();
+
     if ((mods & SDL_KMOD_CTRL) && !adam)
         return;
 
     const bool* keyboard_state = adam ? adam_controller_keys : SDL_GetKeyboardState(NULL);
+
     bool keyboard = !adam || config_emulator.adam_controller[controller] == config_AdamController_Keyboard;
+
     SDL_Gamepad* gamepad_ctrl = gamepad_controller[controller];
-    bool gp = IsValidPointer(gamepad_ctrl) && (adam ?
-        config_emulator.adam_controller[controller] == config_AdamController_Gamepad : config_input[controller].gamepad);
+
+    bool gp = IsValidPointer(gamepad_ctrl) && (adam ? config_emulator.adam_controller[controller] == config_AdamController_Gamepad : config_input[controller].gamepad);
 
     struct { SDL_Scancode key; GC_Keys gc_key; int gp_btn_field; } button_map[] = {
         { config_input[controller].key_left_button, Key_Left_Button, config_input[controller].gamepad_left_button },
@@ -615,6 +624,7 @@ const char* events_adam_reserved_key(SDL_Scancode scancode)
 {
     if (scancode == SDL_SCANCODE_UNKNOWN)
         return NULL;
+
     switch (scancode)
     {
         case SDL_SCANCODE_LSHIFT: case SDL_SCANCODE_RSHIFT:
@@ -625,12 +635,13 @@ const char* events_adam_reserved_key(SDL_Scancode scancode)
             return "Keyboard modifier";
         default: break;
     }
-    if (config_hotkeys[config_HotkeyIndex_Fullscreen].key == scancode &&
-        config_hotkeys[config_HotkeyIndex_Fullscreen].mod == SDL_KMOD_NONE)
+
+    if (config_hotkeys[config_HotkeyIndex_Fullscreen].key == scancode && config_hotkeys[config_HotkeyIndex_Fullscreen].mod == SDL_KMOD_NONE)
         return "Fullscreen";
-    if (config_hotkeys[config_HotkeyIndex_Quit].key == scancode &&
-        config_hotkeys[config_HotkeyIndex_Quit].mod == SDL_KMOD_NONE)
+
+    if (config_hotkeys[config_HotkeyIndex_Quit].key == scancode && config_hotkeys[config_HotkeyIndex_Quit].mod == SDL_KMOD_NONE)
         return "Quit";
+
     return NULL;
 }
 
@@ -638,6 +649,7 @@ static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
 {
     if (scancode == SDL_SCANCODE_UNKNOWN)
         return GC_ADAM_KEY_COUNT;
+
     if (!events_adam_reserved_key(scancode))
     {
         for (int i = 0; i < config_adam_key_count; i++)
@@ -646,6 +658,7 @@ static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
                 return config_adam_keys[i].key;
         }
     }
+
     return events_adam_typing_key(scancode);
 }
 
@@ -658,11 +671,15 @@ static void send_adam_key(SDL_Scancode scancode, bool pressed)
     {
         if (adam_scancode_down[scancode])
             return;
+
         GC_AdamKey key = adam_key_from_scancode(scancode);
+
         if (key >= GC_ADAM_KEY_COUNT)
             return;
+
         adam_scancode_down[scancode] = true;
         adam_pressed_keys[scancode] = key;
+
         if (adam_key_references[key]++ == 0)
             emu_adam_key_pressed(key);
     }
@@ -670,8 +687,10 @@ static void send_adam_key(SDL_Scancode scancode, bool pressed)
     {
         if (!adam_scancode_down[scancode])
             return;
+
         adam_scancode_down[scancode] = false;
         GC_AdamKey key = adam_pressed_keys[scancode];
+
         if ((adam_key_references[key] > 0) && (--adam_key_references[key] == 0))
             emu_adam_key_released(key);
     }

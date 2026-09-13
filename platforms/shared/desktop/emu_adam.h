@@ -41,8 +41,7 @@ struct EmuDesktopContent
     bool playlist;
 };
 
-bool emu_adam_validate_media(GC_AdamMediaSlot slot, const char* path,
-    char* error = NULL, size_t error_size = 0);
+bool emu_adam_validate_media(GC_AdamMediaSlot slot, const char* path, char* error = NULL, size_t error_size = 0);
 bool emu_adam_prepare_session(const char* const* paths);
 bool emu_adam_commit_session(void);
 void emu_adam_clear_session(void);
@@ -50,11 +49,9 @@ bool emu_swap_adam_disks(void);
 void emu_adam_init(void);
 void emu_adam_prepare_load(void);
 bool emu_adam_load_firmware(void);
-bool emu_adam_classify_content(const char* path, GC_Machine machine,
-    EmuDesktopContent* content, char* error = NULL, size_t error_size = 0);
+bool emu_adam_classify_content(const char* path, GC_Machine machine, EmuDesktopContent* content, char* error = NULL, size_t error_size = 0);
 void emu_adam_destroy_content(EmuDesktopContent* content);
-bool emu_adam_load_content(const EmuDesktopContent* content, const char* requested_path,
-    int boot_mode, Cartridge::ForceConfiguration* config, bool softpatching);
+bool emu_adam_load_content(const EmuDesktopContent* content, const char* requested_path, int boot_mode, Cartridge::ForceConfiguration* config, bool softpatching);
 void emu_adam_clear_host_media(void);
 bool emu_adam_get_state_path(int index, char* path, size_t path_size);
 

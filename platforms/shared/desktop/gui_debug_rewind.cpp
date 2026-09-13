@@ -44,8 +44,8 @@ void gui_debug_window_rewind(void)
     ImGui::Dummy(ImVec2(280, 0));
 
     size_t estimated_memory = rewind_get_estimated_memory_usage();
-    ImGui::Text("Estimated buffer: %.1f MiB (%d snapshots)",
-        (double)estimated_memory / (1024.0 * 1024.0), rewind_get_capacity());
+    ImGui::Text("Estimated buffer: %.1f MiB (%d snapshots)", (double)estimated_memory / (1024.0 * 1024.0), rewind_get_capacity());
+
     if (rewind_is_capacity_limited())
         ImGui::TextColored(orange, "ADAM rewind is capped at 512 MiB.");
 

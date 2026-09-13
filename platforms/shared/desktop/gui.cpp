@@ -124,12 +124,12 @@ bool gui_init(void)
     strncpy_fit(gui_bios_path, config_emulator.bios_path.c_str(), sizeof(gui_bios_path));
     if (strlen(gui_bios_path) > 0)
         emu_load_bios(gui_bios_path);
-    strncpy_fit(gui_adam_eos_path, config_emulator.adam_eos_path.c_str(),
-        sizeof(gui_adam_eos_path));
+
+    strncpy_fit(gui_adam_eos_path, config_emulator.adam_eos_path.c_str(), sizeof(gui_adam_eos_path));
     if (strlen(gui_adam_eos_path) > 0)
         emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
-    strncpy_fit(gui_adam_smartwriter_path, config_emulator.adam_smartwriter_path.c_str(),
-        sizeof(gui_adam_smartwriter_path));
+
+    strncpy_fit(gui_adam_smartwriter_path, config_emulator.adam_smartwriter_path.c_str(), sizeof(gui_adam_smartwriter_path));
     if (strlen(gui_adam_smartwriter_path) > 0)
         emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER, gui_adam_smartwriter_path);
 
@@ -193,9 +193,9 @@ void gui_render(void)
     if (!config_debug.debug && !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM)
     {
         ImGuiIO& io = ImGui::GetIO();
-        gui_main_window_focused = SDL_GetKeyboardFocus() == application_sdl_window &&
-            !io.WantCaptureKeyboard && !io.WantTextInput;
+        gui_main_window_focused = SDL_GetKeyboardFocus() == application_sdl_window && !io.WantCaptureKeyboard && !io.WantTextInput;
     }
+
     if (keyboard_was_active && !events_is_adam_keyboard_active())
         events_release_adam_keys();
 
@@ -352,10 +352,13 @@ bool gui_is_cartridge_file(const char* path)
 {
     if (emu_is_busy())
         return false;
+
     EmuDesktopContent content = {};
-    bool valid = emu_adam_classify_content(path, GC_MACHINE_AUTO, &content) &&
-        content.type == EmuDesktopContentCartridge;
+
+    bool valid = emu_adam_classify_content(path, GC_MACHINE_AUTO, &content) && content.type == EmuDesktopContentCartridge;
+
     emu_adam_destroy_content(&content);
+
     return valid;
 }
 
@@ -363,16 +366,19 @@ bool gui_open_rom(const char* path, bool adam_cartridge)
 {
     if (loading_rom_active)
         return false;
+
     if (!gui_is_cartridge_file(path))
     {
         gui_set_error_message("Open ROM accepts cartridge images. Insert ADAM disks and data packs using the ADAM drive menus.");
         return false;
     }
+
     if (!emu_is_bios_loaded() || (adam_cartridge && !emu_are_adam_firmware_paths_valid()))
     {
         gui_adam_open_missing_firmware(adam_cartridge);
         return false;
     }
+
     int previous_machine = config_emulator.machine;
     int previous_boot = config_emulator.adam_boot_mode;
     config_emulator.machine = adam_cartridge ? GC_MACHINE_ADAM : GC_MACHINE_COLECOVISION;
@@ -380,6 +386,7 @@ bool gui_open_rom(const char* path, bool adam_cartridge)
     bool started = gui_load_rom(path);
     config_emulator.machine = previous_machine;
     config_emulator.adam_boot_mode = previous_boot;
+
     return started;
 }
 
@@ -387,15 +394,20 @@ void gui_drop_media(const char* path)
 {
     if (emu_is_busy())
         return;
+
     EmuDesktopContent content = {};
+
     if (!emu_adam_classify_content(path, GC_MACHINE_AUTO, &content))
     {
         emu_adam_destroy_content(&content);
         gui_set_error_message("Unable to identify the dropped image. Use Open ROM or an ADAM drive's Insert menu.");
         return;
     }
+
     EmuDesktopContentType type = content.type;
+
     emu_adam_destroy_content(&content);
+
     if (type == EmuDesktopContentCartridge)
         gui_open_rom(path);
     else
@@ -408,9 +420,12 @@ bool gui_start_adam(const char* const* media_paths)
         return false;
 
     gui_debug_auto_save_settings();
+
     emu_resume();
+
     if (!emu_start_adam(media_paths))
         return false;
+
     return finish_started_content(false);
 }
 
@@ -660,8 +675,8 @@ static void main_window(void)
     }
 
     ImGuiViewport* output_viewport = ImGui::GetWindowViewport();
-    SDL_Window* output_window = output_viewport ?
-        (SDL_Window*)output_viewport->PlatformHandle : NULL;
+    SDL_Window* output_window = output_viewport ? (SDL_Window*)output_viewport->PlatformHandle : NULL;
+
     if (output_window)
         gui_main_window_sdl_window_id = SDL_GetWindowID(output_window);
     else if (application_sdl_window)

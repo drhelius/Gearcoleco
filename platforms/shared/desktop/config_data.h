@@ -76,6 +76,7 @@ static const config_AdamKeyDefinition config_adam_keys[] =
     { "Delete", "Delete", GC_ADAM_KEY_DELETE, SDL_SCANCODE_DELETE },
     { "Escape / WP", "Escape", GC_ADAM_KEY_ESCAPE, SDL_SCANCODE_ESCAPE }
 };
+
 static const int config_adam_key_count = sizeof(config_adam_keys) / sizeof(config_adam_keys[0]);
 
 enum config_AdamController

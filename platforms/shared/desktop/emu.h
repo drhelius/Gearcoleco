@@ -111,20 +111,16 @@ EXTERN bool emu_unload_content(void);
 EXTERN bool emu_load_adam_firmware(GC_AdamFirmware firmware, const char* file_path);
 EXTERN bool emu_is_adam_firmware_loaded(GC_AdamFirmware firmware);
 EXTERN u32 emu_get_adam_firmware_crc(GC_AdamFirmware firmware);
-EXTERN void emu_get_adam_firmware_path(GC_AdamFirmware firmware, char* path,
-    size_t path_size);
-EXTERN bool emu_inspect_adam_firmware(GC_AdamFirmware firmware, const char* file_path,
-    size_t* actual_size, u32* crc);
+EXTERN void emu_get_adam_firmware_path(GC_AdamFirmware firmware, char* path, size_t path_size);
+EXTERN bool emu_inspect_adam_firmware(GC_AdamFirmware firmware, const char* file_path, size_t* actual_size, u32* crc);
 EXTERN bool emu_are_adam_firmware_paths_valid(void);
 EXTERN bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path);
-EXTERN bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
-    bool discard_current_changes);
+EXTERN bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path, bool discard_current_changes);
 EXTERN int emu_get_adam_playlist_count(GC_AdamMediaSlot slot);
 EXTERN int emu_get_adam_playlist_index(GC_AdamMediaSlot slot);
 EXTERN const char* emu_get_adam_playlist_name(GC_AdamMediaSlot slot, int index);
 EXTERN const char* emu_get_adam_playlist_path(GC_AdamMediaSlot slot);
-EXTERN bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index,
-    bool discard_current_changes);
+EXTERN bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index, bool discard_current_changes);
 EXTERN bool emu_save_adam_media(GC_AdamMediaSlot slot);
 EXTERN bool emu_save_adam_media_as(GC_AdamMediaSlot slot, const char* file_path);
 EXTERN bool emu_discard_adam_media_changes(GC_AdamMediaSlot slot);

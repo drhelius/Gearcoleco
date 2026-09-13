@@ -13,7 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see http://www.gnu.org/licenses/.
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
 #include <string.h>
@@ -39,31 +40,6 @@ static const Adam::FirmwareMetadata kAdamFirmwareMetadata[GC_ADAM_FIRMWARE_COUNT
         { "writer.rom", "wp.rom", "wp_r80.rom", NULL }
     }
 };
-
-static u32 CalculateAdamCRC32(const u8* data, int size)
-{
-    u32 crc = ~0U;
-
-    while (size-- > 0)
-    {
-        crc ^= *data++;
-
-        for (int bit = 0; bit < 8; bit++)
-        {
-            u32 mask = 0U - (crc & 1U);
-            crc = (crc >> 1) ^ (0xEDB88320U & mask);
-        }
-    }
-
-    return crc ^ ~0U;
-}
-
-const Adam::FirmwareMetadata* Adam::GetFirmwareMetadata(GC_AdamFirmware firmware)
-{
-    if ((firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
-        return NULL;
-    return &kAdamFirmwareMetadata[firmware];
-}
 
 Adam::Adam()
 {
@@ -113,16 +89,19 @@ void Adam::AllocateStorage()
         m_pOS7ROM = new u8[kOS7ROMSize];
         memset(m_pOS7ROM, 0xFF, kOS7ROMSize);
     }
+
     if (!IsValidPointer(m_pEOSROM))
     {
         m_pEOSROM = new u8[kEOSROMSize];
         memset(m_pEOSROM, 0xFF, kEOSROMSize);
     }
+
     if (!IsValidPointer(m_pSmartWriterROM))
     {
         m_pSmartWriterROM = new u8[kSmartWriterROMSize];
         memset(m_pSmartWriterROM, 0xFF, kSmartWriterROMSize);
     }
+
     if (!IsValidPointer(m_pMainRAM))
     {
         m_pMainRAM = new u8[kMainRAMSize];
@@ -138,6 +117,7 @@ void Adam::SetMapper(Mapper* mapper)
 void Adam::SetTraceLogger(TraceLogger* trace_logger)
 {
     m_pTraceLogger = trace_logger;
+
     if (IsValidPointer(m_pAdamNet))
         m_pAdamNet->SetTraceLogger(trace_logger);
 }
@@ -167,8 +147,25 @@ bool Adam::IsFirmwareReady() const
     return true;
 }
 
-bool Adam::LoadFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size,
-    const u8* smartwriter, int smartwriter_size)
+u32 Adam::CalculateAdamCRC32(const u8* data, int size)
+{
+    u32 crc = ~0U;
+
+    while (size-- > 0)
+    {
+        crc ^= *data++;
+
+        for (int bit = 0; bit < 8; bit++)
+        {
+            u32 mask = 0U - (crc & 1U);
+            crc = (crc >> 1) ^ (0xEDB88320U & mask);
+        }
+    }
+
+    return crc ^ ~0U;
+}
+
+bool Adam::LoadFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size, const u8* smartwriter, int smartwriter_size)
 {
     if (!IsValidPointer(os7) || (os7_size != kOS7ROMSize) ||
         !IsValidPointer(eos) || (eos_size != kEOSROMSize) ||
@@ -194,8 +191,7 @@ bool Adam::LoadFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size
 
 bool Adam::LoadFirmware(GC_AdamFirmware firmware, const u8* data, int size)
 {
-    if ((firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT) ||
-        !IsValidPointer(data))
+    if ((firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT) || !IsValidPointer(data))
     {
         return false;
     }
@@ -300,8 +296,7 @@ void Adam::ReleaseAllKeys()
     m_pAdamNet->ReleaseAllKeys();
 }
 
-GC_AdamMediaError Adam::InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const u8* data, size_t size, bool write_protected, u32 base_crc)
+GC_AdamMediaError Adam::InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc)
 {
     return m_pAdamNet->InsertMedia(slot, type, data, size, write_protected, base_crc);
 }
@@ -439,8 +434,10 @@ void Adam::WriteMIOC(u8 value)
     u8 old_value = m_MIOC;
     bool mapping_changed = (old_value & 0x0F) != (value & 0x0F);
     m_MIOC = value;
+
     if (old_value != value)
         TraceMapChange(0, old_value, value, false);
+
     if (mapping_changed)
         SetMemoryMap();
 }
@@ -451,8 +448,10 @@ void Adam::WriteControl(u8 value)
     bool reset = (old_value & 0x01) && !(value & 0x01);
     bool mapping_changed = (old_value & 0x02) != (value & 0x02);
     m_Control = value;
+
     if (old_value != value)
         TraceMapChange(1, old_value, value, reset);
+
     if (mapping_changed)
         SetMemoryMap();
 
@@ -463,11 +462,9 @@ void Adam::WriteControl(u8 value)
 void Adam::TraceMapChange(u8 target, u8 old_value, u8 new_value, bool reset) const
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (!IsValidPointer(m_pTraceLogger) ||
-        !m_pTraceLogger->IsEventEnabled(TRACE_ADAM, TRACE_ADAM_MAP))
-    {
+    if (!IsValidPointer(m_pTraceLogger) || !m_pTraceLogger->IsEventEnabled(TRACE_ADAM, TRACE_ADAM_MAP))
         return;
-    }
+
     GC_Trace_Entry entry = {};
     entry.type = TRACE_ADAM;
     entry.adam.event = TRACE_ADAM_MAP;
@@ -701,6 +698,14 @@ u32 Adam::GetMemoryMapGeneration() const
     return m_MemoryMapGeneration;
 }
 
+const Adam::FirmwareMetadata* Adam::GetFirmwareMetadata(GC_AdamFirmware firmware)
+{
+    if ((firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
+        return NULL;
+
+    return &kAdamFirmwareMetadata[firmware];
+}
+
 void Adam::GetDebugState(GC_AdamDebugState* state) const
 {
     if (!IsValidPointer(state))
@@ -722,8 +727,7 @@ void Adam::GetDebugState(GC_AdamDebugState* state) const
         state->firmware[firmware].loaded = m_FirmwareLoaded[firmware];
         state->firmware[firmware].size = metadata->size;
         state->firmware[firmware].crc = m_FirmwareCRC[firmware];
-        state->firmware[firmware].known = m_FirmwareLoaded[firmware] &&
-            (m_FirmwareCRC[firmware] == metadata->crc);
+        state->firmware[firmware].known = m_FirmwareLoaded[firmware] && (m_FirmwareCRC[firmware] == metadata->crc);
     }
 
     for (int page = 0; page < kPageCount; page++)
@@ -734,11 +738,8 @@ void Adam::GetDebugState(GC_AdamDebugState* state) const
         debug_page->end = (u16)(debug_page->start + kPageSize - 1);
         debug_page->read_source = mapped_page->source;
         debug_page->read_offset = mapped_page->source_offset;
-        debug_page->write_source = IsValidPointer(mapped_page->write) ?
-            MemorySourceRAM : (mapped_page->type == PageCartridge ?
-            MemorySourceCartridge : MemorySourceOpenBus);
-        debug_page->write_offset = IsValidPointer(mapped_page->write) ?
-            mapped_page->source_offset : 0;
+        debug_page->write_source = IsValidPointer(mapped_page->write) ? MemorySourceRAM : (mapped_page->type == PageCartridge ? MemorySourceCartridge : MemorySourceOpenBus);
+        debug_page->write_offset = IsValidPointer(mapped_page->write) ? mapped_page->source_offset : 0;
         debug_page->cartridge_bank = -1;
         debug_page->writable = IsValidPointer(mapped_page->write);
     }

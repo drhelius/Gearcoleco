@@ -52,8 +52,6 @@ public:
     u8* GetEEPROM() const;
 
 public:
-    static bool IsValidROMBuffer(const u8* buffer, int size);
-
     Cartridge();
     ~Cartridge();
     void Init();
@@ -92,6 +90,7 @@ public:
     bool LoadFromBuffer(const u8* buffer, int size, const char* path, bool softpatching);
     bool IsSoftpatchApplied() const;
     const char* GetSoftpatchPath() const;
+    static bool IsValidROMBuffer(const u8* buffer, int size);
 
 private:
     bool GatherMetadata(u32 crc);

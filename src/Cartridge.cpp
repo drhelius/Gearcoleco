@@ -29,33 +29,6 @@
 #include "ips_patch.h"
 #include <utility>
 
-bool Cartridge::IsValidROMBuffer(const u8* buffer, int size)
-{
-    if (!IsValidPointer(buffer) || (size <= 0))
-        return false;
-
-    u8 second = size > 1 ? buffer[1] : 0xFF;
-    u16 header = second | (buffer[0] << 8);
-    if ((header == 0xAA55) || (header == 0x55AA))
-        return true;
-
-    if (size > 0x8000)
-    {
-        int offset = size - 0x4000;
-        header = buffer[offset + 1] | (buffer[offset] << 8);
-        if ((header == 0xAA55) || (header == 0x55AA))
-            return true;
-    }
-
-    u32 crc = CalculateCRC32(0, buffer, size);
-    for (int i = 0; kGameDatabase[i].title != 0; i++)
-    {
-        if ((kGameDatabase[i].crc == crc) && (kGameDatabase[i].mode & GC_GameDBMode_OCM))
-            return true;
-    }
-    return false;
-}
-
 Cartridge::Cartridge()
 {
     InitPointer(m_pROM);
@@ -409,6 +382,37 @@ bool Cartridge::LoadFromFile(const char* path, bool softpatching)
     return m_bReady;
 }
 
+bool Cartridge::IsValidROMBuffer(const u8* buffer, int size)
+{
+    if (!IsValidPointer(buffer) || (size <= 0))
+        return false;
+
+    u8 second = size > 1 ? buffer[1] : 0xFF;
+    u16 header = second | (buffer[0] << 8);
+
+    if ((header == 0xAA55) || (header == 0x55AA))
+        return true;
+
+    if (size > 0x8000)
+    {
+        int offset = size - 0x4000;
+        header = buffer[offset + 1] | (buffer[offset] << 8);
+
+        if ((header == 0xAA55) || (header == 0x55AA))
+            return true;
+    }
+
+    u32 crc = CalculateCRC32(0, buffer, size);
+
+    for (int i = 0; kGameDatabase[i].title != 0; i++)
+    {
+        if ((kGameDatabase[i].crc == crc) && (kGameDatabase[i].mode & GC_GameDBMode_OCM))
+            return true;
+    }
+
+    return false;
+}
+
 bool Cartridge::LoadFromBuffer(const u8* buffer, int size, const char* path,
     bool softpatching)
 {
@@ -418,16 +422,18 @@ bool Cartridge::LoadFromBuffer(const u8* buffer, int size, const char* path,
     Reset();
     SetFilePath(path);
     m_bReady = LoadFromBufferWithSoftpatch(buffer, size, softpatching);
+
     if (!m_bReady && m_softpatch_applied)
     {
-        Error("Media rejected after applying IPS patch %s. Loading unpatched media.",
-            m_softpatch_path);
+        Error("Media rejected after applying IPS patch %s. Loading unpatched media.", m_softpatch_path);
         Reset();
         SetFilePath(path);
         m_bReady = LoadFromBufferWithSoftpatch(buffer, size, false);
     }
+
     if (!m_bReady)
         Reset();
+
     return m_bReady;
 }
 
@@ -436,22 +442,23 @@ bool Cartridge::LoadFromBufferWithSoftpatch(const u8* buffer, int size, bool sof
     u8* patched_buffer = NULL;
     int patched_size = 0;
     char patch_path[4096] = {};
-    bool patched = softpatching && ips_apply_patch(m_szFilePath, buffer, size,
-        &patched_buffer, &patched_size, patch_path, sizeof(patch_path));
-
+    bool patched = softpatching && ips_apply_patch(m_szFilePath, buffer, size, &patched_buffer, &patched_size, patch_path, sizeof(patch_path));
     bool loaded;
+
     if (patched)
         loaded = LoadFromBuffer(patched_buffer, patched_size);
     else
         loaded = LoadFromBuffer(buffer, size);
 
     m_softpatch_applied = patched;
+
     if (m_softpatch_applied)
         strncpy_fit(m_softpatch_path, patch_path, sizeof(m_softpatch_path));
     else
         m_softpatch_path[0] = 0;
 
     SafeDeleteArray(patched_buffer);
+
     return loaded;
 }
 

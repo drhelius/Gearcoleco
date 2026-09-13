@@ -85,6 +85,7 @@ void rewind_reset(void)
     estimated_size = 0;
     estimated_capacity = 0;
     capacity_limited = false;
+
     for (int i = 0; i < REWIND_MAX_SNAPSHOTS; i++)
         sizes[i] = 0;
 
@@ -114,8 +115,7 @@ void rewind_push(void)
     frame_accum = 0;
 
     GC_RuntimeInfo runtime;
-    if (emu_get_core()->GetRuntimeInfo(runtime) &&
-        ((runtime.screen_width != snapshot_width) || (runtime.screen_height != snapshot_height)))
+    if (emu_get_core()->GetRuntimeInfo(runtime) && ((runtime.screen_width != snapshot_width) || (runtime.screen_height != snapshot_height)))
     {
         storage_dirty = true;
     }
@@ -269,8 +269,8 @@ static int get_effective_capacity(size_t target_slot_size)
 {
     int target = get_target_capacity();
     capacity_limited = false;
-    if ((emu_get_machine() == GC_MACHINE_ADAM) && (target_slot_size > 0) &&
-        ((size_t)target > (kAdamRewindMemoryLimit / target_slot_size)))
+
+    if ((emu_get_machine() == GC_MACHINE_ADAM) && (target_slot_size > 0) && ((size_t)target > (kAdamRewindMemoryLimit / target_slot_size)))
     {
         target = (int)(kAdamRewindMemoryLimit / target_slot_size);
         capacity_limited = true;
@@ -292,7 +292,7 @@ static size_t get_target_slot_size(void)
 
     if (emu_get_machine() == GC_MACHINE_ADAM)
     {
-        // Printing can grow a state without changing media or resetting rewind.
+        // Printing can grow a state without changing media or resetting rewind
         AdamNet* adam_net = emu_get_core()->GetAdam()->GetAdamNet();
         target_slot_size += AdamNet::kPrinterSpoolSize - adam_net->GetPrinterSize();
     }
@@ -315,11 +315,11 @@ static bool ensure_storage(void)
     size_t target_slot_size = get_target_slot_size();
     if (target_slot_size == 0)
         return false;
+
     target_capacity = get_effective_capacity(target_slot_size);
     if (target_capacity < 1)
     {
-        Log("Rewind: ADAM state exceeds the %zu MB rewind memory limit",
-            kAdamRewindMemoryLimit / (1024U * 1024U));
+        Log("Rewind: ADAM state exceeds the %zu MB rewind memory limit", kAdamRewindMemoryLimit / (1024U * 1024U));
         release_storage();
         return false;
     }
@@ -334,12 +334,14 @@ static bool ensure_storage(void)
             snapshot_width = runtime.screen_width;
             snapshot_height = runtime.screen_height;
         }
+
         storage_dirty = false;
         return true;
     }
 
     size_t target_size = (size_t)target_capacity * target_slot_size;
     u8* new_buffer = new (std::nothrow) u8[target_size];
+
     if (!IsValidPointer(new_buffer))
     {
         Log("Rewind: failed to allocate %zu bytes", target_size);

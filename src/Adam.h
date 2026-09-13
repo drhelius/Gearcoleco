@@ -13,7 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see http://www.gnu.org/licenses/.
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
 #ifndef ADAM_H
@@ -55,7 +56,6 @@ public:
     static const int kMainRAMSize = 0x10000;
     static const int kPageSize = 0x2000;
     static const int kPageCount = 8;
-    static const FirmwareMetadata* GetFirmwareMetadata(GC_AdamFirmware firmware);
 
     Adam();
     virtual ~Adam();
@@ -65,8 +65,7 @@ public:
     void SetEnabled(bool enabled);
     INLINE bool IsEnabled() const { return m_Enabled; }
     bool IsFirmwareReady() const;
-    bool LoadFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size,
-        const u8* smartwriter, int smartwriter_size);
+    bool LoadFirmware(const u8* os7, int os7_size, const u8* eos, int eos_size, const u8* smartwriter, int smartwriter_size);
     bool LoadFirmware(GC_AdamFirmware firmware, const u8* data, int size);
     void UnloadFirmware();
     void Reset(bool cold, GC_AdamBootMode boot_mode);
@@ -74,8 +73,7 @@ public:
     void KeyPressed(GC_AdamKey key);
     void KeyReleased(GC_AdamKey key);
     void ReleaseAllKeys();
-    GC_AdamMediaError InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-        const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
+    GC_AdamMediaError InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
     void EjectMedia(GC_AdamMediaSlot slot);
     AdamMedia* GetMedia(GC_AdamMediaSlot slot);
     const AdamMedia* GetMedia(GC_AdamMediaSlot slot) const;
@@ -106,6 +104,7 @@ public:
     u32 GetMemorySourceOffset(u16 address) const;
     u32 GetMemoryMapGeneration() const;
     void GetDebugState(GC_AdamDebugState* state) const;
+    static const FirmwareMetadata* GetFirmwareMetadata(GC_AdamFirmware firmware);
 
 private:
     enum PageType
@@ -124,6 +123,7 @@ private:
         u32 source_offset;
     };
 
+    static u32 CalculateAdamCRC32(const u8* data, int size);
     void AllocateStorage();
     void InitializeRAM();
     void SetMemoryMap();

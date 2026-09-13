@@ -13,7 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see http://www.gnu.org/licenses/.
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
 #ifndef ADAM_MEDIA_H
@@ -31,15 +32,9 @@ public:
     static const size_t kBlockSize = 0x400;
     static const size_t kSectorSize = 0x200;
 
-    static bool IsValidImageSize(GC_AdamMediaType type, size_t size);
-    static bool ExtractFromZip(const u8* archive_data, size_t archive_size, u8** media_data,
-        size_t* media_size, GC_AdamMediaType* media_type, char* media_name = NULL,
-        size_t media_name_size = 0);
-
     AdamMedia();
     ~AdamMedia();
-    GC_AdamMediaError Insert(GC_AdamMediaType type, const u8* data, size_t size,
-        bool write_protected, u32 base_crc = 0);
+    GC_AdamMediaError Insert(GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
     void Eject();
     GC_AdamMediaError ReadBlock(u32 block, u8* data, size_t length);
     GC_AdamMediaError WriteBlock(u32 block, const u8* data, size_t length);
@@ -59,8 +54,13 @@ public:
     u8* GetData();
     void SaveState(std::ostream& stream) const;
     bool LoadState(std::istream& stream, bool load_image = true);
+    static bool IsValidImageSize(GC_AdamMediaType type, size_t size);
+    static bool ExtractFromZip(const u8* archive_data, size_t archive_size, u8** media_data,
+        size_t* media_size, GC_AdamMediaType* media_type, char* media_name = NULL, size_t media_name_size = 0);
 
 private:
+    static u32 CalculateAdamMediaCRC32(const u8* data, size_t size);
+    static bool AdamMediaNameEndsWith(const char* name, const char* suffix);
     size_t GetByteOffset(u32 block, size_t byte_in_block) const;
 
 private:

@@ -13,7 +13,8 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see http://www.gnu.org/licenses/.
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
 #include <string.h>
@@ -26,18 +27,12 @@ static const int kKeyRepeatIntervalCycles = GC_MASTER_CLOCK_NTSC / 20;
 
 static const AdamNet::DeviceMetadata kDevices[] =
 {
-    { 0x01, "Keyboard", AdamNet::DeviceKeyboard, -1, 1,
-        AdamNet::TimingKeyboard, 0 },
-    { 0x02, "Printer", AdamNet::DevicePrinter, -1, 16,
-        AdamNet::TimingPrinter, 0 },
-    { 0x04, "Disk 1", AdamNet::DeviceDisk, GC_ADAM_MEDIA_DISK_1,
-        AdamMedia::kBlockSize, AdamNet::TimingFloppy, 0 },
-    { 0x05, "Disk 2", AdamNet::DeviceDisk, GC_ADAM_MEDIA_DISK_2,
-        AdamMedia::kBlockSize, AdamNet::TimingFloppy, 0 },
-    { 0x08, "Data Pack 1", AdamNet::DeviceDataPack, GC_ADAM_MEDIA_DATA_PACK_1,
-        AdamMedia::kBlockSize, AdamNet::TimingDataPack, 0 },
-    { 0x18, "Data Pack 2", AdamNet::DeviceDataPack, GC_ADAM_MEDIA_DATA_PACK_2,
-        AdamMedia::kBlockSize, AdamNet::TimingDataPack, 4 }
+    { 0x01, "Keyboard", AdamNet::DeviceKeyboard, -1, 1, AdamNet::TimingKeyboard, 0 },
+    { 0x02, "Printer", AdamNet::DevicePrinter, -1, 16, AdamNet::TimingPrinter, 0 },
+    { 0x04, "Disk 1", AdamNet::DeviceDisk, GC_ADAM_MEDIA_DISK_1, AdamMedia::kBlockSize, AdamNet::TimingFloppy, 0 },
+    { 0x05, "Disk 2", AdamNet::DeviceDisk, GC_ADAM_MEDIA_DISK_2, AdamMedia::kBlockSize, AdamNet::TimingFloppy, 0 },
+    { 0x08, "Data Pack 1", AdamNet::DeviceDataPack, GC_ADAM_MEDIA_DATA_PACK_1, AdamMedia::kBlockSize, AdamNet::TimingDataPack, 0 },
+    { 0x18, "Data Pack 2", AdamNet::DeviceDataPack, GC_ADAM_MEDIA_DATA_PACK_2, AdamMedia::kBlockSize, AdamNet::TimingDataPack, 4 }
 };
 
 #define ADAM_KEY(normal, shifted, control, home, sends, repeats) \
@@ -281,6 +276,7 @@ void AdamNet::ProcessEvent()
 bool AdamNet::ScanCommands()
 {
     u8 pcb_command = GetPCB(PCBCommandStatus);
+
     if ((pcb_command > 0) && (pcb_command < 0x80) && (pcb_command <= 5))
     {
         StartPCBCommand(pcb_command);
@@ -288,6 +284,7 @@ bool AdamNet::ScanCommands()
     }
 
     int count = GetPCB(PCBDeviceCount);
+
     if (count > kMaxDCBs)
         count = kMaxDCBs;
 
@@ -341,11 +338,11 @@ void AdamNet::StartDCBCommand(u8 dcb, u8 command)
 void AdamNet::TraceTransfer(u8 event, u8 response, u8 error) const
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (!IsValidPointer(m_pTraceLogger) ||
-        !m_pTraceLogger->IsEventEnabled(TRACE_ADAM, event))
+    if (!IsValidPointer(m_pTraceLogger) || !m_pTraceLogger->IsEventEnabled(TRACE_ADAM, event))
     {
         return;
     }
+
     GC_Trace_Entry entry = {};
     entry.type = TRACE_ADAM;
     entry.adam.event = event;
@@ -369,19 +366,18 @@ void AdamNet::TraceTransfer(u8 event, u8 response, u8 error) const
 int AdamNet::GetTransferCycles(u8 device, u8 command, u16 length) const
 {
     const DeviceMetadata* metadata = GetDeviceMetadata(device);
+
     if (!IsValidPointer(metadata))
         return kStatusCycles;
+
     switch (metadata->timing)
     {
         case TimingFloppy:
-            return (command == CommandRead || command == CommandWrite) ?
-                kFloppyBlockCycles : kStatusCycles;
+            return (command == CommandRead || command == CommandWrite) ? kFloppyBlockCycles : kStatusCycles;
         case TimingDataPack:
-            return (command == CommandRead || command == CommandWrite) ?
-                kDataPackBlockCycles : kStatusCycles;
+            return (command == CommandRead || command == CommandWrite) ? kDataPackBlockCycles : kStatusCycles;
         case TimingPrinter:
-            return kLinkByteCycles * (4 + (length > metadata->max_transfer ?
-                metadata->max_transfer : length));
+            return kLinkByteCycles * (4 + (length > metadata->max_transfer ? metadata->max_transfer : length));
         case TimingKeyboard:
             return kLinkByteCycles * 2;
         default:
@@ -392,6 +388,7 @@ int AdamNet::GetTransferCycles(u8 device, u8 command, u16 length) const
 void AdamNet::CompletePCBCommand()
 {
     u8 response = ResponseTimeout;
+
     switch (m_Transfer.command)
     {
         case 1:
@@ -417,7 +414,9 @@ void AdamNet::CompletePCBCommand()
         default:
             break;
     }
+
     TraceTransfer(TRACE_ADAM_COMMAND_COMPLETE, response);
+
     if ((response & 0xF0) != ResponseSuccess)
         TraceTransfer(TRACE_ADAM_ERROR, response);
 }
@@ -426,6 +425,7 @@ void AdamNet::CompleteDCBCommand()
 {
     u8 response = ResponseTimeout;
     const DeviceMetadata* metadata = GetDeviceMetadata(m_Transfer.device);
+
     if (IsValidPointer(metadata))
     {
         switch (metadata->type)
@@ -447,11 +447,9 @@ void AdamNet::CompleteDCBCommand()
 
     SetDCB(m_Transfer.dcb, DCBCommandStatus, response);
     TraceTransfer(TRACE_ADAM_COMMAND_COMPLETE, response, m_Transfer.error);
-    if ((response == ResponseSuccess) && ((m_Transfer.command == CommandRead) ||
-        (m_Transfer.command == CommandWrite)))
-    {
+
+    if ((response == ResponseSuccess) && ((m_Transfer.command == CommandRead) || (m_Transfer.command == CommandWrite)))
         TraceTransfer(TRACE_ADAM_DMA_COMPLETE, response);
-    }
     else if (response != ResponseSuccess)
         TraceTransfer(TRACE_ADAM_ERROR, response, m_Transfer.error);
 }
@@ -510,6 +508,7 @@ void AdamNet::CompletePrinter(u8 dcb, u8 command, u8* response)
         case CommandWrite:
         {
             const DeviceMetadata* metadata = GetDeviceMetadata(m_Transfer.device);
+
             if (!IsValidPointer(metadata) || (m_Transfer.length > metadata->max_transfer))
             {
                 m_Transfer.error = GC_ADAM_MEDIA_ERROR_OUT_OF_RANGE;
@@ -519,6 +518,7 @@ void AdamNet::CompletePrinter(u8 dcb, u8 command, u8* response)
 
             int original_size = m_PrinterSize;
             bool ok = true;
+
             for (u16 i = 0; i < m_Transfer.length; i++)
             {
                 if (!AppendPrinter(m_pAdam->ReadPhysicalRAM((u16)(m_Transfer.buffer + i))))
@@ -533,6 +533,7 @@ void AdamNet::CompletePrinter(u8 dcb, u8 command, u8* response)
                 m_PrinterSize = original_size;
                 m_Transfer.error = GC_ADAM_MEDIA_ERROR_OUT_OF_RANGE;
             }
+
             *response = ok ? ResponseSuccess : ResponsePrinterBusy;
             break;
         }
@@ -561,13 +562,14 @@ void AdamNet::CompleteMedia(u8 dcb, u8 device, u8 command, u8* response)
     if (command == CommandStatus)
     {
         ReportDevice(dcb, GetDeviceMetadata(device));
-        // Status reports both units; each floppy controller has no secondary drive.
+
         u8 status = (u8)(GetMediaStatus(media) | 0x40);
+
         if (metadata->type == DeviceDataPack)
         {
-            status = (u8)(GetMediaStatus(&m_Media[GC_ADAM_MEDIA_DATA_PACK_1]) |
-                (GetMediaStatus(&m_Media[GC_ADAM_MEDIA_DATA_PACK_2]) << 4));
+            status = (u8)(GetMediaStatus(&m_Media[GC_ADAM_MEDIA_DATA_PACK_1]) | (GetMediaStatus(&m_Media[GC_ADAM_MEDIA_DATA_PACK_2]) << 4));
         }
+
         SetDCB(dcb, DCBNodeStatus, status);
         *response = ResponseSuccess;
         return;
@@ -620,6 +622,7 @@ void AdamNet::CompleteMedia(u8 dcb, u8 device, u8 command, u8* response)
     }
 
     int media_slot = GetMediaSlot(device);
+
     if ((command == CommandRead) &&
         (!m_MediaCacheValid[media_slot] ||
         (m_MediaCacheBlock[media_slot] != m_Transfer.block) ||
@@ -663,10 +666,12 @@ void AdamNet::CompleteMedia(u8 dcb, u8 device, u8 command, u8* response)
     {
         m_Transfer.error = error;
         u8 status = 2;
+
         if (error == GC_ADAM_MEDIA_ERROR_NO_MEDIA || error == GC_ADAM_MEDIA_ERROR_CHANGED)
             status = 3;
         else if (error == GC_ADAM_MEDIA_ERROR_WRITE_PROTECTED)
             status = 5;
+
         InvalidateMediaCache(media_slot);
         SetDeviceStatus(dcb, device, status);
         *response = ResponseDeviceError;
@@ -725,6 +730,7 @@ void AdamNet::ReportDevice(u8 dcb, const DeviceMetadata* device)
 {
     if (!IsValidPointer(device))
         return;
+
     SetDCB16(dcb, DCBMaxLengthLow, device->max_transfer);
     bool block = (device->type == DeviceDisk) || (device->type == DeviceDataPack);
     SetDCB(dcb, DCBDeviceType, block ? 1 : 0);
@@ -781,19 +787,21 @@ void AdamNet::InvalidateMediaCache(int slot)
     m_MediaCacheGeneration[slot] = 0;
 }
 
-GC_AdamMediaError AdamNet::InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type,
-    const u8* data, size_t size, bool write_protected, u32 base_crc)
+GC_AdamMediaError AdamNet::InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc)
 {
     if ((slot < GC_ADAM_MEDIA_DISK_1) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
         return GC_ADAM_MEDIA_ERROR_INVALID_ARGUMENT;
 
     bool disk_slot = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
+
     if ((disk_slot && type != GC_ADAM_MEDIA_DISK) || (!disk_slot && type != GC_ADAM_MEDIA_DATA_PACK))
         return GC_ADAM_MEDIA_ERROR_INVALID_ARGUMENT;
 
     GC_AdamMediaError error = m_Media[slot].Insert(type, data, size, write_protected, base_crc);
+
     if (error == GC_ADAM_MEDIA_ERROR_NONE)
         InvalidateMediaCache(slot);
+
     return error;
 }
 
@@ -852,6 +860,7 @@ u8 AdamNet::TranslateKey(GC_AdamKey key) const
         return definition->home;
     if (m_KeyPressed[GC_ADAM_KEY_SHIFT] || m_Lock)
         return definition->shifted;
+
     return definition->normal;
 }
 
@@ -862,17 +871,13 @@ bool AdamNet::IsDirectionKey(GC_AdamKey key) const
 
 u8 AdamNet::GetDiagonalCode(GC_AdamKey key) const
 {
-    if ((key == GC_ADAM_KEY_UP && m_KeyPressed[GC_ADAM_KEY_RIGHT]) ||
-        (key == GC_ADAM_KEY_RIGHT && m_KeyPressed[GC_ADAM_KEY_UP]))
+    if ((key == GC_ADAM_KEY_UP && m_KeyPressed[GC_ADAM_KEY_RIGHT]) || (key == GC_ADAM_KEY_RIGHT && m_KeyPressed[GC_ADAM_KEY_UP]))
         return 0xA8;
-    if ((key == GC_ADAM_KEY_RIGHT && m_KeyPressed[GC_ADAM_KEY_DOWN]) ||
-        (key == GC_ADAM_KEY_DOWN && m_KeyPressed[GC_ADAM_KEY_RIGHT]))
+    if ((key == GC_ADAM_KEY_RIGHT && m_KeyPressed[GC_ADAM_KEY_DOWN]) || (key == GC_ADAM_KEY_DOWN && m_KeyPressed[GC_ADAM_KEY_RIGHT]))
         return 0xA9;
-    if ((key == GC_ADAM_KEY_DOWN && m_KeyPressed[GC_ADAM_KEY_LEFT]) ||
-        (key == GC_ADAM_KEY_LEFT && m_KeyPressed[GC_ADAM_KEY_DOWN]))
+    if ((key == GC_ADAM_KEY_DOWN && m_KeyPressed[GC_ADAM_KEY_LEFT]) || (key == GC_ADAM_KEY_LEFT && m_KeyPressed[GC_ADAM_KEY_DOWN]))
         return 0xAA;
-    if ((key == GC_ADAM_KEY_LEFT && m_KeyPressed[GC_ADAM_KEY_UP]) ||
-        (key == GC_ADAM_KEY_UP && m_KeyPressed[GC_ADAM_KEY_LEFT]))
+    if ((key == GC_ADAM_KEY_LEFT && m_KeyPressed[GC_ADAM_KEY_UP]) || (key == GC_ADAM_KEY_UP && m_KeyPressed[GC_ADAM_KEY_LEFT]))
         return 0xAB;
     return 0;
 }
@@ -891,12 +896,15 @@ void AdamNet::KeyPressed(GC_AdamKey key)
     }
 
     const KeyDefinition* definition = &kAdamKeys[key];
+
     if (!definition->sends_code)
         return;
 
     u8 code = IsDirectionKey(key) ? GetDiagonalCode(key) : 0;
+
     if (code == 0)
         code = TranslateKey(key);
+
     QueueKey(code);
 
     if (definition->repeats)
@@ -912,6 +920,7 @@ void AdamNet::KeyReleased(GC_AdamKey key)
         return;
 
     m_KeyPressed[key] = false;
+
     if (m_RepeatKey == key)
     {
         m_RepeatKey = GC_ADAM_KEY_COUNT;
@@ -1064,10 +1073,13 @@ void AdamNet::SaveState(std::ostream& stream) const
 {
     u8 state = (u8)m_State;
     u8 transfer_flags = 0;
+
     if (m_Transfer.active)
         transfer_flags |= 0x01;
+
     if (m_Transfer.pcb)
         transfer_flags |= 0x02;
+
     s32 cycles_until_event = m_CyclesUntilEvent;
     u8 keyboard_overflow = m_KeyboardOverflow ? 1 : 0;
     u8 lock = m_Lock ? 1 : 0;
@@ -1085,8 +1097,7 @@ void AdamNet::SaveState(std::ostream& stream) const
     stream.write(reinterpret_cast<const char*>(&m_Transfer.pcb_address), sizeof(m_Transfer.pcb_address));
     stream.write(reinterpret_cast<const char*>(&m_Transfer.pcb_count), sizeof(m_Transfer.pcb_count));
     stream.write(reinterpret_cast<const char*>(&m_Transfer.block), sizeof(m_Transfer.block));
-    stream.write(reinterpret_cast<const char*>(&m_Transfer.media_generation),
-        sizeof(m_Transfer.media_generation));
+    stream.write(reinterpret_cast<const char*>(&m_Transfer.media_generation), sizeof(m_Transfer.media_generation));
     stream.write(reinterpret_cast<const char*>(&m_PCBAddress), sizeof(m_PCBAddress));
     stream.write(reinterpret_cast<const char*>(&m_ScanIndex), sizeof(m_ScanIndex));
     stream.write(reinterpret_cast<const char*>(&cycles_until_event), sizeof(cycles_until_event));
@@ -1094,10 +1105,8 @@ void AdamNet::SaveState(std::ostream& stream) const
     {
         u8 cache_valid = m_MediaCacheValid[i] ? 1 : 0;
         stream.write(reinterpret_cast<const char*>(&cache_valid), sizeof(cache_valid));
-        stream.write(reinterpret_cast<const char*>(&m_MediaCacheBlock[i]),
-            sizeof(m_MediaCacheBlock[i]));
-        stream.write(reinterpret_cast<const char*>(&m_MediaCacheGeneration[i]),
-            sizeof(m_MediaCacheGeneration[i]));
+        stream.write(reinterpret_cast<const char*>(&m_MediaCacheBlock[i]), sizeof(m_MediaCacheBlock[i]));
+        stream.write(reinterpret_cast<const char*>(&m_MediaCacheGeneration[i]), sizeof(m_MediaCacheGeneration[i]));
     }
     stream.write(reinterpret_cast<const char*>(m_KeyboardFIFO), sizeof(m_KeyboardFIFO));
     stream.write(reinterpret_cast<const char*>(&m_KeyboardRead), sizeof(m_KeyboardRead));
@@ -1147,8 +1156,7 @@ bool AdamNet::ReadState(std::istream& stream, bool load_images)
     stream.read(reinterpret_cast<char*>(&m_Transfer.pcb_address), sizeof(m_Transfer.pcb_address));
     stream.read(reinterpret_cast<char*>(&m_Transfer.pcb_count), sizeof(m_Transfer.pcb_count));
     stream.read(reinterpret_cast<char*>(&m_Transfer.block), sizeof(m_Transfer.block));
-    stream.read(reinterpret_cast<char*>(&m_Transfer.media_generation),
-        sizeof(m_Transfer.media_generation));
+    stream.read(reinterpret_cast<char*>(&m_Transfer.media_generation), sizeof(m_Transfer.media_generation));
     stream.read(reinterpret_cast<char*>(&m_PCBAddress), sizeof(m_PCBAddress));
     stream.read(reinterpret_cast<char*>(&m_ScanIndex), sizeof(m_ScanIndex));
     stream.read(reinterpret_cast<char*>(&cycles_until_event), sizeof(cycles_until_event));
@@ -1234,9 +1242,9 @@ bool AdamNet::ReadState(std::istream& stream, bool load_images)
     m_RepeatCycles = repeat_cycles;
     m_PrinterSize = printer_size;
 
-    if ((m_RepeatKey < GC_ADAM_KEY_COUNT) &&
-        (!m_KeyPressed[m_RepeatKey] || (m_RepeatCycles <= 0)))
+    if ((m_RepeatKey < GC_ADAM_KEY_COUNT) && (!m_KeyPressed[m_RepeatKey] || (m_RepeatCycles <= 0)))
         return false;
+
     if ((m_RepeatKey == GC_ADAM_KEY_COUNT) && (m_RepeatCycles != 0))
         return false;
 
@@ -1251,19 +1259,15 @@ bool AdamNet::IsMediaStateCompatible(const AdamNet& state) const
         const AdamMedia* saved = &state.m_Media[i];
 
 #if defined(__LIBRETRO__)
-        // The frontend prepares the saved disk selection before loading the core.
+        // The frontend prepares the saved disk selection before loading the core
         if (current->IsInserted() != saved->IsInserted())
             return false;
 #endif
 
         if (current->IsInserted() && saved->IsInserted())
         {
-            if ((current->GetType() != saved->GetType()) ||
-                (current->GetSize() != saved->GetSize()) ||
-                (current->GetBaseCRC() != saved->GetBaseCRC()))
-            {
+            if ((current->GetType() != saved->GetType()) || (current->GetSize() != saved->GetSize()) || (current->GetBaseCRC() != saved->GetBaseCRC()))
                 return false;
-            }
         }
     }
 
@@ -1281,6 +1285,7 @@ bool AdamNet::LoadState(std::istream& stream)
 
     stream.clear();
     stream.seekg(start);
+
     if (!stream.good())
         return false;
 

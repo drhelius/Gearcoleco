@@ -372,11 +372,10 @@ void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware)
     if (!begin_dialog())
         return;
 
-    FileDialogID id = firmware == GC_ADAM_FIRMWARE_EOS ? FileDialog_LoadAdamEOS :
-        FileDialog_LoadAdamSmartWriter;
+    FileDialogID id = firmware == GC_ADAM_FIRMWARE_EOS ? FileDialog_LoadAdamEOS : FileDialog_LoadAdamSmartWriter;
+
     SDL_DialogFileFilter filters[] = { { "Firmware Files", "rom;bin" }, { "All Files", "*" } };
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window,
-        filters, 2, NULL, false);
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, 2, NULL, false);
 }
 
 void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot, bool discard_current_changes)
@@ -387,14 +386,13 @@ void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot, bool discard_curre
     pending_dialog_int_param1 = slot;
     pending_dialog_bool_param1 = discard_current_changes;
     bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
+
     SDL_DialogFileFilter filters[] = {
-        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images",
-            disk ? "dsk;zip" : "ddp;zip" }
+        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk;zip" : "ddp;zip" }
     };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
-        config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_InsertAdamMedia,
-        application_sdl_window, filters, 1, default_path, false);
+
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_InsertAdamMedia, application_sdl_window, filters, 1, default_path, false);
 }
 
 void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple)
@@ -404,13 +402,11 @@ void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple)
     pending_dialog_int_param1 = slot;
     bool disk = slot <= GC_ADAM_MEDIA_DISK_2;
     SDL_DialogFileFilter filters[] = {
-        { disk ? "ADAM Disks and Playlists" : "ADAM Data Packs and Playlists",
-            disk ? "dsk;zip;m3u" : "ddp;zip;m3u" }
+        { disk ? "ADAM Disks and Playlists" : "ADAM Data Packs and Playlists", disk ? "dsk;zip;m3u" : "ddp;zip;m3u" }
     };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
-        config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SelectAdamMedia,
-        application_sdl_window, filters, 1, default_path, multiple);
+
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SelectAdamMedia, application_sdl_window, filters, 1, default_path, multiple);
 }
 
 void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
@@ -421,11 +417,12 @@ void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
     pending_dialog_int_param1 = slot;
     bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
     FileDialogID id = disk ? FileDialog_SaveAdamDisk : FileDialog_SaveAdamDataPack;
+
     SDL_DialogFileFilter filters[] = {
         { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk" : "ddp" }
     };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
-        config_emulator.last_open_path.c_str();
+
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
     SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window,
         filters, 1, default_path);
 }
@@ -436,10 +433,10 @@ void gui_file_dialog_save_adam_printer(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Text Files", "txt" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL :
-        config_emulator.last_open_path.c_str();
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveAdamPrinter,
-        application_sdl_window, filters, 1, default_path);
+
+    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
+
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveAdamPrinter, application_sdl_window, filters, 1, default_path);
 }
 
 void gui_file_dialog_process_results(void)
@@ -481,7 +478,7 @@ static void SDLCALL file_dialog_callback(void* userdata, const char* const* file
     FileDialogResult result;
     result.id = (FileDialogID)(intptr_t)userdata;
     result.files = filelist;
-    // SDL may call from a worker; keep its file-list storage alive until the handoff finishes.
+
     if (!SDL_RunOnMainThread(finish_dialog, &result, true))
         Error("Unable to complete file dialog: %s", SDL_GetError());
 }

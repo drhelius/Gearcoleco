@@ -95,10 +95,8 @@ void gui_debug_memory_reset(void)
     if (IsValidPointer(cart->GetROM()))
         mem_edit[MEMORY_EDITOR_ROM].Reset("ROM", cart->GetROM(), cart->GetROMSize(), 0x0000);
 
-    mem_edit[MEMORY_EDITOR_ADAM_MAPPED].Reset("CPU MAP", 0x10000, adam_mapped_read,
-        adam_mapped_write, adam_mapped_can_write, adam);
-    mem_edit[MEMORY_EDITOR_ADAM_RAM].Reset("ADAM RAM", adam->GetMainRAM(),
-        Adam::kMainRAMSize, 0x0000);
+    mem_edit[MEMORY_EDITOR_ADAM_MAPPED].Reset("CPU MAP", 0x10000, adam_mapped_read, adam_mapped_write, adam_mapped_can_write, adam);
+    mem_edit[MEMORY_EDITOR_ADAM_RAM].Reset("ADAM RAM", adam->GetMainRAM(), Adam::kMainRAMSize, 0x0000);
 }
 
 void gui_debug_window_memory(void)
@@ -637,8 +635,10 @@ bool gui_debug_memory_load_settings(std::istream& stream, int editor_count)
 static bool adam_mapped_read(int address, u8* value, void* user_data)
 {
     Adam* adam = static_cast<Adam*>(user_data);
+
     if (!IsValidPointer(adam) || !IsValidPointer(value) || (address < 0) || (address > 0xFFFF))
         return false;
+
     *value = adam->DebugReadMemory((u16)address);
     return true;
 }
@@ -646,15 +646,13 @@ static bool adam_mapped_read(int address, u8* value, void* user_data)
 static bool adam_mapped_write(int address, u8 value, void* user_data)
 {
     Adam* adam = static_cast<Adam*>(user_data);
-    return IsValidPointer(adam) && (address >= 0) && (address <= 0xFFFF) &&
-        adam->DebugWriteMemory((u16)address, value);
+    return IsValidPointer(adam) && (address >= 0) && (address <= 0xFFFF) && adam->DebugWriteMemory((u16)address, value);
 }
 
 static bool adam_mapped_can_write(int address, void* user_data)
 {
     Adam* adam = static_cast<Adam*>(user_data);
-    return IsValidPointer(adam) && (address >= 0) && (address <= 0xFFFF) &&
-        adam->CanWriteMemory((u16)address);
+    return IsValidPointer(adam) && (address >= 0) && (address <= 0xFFFF) && adam->CanWriteMemory((u16)address);
 }
 
 static const char* adam_memory_source_name(Adam::MemorySource source)
@@ -680,6 +678,7 @@ static bool memory_settings_read_count(std::istream& stream, int& count, size_t 
 {
     if (!memory_settings_read_data(stream, &count, sizeof(count)))
         return false;
+
     if (count < 0 || count > DEBUG_MEMORY_MAX_SETTINGS_RECORDS || record_size == 0)
         return false;
 
@@ -712,6 +711,7 @@ static bool memory_settings_read_editor(std::istream& stream, std::vector<MemEdi
 
     total_records += (u32)bookmark_count;
     bookmarks.reserve((size_t)bookmark_count);
+
     for (int i = 0; i < bookmark_count; i++)
     {
         MemEditor::Bookmark item = {};
@@ -724,9 +724,9 @@ static bool memory_settings_read_editor(std::istream& stream, std::vector<MemEdi
     }
 
     MemEditor::Watch watch = {};
-    size_t watch_size = sizeof(watch.address) + sizeof(watch.notes) +
-        sizeof(watch.size) + sizeof(watch.format);
+    size_t watch_size = sizeof(watch.address) + sizeof(watch.notes) + sizeof(watch.size) + sizeof(watch.format);
     int watch_count = 0;
+
     if (!memory_settings_read_count(stream, watch_count, watch_size) ||
         (u32)watch_count > DEBUG_MEMORY_MAX_SETTINGS_RECORDS - total_records)
         return false;

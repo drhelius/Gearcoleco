@@ -194,13 +194,11 @@ static void load_media_thread_func(void)
 
     if (machine == GC_MACHINE_ADAM)
     {
-        loading_result = emu_adam_load_content(&content, loading_file_path,
-            loading_adam_boot_mode, &loading_config, loading_softpatching);
+        loading_result = emu_adam_load_content(&content, loading_file_path, loading_adam_boot_mode, &loading_config, loading_softpatching);
 
         if (loading_result)
         {
-            strncpy_fit(loaded_content_path, loading_file_path,
-                sizeof(loaded_content_path));
+            strncpy_fit(loaded_content_path, loading_file_path, sizeof(loaded_content_path));
             set_debug_identity(machine, content.entry_name);
         }
     }
@@ -211,8 +209,7 @@ static void load_media_thread_func(void)
     }
     else
     {
-        loading_result = gearcoleco->LoadROMFromBuffer(content.data, (int)content.size,
-            &loading_config, content.source_path, loading_softpatching);
+        loading_result = gearcoleco->LoadROMFromBuffer(content.data, (int)content.size, &loading_config, content.source_path, loading_softpatching);
 
         if (loading_result)
         {
@@ -835,8 +832,7 @@ bool emu_load_state_slot(int index)
         if (gearcoleco->GetMachine() == GC_MACHINE_ADAM)
         {
             char state_path[4096];
-            if (emu_adam_get_state_path(index, state_path, sizeof(state_path)) &&
-                gearcoleco->LoadState(state_path, -1))
+            if (emu_adam_get_state_path(index, state_path, sizeof(state_path)) && gearcoleco->LoadState(state_path, -1))
             {
                 emu_reconcile_adam_media_after_state_load();
                 emu_restore_adam_state_screenshot(state_path);
@@ -1864,6 +1860,7 @@ void update_savestates_data(void)
         const char* dir = get_configurated_dir(config_emulator.savestates_dir_option, config_emulator.savestates_path.c_str());
         char adam_state_path[4096];
         bool adam = gearcoleco->GetMachine() == GC_MACHINE_ADAM;
+
         if (adam && !emu_adam_get_state_path(i + 1, adam_state_path,
             sizeof(adam_state_path)))
             continue;
@@ -1878,18 +1875,16 @@ void update_savestates_data(void)
         {
             emu_savestates_screenshots[i].data = new u8[emu_savestates[i].screenshot_size];
             emu_savestates_screenshots[i].size = emu_savestates[i].screenshot_size;
+    
             bool loaded;
+
             if (adam)
-                loaded = gearcoleco->GetSaveStateScreenshot(-1, adam_state_path,
-                    &emu_savestates_screenshots[i]);
+                loaded = gearcoleco->GetSaveStateScreenshot(-1, adam_state_path, &emu_savestates_screenshots[i]);
             else
-                loaded = gearcoleco->GetSaveStateScreenshot(i + 1, dir,
-                    &emu_savestates_screenshots[i]);
-            if (!loaded || (emu_savestates_screenshots[i].size !=
-                (size_t)emu_savestates_screenshots[i].width * emu_savestates_screenshots[i].height * 4))
-            {
+                loaded = gearcoleco->GetSaveStateScreenshot(i + 1, dir, &emu_savestates_screenshots[i]);
+
+            if (!loaded || (emu_savestates_screenshots[i].size != (size_t)emu_savestates_screenshots[i].width * emu_savestates_screenshots[i].height * 4))
                 SafeDeleteArray(emu_savestates_screenshots[i].data);
-            }
         }
     }
 }
