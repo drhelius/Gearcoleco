@@ -18,29 +18,29 @@ This server provides tools for ColecoVision and Coleco ADAM development, ROM hac
     <tr>
       <td rowspan="2"><strong>Windows</strong></td>
       <td>x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.13/Gearcoleco-1.6.13-mcpb-windows-x64.mcpb">Gearcoleco-1.6.13-mcpb-windows-x64.mcpb</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.7.0/Gearcoleco-1.7.0-mcpb-windows-x64.mcpb">Gearcoleco-1.7.0-mcpb-windows-x64.mcpb</a></td>
     </tr>
     <tr>
       <td>ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.13/Gearcoleco-1.6.13-mcpb-windows-arm64.mcpb">Gearcoleco-1.6.13-mcpb-windows-arm64.mcpb</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.7.0/Gearcoleco-1.7.0-mcpb-windows-arm64.mcpb">Gearcoleco-1.7.0-mcpb-windows-arm64.mcpb</a></td>
     </tr>
     <tr>
       <td rowspan="2"><strong>macOS</strong></td>
       <td>x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.13/Gearcoleco-1.6.13-mcpb-macos-x64.mcpb">Gearcoleco-1.6.13-mcpb-macos-x64.mcpb</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.7.0/Gearcoleco-1.7.0-mcpb-macos-x64.mcpb">Gearcoleco-1.7.0-mcpb-macos-x64.mcpb</a></td>
     </tr>
     <tr>
       <td>ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.13/Gearcoleco-1.6.13-mcpb-macos-arm64.mcpb">Gearcoleco-1.6.13-mcpb-macos-arm64.mcpb</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.7.0/Gearcoleco-1.7.0-mcpb-macos-arm64.mcpb">Gearcoleco-1.7.0-mcpb-macos-arm64.mcpb</a></td>
     </tr>
     <tr>
       <td rowspan="2"><strong>Linux</strong></td>
       <td>x64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.13/Gearcoleco-1.6.13-mcpb-linux-x64.mcpb">Gearcoleco-1.6.13-mcpb-linux-x64.mcpb</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.7.0/Gearcoleco-1.7.0-mcpb-linux-x64.mcpb">Gearcoleco-1.7.0-mcpb-linux-x64.mcpb</a></td>
     </tr>
     <tr>
       <td>ARM64</td>
-      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.6.13/Gearcoleco-1.6.13-mcpb-linux-arm64.mcpb">Gearcoleco-1.6.13-mcpb-linux-arm64.mcpb</a></td>
+      <td><a href="https://github.com/drhelius/Gearcoleco/releases/download/1.7.0/Gearcoleco-1.7.0-mcpb-linux-arm64.mcpb">Gearcoleco-1.7.0-mcpb-linux-arm64.mcpb</a></td>
     </tr>
   </tbody>
 </table>
