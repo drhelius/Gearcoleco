@@ -352,12 +352,12 @@ void F18A::WriteControl(u8 control)
     {
         m_bFirstByteInSequence = false;
         m_VdpAddress = (m_VdpAddress & 0x3F00) | control;
-        m_VdpBuffer = control;
     }
     else
     {
         m_bFirstByteInSequence = true;
-        m_VdpAddress = ((control & 0x3F) << 8) | m_VdpBuffer;
+        u8 data = (u8)m_VdpAddress;
+        m_VdpAddress = ((control & 0x3F) << 8) | data;
 
         if ((control & 0xC0) == 0x00)
         {
@@ -368,11 +368,11 @@ void F18A::WriteControl(u8 control)
         else if ((control & 0x80) != 0)
         {
             u8 reg = control & 0x3F;
-            WriteVDPRegister(reg, m_VdpBuffer);
+            WriteVDPRegister(reg, data);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
             m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_VDP_REGISTER, reg, false);
 #endif
-            TraceVDPEvent(TRACE_VDP_REG_WRITE, reg, m_VdpBuffer);
+            TraceVDPEvent(TRACE_VDP_REG_WRITE, reg, data);
         }
     }
 }
