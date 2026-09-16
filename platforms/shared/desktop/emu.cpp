@@ -34,7 +34,6 @@
 #include "runahead.h"
 #include "events.h"
 #include "gui_debug_trace_logger.h"
-#include "no_bios.h"
 #include "mcp/mcp_manager.h"
 #include "utils.h"
 

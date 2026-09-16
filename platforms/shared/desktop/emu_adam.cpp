@@ -1640,7 +1640,7 @@ void emu_restore_adam_state_screenshot(const char* file_path)
 
     GC_SaveState_Screenshot screenshot;
     screenshot.data = new u8[size];
-    screenshot.size = size;
+    screenshot.size = (u32)size;
 
     if (core->GetSaveStateScreenshot(-1, file_path, &screenshot))
         memcpy(emu_frame_buffer, screenshot.data, size);
