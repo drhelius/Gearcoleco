@@ -111,9 +111,30 @@ bool gui_init(void)
         gui_default_fonts[i] = io.Fonts->AddFontDefault(&font_cfg);
     }
 
+    gui_apply_settings();
+
+    if (strlen(gui_bios_path) > 0)
+        emu_load_bios(gui_bios_path);
+
+    if (strlen(gui_adam_eos_path) > 0)
+        emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
+
+    if (strlen(gui_adam_smartwriter_path) > 0)
+        emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER, gui_adam_smartwriter_path);
+
+    gui_debug_init();
+    gui_init_menus();
+
+    return true;
+}
+
+void gui_apply_settings(void)
+{
     gui_default_font = gui_default_fonts[config_debug.font_size];
 
     set_style();
+
+    emu_audio_sync = config_audio.sync;
 
     emu_audio_mute(!config_audio.enable);
     emu_audio_set_master_volume(config_audio.master_volume);
@@ -122,16 +143,10 @@ bool gui_init(void)
     emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
 
     strncpy_fit(gui_bios_path, config_emulator.bios_path.c_str(), sizeof(gui_bios_path));
-    if (strlen(gui_bios_path) > 0)
-        emu_load_bios(gui_bios_path);
 
     strncpy_fit(gui_adam_eos_path, config_emulator.adam_eos_path.c_str(), sizeof(gui_adam_eos_path));
-    if (strlen(gui_adam_eos_path) > 0)
-        emu_load_adam_firmware(GC_ADAM_FIRMWARE_EOS, gui_adam_eos_path);
 
     strncpy_fit(gui_adam_smartwriter_path, config_emulator.adam_smartwriter_path.c_str(), sizeof(gui_adam_smartwriter_path));
-    if (strlen(gui_adam_smartwriter_path) > 0)
-        emu_load_adam_firmware(GC_ADAM_FIRMWARE_SMARTWRITER, gui_adam_smartwriter_path);
 
     emu_video_no_sprite_limit(config_video.sprite_limit);
     emu_set_disassembler_syntax(config_debug.dis_syntax);
@@ -144,11 +159,6 @@ bool gui_init(void)
     strncpy_fit(gui_savestates_path, config_emulator.savestates_path.c_str(), sizeof(gui_savestates_path));
     strncpy_fit(gui_screenshots_path, config_emulator.screenshots_path.c_str(), sizeof(gui_screenshots_path));
     strncpy_fit(gui_mcp_http_address, config_emulator.mcp_http_address.c_str(), sizeof(gui_mcp_http_address));
-
-    gui_debug_init();
-    gui_init_menus();
-
-    return true;
 }
 
 void gui_destroy(void)

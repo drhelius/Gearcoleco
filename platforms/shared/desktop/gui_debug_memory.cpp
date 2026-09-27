@@ -53,7 +53,11 @@ static bool memory_settings_read_editor(std::istream& stream, std::vector<MemEdi
 void gui_debug_memory_init(void)
 {
     gui_debug_memory_reset();
+    gui_debug_memory_apply_settings();
+}
 
+void gui_debug_memory_apply_settings(void)
+{
     for (int i = 0; i < MEMORY_EDITOR_MAX; i++)
     {
         MemEditor::Options options;
@@ -92,8 +96,7 @@ void gui_debug_memory_reset(void)
     mem_edit[MEMORY_EDITOR_SGM_RAM].Reset("SGM RAM", memory->GetSGMRam(), 0x8000, 0x0000);
     mem_edit[MEMORY_EDITOR_VRAM].Reset("VRAM", video->GetVRAM(), 0x4000, 0x0000);
 
-    if (IsValidPointer(cart->GetROM()))
-        mem_edit[MEMORY_EDITOR_ROM].Reset("ROM", cart->GetROM(), cart->GetROMSize(), 0x0000);
+    mem_edit[MEMORY_EDITOR_ROM].Reset("ROM", cart->GetROM(), cart->GetROMSize(), 0x0000);
 
     mem_edit[MEMORY_EDITOR_ADAM_MAPPED].Reset("CPU MAP", 0x10000, adam_mapped_read, adam_mapped_write, adam_mapped_can_write, adam);
     mem_edit[MEMORY_EDITOR_ADAM_RAM].Reset("ADAM RAM", adam->GetMainRAM(), Adam::kMainRAMSize, 0x0000);

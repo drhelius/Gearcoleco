@@ -20,15 +20,58 @@
 #define GUI_ACTIONS_IMPORT
 #include "gui_actions.h"
 #include "gui.h"
+#include "gui_debug.h"
+#include "gui_debug_memory.h"
 #include "gui_debug_trace_logger.h"
 #include "config.h"
 #include "emu.h"
+#include "ogl_renderer.h"
 #include "rewind.h"
 #include "events.h"
 #include "gearcoleco.h"
 #include "application.h"
 #include "display.h"
 #include "utils.h"
+
+void gui_action_load_defaults(void)
+{
+    if (gui_is_rom_loading() || emu_is_busy())
+        return;
+
+    if (!gui_debug_trace_logger_stop())
+        return;
+
+    emu_stop_vgm_recording();
+
+    GearcolecoCore* core = emu_get_core();
+    gui_debug_auto_save_settings();
+
+    if (!emu_unload_content())
+    {
+        gui_set_error_message("Unable to save modified ADAM media. Save the affected media and retry loading default settings.");
+        return;
+    }
+
+    application_reset_title();
+    core->GetMemory()->UnloadBios();
+    core->UnloadAdamFirmware();
+
+    config_load_defaults();
+    gui_apply_settings();
+
+    emu_resume();
+    emu_reset(gui_get_force_configuration(), false, false);
+
+    gui_debug_reset();
+    gui_debug_memory_apply_settings();
+    gui_debug_trace_logger_init();
+    update_savestates_data();
+    events_sync_input();
+    ogl_renderer_unload_shader_preset();
+    application_apply_settings();
+
+    config_write();
+}
 
 void gui_action_reset(void)
 {

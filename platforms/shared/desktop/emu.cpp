@@ -718,7 +718,12 @@ bool emu_is_bios_loaded(void)
     return gearcoleco->GetMemory()->IsBiosLoaded();
 }
 
-void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer)
+void emu_save_persistent_data(void)
+{
+    save_ram();
+}
+
+void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer, bool save_persistent_data)
 {
     gui_debug_trace_logger_reset();
     emu_debug_command = Debug_Command_None;
@@ -729,7 +734,8 @@ void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer)
     reset_buffers();
     reset_rewind_timing();
     emu_audio_reset();
-    save_ram();
+    if (save_persistent_data)
+        emu_save_persistent_data();
     gearcoleco->SetVideoChip((GC_VideoChip)config_video.video_chip);
     gearcoleco->SetAdamRegion(config.region);
     if (adam_computer && gearcoleco->GetMachine() == GC_MACHINE_ADAM)
@@ -1848,14 +1854,20 @@ void update_savestates_data(void)
 {
     emu_savestates_generation++;
 
+    for (int i = 0; i < 5; i++)
+    {
+        emu_savestates[i].rom_name[0] = 0;
+        SafeDeleteArray(emu_savestates_screenshots[i].data);
+        emu_savestates_screenshots[i].width = 0;
+        emu_savestates_screenshots[i].height = 0;
+        emu_savestates_screenshots[i].size = 0;
+    }
+
     if (emu_is_empty())
         return;
 
     for (int i = 0; i < 5; i++)
     {
-        emu_savestates[i].rom_name[0] = 0;
-        SafeDeleteArray(emu_savestates_screenshots[i].data);
-
         const char* dir = get_configurated_dir(config_emulator.savestates_dir_option, config_emulator.savestates_path.c_str());
         char adam_state_path[4096];
         bool adam = gearcoleco->GetMachine() == GC_MACHINE_ADAM;

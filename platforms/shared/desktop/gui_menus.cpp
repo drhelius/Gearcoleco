@@ -338,7 +338,7 @@ static void menu_gearcoleco(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Load Default Settings"))
+        if (ImGui::MenuItem("Load Default Settings", NULL, false, !gui_is_rom_loading() && !emu_is_busy()))
         {
             open_load_defaults = true;
         }
