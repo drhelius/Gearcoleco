@@ -475,14 +475,16 @@ static void input_poll_controller(int controller)
 
     if (gp)
     {
-        if (config_input[controller].gamepad_directional == 0)
+        if (config_input[controller].gamepad_directional == 0 ||
+            config_input[controller].gamepad_directional == 2)
         {
             dir_left  |= SDL_GetGamepadButton(gamepad_ctrl, SDL_GAMEPAD_BUTTON_DPAD_LEFT);
             dir_right |= SDL_GetGamepadButton(gamepad_ctrl, SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
             dir_up    |= SDL_GetGamepadButton(gamepad_ctrl, SDL_GAMEPAD_BUTTON_DPAD_UP);
             dir_down  |= SDL_GetGamepadButton(gamepad_ctrl, SDL_GAMEPAD_BUTTON_DPAD_DOWN);
         }
-        else
+        if (config_input[controller].gamepad_directional == 1 ||
+            config_input[controller].gamepad_directional == 2)
         {
             const int STICK_DEAD_ZONE = 8000;
             int rawx = SDL_GetGamepadAxis(gamepad_ctrl, (SDL_GamepadAxis)config_input[controller].gamepad_x_axis);
