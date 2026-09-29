@@ -839,6 +839,7 @@ bool emu_load_state_slot(int index)
             char state_path[4096];
             if (emu_adam_get_state_path(index, state_path, sizeof(state_path)) && gearcoleco->LoadState(state_path, -1))
             {
+                emu_debug_state_restored();
                 emu_reconcile_adam_media_after_state_load();
                 emu_restore_adam_state_screenshot(state_path);
                 events_sync_input();
@@ -852,6 +853,7 @@ bool emu_load_state_slot(int index)
         const char* dir = get_configurated_dir(config_emulator.savestates_dir_option, config_emulator.savestates_path.c_str());
         if (gearcoleco->LoadState(dir, index))
         {
+            emu_debug_state_restored();
             events_sync_input();
             rewind_reset();
             runahead_reset();
@@ -873,6 +875,7 @@ void emu_load_state_file(const char* file_path)
     {
         if (gearcoleco->LoadState(file_path, -1))
         {
+            emu_debug_state_restored();
             emu_reconcile_adam_media_after_state_load();
             emu_restore_adam_state_screenshot(file_path);
             events_sync_input();
@@ -880,6 +883,15 @@ void emu_load_state_file(const char* file_path)
             runahead_reset();
         }
     }
+}
+
+void emu_debug_state_restored(void)
+{
+    gearcoleco->GetProcessor()->ResetDebuggerExecutionState();
+    emu_debug_command = Debug_Command_None;
+    emu_debug_step_frames_pending = 0;
+    emu_debug_halt_step_frames_pending = 0;
+    emu_debug_pc_changed = true;
 }
 
 void emu_get_runtime(GC_RuntimeInfo& runtime)

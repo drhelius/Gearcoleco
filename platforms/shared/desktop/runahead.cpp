@@ -90,19 +90,23 @@ void runahead_run(int frames, u8* frame_buffer, s16* sample_buffer, int* sample_
 
     // Run the speculative frames with the same input, discarding their audio
     // and keeping only the last rendered frame.
+    core->GetProcessor()->SetDebuggerSpeculativeExecution(true);
     for (int i = 0; i < frames; i++)
     {
         int discarded_samples = 0;
         bool render = (i == (frames - 1));
         core->RunToVBlank(frame_buffer, runahead_audio, &discarded_samples, NULL, render);
     }
+    core->GetProcessor()->SetDebuggerSpeculativeExecution(false);
 
     // Roll back to the authoritative frame. If restoring ever fails, the
     // authoritative state is unrecoverable, so keep the (valid) speculative
     // state as the new timeline and disable run-ahead. Emulation continues
     // without interruption.
-    if (!core->LoadState(runahead_buffer, saved_size))
+    bool restored = core->LoadState(runahead_buffer, saved_size);
+    if (!restored)
     {
+        emu_debug_state_restored();
         Log("Run-ahead: failed to restore state, disabling run-ahead");
         config_emulator.runahead = 0;
     }

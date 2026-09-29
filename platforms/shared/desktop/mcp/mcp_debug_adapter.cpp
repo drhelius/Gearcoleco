@@ -1858,6 +1858,7 @@ json DebugAdapter::LoadStateFile(const std::string& file_path)
         return result;
     }
 
+    emu_debug_state_restored();
     emu_reconcile_adam_media_after_state_load();
     emu_restore_adam_state_screenshot(file_path.c_str());
     events_sync_input();
