@@ -100,7 +100,6 @@ public:
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream, int version);
     void ResetDebuggerExecutionState();
-    void SetDebuggerSpeculativeExecution(bool speculative);
     ProcessorState* GetState();
     void SetDisassemblerSyntax(GC_Disassembler_Syntax syntax);
     GC_Disassembler_Syntax GetDisassemblerSyntax() const;
@@ -184,7 +183,6 @@ private:
     std::vector<GC_Breakpoint> m_breakpoints;
     GC_Breakpoint m_run_to_breakpoint;
     bool m_run_to_breakpoint_requested;
-    bool m_debugger_speculative_execution;
     std::stack<GC_CallStackEntry> m_disassembler_call_stack;
     GC_Disassembler_Syntax m_disassembler_syntax;
     s32 m_debug_next_irq;

@@ -56,7 +56,6 @@ Processor::Processor(Memory* pMemory)
     m_memory_breakpoint_hit = false;
     m_run_to_breakpoint_hit = false;
     m_run_to_breakpoint_requested = false;
-    m_debugger_speculative_execution = false;
     m_disassembler_syntax = GC_Disassembler_Syntax_Gearcoleco;
     m_debug_next_irq = 0;
 
@@ -149,7 +148,6 @@ void Processor::Reset(bool cold)
     m_memory_breakpoint_hit = false;
     m_run_to_breakpoint_hit = false;
     m_run_to_breakpoint_requested = false;
-    m_debugger_speculative_execution = false;
     m_debug_next_irq = 1;
     ClearDisassemblerCallStack();
 }
@@ -172,12 +170,9 @@ unsigned int Processor::RunFor(unsigned int tstates)
     {
         m_iTStates = 0;
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-        if (!m_debugger_speculative_execution)
-        {
-            m_cpu_breakpoint_hit = false;
-            m_memory_breakpoint_hit = false;
-            m_run_to_breakpoint_hit = false;
-        }
+        m_cpu_breakpoint_hit = false;
+        m_memory_breakpoint_hit = false;
+        m_run_to_breakpoint_hit = false;
 #endif
 
         if (!m_bInputLastCycle)
@@ -196,8 +191,7 @@ unsigned int Processor::RunFor(unsigned int tstates)
                 IncreaseR();
                 WZ.SetValue(PC.GetValue());
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                if (!m_debugger_speculative_execution)
-                    m_debug_next_irq = 2;
+                m_debug_next_irq = 2;
                 PushCallStack(pc, 0x0066, pc, 0);
                 TraceIRQEvent(pc, 0x0066, 2);
 #endif
@@ -232,8 +226,7 @@ unsigned int Processor::RunFor(unsigned int tstates)
                 IncreaseR();
                 WZ.SetValue(PC.GetValue());
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-                if (!m_debugger_speculative_execution)
-                    m_debug_next_irq = 3;
+                m_debug_next_irq = 3;
                 PushCallStack(pc, interrupt_vector, pc, m_pMemory->GetBank(interrupt_vector));
                 TraceIRQEvent(pc, interrupt_vector, 3);
 #endif
@@ -268,9 +261,6 @@ unsigned int Processor::RunFor(unsigned int tstates)
 void Processor::LogInstructionEvent(u16 pc)
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (m_debugger_speculative_execution)
-        return;
-
     GC_Disassembler_Record* record = m_pMemory->GetOrCreateDisassemblerRecord(pc);
     bool changed = !IsValidPointer(record) || record->size <= 0;
 
@@ -324,9 +314,6 @@ void Processor::LogInstructionEvent(u16 pc)
 void Processor::LogIRQEvent(u16 pc, u16 vector, u8 irq_type)
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (m_debugger_speculative_execution)
-        return;
-
     GC_Trace_Entry e = {};
     e.type = TRACE_CPU_IRQ;
     e.irq.pc = pc;
@@ -499,9 +486,6 @@ void Processor::UndocumentedOPCode()
 void Processor::DisassembleNextOPCode()
 {
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-
-    if (m_debugger_speculative_execution)
-        return;
 
     CheckBreakpoints();
 
@@ -1000,8 +984,7 @@ bool Processor::DuringInputOpcode()
 
 void Processor::RequestMemoryBreakpoint()
 {
-    if (!m_debugger_speculative_execution)
-        m_memory_breakpoint_hit = true;
+    m_memory_breakpoint_hit = true;
 }
 
 void Processor::ResetDebuggerExecutionState()
@@ -1012,11 +995,6 @@ void Processor::ResetDebuggerExecutionState()
     m_memory_breakpoint_hit = false;
     m_run_to_breakpoint_hit = false;
     m_debug_next_irq = 0;
-}
-
-void Processor::SetDebuggerSpeculativeExecution(bool speculative)
-{
-    m_debugger_speculative_execution = speculative;
 }
 
 void Processor::SaveState(std::ostream& stream)
@@ -1147,9 +1125,6 @@ Processor::ProcessorState* Processor::GetState()
 void Processor::CheckBreakpoints()
 {
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-
-    if (m_debugger_speculative_execution)
-        return;
 
     m_cpu_breakpoint_hit = (m_breakpoints_irq_enabled && m_debug_next_irq > 0);
     m_run_to_breakpoint_hit = false;
@@ -1360,7 +1335,7 @@ void Processor::CheckMemoryBreakpoints(int type, u16 address, bool read)
 {
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
-    if (m_debugger_speculative_execution || !m_breakpoints_enabled)
+    if (!m_breakpoints_enabled)
         return;
 
     for (int i = 0; i < (int)m_breakpoints.size(); i++)
@@ -1406,8 +1381,6 @@ void Processor::CheckMemoryBreakpoints(int type, u16 address, bool read)
 void Processor::PushCallStack(u16 src, u16 dest, u16 back, u8 bank)
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (m_debugger_speculative_execution)
-        return;
     GC_CallStackEntry entry;
     entry.src = src;
     entry.dest = dest;
@@ -1426,7 +1399,7 @@ void Processor::PushCallStack(u16 src, u16 dest, u16 back, u8 bank)
 void Processor::PopCallStack()
 {
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    if (!m_debugger_speculative_execution && !m_disassembler_call_stack.empty())
+    if (!m_disassembler_call_stack.empty())
         m_disassembler_call_stack.pop();
 #endif
 }
