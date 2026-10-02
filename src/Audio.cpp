@@ -125,7 +125,7 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
             m_pApu->read_debug_samples(m_pDebugChannelBuffer[i], i, GC_AUDIO_BUFFER_SIZE, &m_iDebugChannelSamples[i]);
     }
 
-    m_pAY8910->EndFrame(m_pSGMBuffer);
+    int sgm_count = m_pAY8910->EndFrame(m_pSGMBuffer);
 
     if (IsValidPointer(pSampleBuffer) && IsValidPointer(pSampleCount))
     {
@@ -139,7 +139,8 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
             }
             else
             {
-                s32 mix = m_pSampleBuffer[i] + m_pSGMBuffer[i];
+                s32 sgm = (sgm_count > 0) ? m_pSGMBuffer[(i >= sgm_count) ? sgm_count - 1 : i] : 0;
+                s32 mix = m_pSampleBuffer[i] + sgm;
                 mix = (s32)((float)mix * m_master_volume);
 
                 mix = CLAMP(mix, -32768, 32767);
@@ -155,8 +156,6 @@ void Audio::EndFrame(s16* pSampleBuffer, int* pSampleCount)
 void Audio::SaveState(std::ostream& stream)
 {
     stream.write(reinterpret_cast<const char*> (&m_ElapsedCycles), sizeof(m_ElapsedCycles));
-    stream.write(reinterpret_cast<const char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
-    stream.write(reinterpret_cast<const char*> (m_pSGMBuffer), sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
     m_pAY8910->SaveState(stream);
     m_pApu->SaveState(stream);
     m_pBuffer->SaveState(stream);
@@ -165,9 +164,14 @@ void Audio::SaveState(std::ostream& stream)
 void Audio::LoadState(std::istream& stream, int version)
 {
     stream.read(reinterpret_cast<char*> (&m_ElapsedCycles), sizeof(m_ElapsedCycles));
-    stream.read(reinterpret_cast<char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
-    stream.read(reinterpret_cast<char*> (m_pSGMBuffer), sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
-    m_pAY8910->LoadState(stream);
+
+    if (version < 109)
+    {
+        stream.read(reinterpret_cast<char*> (m_pSampleBuffer), sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
+        stream.read(reinterpret_cast<char*> (m_pSGMBuffer), sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
+    }
+
+    m_pAY8910->LoadState(stream, version);
 
     if (version >= 104)
     {
@@ -192,7 +196,7 @@ void Audio::LoadStateV1(std::istream& stream)
     memset(m_pSampleBuffer, 0, sizeof(blip_sample_t) * GC_AUDIO_BUFFER_SIZE);
     stream.seekg(sizeof(s16) * GC_AUDIO_BUFFER_SIZE_V1, ios::cur);
     memset(m_pSGMBuffer, 0, sizeof(s16) * GC_AUDIO_BUFFER_SIZE);
-    m_pAY8910->LoadState(stream);
+    m_pAY8910->LoadState(stream, GC_SAVESTATE_VERSION_V1);
 
     m_pApu->reset();
     m_pApu->volume(0.6);

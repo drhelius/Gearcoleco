@@ -443,14 +443,12 @@ void AY8910::SaveState(std::ostream& stream)
     stream.write(reinterpret_cast<const char*>(m_Sign), sizeof(m_Sign));
     stream.write(reinterpret_cast<const char*>(&m_iCycleCounter), sizeof(m_iCycleCounter));
     stream.write(reinterpret_cast<const char*>(&m_iSampleCounter), sizeof(m_iSampleCounter));
-    stream.write(reinterpret_cast<const char*>(m_pBuffer), GC_AUDIO_BUFFER_SIZE * sizeof(s16));
-    stream.write(reinterpret_cast<const char*>(&m_iBufferIndex), sizeof(m_iBufferIndex));
     stream.write(reinterpret_cast<const char*>(&m_ElapsedCycles), sizeof(m_ElapsedCycles));
     stream.write(reinterpret_cast<const char*>(&m_iClockRate), sizeof(m_iClockRate));
     stream.write(reinterpret_cast<const char*>(&m_CurrentSample), sizeof(m_CurrentSample));
 }
 
-void AY8910::LoadState(std::istream& stream)
+void AY8910::LoadState(std::istream& stream, int version)
 {
     stream.read(reinterpret_cast<char*>(m_Registers), sizeof(m_Registers));
     stream.read(reinterpret_cast<char*>(&m_SelectedRegister), sizeof(m_SelectedRegister));
@@ -471,8 +469,15 @@ void AY8910::LoadState(std::istream& stream)
     stream.read(reinterpret_cast<char*>(m_Sign), sizeof(m_Sign));
     stream.read(reinterpret_cast<char*>(&m_iCycleCounter), sizeof(m_iCycleCounter));
     stream.read(reinterpret_cast<char*>(&m_iSampleCounter), sizeof(m_iSampleCounter));
-    stream.read(reinterpret_cast<char*>(m_pBuffer), GC_AUDIO_BUFFER_SIZE * sizeof(s16));
-    stream.read(reinterpret_cast<char*>(&m_iBufferIndex), sizeof(m_iBufferIndex));
+
+    if (version < 109)
+    {
+        stream.read(reinterpret_cast<char*>(m_pBuffer), GC_AUDIO_BUFFER_SIZE * sizeof(s16));
+        stream.read(reinterpret_cast<char*>(&m_iBufferIndex), sizeof(m_iBufferIndex));
+    }
+    else
+        m_iBufferIndex = 0;
+
     stream.read(reinterpret_cast<char*>(&m_ElapsedCycles), sizeof(m_ElapsedCycles));
     stream.read(reinterpret_cast<char*>(&m_iClockRate), sizeof(m_iClockRate));
     stream.read(reinterpret_cast<char*>(&m_CurrentSample), sizeof(m_CurrentSample));
