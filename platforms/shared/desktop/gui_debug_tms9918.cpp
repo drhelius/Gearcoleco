@@ -518,6 +518,16 @@ void gui_debug_window_tms9918a_sprites(void)
         float real_x = (float)(x - sprite_shift);
         float real_y = (float)final_y;
 
+        if (video->GetOverscan() != Video::OverscanDisabled)
+        {
+            real_y += (float)(video->IsPAL() ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V);
+
+            if (video->GetOverscan() == Video::OverscanFull284)
+                real_x += (float)GC_RESOLUTION_SMS_OVERSCAN_H_284_L;
+            else if (video->GetOverscan() == Video::OverscanFull320)
+                real_x += (float)GC_RESOLUTION_SMS_OVERSCAN_H_320_L;
+        }
+
         float max_width = sprites_16 ? 16.0f : 8.0f;
         float max_height = sprites_16 ? 16.0f : 8.0f;
 

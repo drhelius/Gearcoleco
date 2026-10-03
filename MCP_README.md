@@ -77,6 +77,8 @@ The server listens for HTTP POST requests on a configurable port (default: 7777)
 ### Headless Mode
 Run the emulator without a GUI, using only the MCP server for control. Ideal for automated testing and CI/CD.
 
+Headless mode is debug mode without rendering, so the debug output settings apply: screenshots use the output overscan from the **Debug** menu instead of the one in the **Video** menu. By default, overscan is disabled. Headless instances read this setting from the configuration file, so set it in the GUI with debug enabled. The same setting applies when the MCP server runs alongside the GUI, because MCP always runs in debug mode.
+
 ### Concurrent Clients
 
 The HTTP server accepts repeated valid MCP initialization requests. All connected clients control the same Gearcoleco instance. Individual HTTP requests are serialized, but multi-request debugging workflows are not atomic. Concurrent agents can interfere with each other through pauses, resets, breakpoints, memory writes, media loads, and save states.

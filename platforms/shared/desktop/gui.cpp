@@ -140,7 +140,7 @@ void gui_apply_settings(void)
     emu_audio_set_master_volume(config_audio.master_volume);
 
     emu_set_video_chip(config_video.video_chip);
-    emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
+    emu_set_overscan(config_debug.debug ? config_debug.overscan : config_video.overscan);
 
     strncpy_fit(gui_bios_path, config_emulator.bios_path.c_str(), sizeof(gui_bios_path));
 

@@ -62,7 +62,7 @@ int application_headless_init(const ApplicationParams& params)
     config_debug.debug = true;
 
     emu_set_video_chip(config_video.video_chip);
-    emu_set_overscan(0);
+    emu_set_overscan(config_debug.overscan);
     emu_audio_mute(true);
 
     gui_debug_init();

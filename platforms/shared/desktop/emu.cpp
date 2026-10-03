@@ -283,7 +283,7 @@ bool emu_get_last_load_result(void)
 
 static void apply_video_config(void)
 {
-    emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
+    emu_set_overscan(config_debug.debug ? config_debug.overscan : config_video.overscan);
     emu_video_no_sprite_limit(config_video.sprite_limit);
     if (config_video.palette == 2)
         emu_palette(config_video.color);

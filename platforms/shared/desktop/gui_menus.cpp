@@ -76,6 +76,7 @@ static void menu_input(void);
 static void menu_audio(void);
 static void menu_debug(void);
 static void menu_about(void);
+static void draw_overscan_menu(const char* label, int* overscan, bool enabled, bool apply);
 static void draw_background_color_menu(const char* label, int theme);
 static void draw_mcp_status(void);
 static void file_dialogs(void);
@@ -727,16 +728,7 @@ static void menu_video(void)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Overscan"))
-        {
-            ImGui::PushItemWidth(150.0f);
-            if (ImGui::Combo("##overscan", &config_video.overscan, "Disabled\0Top+Bottom\0Full (284 width)\0Full (320 width)\0\0"))
-            {
-                emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
-            }
-            ImGui::PopItemWidth();
-            ImGui::EndMenu();
-        }
+        draw_overscan_menu("Overscan", &config_video.overscan, true, !config_debug.debug);
 
         ImGui::Separator();
 
@@ -836,6 +828,20 @@ static void menu_video(void)
             ImGui::EndMenu();
         }
 
+        ImGui::EndMenu();
+    }
+}
+
+static void draw_overscan_menu(const char* label, int* overscan, bool enabled, bool apply)
+{
+    if (ImGui::BeginMenu(label, enabled))
+    {
+        ImGui::PushItemWidth(150.0f);
+        if (ImGui::Combo("##overscan", overscan, "Disabled\0Top+Bottom\0Full (284 width)\0Full (320 width)\0\0") && apply)
+        {
+            emu_set_overscan(*overscan);
+        }
+        ImGui::PopItemWidth();
         ImGui::EndMenu();
     }
 }
@@ -1403,7 +1409,7 @@ static void menu_debug(void)
 
         if (ImGui::MenuItem("Enable", "", &config_debug.debug))
         {
-            emu_set_overscan(config_debug.debug ? 0 : config_video.overscan);
+            emu_set_overscan(config_debug.debug ? config_debug.overscan : config_video.overscan);
 
             if (config_debug.debug)
                 emu_debug_step_over();
@@ -1489,13 +1495,20 @@ static void menu_debug(void)
 
         ImGui::Separator();
 
-        ImGui::MenuItem("Show Output Screen", "", &config_debug.show_screen, config_debug.debug);
-
-        if (ImGui::BeginMenu("Output Scale", config_debug.debug))
+        if (ImGui::BeginMenu("Debug Output Screen", config_debug.debug))
         {
-            ImGui::PushItemWidth(200.0f);
-            ImGui::SliderInt("##debug_scale", &config_debug.scale, 1, 10);
-            ImGui::PopItemWidth();
+            ImGui::MenuItem("Show Output Screen", "", &config_debug.show_screen, config_debug.debug);
+
+            if (ImGui::BeginMenu("Scale", config_debug.debug))
+            {
+                ImGui::PushItemWidth(200.0f);
+                ImGui::SliderInt("##debug_scale", &config_debug.scale, 1, 10);
+                ImGui::PopItemWidth();
+                ImGui::EndMenu();
+            }
+
+            draw_overscan_menu("Overscan", &config_debug.overscan, config_debug.debug, config_debug.debug);
+
             ImGui::EndMenu();
         }
 

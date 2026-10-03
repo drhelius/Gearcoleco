@@ -330,6 +330,7 @@ struct config_Debug
     int dis_look_ahead_count;
     int font_size;
     int scale;
+    int overscan;
     bool multi_viewport;
     bool single_instance;
     bool auto_debug_settings;
