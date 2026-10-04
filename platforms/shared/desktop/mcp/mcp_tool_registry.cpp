@@ -212,6 +212,7 @@ static const McpToolCategory kMcpToolCategories[] =
     {"rewind", "Rewind", "Inspect rewind buffer status and seek to rewind snapshots for time-travel debugging."},
     {"input", "Input", "Inspect or control ColecoVision controllers and semantic ADAM keyboard input."},
     {"trace", "Trace", "Read trace log entries and configure CPU, interrupt, video, audio, memory, and debug-message tracing."},
+    {"profiler", "Profiler", "Start, stop, or reset the function profiler and read per-function call counts and cycle statistics."},
     {"tools", "Other Tools", "Additional emulator/debugger tools that do not fit another category."}
 };
 
@@ -300,6 +301,11 @@ static const char* const kMcpTraceTools[] =
     "get_trace_log", "set_trace_log"
 };
 
+static const char* const kMcpProfilerTools[] =
+{
+    "set_profiler", "get_profiler_data"
+};
+
 static const McpToolCategoryTools kMcpToolCategoryTools[] =
 {
     {"execution", kMcpExecutionTools, MCP_ARRAY_COUNT(kMcpExecutionTools)},
@@ -316,7 +322,8 @@ static const McpToolCategoryTools kMcpToolCategoryTools[] =
     {"state", kMcpStateTools, MCP_ARRAY_COUNT(kMcpStateTools)},
     {"rewind", kMcpRewindTools, MCP_ARRAY_COUNT(kMcpRewindTools)},
     {"input", kMcpInputTools, MCP_ARRAY_COUNT(kMcpInputTools)},
-    {"trace", kMcpTraceTools, MCP_ARRAY_COUNT(kMcpTraceTools)}
+    {"trace", kMcpTraceTools, MCP_ARRAY_COUNT(kMcpTraceTools)},
+    {"profiler", kMcpProfilerTools, MCP_ARRAY_COUNT(kMcpProfilerTools)}
 };
 
 const size_t kMcpSearchToolLimit = 20;
@@ -710,6 +717,8 @@ std::string McpToolRegistry::AliasesForTool(const std::string& tool_name) const
         aliases += " label labels names debug symbols";
     if (StringContains(name, "trace"))
         aliases += " log logger events cpu irq debug output";
+    if (StringContains(name, "profiler"))
+        aliases += " performance cycles timing hotspot function calls frame";
     if (StringContains(name, "controller"))
         aliases += " input joypad gamepad button macro tap press release";
     if (StringContains(name, "state") || StringContains(name, "rewind"))

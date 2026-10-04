@@ -184,6 +184,8 @@ public:
     // Tracing
     json GetTraceLog(s64 start, int count);
     json SetTraceLog(const json& arguments);
+    json SetProfiler(const std::string& action);
+    json GetProfilerData(const std::string& sort, int count, const std::string& filter);
 
     // Core access
     GearcolecoCore* GetCore() { return m_core; }

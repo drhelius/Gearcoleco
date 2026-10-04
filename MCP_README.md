@@ -57,6 +57,7 @@ This server provides tools for ColecoVision and Coleco ADAM development, ROM hac
 - Disassembler bookmarks and call stack inspection
 - Memory editor: bookmarks, watches, memory search, byte finding
 - Trace logger: CPU instructions, VDP, PSG, AY-3-8910, I/O, input, SGM, mapper, EEPROM, and SRAM events
+- Profiler: per-function call counts, calls per frame, and inclusive/exclusive cycle statistics
 - Rewind (time travel debugging)
 - Screenshot capture as base64-encoded PNG
 - Save state management (5 slots)
@@ -313,6 +314,7 @@ Once configured, you can ask your AI assistant:
 - "Locate the routine that updates score digits in RAM and add memory watches for those addresses"
 - "Trace CPU instructions and VDP writes for one frame, then summarize the rendering flow"
 - "Compare SGM RAM before and after this routine runs and identify what data structure changed"
+- "Profile the game for a few seconds, then tell me which functions use the most CPU time per frame and what they do"
 
 ## Available MCP Tools
 
@@ -356,6 +358,16 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `lookup_symbol_by_name` | Find all exact-name symbol matches |
 | `lookup_symbol_at_address` | Find symbol at bank/address |
 | `get_call_stack` | Get current call stack |
+
+### Profiler
+| Tool | Description |
+|------|-------------|
+| `set_profiler` | Start, stop, or reset the function profiler |
+| `get_profiler_data` | Read per-function call counts and cycle statistics |
+
+`set_profiler` takes `action` (`start`, `stop`, `reset`). `start` opens the Profiler debugger window and `stop` closes it. Statistics are only collected while the window is visible (in headless mode, while started), starting on the next frame.
+
+`get_profiler_data` returns `collecting`, `window_open`, `total_cycles`, `frame_cycles`, `frames`, `function_count`, and per-function `name`, `symbol` (`manual`, `prebuilt`, `auto`, or `none`), `bank`, `address`, `type`, `calls`, `calls_per_frame`, `inclusive_cycles`, `inclusive_percent`, `exclusive_cycles`, `exclusive_percent`, `average_cycles`, `min_cycles`, and `max_cycles`. Optional `sort` (`inclusive`, `exclusive`, `calls`, `average`, `max`; highest first), `count` (default 50, max 1000), and `filter` (name or hex address substring).
 
 ### Breakpoints
 | Tool | Description |
