@@ -29,6 +29,7 @@
 class Memory;
 class IOPorts;
 class TraceLogger;
+class Profiler;
 
 class Processor
 {
@@ -127,6 +128,7 @@ public:
     std::stack<GC_CallStackEntry>* GetDisassemblerCallStack();
     void CheckMemoryBreakpoints(int type, u16 address, bool read);
     void SetTraceLogger(TraceLogger* pTraceLogger);
+    void SetProfiler(Profiler* pProfiler);
 
 private:
     typedef void (Processor::*OPCmemberptr) (void);
@@ -143,6 +145,7 @@ private:
     OPCptr m_OPCodesED[256];
     Memory* m_pMemory;
     TraceLogger* m_pTraceLogger;
+    Profiler* m_pProfiler;
     SixteenBitRegister AF;
     SixteenBitRegister BC;
     SixteenBitRegister DE;
@@ -212,8 +215,9 @@ private:
     void InvalidOPCode();
     void UndocumentedOPCode();
     void CheckBreakpoints();
-    void PushCallStack(u16 src, u16 dest, u16 back, u8 bank);
-    void PopCallStack();
+    void PushCallStack(u16 src, u16 dest, u16 back, u8 bank, u8 tstates, bool irq);
+    void PopCallStack(u8 tstates);
+    NO_INLINE void ProfilerEnter(u16 address, u32 pending_cycles, bool irq);
     void FormatDisassemblerDataBytes(char* text, size_t text_size, const u8* bytes, int size);
     void SetDisassemblerOperandText(GC_Disassembler_Record* record, const char* text);
     void SetDisassemblerOperand(GC_Disassembler_Record* record, u16 address, bool is_zp, const char* text);
@@ -238,7 +242,7 @@ private:
     void OPCodes_JP_nn_Conditional(bool condition);
     void OPCodes_JR_n();
     void OPCodes_JR_n_conditional(bool condition);
-    void OPCodes_RET();
+    void OPCodes_RET(u8 tstates);
     void OPCodes_RET_Conditional(bool condition);
     void OPCodes_IN_C(u8* reg);
     u8 OPCodes_INI();
@@ -919,6 +923,7 @@ const bool kZ80ParityTable[256] = {
 };
 
 #include "Memory.h"
+#include "Profiler.h"
 #include "Processor_inline.h"
 
 #endif	/* PROCESSOR_H */

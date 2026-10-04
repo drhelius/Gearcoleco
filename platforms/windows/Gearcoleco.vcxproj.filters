@@ -50,6 +50,7 @@
     <ClCompile Include="..\shared\desktop\gui_debug_tms9918.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_f18a.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_trace_logger.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\gui_debug_profiler.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\trace_logger_formatter.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_filedialogs.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_menus.cpp"><Filter>desktop</Filter></ClCompile>
@@ -79,6 +80,7 @@
     <ClCompile Include="..\..\src\opcodes_ed.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\Processor.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\TraceLogger.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\Profiler.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\VgmRecorder.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\TMS9918A.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\F18A.cpp"><Filter>core</Filter></ClCompile>
@@ -134,6 +136,7 @@
     <ClInclude Include="..\shared\desktop\gui_debug_tms9918.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_f18a.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_trace_logger.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\gui_debug_profiler.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\trace_logger_formatter.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_widgets.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_filedialogs.h"><Filter>desktop</Filter></ClInclude>
@@ -187,6 +190,7 @@
     <ClInclude Include="..\..\src\opcodefdcb_names.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\opcodexx_names.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Processor.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\Profiler.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Processor_inline.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\SixteenBitRegister.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\StandardMapper.h"><Filter>core</Filter></ClInclude>

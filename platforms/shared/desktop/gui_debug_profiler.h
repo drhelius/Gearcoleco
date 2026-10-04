@@ -13,26 +13,23 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/ 
- * 
+ * along with this program.  If not, see http://www.gnu.org/licenses/
+ *
  */
 
-#ifndef GEARCOLECO_H
-#define	GEARCOLECO_H
+#ifndef GUI_DEBUG_PROFILER_H
+#define GUI_DEBUG_PROFILER_H
 
-#include "common.h"
-#include "definitions.h"
-#include "log.h"
-#include "GearcolecoCore.h"
-#include "Memory.h"
-#include "Processor.h"
-#include "Cartridge.h"
-#include "Audio.h"
-#include "Video.h"
-#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-#include "TraceLogger.h"
-#include "Profiler.h"
+#ifdef GUI_DEBUG_PROFILER_IMPORT
+    #define EXTERN
+#else
+    #define EXTERN extern
 #endif
 
-#endif	/* GEARCOLECO_H */
+EXTERN void gui_debug_window_profiler(void);
+EXTERN void gui_debug_profiler_update(void);
+EXTERN void gui_debug_profiler_reset(void);
 
+#undef GUI_DEBUG_PROFILER_IMPORT
+#undef EXTERN
+#endif /* GUI_DEBUG_PROFILER_H */

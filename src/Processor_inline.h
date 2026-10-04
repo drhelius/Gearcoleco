@@ -62,6 +62,10 @@ inline void Processor::LeaveHalt()
     {
         m_bHalt = false;
         PC.Increment();
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+        if (unlikely(m_pProfiler->IsEnabled()))
+            m_pProfiler->Halt(false, m_iTStates);
+#endif
     }
 }
 
@@ -319,7 +323,7 @@ inline void Processor::OPCodes_RST(u16 address)
     PC.SetValue(address);
     WZ.SetValue(address);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    PushCallStack(pc - 1, address, pc, m_pMemory->GetBank(address));
+    PushCallStack(pc - 1, address, pc, m_pMemory->GetBank(address), 11, false);
 #endif
 }
 
@@ -333,7 +337,7 @@ inline void Processor::OPCodes_CALL_nn()
     PC.SetValue(address);
     WZ.SetValue(address);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    PushCallStack(pc - 3, address, pc, m_pMemory->GetBank(address));
+    PushCallStack(pc - 3, address, pc, m_pMemory->GetBank(address), 17, false);
 #endif
 }
 
@@ -349,7 +353,7 @@ inline void Processor::OPCodes_CALL_nn_Conditional(bool condition)
         PC.SetValue(address);
         m_bBranchTaken = true;
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    PushCallStack(pc - 3, address, pc, m_pMemory->GetBank(address));
+    PushCallStack(pc - 3, address, pc, m_pMemory->GetBank(address), 17, false);
 #endif
     }
     WZ.SetValue(address);
@@ -404,12 +408,14 @@ inline void Processor::OPCodes_JR_n_conditional(bool condition)
     }
 }
 
-inline void Processor::OPCodes_RET()
+inline void Processor::OPCodes_RET(u8 tstates)
 {
     StackPop(&PC);
     WZ.SetValue(PC.GetValue());
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
-    PopCallStack();
+    PopCallStack(tstates);
+#else
+    UNUSED(tstates);
 #endif
 }
 
@@ -417,7 +423,7 @@ inline void Processor::OPCodes_RET_Conditional(bool condition)
 {
     if (condition)
     {
-        OPCodes_RET();
+        OPCodes_RET(11);
         m_bBranchTaken = true;
     }
 }

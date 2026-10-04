@@ -39,6 +39,7 @@
     <ClCompile Include="..\..\src\opcodes_ed.cpp" />
     <ClCompile Include="..\..\src\Processor.cpp" />
     <ClCompile Include="..\..\src\TraceLogger.cpp" />
+    <ClCompile Include="..\..\src\Profiler.cpp" />
     <ClCompile Include="..\..\src\VgmRecorder.cpp" />
     <ClCompile Include="..\..\src\TMS9918A.cpp" />
     <ClCompile Include="..\..\src\F18A.cpp" />
@@ -70,6 +71,7 @@
     <ClCompile Include="..\shared\desktop\gui_debug_tms9918.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_f18a.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_trace_logger.cpp" />
+    <ClCompile Include="..\shared\desktop\gui_debug_profiler.cpp" />
     <ClCompile Include="..\shared\desktop\trace_logger_formatter.cpp" />
     <ClCompile Include="..\shared\desktop\gui_filedialogs.cpp" />
     <ClCompile Include="..\shared\desktop\gui_menus.cpp" />
@@ -166,6 +168,7 @@
     <ClInclude Include="..\..\src\SixteenBitRegister.h" />
     <ClInclude Include="..\..\src\StandardMapper.h" />
     <ClInclude Include="..\..\src\TraceLogger.h" />
+    <ClInclude Include="..\..\src\Profiler.h" />
     <ClInclude Include="..\..\src\VgmRecorder.h" />
     <ClInclude Include="..\..\src\Video.h" />
     <ClInclude Include="..\..\src\TMS9918A.h" />
@@ -220,6 +223,7 @@
     <ClInclude Include="..\shared\desktop\gui_debug_tms9918.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_f18a.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_trace_logger.h" />
+    <ClInclude Include="..\shared\desktop\gui_debug_profiler.h" />
     <ClInclude Include="..\shared\desktop\trace_logger_formatter.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_widgets.h" />
     <ClInclude Include="..\shared\desktop\gui_filedialogs.h" />

@@ -33,6 +33,7 @@ class Input;
 class ColecoVisionIOPorts;
 class Random;
 class TraceLogger;
+class Profiler;
 class Adam;
 class AdamMedia;
 
@@ -108,6 +109,7 @@ public:
     GC_VideoChip GetVideoChip() const;
     Input* GetInput();
     TraceLogger* GetTraceLogger();
+    Profiler* GetProfiler();
     Adam* GetAdam();
     u64 GetMasterClockCycles();
     bool GetAdamDebugState(GC_AdamDebugState* state);
@@ -136,6 +138,7 @@ private:
     ColecoVisionIOPorts* m_pColecoVisionIOPorts;
     Random* m_pRandom;
     TraceLogger* m_pTraceLogger;
+    Profiler* m_pProfiler;
     Adam* m_pAdam;
     u8* m_pStateBackup;
     size_t m_StateBackupCapacity;

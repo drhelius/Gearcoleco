@@ -33,6 +33,7 @@
 #include "Adam.h"
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
 #include "TraceLogger.h"
+#include "Profiler.h"
 #endif
 #include "no_bios.h"
 #include "common.h"
@@ -52,6 +53,7 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pColecoVisionIOPorts);
     InitPointer(m_pRandom);
     InitPointer(m_pTraceLogger);
+    InitPointer(m_pProfiler);
     InitPointer(m_pAdam);
     InitPointer(m_pStateBackup);
     m_StateBackupCapacity = 0;
@@ -74,6 +76,7 @@ GearcolecoCore::~GearcolecoCore()
     SafeDelete(m_pColecoVisionIOPorts);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     SafeDelete(m_pTraceLogger);
+    SafeDelete(m_pProfiler);
 #endif
     SafeDelete(m_pCartridge);
     SafeDelete(m_pInput);
@@ -124,6 +127,8 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pInput->SetTraceLogger(m_pTraceLogger);
     m_pColecoVisionIOPorts->SetTraceLogger(m_pTraceLogger);
     m_pAdam->SetTraceLogger(m_pTraceLogger);
+    m_pProfiler = new Profiler(&m_MasterClockCycles);
+    m_pProcessor->SetProfiler(m_pProfiler);
 #endif
 }
 
@@ -662,6 +667,11 @@ Input* GearcolecoCore::GetInput()
 TraceLogger* GearcolecoCore::GetTraceLogger()
 {
     return m_pTraceLogger;
+}
+
+Profiler* GearcolecoCore::GetProfiler()
+{
+    return m_pProfiler;
 }
 
 Adam* GearcolecoCore::GetAdam()
@@ -1718,6 +1728,10 @@ bool GearcolecoCore::GetSaveStateScreenshot(int index, const char* path, GC_Save
 void GearcolecoCore::Reset(bool cold, bool video_changed)
 {
     m_MasterClockCycles = 0;
+
+    if (IsValidPointer(m_pProfiler))
+        m_pProfiler->Reset();
+
     m_pMemory->SetupMapper();
     m_pAdam->SetMapper(m_pMemory->GetMapper());
     m_pAdam->SetEnabled(m_machine == GC_MACHINE_ADAM);
