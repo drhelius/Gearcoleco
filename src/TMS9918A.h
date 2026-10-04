@@ -66,6 +66,8 @@ public:
 private:
     INLINE void TraceVDPEvent(u8 event, u8 reg = 0xFF, u8 raw = 0, int sprite = 0xFF, int auxiliary = 0);
     void LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary);
+    INLINE void TraceSpriteBudget(int line);
+    void LogSpriteBudget(int line);
     void ScanLine(int line);
     void LatchSpriteAttributes();
     void RemapVRAM(bool memory16K);
@@ -130,6 +132,12 @@ INLINE void TMS9918A::TraceVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int au
 {
     if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_VDP, event))
         LogVDPEvent(event, reg, raw, sprite, auxiliary);
+}
+
+INLINE void TMS9918A::TraceSpriteBudget(int line)
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_VDP))
+        LogSpriteBudget(line);
 }
 
 inline u8* TMS9918A::GetVRAM()

@@ -894,6 +894,7 @@ void F18A::RenderF18AScanline(int line)
             RenderF18ATileLayer(line, true);
 
         RenderF18ASprites(line);
+        TraceSpriteBudget(line, true);
     }
     else
     {

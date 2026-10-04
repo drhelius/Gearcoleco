@@ -633,9 +633,11 @@ static void trace_logger_menu(void)
             ImGui::EndMenu();
         }
 
-        const char* vdp_names[] = {"Registers", "Interrupts", "Status", "Sprites", "Timing", "VRAM"};
-        const u32 vdp_masks[] = {TRACE_VDP_EVENT_REGISTERS, TRACE_VDP_EVENT_INTERRUPTS, TRACE_VDP_EVENT_STATUS, TRACE_VDP_EVENT_SPRITES, TRACE_VDP_EVENT_TIMING, TRACE_VDP_EVENT_VRAM};
-        trace_submenu("VDP", &config_debug.trace_vdp, &config_debug.trace_vdp_events, vdp_names, vdp_masks, 6);
+        const char* vdp_names[] = {"Registers", "Interrupts", "Status", "Sprites", "Timing", "VRAM",
+            "Sprite Budget (Every Line)", "Sprite Budget (Limit Hits)"};
+        const u32 vdp_masks[] = {TRACE_VDP_EVENT_REGISTERS, TRACE_VDP_EVENT_INTERRUPTS, TRACE_VDP_EVENT_STATUS, TRACE_VDP_EVENT_SPRITES, TRACE_VDP_EVENT_TIMING, TRACE_VDP_EVENT_VRAM,
+            TRACE_VDP_EVENT_SPRITE_BUDGET, TRACE_VDP_EVENT_SPRITE_LIMIT};
+        trace_submenu("VDP", &config_debug.trace_vdp, &config_debug.trace_vdp_events, vdp_names, vdp_masks, 8);
         const char* psg_names[] = {"Tone", "Volume", "Noise"};
         const u32 psg_masks[] = {TRACE_PSG_EVENT_TONE, TRACE_PSG_EVENT_VOLUME, TRACE_PSG_EVENT_NOISE};
         trace_submenu("PSG", &config_debug.trace_psg, &config_debug.trace_psg_events, psg_names, psg_masks, 3);

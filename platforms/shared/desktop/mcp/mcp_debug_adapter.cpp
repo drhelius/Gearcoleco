@@ -3125,6 +3125,8 @@ json DebugAdapter::SetTraceLog(const json& arguments)
         else if (filter == "vdp.interrupts") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_INTERRUPTS; }
         else if (filter == "vdp.status") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_STATUS; }
         else if (filter == "vdp.sprites") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_SPRITES; }
+        else if (filter == "vdp.sprite_budget") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_SPRITE_BUDGET; }
+        else if (filter == "vdp.sprite_limit") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_SPRITE_LIMIT; }
         else if (filter == "vdp.timing") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_TIMING; }
         else if (filter == "vdp.vram") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_VRAM; }
         else if (filter == "psg.tone") { flags |= TRACE_FLAG_PSG; masks[TRACE_PSG] |= TRACE_PSG_EVENT_TONE; }
@@ -3197,6 +3199,8 @@ json DebugAdapter::SetTraceLog(const json& arguments)
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_INTERRUPTS) active_filters.push_back("vdp.interrupts");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_STATUS) active_filters.push_back("vdp.status");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_SPRITES) active_filters.push_back("vdp.sprites");
+    if (masks[TRACE_VDP] & TRACE_VDP_EVENT_SPRITE_BUDGET) active_filters.push_back("vdp.sprite_budget");
+    if (masks[TRACE_VDP] & TRACE_VDP_EVENT_SPRITE_LIMIT) active_filters.push_back("vdp.sprite_limit");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_TIMING) active_filters.push_back("vdp.timing");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_VRAM) active_filters.push_back("vdp.vram");
     if (masks[TRACE_PSG] & TRACE_PSG_EVENT_TONE) active_filters.push_back("psg.tone");

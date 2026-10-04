@@ -157,6 +157,67 @@ void TMS9918A::LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
 #endif
 }
 
+void TMS9918A::LogSpriteBudget(int line)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    bool trace_budget = m_pTraceLogger->IsEventEnabled(TRACE_VDP, TRACE_VDP_SPRITE_BUDGET);
+    bool trace_limit = m_pTraceLogger->IsEventEnabled(TRACE_VDP, TRACE_VDP_SPRITE_LIMIT);
+
+    if (!trace_budget && !trace_limit)
+        return;
+
+    int requested = 0;
+    int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
+
+    if (IsSetBit(m_VdpRegister[1], 0))
+        sprite_size *= 2;
+
+    for (int sprite = 0; sprite < GC_MAX_SPRITES; sprite++)
+    {
+        int sprite_y = m_SpriteAttribLatch[sprite << 2];
+
+        if (sprite_y == 0xD0)
+            break;
+
+        if (sprite_y > 0xE0)
+            sprite_y -= 0x100;
+
+        sprite_y++;
+
+        if ((sprite_y <= line) && ((sprite_y + sprite_size) > line))
+            requested++;
+    }
+
+    bool limit = requested > 4;
+
+    if (!trace_budget && !limit)
+        return;
+
+    GC_Trace_Entry e = {};
+    e.type = TRACE_VDP;
+    e.vdp.raw = 4;
+    e.vdp.effective = (u8)(m_bNoSpriteLimit ? requested : MIN(requested, 4));
+    e.vdp.mode = (u8)m_iMode;
+    e.vdp.line = (u16)line;
+    e.vdp.hpos = (u16)m_iCycleCounter;
+    e.vdp.auxiliary = (u16)requested;
+
+    if (trace_budget)
+    {
+        e.vdp.event = TRACE_VDP_SPRITE_BUDGET;
+        m_pTraceLogger->TraceLog(e);
+    }
+
+    if (trace_limit && limit)
+    {
+        e.vdp.event = TRACE_VDP_SPRITE_LIMIT;
+        m_pTraceLogger->TraceLog(e);
+    }
+#else
+    UNUSED(line);
+#endif
+}
+
 void TMS9918A::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
@@ -424,7 +485,10 @@ void TMS9918A::ScanLine(int line)
             RenderBackground(line);
 
             if ((m_iMode & 0x01) == 0)
+            {
                 RenderSprites(line);
+                TraceSpriteBudget(line);
+            }
         }
     }
     else

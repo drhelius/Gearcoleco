@@ -179,6 +179,108 @@ void F18A::LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary)
 #endif
 }
 
+void F18A::LogSpriteBudget(int line, bool enhanced)
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    bool trace_budget = m_pTraceLogger->IsEventEnabled(TRACE_VDP, TRACE_VDP_SPRITE_BUDGET);
+    bool trace_limit = m_pTraceLogger->IsEventEnabled(TRACE_VDP, TRACE_VDP_SPRITE_LIMIT);
+
+    if (!trace_budget && !trace_limit)
+        return;
+
+    int requested = 0;
+    int sprite_limit = m_VdpRegister[30] & 0x1F;
+    bool unlimited = (sprite_limit == 31);
+
+    if (enhanced)
+    {
+        if (!m_f18a_mode.sprites_enabled)
+            return;
+
+        int sat = (m_VdpRegister[5] & 0x7F) << 7;
+        int stop_sprite = m_VdpRegister[51] & 0x3F;
+        int magnification = IsSetBit(m_VdpRegister[1], 0) ? 2 : 1;
+
+        for (int sprite = 0; sprite < 32; sprite++)
+        {
+            if ((stop_sprite < 32) && (sprite == stop_sprite))
+                break;
+
+            int offset = sat + (sprite << 2);
+            u8 raw_y = ReadVRAM((u16)offset);
+
+            if (!m_f18a_mode.row30 && (raw_y == 0xD0))
+                break;
+
+            bool sprite_size_16 = IsSetBit(m_VdpRegister[1], 1);
+            if (m_f18a_unlocked && IsSetBit(ReadVRAM((u16)(offset + 3)), 4))
+                sprite_size_16 = true;
+            int display_size = (sprite_size_16 ? 16 : 8) * magnification;
+            int top = IsSetBit(m_VdpRegister[49], 3) ? raw_y : ((raw_y + 1) & 0xFF);
+            int delta_y = ((u8)line - (u8)top) & 0xFF;
+
+            if (delta_y < display_size)
+                requested++;
+        }
+    }
+    else
+    {
+        int sprite_size = IsSetBit(m_VdpRegister[1], 1) ? 16 : 8;
+
+        if (IsSetBit(m_VdpRegister[1], 0))
+            sprite_size *= 2;
+
+        for (int sprite = 0; sprite < GC_MAX_SPRITES; sprite++)
+        {
+            int sprite_y = m_SpriteAttribLatch[sprite << 2];
+
+            if (sprite_y == 0xD0)
+                break;
+
+            sprite_y = (sprite_y + 1) & 0xFF;
+
+            if (sprite_y >= 0xE0)
+                sprite_y = -(0x100 - sprite_y);
+
+            if ((sprite_y <= line) && ((sprite_y + sprite_size) > line))
+                requested++;
+        }
+    }
+
+    int max_sprites = unlimited ? GC_MAX_SPRITES : sprite_limit;
+    bool limit = requested > max_sprites;
+
+    if (!trace_budget && !limit)
+        return;
+
+    bool render_all = unlimited || (!enhanced && m_bNoSpriteLimit);
+
+    GC_Trace_Entry e = {};
+    e.type = TRACE_VDP;
+    e.vdp.raw = (u8)max_sprites;
+    e.vdp.effective = (u8)(render_all ? requested : MIN(requested, max_sprites));
+    e.vdp.mode = (u8)m_iMode;
+    e.vdp.line = (u16)line;
+    e.vdp.hpos = (u16)m_iCycleCounter;
+    e.vdp.auxiliary = (u16)requested;
+
+    if (trace_budget)
+    {
+        e.vdp.event = TRACE_VDP_SPRITE_BUDGET;
+        m_pTraceLogger->TraceLog(e);
+    }
+
+    if (trace_limit && limit)
+    {
+        e.vdp.event = TRACE_VDP_SPRITE_LIMIT;
+        m_pTraceLogger->TraceLog(e);
+    }
+#else
+    UNUSED(line);
+    UNUSED(enhanced);
+#endif
+}
+
 void F18A::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
@@ -428,7 +530,10 @@ void F18A::ScanLine(int line)
             RenderBackground(line);
 
             if (m_iMode != 0x01)
+            {
                 RenderSprites(line);
+                TraceSpriteBudget(line, false);
+            }
         }
     }
     else

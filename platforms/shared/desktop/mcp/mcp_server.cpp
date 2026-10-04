@@ -1775,7 +1775,8 @@ json McpServer::BuildToolList()
                         {"type", "string"},
                         {"enum", json::array({
                             "cpu.instructions", "cpu.interrupts",
-                            "vdp.registers", "vdp.interrupts", "vdp.status", "vdp.sprites", "vdp.timing", "vdp.vram",
+                            "vdp.registers", "vdp.interrupts", "vdp.status", "vdp.sprites", "vdp.sprite_budget", "vdp.sprite_limit",
+                            "vdp.timing", "vdp.vram",
                             "psg.tone", "psg.volume", "psg.noise",
                             "ay8910.registers", "ay8910.tone", "ay8910.noise_mixer", "ay8910.volume", "ay8910.envelope", "ay8910.io",
                             "io.reads", "io.writes", "input.reads", "input.writes", "sgm.control",
