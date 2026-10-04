@@ -314,6 +314,8 @@ struct config_Debug
     int trace_sgm_events;
     int trace_adam_events;
     int trace_mapper_events;
+    int trace_vblank_watch_address;
+    int trace_vblank_watch_operation;
     int trace_output;
     int trace_capacity;
     int trace_disk_dir_option;

@@ -300,6 +300,13 @@ void trace_logger_format_entry(const GC_Trace_Entry& entry,
                                  entry.vdp.line, entry.vdp.auxiliary, entry.vdp.raw);
                     break;
                 }
+                case TRACE_VDP_MISSED_VBLANK:
+                {
+                    const char* access = entry.vdp.raw == 0x03 ? "R/W" : (entry.vdp.raw == 0x02 ? "W" : "R");
+                    snprintf(text, sizeof(text), "[VDP] VBLANK MISSED Watch:$%04X %s Consecutive:%u",
+                             entry.vdp.address, access, entry.vdp.auxiliary);
+                    break;
+                }
                 default:
                     snprintf(text, sizeof(text), "[VDP] UNKNOWN Event:$%02X", entry.vdp.event);
                     break;

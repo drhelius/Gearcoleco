@@ -101,6 +101,8 @@ private:
     void LogVDPEvent(u8 event, u8 reg, u8 raw, int sprite, int auxiliary);
     INLINE void TraceSpriteBudget(int line, bool enhanced);
     void LogSpriteBudget(int line, bool enhanced);
+    INLINE void TraceMissedVBlank();
+    void LogMissedVBlank();
     void ScanLine(int line);
     void LatchSpriteAttributes();
     void RenderBackground(int line);
@@ -248,6 +250,12 @@ INLINE void F18A::TraceSpriteBudget(int line, bool enhanced)
 {
     if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEnabled(TRACE_VDP))
         LogSpriteBudget(line, enhanced);
+}
+
+INLINE void F18A::TraceMissedVBlank()
+{
+    if (IsValidPointer(m_pTraceLogger) && m_pTraceLogger->IsEventEnabled(TRACE_VDP, TRACE_VDP_MISSED_VBLANK))
+        LogMissedVBlank();
 }
 
 inline u8* F18A::GetVRAM()

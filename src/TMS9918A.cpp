@@ -218,6 +218,28 @@ void TMS9918A::LogSpriteBudget(int line)
 #endif
 }
 
+void TMS9918A::LogMissedVBlank()
+{
+#if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
+    u32 misses = m_pProcessor->UpdateVBlankWatch();
+
+    if (misses == 0)
+        return;
+
+    GC_Trace_Entry e = {};
+    e.type = TRACE_VDP;
+    e.vdp.event = TRACE_VDP_MISSED_VBLANK;
+    e.vdp.address = m_pProcessor->GetVBlankWatchAddress();
+    e.vdp.raw = (m_pProcessor->GetVBlankWatchAccess(true) ? 0x01 : 0x00) |
+        (m_pProcessor->GetVBlankWatchAccess(false) ? 0x02 : 0x00);
+    e.vdp.auxiliary = (u16)MIN(misses, 0xFFFFU);
+    e.vdp.mode = (u8)m_iMode;
+    e.vdp.line = (u16)m_iRenderLine;
+    e.vdp.hpos = (u16)m_iCycleCounter;
+    m_pTraceLogger->TraceLog(e);
+#endif
+}
+
 void TMS9918A::Reset(bool bPAL)
 {
     m_bPAL = bPAL;
@@ -272,6 +294,8 @@ bool TMS9918A::Tick(unsigned int clockCycles)
         if (!m_LineEvents.vint && (m_iCycleCounter >= m_Timing[TIMING_VINT]))
         {
             m_LineEvents.vint = true;
+
+            TraceMissedVBlank();
 
             if (IsSetBit(m_VdpRegister[1], 5) && !IsSetBit(m_VdpStatus, 7))
             {

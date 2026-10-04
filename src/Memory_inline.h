@@ -29,7 +29,8 @@
 inline u8 Memory::Read(u16 address)
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-    m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, true);
+    if (m_pProcessor->HasMemoryHooks(true))
+        m_pProcessor->CheckCpuAddressHooks(address, true);
     #endif
 
     if (unlikely(IsValidPointer(m_pAdam)))
@@ -91,7 +92,8 @@ inline u8 Memory::DebugRetrieve(u16 address)
 inline void Memory::Write(u16 address, u8 value)
 {
     #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
-    m_pProcessor->CheckMemoryBreakpoints(Processor::GC_BREAKPOINT_TYPE_ROMRAM, address, false);
+    if (m_pProcessor->HasMemoryHooks(false))
+        m_pProcessor->CheckCpuAddressHooks(address, false);
     #endif
 
     if (unlikely(IsValidPointer(m_pAdam)))

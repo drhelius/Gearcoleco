@@ -3158,6 +3158,7 @@ json DebugAdapter::GetTraceLog(s64 start, int count)
 
 json DebugAdapter::SetTraceLog(const json& arguments)
 {
+    static const char* const k_vblank_watch_operations[] = { "read", "write", "read_write" };
     json result;
 
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
@@ -3196,6 +3197,7 @@ json DebugAdapter::SetTraceLog(const json& arguments)
         else if (filter == "vdp.sprites") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_SPRITES; }
         else if (filter == "vdp.sprite_budget") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_SPRITE_BUDGET; }
         else if (filter == "vdp.sprite_limit") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_SPRITE_LIMIT; }
+        else if (filter == "vdp.missed_vblank") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_MISSED_VBLANK; }
         else if (filter == "vdp.timing") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_TIMING; }
         else if (filter == "vdp.vram") { flags |= TRACE_FLAG_VDP; masks[TRACE_VDP] |= TRACE_VDP_EVENT_VRAM; }
         else if (filter == "psg.tone") { flags |= TRACE_FLAG_PSG; masks[TRACE_PSG] |= TRACE_PSG_EVENT_TONE; }
@@ -3235,6 +3237,30 @@ json DebugAdapter::SetTraceLog(const json& arguments)
         return {{"error", "Unknown trace memory size"}};
     if (disk_index < 0)
         return {{"error", "Unknown trace disk size"}};
+    int vblank_watch_address_value = config_debug.trace_vblank_watch_address;
+    std::string vblank_watch_address = arguments.value("vblank_watch_address", "");
+    if (!vblank_watch_address.empty())
+    {
+        u16 address = 0;
+        if (!parse_hex_with_prefix(vblank_watch_address, &address))
+            return {{"error", "Invalid vblank watch address"}};
+        vblank_watch_address_value = address;
+    }
+
+    int vblank_watch_operation_value = config_debug.trace_vblank_watch_operation;
+    std::string vblank_watch_operation = arguments.value("vblank_watch_operation", "");
+    if (!vblank_watch_operation.empty())
+    {
+        vblank_watch_operation_value = -1;
+        for (int i = 0; i < 3; i++)
+        {
+            if (vblank_watch_operation == k_vblank_watch_operations[i])
+                vblank_watch_operation_value = i;
+        }
+        if (vblank_watch_operation_value < 0)
+            return {{"error", "Invalid vblank watch operation"}};
+    }
+
     bool custom_path = arguments.contains("output_path") && !arguments["output_path"].get<std::string>().empty();
     std::string requested_path = custom_path ? arguments["output_path"].get<std::string>() : std::string();
     bool storage_change = output != config_debug.trace_output;
@@ -3259,6 +3285,8 @@ json DebugAdapter::SetTraceLog(const json& arguments)
             return {{"error", "Unable to configure trace logger"}};
     }
     gui_debug_trace_logger_set_event_filters(masks);
+    config_debug.trace_vblank_watch_address = vblank_watch_address_value;
+    config_debug.trace_vblank_watch_operation = vblank_watch_operation_value;
     if (!gui_debug_trace_logger_start(flags))
         return {{"error", "Unable to start trace logger"}};
     json active_filters = json::array();
@@ -3270,6 +3298,7 @@ json DebugAdapter::SetTraceLog(const json& arguments)
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_SPRITES) active_filters.push_back("vdp.sprites");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_SPRITE_BUDGET) active_filters.push_back("vdp.sprite_budget");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_SPRITE_LIMIT) active_filters.push_back("vdp.sprite_limit");
+    if (masks[TRACE_VDP] & TRACE_VDP_EVENT_MISSED_VBLANK) active_filters.push_back("vdp.missed_vblank");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_TIMING) active_filters.push_back("vdp.timing");
     if (masks[TRACE_VDP] & TRACE_VDP_EVENT_VRAM) active_filters.push_back("vdp.vram");
     if (masks[TRACE_PSG] & TRACE_PSG_EVENT_TONE) active_filters.push_back("psg.tone");
@@ -3297,6 +3326,13 @@ json DebugAdapter::SetTraceLog(const json& arguments)
         {"memory_size", gui_debug_trace_logger_memory_size_name(capacity_index)},
         {"disk_size", gui_debug_trace_logger_disk_size_name(disk_index)},
         {"filters", active_filters}, {"total_entries", tl->GetCount()}};
+    if (masks[TRACE_VDP] & TRACE_VDP_EVENT_MISSED_VBLANK)
+    {
+        char address[8];
+        snprintf(address, sizeof(address), "%04X", config_debug.trace_vblank_watch_address);
+        result["vblank_watch_address"] = address;
+        result["vblank_watch_operation"] = k_vblank_watch_operations[config_debug.trace_vblank_watch_operation];
+    }
     if (output == gui_TraceOutput_Disk)
         result["output_path"] = gui_debug_trace_logger_get_output_path();
 #else

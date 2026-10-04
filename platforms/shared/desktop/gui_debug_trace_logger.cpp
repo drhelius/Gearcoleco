@@ -44,6 +44,8 @@ static const u64 trace_limits[] = {10ULL << 20, 50ULL << 20, 100ULL << 20,
 
 static void trace_logger_menu(void);
 static void trace_logger_sync_flags(void);
+static void trace_logger_sync_vblank_watch(bool enabled);
+static void trace_logger_menu_missed_vblank(void);
 static u32 trace_logger_get_config_flags(void);
 static void trace_logger_set_config_flags(u32 flags);
 static u32 trace_logger_get_config_event_filter(GC_Trace_Type type);
@@ -340,6 +342,7 @@ static bool trace_logger_stop(bool show_status)
 
     trace_enabled = false;
     emu_get_core()->GetTraceLogger()->SetEnabledFlags(0);
+    trace_logger_sync_vblank_watch(false);
     return true;
 }
 
@@ -360,7 +363,10 @@ static bool trace_logger_stop_disk(bool show_status, bool flush_entries)
     success = success && !trace_disk_error;
     trace_enabled = false;
     if (emu_get_core())
+    {
         emu_get_core()->GetTraceLogger()->SetEnabledFlags(0);
+        trace_logger_sync_vblank_watch(false);
+    }
     if (success)
     {
         if (show_status)
@@ -519,7 +525,7 @@ static void trace_logger_menu_event_filter(const char* label, int* filter, u32 m
 }
 
 static void trace_submenu(const char* label, bool* enabled, int* events,
-    const char* const* names, const u32* masks, int count)
+    const char* const* names, const u32* masks, int count, void (*extra_menu)(void) = NULL)
 {
     if (!ImGui::BeginMenu(label))
         return;
@@ -528,7 +534,39 @@ static void trace_submenu(const char* label, bool* enabled, int* events,
     ImGui::BeginDisabled(!*enabled);
     for (int i = 0; i < count; i++)
         trace_logger_menu_event_filter(names[i], events, masks[i]);
+    if (extra_menu)
+        extra_menu();
     ImGui::EndDisabled();
+    ImGui::EndMenu();
+}
+
+static void trace_logger_menu_missed_vblank(void)
+{
+    if (!ImGui::BeginMenu("Missed VBlank"))
+        return;
+
+    trace_logger_menu_event_filter("Enabled", &config_debug.trace_vdp_events, TRACE_VDP_EVENT_MISSED_VBLANK);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Logs a missed VBlank if the watched access did not happen during the frame ending at VBlank");
+
+    float input_x = ImGui::GetCursorPosX() + ImGui::CalcTextSize("Operation").x + ImGui::GetStyle().ItemSpacing.x;
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Address");
+    ImGui::SameLine(input_x);
+    u16 address = (u16)config_debug.trace_vblank_watch_address;
+    ImGui::PushItemWidth(45.0f);
+    if (ImGui::InputScalar("##vblank_watch_address", ImGuiDataType_U16, &address, NULL, NULL, "%04X", ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase))
+        config_debug.trace_vblank_watch_address = address;
+    ImGui::PopItemWidth();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Operation");
+    ImGui::SameLine(input_x);
+    ImGui::PushItemWidth(60.0f);
+    ImGui::Combo("##vblank_watch_operation", &config_debug.trace_vblank_watch_operation, "R\0W\0R/W\0\0");
+    ImGui::PopItemWidth();
+
     ImGui::EndMenu();
 }
 
@@ -637,7 +675,7 @@ static void trace_logger_menu(void)
             "Sprite Budget (Every Line)", "Sprite Budget (Limit Hits)"};
         const u32 vdp_masks[] = {TRACE_VDP_EVENT_REGISTERS, TRACE_VDP_EVENT_INTERRUPTS, TRACE_VDP_EVENT_STATUS, TRACE_VDP_EVENT_SPRITES, TRACE_VDP_EVENT_TIMING, TRACE_VDP_EVENT_VRAM,
             TRACE_VDP_EVENT_SPRITE_BUDGET, TRACE_VDP_EVENT_SPRITE_LIMIT};
-        trace_submenu("VDP", &config_debug.trace_vdp, &config_debug.trace_vdp_events, vdp_names, vdp_masks, 8);
+        trace_submenu("VDP", &config_debug.trace_vdp, &config_debug.trace_vdp_events, vdp_names, vdp_masks, 8, trace_logger_menu_missed_vblank);
         const char* psg_names[] = {"Tone", "Volume", "Noise"};
         const u32 psg_masks[] = {TRACE_PSG_EVENT_TONE, TRACE_PSG_EVENT_VOLUME, TRACE_PSG_EVENT_NOISE};
         trace_submenu("PSG", &config_debug.trace_psg, &config_debug.trace_psg_events, psg_names, psg_masks, 3);
@@ -672,6 +710,17 @@ static void trace_logger_sync_flags(void)
     for (int i = 0; i < TRACE_TYPE_COUNT; i++)
         logger->SetEventFilter((GC_Trace_Type)i, trace_logger_get_config_event_filter((GC_Trace_Type)i));
     logger->SetEnabledFlags(flags);
+    trace_logger_sync_vblank_watch(true);
+}
+
+static void trace_logger_sync_vblank_watch(bool enabled)
+{
+    bool active = enabled && config_debug.trace_vdp &&
+        (((u32)config_debug.trace_vdp_events & TRACE_VDP_EVENT_MISSED_VBLANK) != 0);
+    int operation = config_debug.trace_vblank_watch_operation;
+    bool read = active && ((operation == 0) || (operation == 2));
+    bool write = active && ((operation == 1) || (operation == 2));
+    emu_get_core()->GetProcessor()->SetVBlankWatch(read, write, (u16)config_debug.trace_vblank_watch_address);
 }
 
 static u32 trace_logger_get_config_flags(void)

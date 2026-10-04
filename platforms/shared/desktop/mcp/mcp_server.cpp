@@ -1789,6 +1789,15 @@ json McpServer::BuildToolList()
                     {"type", "string"},
                     {"description", "Output directory for disk capture."}
                 }},
+                {"vblank_watch_address", {
+                    {"type", "string"},
+                    {"description", "CPU address hex watched by vdp.missed_vblank: '7000', '0x7000', or '$7000'. Omit to keep current."}
+                }},
+                {"vblank_watch_operation", {
+                    {"type", "string"},
+                    {"description", "Access that marks a frame as on time for vdp.missed_vblank. Omit to keep current."},
+                    {"enum", json::array({"read", "write", "read_write"})}
+                }},
                 {"filters", {
                     {"type", "array"},
                     {"minItems", 1},
@@ -1797,7 +1806,7 @@ json McpServer::BuildToolList()
                         {"type", "string"},
                         {"enum", json::array({
                             "cpu.instructions", "cpu.interrupts",
-                            "vdp.registers", "vdp.interrupts", "vdp.status", "vdp.sprites", "vdp.sprite_budget", "vdp.sprite_limit",
+                            "vdp.registers", "vdp.interrupts", "vdp.status", "vdp.sprites", "vdp.sprite_budget", "vdp.sprite_limit", "vdp.missed_vblank",
                             "vdp.timing", "vdp.vram",
                             "psg.tone", "psg.volume", "psg.noise",
                             "ay8910.registers", "ay8910.tone", "ay8910.noise_mixer", "ay8910.volume", "ay8910.envelope", "ay8910.io",

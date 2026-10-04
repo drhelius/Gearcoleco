@@ -1328,6 +1328,30 @@ inline std::vector<Processor::GC_Breakpoint>* Processor::GetBreakpoints()
     return &m_breakpoints;
 }
 
+INLINE bool Processor::HasMemoryHooks(bool read) const
+{
+    return read ? m_memory_hooks_read : m_memory_hooks_write;
+}
+
+INLINE void Processor::CheckCpuAddressHooks(u16 address, bool read)
+{
+    if ((read ? m_vblank_watch_read : m_vblank_watch_write) && (address == m_vblank_watch_address))
+        m_vblank_watch_hit = true;
+
+    if (m_breakpoints_enabled)
+        CheckMemoryBreakpoints(GC_BREAKPOINT_TYPE_ROMRAM, address, read);
+}
+
+INLINE u16 Processor::GetVBlankWatchAddress() const
+{
+    return m_vblank_watch_address;
+}
+
+INLINE bool Processor::GetVBlankWatchAccess(bool read) const
+{
+    return read ? m_vblank_watch_read : m_vblank_watch_write;
+}
+
 inline std::stack<Processor::GC_CallStackEntry>* Processor::GetDisassemblerCallStack()
 {
     return &m_disassembler_call_stack;
