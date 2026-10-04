@@ -926,6 +926,28 @@ json McpServer::BuildToolList()
     });
 
     tools.push_back({
+        {"name", "load_bios"},
+        {"title", "Load BIOS"},
+        {"description", "Load ColecoVision OS-7 BIOS (8KB) or ADAM EOS (8KB) / SmartWriter (32KB) firmware and save its path; a running ADAM uses it on next power-on."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", false}, {"openWorldHint", true}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"file_path", {
+                    {"type", "string"},
+                    {"description", "Absolute BIOS or firmware file path."}
+                }},
+                {"type", {
+                    {"type", "string"},
+                    {"enum", json::array({"os7", "eos", "smartwriter"})},
+                    {"description", "Firmware type: os7 (ColecoVision BIOS), eos, or smartwriter. Default os7."}
+                }}
+            }},
+            {"required", json::array({"file_path"})}
+        }}
+    });
+
+    tools.push_back({
         {"name", "load_symbols"},
         {"title", "Load Symbols"},
         {"description", "Load .sym debug symbols (BANK:ADDRESS LABEL); append to symbol table."},
@@ -2581,6 +2603,18 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
     else if (normalizedTool == "load_media")
     {
         return {{"error", "load_media must be handled by the MCP manager"}};
+    }
+    else if (normalizedTool == "load_bios")
+    {
+        std::string file_path = arguments["file_path"];
+        std::string type = arguments.value("type", "os7");
+        if (type == "os7")
+            return m_debugAdapter.LoadBios(file_path, GC_ADAM_FIRMWARE_OS7);
+        if (type == "eos")
+            return m_debugAdapter.LoadBios(file_path, GC_ADAM_FIRMWARE_EOS);
+        if (type == "smartwriter")
+            return m_debugAdapter.LoadBios(file_path, GC_ADAM_FIRMWARE_SMARTWRITER);
+        return {{"error", "Invalid type (must be os7, eos, or smartwriter)"}};
     }
     else if (normalizedTool == "load_symbols")
     {

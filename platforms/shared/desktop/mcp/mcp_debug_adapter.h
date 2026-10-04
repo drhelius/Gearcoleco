@@ -138,6 +138,7 @@ public:
     bool IsMediaLoading() const;
     json FinishLoadMedia(const std::string& file_path);
     json StartAdam();
+    json LoadBios(const std::string& file_path, GC_AdamFirmware firmware);
     json ListSaveStateSlots();
     json SelectSaveStateSlot(int slot);
     json SaveState();

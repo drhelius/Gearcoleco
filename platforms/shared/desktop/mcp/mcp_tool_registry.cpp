@@ -206,7 +206,7 @@ static const McpToolCategory kMcpToolCategories[] =
     {"hardware_video", "Video Hardware", "Inspect TMS9918A VDP registers, display timing, status, sprites, scanlines, and video state."},
     {"hardware_audio", "Audio Hardware", "Inspect ColecoVision PSG and AY-3-8910 audio state, channels, mixer, and sound registers."},
     {"hardware_adam", "ADAM Hardware", "Inspect ADAM firmware, MIOC/control mapping, ADAMnet PCB/DCBs, transfers, timing, and keyboard state."},
-    {"media", "Media", "Start ADAM, load cartridges or ADAM media, list recent media, load symbols, and inspect the active machine and slots."},
+    {"media", "Media", "Start ADAM, load cartridges, ADAM media, or BIOS/firmware files, list recent media, load symbols, and inspect the active machine and slots."},
     {"capture", "Capture", "Capture current screenshots and ColecoVision sprite images or sprite metadata."},
     {"state", "Save States", "List save slots, select a slot, save emulator state, and load emulator state."},
     {"rewind", "Rewind", "Inspect rewind buffer status and seek to rewind snapshots for time-travel debugging."},
@@ -270,7 +270,7 @@ static const char* const kMcpAdamTools[] =
 
 static const char* const kMcpMediaTools[] =
 {
-    "start_adam", "load_media", "get_media_info", "list_adam_media", "list_recent_media",
+    "start_adam", "load_media", "load_bios", "get_media_info", "list_adam_media", "list_recent_media",
     "get_adam_printer_output", "clear_adam_printer_output"
 };
 

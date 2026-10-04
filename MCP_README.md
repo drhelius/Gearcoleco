@@ -393,6 +393,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `list_recent_media` | List the 15 most recent cartridge or ADAM media files opened by Gearcoleco |
 | `start_adam` | Start a firmware-only ADAM SmartWriter session |
 | `load_media` | Load a cartridge or ADAM `.ddp`/`.dsk`/`.zip`/`.m3u` file |
+| `load_bios` | Load a BIOS or firmware file and save its path. Types: `os7` (ColecoVision BIOS, default), `eos`, and `smartwriter` |
 | `list_save_state_slots` | List save state slots |
 | `select_save_state_slot` | Select active slot |
 | `save_state` / `load_state` | Save/load state |

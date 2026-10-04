@@ -27,6 +27,7 @@
 #include "../emu.h"
 #include "../gui.h"
 #include "../gui_actions.h"
+#include "../gui_adam.h"
 #include "../gui_debug_disassembler.h"
 #include "../gui_debug_memory.h"
 #include "../gui_debug_memeditor.h"
@@ -1662,6 +1663,71 @@ json DebugAdapter::StartAdam()
         {"boot_mode", "computer"},
         {"content_name", emu_get_content_name()}
     };
+}
+
+json DebugAdapter::LoadBios(const std::string& file_path, GC_AdamFirmware firmware)
+{
+    json result;
+
+    if (file_path.empty())
+    {
+        result["error"] = "File path is required";
+        Log("[MCP] LoadBios failed: File path is required");
+        return result;
+    }
+
+    if (gui_is_rom_loading() || emu_is_busy())
+    {
+        result["error"] = "Another media load is already in progress";
+        result["error_code"] = "load_in_progress";
+        return result;
+    }
+
+    const Adam::FirmwareMetadata* metadata = Adam::GetFirmwareMetadata(firmware);
+    size_t actual_size = 0;
+    u32 crc = 0;
+    bool valid = emu_inspect_adam_firmware(firmware, file_path.c_str(), &actual_size, &crc);
+
+    if (actual_size == 0)
+    {
+        result["error"] = "Failed to load BIOS file: file not found or empty";
+        Log("[MCP] LoadBios failed: file not found or empty: %s", file_path.c_str());
+        return result;
+    }
+
+    if (!valid)
+    {
+        result["error"] = std::string("Failed to load BIOS file: invalid ") + metadata->role_name + " size";
+        result["expected_size"] = metadata->size;
+        result["actual_size"] = actual_size;
+        Log("[MCP] LoadBios failed: invalid size: %s", file_path.c_str());
+        return result;
+    }
+
+    if (!gui_adam_apply_firmware_path(firmware, file_path.c_str()))
+    {
+        result["error"] = "Failed to load BIOS file";
+        Log("[MCP] LoadBios failed: %s", file_path.c_str());
+        return result;
+    }
+
+    bool known_revision = crc == metadata->crc;
+
+    result["success"] = true;
+    result["file_path"] = file_path;
+    result["role"] = metadata->role_name;
+    result["size"] = actual_size;
+    result["crc32"] = AdamHex(crc, 8);
+    result["known_revision"] = known_revision;
+
+    if (!emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM))
+        result["note"] = "ADAM is running; firmware will be used on next ADAM power-on";
+
+    if (!known_revision)
+        result["warning"] = std::string("CRC does not match the known ") + metadata->role_name + " revision (" +
+            AdamHex(metadata->crc, 8) + ")";
+
+    return result;
 }
 
 json DebugAdapter::LoadSymbols(const std::string& file_path)
