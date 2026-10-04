@@ -1,8 +1,8 @@
-# Geargrafx Shaders
+# Gearcoleco Shaders
 
-Geargrafx desktop shader presets use `.gshader` files. A preset is an INI-style file that describes one or more GLSL fragment shader passes. Presets placed in this `shaders` directory are discovered once when the desktop app starts and appear in the `Video > Shader` combo after `Pixel Perfect`.
+Gearcoleco desktop shader presets use `.gshader` files. A preset is an INI-style file that describes one or more GLSL fragment shader passes. Presets placed in this `shaders` directory are discovered once when the desktop app starts and appear in the `Video > Shader` combo after `Pixel Perfect`.
 
-GLSL files are normal fragment shaders. Geargrafx supplies a fullscreen vertex shader and prepends the correct GLSL version, so shader files should not include a `#version` line.
+GLSL files are normal fragment shaders. Gearcoleco supplies a fullscreen vertex shader and prepends the correct GLSL version, so shader files should not include a `#version` line.
 
 ## Minimal Preset
 
@@ -46,7 +46,7 @@ Step=0.01
 - `AbsoluteWidth`, `AbsoluteHeight`: used with `ScaleType=Absolute`.
 - `FloatFramebuffer`: `true` when the pass output needs signed or high-range intermediate values. Uses a floating-point render target.
 
-The final pass is what Geargrafx displays. Non-final passes render to intermediate textures.
+The final pass is what Gearcoleco displays. Non-final passes render to intermediate textures.
 
 `[Parameters]`
 

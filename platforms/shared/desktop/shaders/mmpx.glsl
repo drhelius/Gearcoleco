@@ -1,6 +1,6 @@
 // Copyright 2020 Morgan McGuire & Mara Gagiu,
 // provided under the Open Source MIT license https://opensource.org/licenses/MIT
-// Ported from mGBA's mmpx.shader/mmpx.fs to Geargrafx GLSL preset uniforms.
+// Ported from mGBA's mmpx.shader/mmpx.fs to Gearcoleco GLSL preset uniforms.
 
 in vec2 vTexCoord;
 out vec4 FragColor;

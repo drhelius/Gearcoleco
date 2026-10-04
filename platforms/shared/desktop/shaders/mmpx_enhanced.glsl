@@ -1,7 +1,7 @@
 // MMPX Enhanced
 // Original MMPX by Morgan McGuire and Mara Gagiu, MIT license.
 // Adapted for Slang by hunterk. Enhanced by CrashGG.
-// Ported from libretro/slang-shaders mmpx-ex.slang to Geargrafx GLSL preset uniforms.
+// Ported from libretro/slang-shaders mmpx-ex.slang to Gearcoleco GLSL preset uniforms.
 
 in vec2 vTexCoord;
 out vec4 FragColor;

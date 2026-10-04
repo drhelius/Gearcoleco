@@ -1,4 +1,4 @@
-; CRT Lottes preset for Geargrafx.
+; CRT Lottes preset for Gearcoleco.
 ; Public domain CRT styled scan-line shader by Timothy Lottes.
 
 [Preset]

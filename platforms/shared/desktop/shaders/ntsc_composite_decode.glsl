@@ -1,4 +1,4 @@
-// Geargrafx NTSC composite decode pass.
+// Gearcoleco NTSC composite decode pass.
 // Horizontally filters the modulated YIQ signal and converts it back to RGB.
 
 in vec2 vTexCoord;

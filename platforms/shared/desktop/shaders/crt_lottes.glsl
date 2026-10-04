@@ -1,5 +1,5 @@
 // Public domain CRT styled scan-line shader by Timothy Lottes.
-// Ported to Geargrafx GLSL preset uniforms.
+// Ported to Gearcoleco GLSL preset uniforms.
 
 in vec2 vTexCoord;
 out vec4 FragColor;

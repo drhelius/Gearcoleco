@@ -1,4 +1,4 @@
-; CRT Lottes + NTSC preset for Geargrafx.
+; CRT Lottes + NTSC preset for Gearcoleco.
 ; Adds a color-only NTSC YIQ pass before the CRT Lottes pass.
 
 [Preset]

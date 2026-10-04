@@ -1,4 +1,4 @@
-; Zfast CRT + Ghosting preset for Geargrafx.
+; Zfast CRT + Ghosting preset for Gearcoleco.
 ; Includes a derivative zfast CRT pass based on zfast CRT by Greg Hogan / SoltanGris42.
 ; Original zfast CRT shader licensed GPL v2 or later.
 

@@ -1,4 +1,4 @@
-// Geargrafx NTSC composite encode pass.
+// Gearcoleco NTSC composite encode pass.
 // Uses standard RGB/YIQ conversion and three-phase NTSC chroma modulation.
 
 in vec2 vTexCoord;

@@ -1,4 +1,4 @@
-// Geargrafx NTSC vertical gaussian and display gamma pass.
+// Gearcoleco NTSC vertical gaussian and display gamma pass.
 
 in vec2 vTexCoord;
 out vec4 FragColor;

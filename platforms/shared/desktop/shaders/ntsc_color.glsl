@@ -1,4 +1,4 @@
-// Geargrafx NTSC color artifact pass.
+// Gearcoleco NTSC color artifact pass.
 // Adds YIQ color response and phase-based rainbow artifacts without composite blur or scanlines.
 
 in vec2 vTexCoord;

@@ -1,5 +1,5 @@
-; CRT Lottes + NTSC + Ghosting preset for Geargrafx.
-; Combines the Geargrafx NTSC color artifact pass, CRT Lottes, and feedback ghosting.
+; CRT Lottes + NTSC + Ghosting preset for Gearcoleco.
+; Combines the Gearcoleco NTSC color artifact pass, CRT Lottes, and feedback ghosting.
 ; Includes the public domain CRT styled scan-line shader by Timothy Lottes.
 
 [Preset]
