@@ -191,6 +191,9 @@ EXTERN int emu_get_sprite_png(int sprite_index, unsigned char** out_buffer);
 EXTERN void emu_start_vgm_recording(const char* file_path);
 EXTERN void emu_stop_vgm_recording(void);
 EXTERN bool emu_is_vgm_recording(void);
+EXTERN bool emu_start_video_recording(const char* file_path);
+EXTERN void emu_stop_video_recording(void);
+EXTERN bool emu_is_video_recording(void);
 EXTERN void update_savestates_data(void);
 
 #undef EMU_IMPORT

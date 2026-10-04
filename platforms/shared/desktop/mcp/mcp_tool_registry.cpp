@@ -207,7 +207,7 @@ static const McpToolCategory kMcpToolCategories[] =
     {"hardware_audio", "Audio Hardware", "Inspect ColecoVision PSG and AY-3-8910 audio state, channels, mixer, and sound registers."},
     {"hardware_adam", "ADAM Hardware", "Inspect ADAM firmware, MIOC/control mapping, ADAMnet PCB/DCBs, transfers, timing, and keyboard state."},
     {"media", "Media", "Start ADAM, load cartridges, ADAM media, or BIOS/firmware files, list recent media, load symbols, and inspect the active machine and slots."},
-    {"capture", "Capture", "Capture current screenshots and ColecoVision sprite images or sprite metadata."},
+    {"capture", "Capture", "Capture current screenshots, record AVI video, and ColecoVision sprite images or sprite metadata."},
     {"state", "Save States", "List save slots, select a slot, save emulator state, and load emulator state."},
     {"rewind", "Rewind", "Inspect rewind buffer status and seek to rewind snapshots for time-travel debugging."},
     {"input", "Input", "Inspect or control ColecoVision controllers and semantic ADAM keyboard input."},
@@ -277,7 +277,7 @@ static const char* const kMcpMediaTools[] =
 
 static const char* const kMcpCaptureTools[] =
 {
-    "get_screenshot", "list_sprites", "get_sprite_image"
+    "get_screenshot", "start_video_recording", "stop_video_recording", "list_sprites", "get_sprite_image"
 };
 
 static const char* const kMcpStateTools[] =
@@ -719,6 +719,8 @@ std::string McpToolRegistry::AliasesForTool(const std::string& tool_name) const
         aliases += " log logger events cpu irq debug output";
     if (StringContains(name, "profiler"))
         aliases += " performance cycles timing hotspot function calls frame";
+    if (StringContains(name, "video_recording"))
+        aliases += " record movie clip capture avi mjpeg gameplay";
     if (StringContains(name, "controller"))
         aliases += " input joypad gamepad button macro tap press release";
     if (StringContains(name, "state") || StringContains(name, "rewind"))
