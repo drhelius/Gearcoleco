@@ -30,7 +30,7 @@
 #include "application.h"
 #include "gui_menus.h"
 #include "gui_filedialogs.h"
-#include "gui_debug_constants.h"
+#include "gui_colors.h"
 #include "gui_debug_adam.h"
 #include "gui_debug.h"
 #include "events.h"

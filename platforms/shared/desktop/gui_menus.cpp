@@ -25,6 +25,7 @@
 #include "gui_filedialogs.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
+#include "gui_colors.h"
 #include "gui_debug.h"
 #include "gui_debug_disassembler.h"
 #include "gui_debug_memory.h"
@@ -60,8 +61,8 @@ static bool load_debug_settings = false;
 static bool open_adam_cartridge = false;
 static char checked_recent_roms[config_max_recent_roms][4096];
 static bool recent_is_cartridge[config_max_recent_roms];
-static const ImVec4 service_mcp_http_color(0.10f, 0.90f, 0.10f, 1.0f);
-static const ImVec4 service_mcp_stdio_color(0.90f, 0.70f, 0.10f, 1.0f);
+static const GuiColor& service_mcp_http_color = green;
+static const GuiColor& service_mcp_stdio_color = amber;
 static ShaderPresetInfo shader_presets[SHADER_PRESET_MAX_DISCOVERED];
 static int shader_preset_count = 0;
 
@@ -1068,7 +1069,7 @@ static void menu_shader(void)
     else if (ogl_shader_chain_get_last_error()[0] != '\0')
     {
         ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "%s", ogl_shader_chain_get_last_error());
+        ImGui::TextColored(red, "%s", ogl_shader_chain_get_last_error());
     }
 
     ImGui::EndMenu();
@@ -1596,7 +1597,7 @@ static void menu_debug(void)
                 ImGui::TextColored(service_mcp_http_color, "Listening on %s:%d",
                     emu_mcp_get_http_address(), emu_mcp_get_http_port());
             else
-                ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "Stopped");
+                ImGui::TextColored(red, "Stopped");
 
             ImGui::Separator();
 
@@ -2020,13 +2021,13 @@ static void draw_savestate_slot_info(int slot)
         {
             if (emu_savestates[slot].version == GC_SAVESTATE_VERSION_V1)
             {
-                ImGui::TextColored(ImVec4(1.0f, 0.80f, 0.0f, 1.0f), "This save state is from an older version");
+                ImGui::TextColored(yellow, "This save state is from an older version");
             }
             else
             {
-                ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "This save state is from an older version and will not work");
+                ImGui::TextColored(red, "This save state is from an older version and will not work");
                 if (emu_savestates[slot].emu_build[0] != 0)
-                    ImGui::TextColored(ImVec4(0.98f, 0.15f, 0.45f, 1.0f), "Use %s - %s", GEARCOLECO_TITLE, emu_savestates[slot].emu_build);
+                    ImGui::TextColored(red, "Use %s - %s", GEARCOLECO_TITLE, emu_savestates[slot].emu_build);
             }
             ImGui::Separator();
         }
@@ -2045,6 +2046,6 @@ static void draw_savestate_slot_info(int slot)
     }
     else
     {
-        ImGui::TextColored(ImVec4(0.50f, 0.50f, 0.50f, 1.0f), "Slot %d is empty", slot + 1);
+        ImGui::TextColored(gray, "Slot %d is empty", slot + 1);
     }
 }

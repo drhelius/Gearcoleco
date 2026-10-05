@@ -184,7 +184,7 @@ void gui_debug_window_f18a_nametables(void)
     if ((selected_tile_x >= 0) && (selected_tile_y >= 0))
     {
         float time = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-        ImVec4 pulse_color = gui_debug_lerp_color(red, white, time);
+        ImVec4 pulse_color = gui_lerp_color(red, white, time);
         draw_list->AddRect(
             ImVec2(position.x + (selected_tile_x * spacing_x),
                 position.y + (selected_tile_y * spacing_y)),
@@ -356,7 +356,7 @@ void gui_debug_window_f18a_patterns(void)
         int tile_x = selected_pattern & 31;
         int tile_y = selected_pattern >> 5;
         float time = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-        ImVec4 pulse_color = gui_debug_lerp_color(red, white, time);
+        ImVec4 pulse_color = gui_lerp_color(red, white, time);
         draw_list->AddRect(
             ImVec2(position.x + (tile_x * spacing), position.y + (tile_y * spacing)),
             ImVec2(position.x + ((tile_x + 1) * spacing),
@@ -486,7 +486,7 @@ void gui_debug_window_f18a_sprites(void)
         if (selected_sprite == s)
         {
             float time = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-            ImVec4 pulse_color = gui_debug_lerp_color(red, white, time);
+            ImVec4 pulse_color = gui_lerp_color(red, white, time);
             ImGui::GetWindowDrawList()->AddRect(position,
                 ImVec2(position.x + image_size, position.y + image_size),
                 ImColor(pulse_color), 2.0f,
@@ -547,7 +547,7 @@ void gui_debug_window_f18a_sprites(void)
         if ((rect_min_x < rect_max_x) && (rect_min_y < rect_max_y))
         {
             float time = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-            ImVec4 pulse_color = gui_debug_lerp_color(red, white, time);
+            ImVec4 pulse_color = gui_lerp_color(red, white, time);
             ImGui::GetWindowDrawList()->AddRect(ImVec2(rect_min_x, rect_min_y),
                 ImVec2(rect_max_x, rect_max_y), ImColor(pulse_color), 2.0f,
                 ImDrawFlags_RoundCornersAll, 2.0f);

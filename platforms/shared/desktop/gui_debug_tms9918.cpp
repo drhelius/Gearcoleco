@@ -160,7 +160,7 @@ void gui_debug_window_tms9918a_nametable(void)
     if (selected_bg_tile_x >= 0 && selected_bg_tile_y >= 0)
     {
         float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-        ImVec4 pulse_color = gui_debug_lerp_color(red, white, t);
+        ImVec4 pulse_color = gui_lerp_color(red, white, t);
         draw_list->AddRect(ImVec2(p.x + (selected_bg_tile_x * spacing_h), p.y + (selected_bg_tile_y * spacing_v)), ImVec2(p.x + ((selected_bg_tile_x + 1) * spacing_h), p.y + ((selected_bg_tile_y + 1) * spacing_v)), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
     }
 
@@ -331,7 +331,7 @@ void gui_debug_window_tms9918a_patterns(void)
         {
             int selected_local_y = selected_tile_y - section_first_line;
             float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-            ImVec4 pulse_color = gui_debug_lerp_color(red, white, t);
+            ImVec4 pulse_color = gui_lerp_color(red, white, t);
             draw_list->AddRect(ImVec2(p_tiles.x + (selected_tile_x * spacing), p_tiles.y + (selected_local_y * spacing)), ImVec2(p_tiles.x + ((selected_tile_x + 1) * spacing), p_tiles.y + ((selected_local_y + 1) * spacing)), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
         }
 
@@ -473,7 +473,7 @@ void gui_debug_window_tms9918a_sprites(void)
         if (selected_sprite == s)
         {
             float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-            ImVec4 pulse_color = gui_debug_lerp_color(red, white, t);
+            ImVec4 pulse_color = gui_lerp_color(red, white, t);
             ImDrawList* dl = ImGui::GetWindowDrawList();
             dl->AddRect(ImVec2(spr_pos[s].x, spr_pos[s].y), ImVec2(spr_pos[s].x + spr_width, spr_pos[s].y + spr_height), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 3.0f);
         }
@@ -548,7 +548,7 @@ void gui_debug_window_tms9918a_sprites(void)
         recty_max = fminf(fmaxf(recty_max, p_screen.y), p_screen.y + (runtime.screen_height * screen_scale));
 
         float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
-        ImVec4 pulse_color = gui_debug_lerp_color(red, white, t);
+        ImVec4 pulse_color = gui_lerp_color(red, white, t);
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
 

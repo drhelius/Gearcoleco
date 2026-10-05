@@ -126,6 +126,7 @@
     <ClInclude Include="..\shared\desktop\gui_adam.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_adam.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_ay8910.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\gui_colors.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_constants.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_disassembler.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_memeditor.h"><Filter>desktop</Filter></ClInclude>
