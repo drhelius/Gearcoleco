@@ -40,6 +40,7 @@ struct KeyState
 static KeyState input_last_state[GC_MAX_GAMEPADS][20] = { };
 static bool input_initialized = false;
 static bool roller_mouse_buttons[2] = { };
+static float spinner_remainder[2] = { };
 static bool adam_scancode_down[SDL_SCANCODE_COUNT] = { };
 static bool adam_controller_keys[SDL_SCANCODE_COUNT] = { };
 static GC_AdamKey adam_pressed_keys[SDL_SCANCODE_COUNT];
@@ -55,6 +56,7 @@ static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode);
 static void send_adam_key(SDL_Scancode scancode, bool pressed);
 static bool adam_keyboard_captures_event(const SDL_Event* event);
 static bool adam_controller_uses_key(SDL_Scancode scancode);
+static int spinner_movement(int spinner, float movement);
 
 bool events_shortcuts(const SDL_Event* event)
 {
@@ -188,7 +190,7 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
                     {
                         if (event->motion.xrel != 0.0f)
                         {
-                            int movement = (int)(-(event->motion.xrel) * senf);
+                            int movement = spinner_movement(0, -(event->motion.xrel) * senf);
                             emu_spinner1(movement);
                         }
                         break;
@@ -197,7 +199,7 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
                     {
                         if (event->motion.xrel != 0.0f)
                         {
-                            int movement = (int)(event->motion.xrel * senf);
+                            int movement = spinner_movement(0, event->motion.xrel * senf);
                             emu_spinner1(movement);
                         }
                         break;
@@ -206,12 +208,12 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
                     {
                         if (event->motion.xrel != 0.0f)
                         {
-                            int movement = (int)(event->motion.xrel * senf);
+                            int movement = spinner_movement(0, event->motion.xrel * senf);
                             emu_spinner1(movement);
                         }
                         if (event->motion.yrel != 0.0f)
                         {
-                            int movement = (int)(event->motion.yrel * senf);
+                            int movement = spinner_movement(1, event->motion.yrel * senf);
                             emu_spinner2(movement);
                         }
                         break;
@@ -231,7 +233,7 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
                 if (sen < 0)
                     sen = 0;
                 float senf = (float)(sen / 2.0f) + 1.0f;
-                int movement = (int)(event->wheel.y * senf);
+                int movement = spinner_movement(1, event->wheel.y * senf);
                 emu_spinner2(movement);
             }
             break;
@@ -696,4 +698,13 @@ static void send_adam_key(SDL_Scancode scancode, bool pressed)
         if ((adam_key_references[key] > 0) && (--adam_key_references[key] == 0))
             emu_adam_key_released(key);
     }
+}
+
+// Fractions carry over so slow movements are not lost
+static int spinner_movement(int spinner, float movement)
+{
+    spinner_remainder[spinner] += movement;
+    int ret = (int)spinner_remainder[spinner];
+    spinner_remainder[spinner] -= (float)ret;
+    return ret;
 }

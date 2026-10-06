@@ -138,6 +138,7 @@ static unsigned input_device[MAX_PADS] = {
 };
 static bool mouse[2];
 static bool mousepre[2];
+static float spinner_remainder[2];
 static bool adam_retro_key_down[RETROK_LAST];
 static int adam_key_references[GC_ADAM_KEY_COUNT];
 
@@ -188,6 +189,7 @@ static bool read_file(const char* path, u8** data, size_t* size);
 static bool read_game_info(const struct retro_game_info* info, u8** data, size_t* size);
 static bool read_adam_game_info(const struct retro_game_info* info, u8** data, size_t* size, GC_AdamMediaType* type);
 static bool ends_with_no_case(const char* text, const char* suffix);
+static int spinner_movement(int spinner, float movement);
 static bool join_path(const char* directory, const char* name, char* path, size_t size);
 static u32 calculate_crc32(const u8* data, size_t size);
 static GC_AdamMediaType adam_media_type_from_path(const char* path);
@@ -365,6 +367,7 @@ static void clear_input_state(void)
 
         mouse[i] = false;
         mousepre[i] = false;
+        spinner_remainder[i] = 0.0f;
     }
 }
 
@@ -1941,21 +1944,21 @@ static void update_input(void)
             // SAC
             case (1):
             {
-                core->Spinner1((int)-relx);
+                core->Spinner1(spinner_movement(0, -relx));
                 break;
             }
             // Wheel
             case (2):
             {
-                core->Spinner1((int)relx);
+                core->Spinner1(spinner_movement(0, relx));
                 break;
             }
             // Roller
             case (3):
             {
                 float rely = (float)(mouse_y) * senf;
-                core->Spinner1((int)relx);
-                core->Spinner2((int)rely);
+                core->Spinner1(spinner_movement(0, relx));
+                core->Spinner2(spinner_movement(1, rely));
                 break;
             }
             default:
@@ -1968,6 +1971,14 @@ static void update_input(void)
         if (mouse[1])
             core->KeyPressed(Controller_1, Key_Right_Button);
     }
+}
+
+static int spinner_movement(int spinner, float movement)
+{
+    spinner_remainder[spinner] += movement;
+    int ret = (int)spinner_remainder[spinner];
+    spinner_remainder[spinner] -= (float)ret;
+    return ret;
 }
 
 static void check_variables(void)
