@@ -66,11 +66,6 @@ void F18AGPU::Load(u16 pc, bool run)
     m_cycle_balance = 0;
 }
 
-void F18AGPU::Stop()
-{
-    m_running = false;
-}
-
 void F18AGPU::RunCycles(int cycles, F18A* video)
 {
     if (!m_running || (cycles <= 0))
@@ -816,11 +811,6 @@ u16 F18AGPU::GetPC() const
 u16 F18AGPU::GetStatus() const
 {
     return m_status;
-}
-
-u16* F18AGPU::GetRegisters()
-{
-    return m_registers;
 }
 
 u8 F18AGPU::GetUserStatus() const

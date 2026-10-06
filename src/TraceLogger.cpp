@@ -101,23 +101,6 @@ void TraceLogger::SetEventFilter(GC_Trace_Type type, u32 filter)
         m_event_filters[type] = filter;
 }
 
-u32 TraceLogger::GetEnabledFlags() const
-{
-    return m_enabled_flags;
-}
-
-u32 TraceLogger::GetEventFilter(GC_Trace_Type type) const
-{
-    if (type < TRACE_TYPE_COUNT)
-        return m_event_filters[type];
-    return 0;
-}
-
-const GC_Trace_Entry* TraceLogger::GetBuffer() const
-{
-    return m_buffer;
-}
-
 u32 TraceLogger::GetCount() const
 {
     return m_count;
@@ -126,11 +109,6 @@ u32 TraceLogger::GetCount() const
 u32 TraceLogger::GetCapacity() const
 {
     return m_capacity;
-}
-
-u32 TraceLogger::GetPosition() const
-{
-    return m_position;
 }
 
 u64 TraceLogger::GetTotalLogged() const

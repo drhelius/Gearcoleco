@@ -97,8 +97,6 @@ typedef int32_t s32;
 typedef uint64_t u64;
 typedef int64_t s64;
 
-typedef void (*RamChangedCallback) (void);
-
 #define FLAG_CARRY 0x01
 #define FLAG_NEGATIVE 0x02
 #define FLAG_PARITY 0x04
@@ -134,7 +132,6 @@ typedef void (*RamChangedCallback) (void);
 
 #define GC_MASTER_CLOCK_PAL 3579545
 #define GC_LINES_PER_FRAME_PAL 313
-#define GC_FRAMES_PER_SECOND_PAL 50
 
 #define GC_AUDIO_SAMPLE_RATE 44100
 #define GC_AUDIO_BUFFER_SIZE 2048
@@ -147,7 +144,6 @@ typedef void (*RamChangedCallback) (void);
 #define GC_SAVESTATE_VERSION_V1 1
 #define GC_LIBRETRO_SAVESTATE_SIZE_COLECOVISION 0x3A000
 #define GC_LIBRETRO_SAVESTATE_SIZE_ADAM 0x180000
-#define GC_LIBRETRO_SAVESTATE_SIZE GC_LIBRETRO_SAVESTATE_SIZE_ADAM
 
 struct GC_SaveState_Header
 {
@@ -402,7 +398,6 @@ struct GC_AdamDebugMediaState
 struct GC_AdamDebugState
 {
     bool valid;
-    int machine;
     int content_type;
     int boot_mode;
     u64 master_clock_cycles;
@@ -500,7 +495,6 @@ enum GC_Disassembler_Syntax
 
 struct GC_Disassembler_Record
 {
-    u32 address;
     u8 bank;
     char name[64];
     char bytes[25];

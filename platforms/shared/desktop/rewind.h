@@ -28,7 +28,6 @@
     #define EXTERN extern
 #endif
 
-#define REWIND_MAX_STATE_SIZE       (256 * 1024)
 #define REWIND_MAX_SNAPSHOTS        600
 
 EXTERN bool rewind_init(void);

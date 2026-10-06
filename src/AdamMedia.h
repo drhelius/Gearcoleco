@@ -50,7 +50,6 @@ public:
     u32 GetBaseCRC() const;
     u32 GetGeneration() const;
     u32 GetPosition() const;
-    const u8* GetData() const;
     u8* GetData();
     void SaveState(std::ostream& stream) const;
     bool LoadState(std::istream& stream, bool load_image = true);

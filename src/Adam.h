@@ -46,7 +46,6 @@ public:
         const char* role_name;
         int size;
         u32 crc;
-        const char* sha1;
         const char* aliases[4];
     };
 
@@ -76,9 +75,7 @@ public:
     GC_AdamMediaError InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
     void EjectMedia(GC_AdamMediaSlot slot);
     AdamMedia* GetMedia(GC_AdamMediaSlot slot);
-    const AdamMedia* GetMedia(GC_AdamMediaSlot slot) const;
     AdamNet* GetAdamNet();
-    const AdamNet* GetAdamNet() const;
     void SaveState(std::ostream& stream) const;
     bool LoadState(std::istream& stream, int expected_boot_mode = -1);
     virtual u8 In(u8 port);
@@ -92,16 +89,10 @@ public:
     u8 ReadPhysicalRAM(u16 address) const;
     void WritePhysicalRAM(u16 address, u8 value);
     u8* GetMainRAM();
-    const u8* GetOS7ROM() const;
-    const u8* GetEOSROM() const;
-    const u8* GetSmartWriterROM() const;
     u32 GetFirmwareCRC(GC_AdamFirmware firmware) const;
     u8 GetMIOC() const;
     u8 GetControl() const;
-    GC_AdamBootMode GetBootMode() const;
-    bool HandlesPort(u8 port) const;
     MemorySource GetMemorySource(u16 address) const;
-    u32 GetMemorySourceOffset(u16 address) const;
     u32 GetMemoryMapGeneration() const;
     void GetDebugState(GC_AdamDebugState* state) const;
     static const FirmwareMetadata* GetFirmwareMetadata(GC_AdamFirmware firmware);

@@ -113,9 +113,6 @@ const u8 kPalette_888_tms9918[48] =
     241
 };
 
-const u8 k2bitTo8bit[4] = {0, 85, 170, 255};
-const u8 k2bitTo5bit[4] = {0, 10, 21, 31};
-const u8 k2bitTo6bit[4] = {0, 21, 42, 63};
 const u8 k4bitTo8bit[16] =
 {
     0, 17, 34, 51, 68, 86, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255

@@ -77,7 +77,6 @@ public:
     GC_Machine GetMachine() const;
     GC_ContentType GetContentType() const;
     GC_AdamBootMode GetAdamBootMode() const;
-    void SaveDisassembledROM();
     bool GetRuntimeInfo(GC_RuntimeInfo& runtime_info);
     void KeyPressed(GC_Controllers controller, GC_Keys key);
     void KeyReleased(GC_Controllers controller, GC_Keys key);
@@ -88,7 +87,6 @@ public:
     void ResetAdamComputer();
     void ResetROM(Cartridge::ForceConfiguration* config = NULL);
     void ResetROMPreservingRAM(Cartridge::ForceConfiguration* config = NULL);
-    void ResetSound();
     void SaveRam();
     void SaveRam(const char* szPath, bool fullPath = false);
     void LoadRam();

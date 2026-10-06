@@ -51,7 +51,6 @@ struct AdamFirmwareInspection
     char path[4096];
     size_t actual_size;
     u32 crc;
-    bool readable;
     bool valid;
 };
 
@@ -87,59 +86,6 @@ static void draw_missing_firmware(void);
 static void draw_quit_confirmation(void);
 static void reset_firmware_paths(void);
 static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* path);
-
-void gui_adam_prepare_window(float width, float height)
-{
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    float available_width = viewport->WorkSize.x > 32.0f ? viewport->WorkSize.x - 32.0f : 1.0f;
-    float available_height = viewport->WorkSize.y > 32.0f ? viewport->WorkSize.y - 32.0f : 1.0f;
-
-    if (width > available_width)
-        width = available_width;
-
-    if (height > available_height)
-        height = available_height;
-
-    ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + 16.0f, viewport->WorkPos.y + 16.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_FirstUseEver);
-
-    if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
-    {
-        ImGui::SetNextWindowSizeConstraints(ImVec2(1.0f, 1.0f),
-            ImVec2(available_width, available_height));
-    }
-}
-
-void gui_adam_keep_window_visible(void)
-{
-    if (ImGui::IsWindowDocked() || (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
-        return;
-
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 position = ImGui::GetWindowPos();
-    ImVec2 original_position = position;
-    ImVec2 size = ImGui::GetWindowSize();
-
-    float x = viewport->WorkPos.x + 16.0f;
-    float y = viewport->WorkPos.y + 16.0f;
-    float max_x = viewport->WorkPos.x + viewport->WorkSize.x - size.x - 16.0f;
-    float max_y = viewport->WorkPos.y + viewport->WorkSize.y - size.y - 16.0f;
-
-    if (position.x < x)
-        position.x = x;
-
-    if (position.y < y)
-        position.y = y;
-
-    if (position.x > max_x && max_x >= x)
-        position.x = max_x;
-
-    if (position.y > max_y && max_y >= y)
-        position.y = max_y;
-
-    if ((position.x != original_position.x) || (position.y != original_position.y))
-        ImGui::SetWindowPos(position);
-}
 
 void gui_adam_open_missing_firmware(bool adam)
 {
@@ -282,7 +228,6 @@ static void refresh_firmware_inspection(GC_AdamFirmware firmware, const char* pa
     inspection->actual_size = 0;
     inspection->crc = 0;
     inspection->valid = emu_inspect_adam_firmware(firmware, path, &inspection->actual_size, &inspection->crc);
-    inspection->readable = inspection->actual_size > 0;
 }
 
 bool gui_adam_apply_firmware_path(GC_AdamFirmware firmware, const char* path)

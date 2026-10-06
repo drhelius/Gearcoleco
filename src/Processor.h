@@ -97,13 +97,11 @@ public:
     void RequestINT(bool assert);
     void RequestNMI();
     void SetIOPOrts(IOPorts* pIOPorts);
-    IOPorts* GetIOPOrts();
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream, int version);
     void ResetDebuggerExecutionState();
     ProcessorState* GetState();
     void SetDisassemblerSyntax(GC_Disassembler_Syntax syntax);
-    GC_Disassembler_Syntax GetDisassemblerSyntax() const;
     void DisassembleNextOPCode();
     void PopulateDisassemblerRecord(GC_Disassembler_Record* record, u16 address);
     void InvalidateOverlappingRecords(u16 address, u8 opcode_size);
@@ -113,9 +111,7 @@ public:
     bool BreakpointHit();
     bool MemoryBreakpointHit();
     bool RunToBreakpointHit();
-    void RequestMemoryBreakpoint();
     bool Halted();
-    bool DuringInputOpcode();
     void EnableBreakpoints(bool enable, bool irqs);
     void ResetBreakpoints();
     bool AddBreakpoint(int type, char* text, bool read, bool write, bool execute);
@@ -225,7 +221,6 @@ private:
     void StackPop(SixteenBitRegister* reg);
     void SetInterruptMode(int mode);
     void IncreaseR();
-    void UpdateProActionReplay();
     void InvalidOPCode();
     void UndocumentedOPCode();
     void CheckBreakpoints();

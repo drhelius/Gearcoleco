@@ -60,7 +60,6 @@ EXTERN void application_trigger_fit_to_content(int width, int height);
 EXTERN void application_refocus_window(void);
 EXTERN void application_update_title_with_rom(const char* rom);
 EXTERN void application_reset_title(void);
-EXTERN void application_input_pump(void);
 EXTERN bool application_check_single_instance(const char* rom_file, const char* symbol_file);
 
 #undef APPLICATION_IMPORT

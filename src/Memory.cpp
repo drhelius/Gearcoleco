@@ -538,7 +538,6 @@ GC_Disassembler_Record* Memory::GetOrCreateDisassemblerRecord(GC_Disassembler_Re
     if (!IsValidPointer(record))
     {
         record = new GC_Disassembler_Record();
-        record->address = offset;
         record->bank = (u8)bank;
         record->segment[0] = 0;
         record->name[0] = 0;

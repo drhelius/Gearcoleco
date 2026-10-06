@@ -19,12 +19,11 @@
 
 #include "ColecoVisionIOPorts.h"
 
-ColecoVisionIOPorts::ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory, Processor* pProcessor)
+ColecoVisionIOPorts::ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Memory* pMemory, Processor* pProcessor)
 {
     m_pAudio = pAudio;
     m_pVideo = pVideo;
     m_pInput = pInput;
-    m_pCartridge = pCartridge;
     m_pMemory = pMemory;
     m_pProcessor = pProcessor;
     m_pTraceLogger = NULL;
@@ -188,7 +187,6 @@ void ColecoVisionIOPorts::LogAY8910WriteEvent(u8 raw)
     else if (reg <= 7)
     {
         e.ay8910.period = ay->GetNoisePeriod();
-        e.ay8910.mixer = registers[7];
     }
     else if (reg <= 10)
     {

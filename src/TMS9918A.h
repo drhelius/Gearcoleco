@@ -22,14 +22,13 @@
 
 #include "Video.h"
 
-class Memory;
 class Processor;
 class TraceLogger;
 
 class TMS9918A : public Video
 {
 public:
-    TMS9918A(Memory* pMemory, Processor* pProcessor);
+    TMS9918A(Processor* pProcessor);
     ~TMS9918A();
     void Init();
     void Reset(bool bPAL);
@@ -79,7 +78,6 @@ private:
     void InitPalettes();
 
 private:
-    Memory* m_pMemory;
     Processor* m_pProcessor;
     TraceLogger* m_pTraceLogger;
     u8* m_pInfoBuffer;

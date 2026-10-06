@@ -18,13 +18,11 @@
  */
 
 #include "F18A.h"
-#include "Memory.h"
 #include "Processor.h"
 #include "TraceLogger.h"
 
-F18A::F18A(Memory* pMemory, Processor* pProcessor)
+F18A::F18A(Processor* pProcessor)
 {
-    m_pMemory = pMemory;
     m_pProcessor = pProcessor;
     InitPointer(m_pTraceLogger);
     InitPointer(m_pInfoBuffer);

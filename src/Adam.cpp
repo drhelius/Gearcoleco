@@ -27,16 +27,14 @@ static const Adam::FirmwareMetadata kAdamFirmwareMetadata[GC_ADAM_FIRMWARE_COUNT
 {
     {
         "OS-7", Adam::kOS7ROMSize, 0x3AA93EF3,
-        "45bedc4cbdeac66c7df59e9e599195c778d86a92",
         { "colecovision.rom", "coleco.rom", "os7.u2", NULL }
     },
     {
-        "EOS", Adam::kEOSROMSize, 0x05A37A34, NULL,
+        "EOS", Adam::kEOSROMSize, 0x05A37A34,
         { "eos.rom", NULL, NULL, NULL }
     },
     {
         "SmartWriter", Adam::kSmartWriterROMSize, 0x58D86A2A,
-        "d4aec4efe1431e56fe52d83baf9118542c525255",
         { "writer.rom", "wp.rom", "wp_r80.rom", NULL }
     }
 };
@@ -311,17 +309,7 @@ AdamMedia* Adam::GetMedia(GC_AdamMediaSlot slot)
     return m_pAdamNet->GetMedia(slot);
 }
 
-const AdamMedia* Adam::GetMedia(GC_AdamMediaSlot slot) const
-{
-    return m_pAdamNet->GetMedia(slot);
-}
-
 AdamNet* Adam::GetAdamNet()
-{
-    return m_pAdamNet;
-}
-
-const AdamNet* Adam::GetAdamNet() const
 {
     return m_pAdamNet;
 }
@@ -383,12 +371,6 @@ bool Adam::LoadState(std::istream& stream, int expected_boot_mode)
     m_Control = control;
     SetMemoryMap();
     return true;
-}
-
-bool Adam::HandlesPort(u8 port) const
-{
-    u8 family = port & 0xE0;
-    return (family == 0x20) || (family == 0x60);
 }
 
 u8 Adam::In(u8 port)
@@ -644,21 +626,6 @@ u8* Adam::GetMainRAM()
     return m_pMainRAM;
 }
 
-const u8* Adam::GetOS7ROM() const
-{
-    return m_pOS7ROM;
-}
-
-const u8* Adam::GetEOSROM() const
-{
-    return m_pEOSROM;
-}
-
-const u8* Adam::GetSmartWriterROM() const
-{
-    return m_pSmartWriterROM;
-}
-
 u32 Adam::GetFirmwareCRC(GC_AdamFirmware firmware) const
 {
     if ((firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
@@ -677,20 +644,9 @@ u8 Adam::GetControl() const
     return m_Control;
 }
 
-GC_AdamBootMode Adam::GetBootMode() const
-{
-    return m_BootMode;
-}
-
 Adam::MemorySource Adam::GetMemorySource(u16 address) const
 {
     return m_Pages[address >> 13].source;
-}
-
-u32 Adam::GetMemorySourceOffset(u16 address) const
-{
-    const MemoryPage* page = &m_Pages[address >> 13];
-    return page->source_offset + (address & 0x1FFF);
 }
 
 u32 Adam::GetMemoryMapGeneration() const
@@ -713,7 +669,6 @@ void Adam::GetDebugState(GC_AdamDebugState* state) const
 
     memset(state, 0, sizeof(*state));
     state->valid = m_Enabled;
-    state->machine = GC_MACHINE_ADAM;
     state->boot_mode = m_BootMode;
     state->mioc = m_MIOC;
     state->control = m_Control;

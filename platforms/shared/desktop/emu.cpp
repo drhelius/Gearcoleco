@@ -48,7 +48,6 @@
 static GearcolecoCore* gearcoleco;
 static McpManager* mcp_manager;
 static s16* audio_buffer;
-static bool audio_enabled;
 static int emu_debug_halt_step_frames_pending;
 static const int kDebugHaltStepMaxFrames = 4;
 static Uint64 rewind_last_counter = 0;
@@ -120,7 +119,6 @@ bool emu_init(void)
     rewind_init();
     runahead_init();
 
-    audio_enabled = true;
     emu_audio_sync = true;
     emu_debug_disable_breakpoints = false;
     emu_debug_irq_breakpoints = false;
@@ -129,7 +127,6 @@ bool emu_init(void)
     emu_debug_pc_changed = false;
     emu_debug_step_frames_pending = 0;
     emu_frame_counter = 0;
-    emu_debug_tile_palette = 0;
     emu_debug_tile_color_mode = true;
     emu_debug_f18a_layer = 0;
     emu_debug_f18a_pattern_palette = 0;
@@ -480,22 +477,6 @@ static void set_debug_identity(GC_Machine machine, const char* content_name)
     snprintf(loaded_debug_identity, sizeof(loaded_debug_identity), "%s - %s", machine_name, name);
 }
 
-void emu_render_current_frame(void)
-{
-    if (emu_is_empty())
-        return;
-
-    GC_RuntimeInfo runtime;
-    gearcoleco->GetRuntimeInfo(runtime);
-    int size = runtime.screen_width * runtime.screen_height;
-    u16* src_buffer = gearcoleco->GetVideo()->GetFrameBuffer();
-
-    gearcoleco->GetVideo()->Render32bit(src_buffer, emu_frame_buffer, GC_PIXEL_RGBA8888, size, true);
-
-    if (config_debug.debug)
-        update_debug();
-}
-
 void emu_reset_rewind_timing(void)
 {
     reset_rewind_timing();
@@ -762,14 +743,8 @@ void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer, bool sa
     runahead_reset();
 }
 
-void emu_dissasemble_rom(void)
-{
-    gearcoleco->SaveDisassembledROM();
-}
-
 void emu_audio_mute(bool mute)
 {
-    audio_enabled = !mute;
     gearcoleco->GetAudio()->Mute(mute);
 }
 
@@ -782,11 +757,6 @@ void emu_audio_reset(void)
 {
     sound_queue_stop();
     sound_queue_start(GC_AUDIO_SAMPLE_RATE, 2, GC_AUDIO_QUEUE_SIZE, config_audio.buffer_count);
-}
-
-bool emu_is_audio_enabled(void)
-{
-    return audio_enabled;
 }
 
 bool emu_is_audio_open(void)
@@ -1055,11 +1025,6 @@ void emu_debug_continue(void)
     gearcoleco->Pause(false);
     emu_debug_halt_step_frames_pending = 0;
     emu_debug_command = Debug_Command_Continue;
-}
-
-bool emu_debug_halt_step_active(void)
-{
-    return emu_debug_halt_step_frames_pending > 0;
 }
 
 void emu_set_disassembler_syntax(int syntax)
@@ -1397,9 +1362,6 @@ static void get_video_recording_size(const GC_RuntimeInfo& runtime, int* width, 
 
 static void save_ram(void)
 {
-#ifdef DEBUG_GEARCOLECO
-    emu_dissasemble_rom();
-#endif
     const char* dir = get_configurated_dir(config_emulator.savefiles_dir_option, config_emulator.savefiles_path.c_str());
     gearcoleco->SaveRam(dir);
 }

@@ -67,7 +67,6 @@ static void apply_window_settings(void);
 static void save_window_size(void);
 
 #if defined(__APPLE__)
-static void* macos_fullscreen_observer = NULL;
 static void* macos_nswindow = NULL;
 extern "C" void* macos_install_fullscreen_observer(void* nswindow, void(*enter_cb)(), void(*exit_cb)());
 extern "C" void macos_set_native_fullscreen(void* nswindow, bool enter);
@@ -309,11 +308,6 @@ void application_reset_title(void)
         SDL_SetWindowTitle(application_sdl_window, WINDOW_TITLE);
 }
 
-void application_input_pump(void)
-{
-    events_emu();
-}
-
 bool application_check_single_instance(const char* rom_file, const char* symbol_file)
 {
     if (!config_debug.single_instance)
@@ -423,7 +417,7 @@ static bool sdl_init(void)
     if (nswindow)
     {
         macos_nswindow = nswindow;
-        macos_fullscreen_observer = macos_install_fullscreen_observer(nswindow, on_enter_fullscreen, on_exit_fullscreen);
+        macos_install_fullscreen_observer(nswindow, on_enter_fullscreen, on_exit_fullscreen);
     }
 #endif
 
@@ -601,10 +595,7 @@ static void sdl_events_app(const SDL_Event* event)
                 if (config_video.sync_mode != config_VideoSync_Disabled && !display_is_vsync_forced_off())
                     display_recreate_gl_context();
                 else
-                {
-                    display_request_gl_context_recreate();
                     display_update_frame_pacing();
-                }
             }
             break;
         }

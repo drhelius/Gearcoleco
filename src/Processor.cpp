@@ -101,11 +101,6 @@ void Processor::SetDisassemblerSyntax(GC_Disassembler_Syntax syntax)
     m_disassembler_syntax = syntax;
 }
 
-GC_Disassembler_Syntax Processor::GetDisassemblerSyntax() const
-{
-    return m_disassembler_syntax;
-}
-
 void Processor::Init()
 {
     Reset();
@@ -164,11 +159,6 @@ void Processor::Reset(bool cold)
 void Processor::SetIOPOrts(IOPorts* pIOPorts)
 {
     m_pIOPorts = pIOPorts;
-}
-
-IOPorts* Processor::GetIOPOrts()
-{
-    return m_pIOPorts;
 }
 
 unsigned int Processor::RunFor(unsigned int tstates)
@@ -303,9 +293,6 @@ void Processor::LogInstructionEvent(u16 pc)
     e.cpu.i = I;
     e.cpu.r = R;
     e.cpu.im = (u8)m_iInterruptMode;
-    e.cpu.iff1 = m_bIFF1;
-    e.cpu.iff2 = m_bIFF2;
-    e.cpu.halt = m_bHalt;
     e.cpu.size = IsValidPointer(record) ? (u8)std::min(record->size, (int)sizeof(e.cpu.opcodes)) : 1;
 
     for (u8 i = 0; i < sizeof(e.cpu.opcodes); i++)
@@ -577,7 +564,6 @@ void Processor::PopulateDisassemblerRecord(GC_Disassembler_Record* record, u16 a
 {
 #ifndef GEARCOLECO_DISABLE_DISASSEMBLER
 
-    record->address = m_pMemory->GetPhysicalAddress(address);
     record->bank = m_pMemory->GetBank(address);
     record->name[0] = 0;
     record->bytes[0] = 0;
@@ -984,16 +970,6 @@ bool Processor::RunToBreakpointHit()
 bool Processor::Halted()
 {
     return m_bHalt;
-}
-
-bool Processor::DuringInputOpcode()
-{
-    return m_bInputLastCycle;
-}
-
-void Processor::RequestMemoryBreakpoint()
-{
-    m_memory_breakpoint_hit = true;
 }
 
 void Processor::ResetDebuggerExecutionState()

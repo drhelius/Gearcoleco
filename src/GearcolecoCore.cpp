@@ -17,7 +17,6 @@
  *
  */
 
-#include <iomanip>
 #include <string>
 #include <string.h>
 #include "GearcolecoCore.h"
@@ -100,11 +99,11 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pMemory = new Memory(m_pCartridge, m_pRandom);
     m_pProcessor = new Processor(m_pMemory);
     m_pAudio = new Audio();
-    m_pTMS9918A = new TMS9918A(m_pMemory, m_pProcessor);
-    m_pF18A = new F18A(m_pMemory, m_pProcessor);
+    m_pTMS9918A = new TMS9918A(m_pProcessor);
+    m_pF18A = new F18A(m_pProcessor);
     m_pVideo = m_pTMS9918A;
     m_pInput = new Input(m_pProcessor);
-    m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pCartridge, m_pMemory, m_pProcessor);
+    m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pMemory, m_pProcessor);
     m_pAdam = new Adam();
     m_pAdam->Init(m_pColecoVisionIOPorts);
 
@@ -560,50 +559,6 @@ GC_AdamBootMode GearcolecoCore::GetAdamBootMode() const
     return m_adam_boot_mode;
 }
 
-void GearcolecoCore::SaveDisassembledROM()
-{
-    GC_Disassembler_Record** biosMap = m_pMemory->GetDisassemblerBiosMap();
-    GC_Disassembler_Record** romMap = m_pMemory->GetDisassemblerRomMap();
-
-    if (m_pCartridge->IsReady() && (strlen(m_pCartridge->GetFilePath()) > 0) && IsValidPointer(romMap))
-    {
-        using namespace std;
-
-        string path = string(m_pCartridge->GetFilePath()) + ".dis";
-
-        Log("Saving Disassembled ROM %s...", path.c_str());
-
-        ofstream myfile;
-        open_ofstream_utf8(myfile, path.c_str(), ios::out | ios::trunc);
-
-        if (myfile.is_open())
-        {
-            #define PAD_ADDR(digits) std::uppercase << std::hex << std::setw(digits) << std::setfill('0')
-            #define PAD_MEM(chars) std::setw(chars) << std::setfill(' ')
-
-            for (int i = 0; i < 0x2000; i++)
-            {
-                if (IsValidPointer(biosMap[i]) && (biosMap[i]->name[0] != 0))
-                {
-                    myfile << "BIOS $" << PAD_ADDR(4) << i << "   " << PAD_MEM(25) << biosMap[i]->bytes << "  " << biosMap[i]->name << "\n";
-                }
-            }
-
-            for (int i = 0; i < MAX_ROM_SIZE; i++)
-            {
-                if (IsValidPointer(romMap[i]) && (romMap[i]->name[0] != 0))
-                {
-                    myfile << "ROM  $" << PAD_ADDR(4) << i + 0x8000 << "   " << PAD_MEM(25) << romMap[i]->bytes << "  " << romMap[i]->name << "\n";
-                }
-            }
-
-            myfile.close();
-        }
-
-        Debug("Disassembled ROM Saved");
-    }
-}
-
 bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 {
     bool pal = (m_machine == GC_MACHINE_ADAM) ? m_pVideo->IsPAL() : m_pCartridge->IsPAL();
@@ -690,7 +645,6 @@ bool GearcolecoCore::GetAdamDebugState(GC_AdamDebugState* state)
         return false;
 
     m_pAdam->GetDebugState(state);
-    state->machine = m_machine;
     state->content_type = m_content_type;
     state->master_clock_cycles = m_MasterClockCycles;
 
@@ -838,11 +792,6 @@ void GearcolecoCore::ResetROMPreservingRAM(Cartridge::ForceConfiguration* config
             ResetROM(config);
         }
     }
-}
-
-void GearcolecoCore::ResetSound()
-{
-    m_pAudio->Reset((m_machine == GC_MACHINE_ADAM) ? m_pVideo->IsPAL() : m_pCartridge->IsPAL());
 }
 
 void GearcolecoCore::SaveRam()

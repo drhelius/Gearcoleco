@@ -33,7 +33,6 @@ public:
     void Reset(u16 pc, bool run);
     void Load(u16 pc, bool run);
     void Trigger();
-    void Stop();
     void RunCycles(int cycles, F18A* video);
     void SaveState(std::ostream& stream);
     void LoadState(std::istream& stream);
@@ -41,7 +40,6 @@ public:
     bool IsRunning() const;
     u16 GetPC() const;
     u16 GetStatus() const;
-    u16* GetRegisters();
     u8 GetUserStatus() const;
     void SetUserStatus(u8 status);
     s64 GetCycleBalance() const;

@@ -70,7 +70,6 @@ enum FileDialogID
     FileDialog_LoadBios,
     FileDialog_LoadAdamEOS,
     FileDialog_LoadAdamSmartWriter,
-    FileDialog_InsertAdamMedia,
     FileDialog_SelectAdamMedia,
     FileDialog_SaveAdamDisk,
     FileDialog_SaveAdamDataPack,
@@ -84,7 +83,6 @@ static bool pending_dialog_too_many = false;
 static bool dialog_active = false;
 static bool pending_refocus_window = false;
 static int pending_dialog_int_param1 = 0;
-static bool pending_dialog_bool_param1 = false;
 
 struct FileDialogResult
 {
@@ -400,23 +398,6 @@ void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware)
     SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, 2, NULL, false);
 }
 
-void gui_file_dialog_insert_adam_media(GC_AdamMediaSlot slot, bool discard_current_changes)
-{
-    if (!begin_dialog())
-        return;
-
-    pending_dialog_int_param1 = slot;
-    pending_dialog_bool_param1 = discard_current_changes;
-    bool disk = (slot == GC_ADAM_MEDIA_DISK_1) || (slot == GC_ADAM_MEDIA_DISK_2);
-
-    SDL_DialogFileFilter filters[] = {
-        { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk;zip" : "ddp;zip" }
-    };
-
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_InsertAdamMedia, application_sdl_window, filters, 1, default_path, false);
-}
-
 void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple)
 {
     if (!begin_dialog())
@@ -714,19 +695,6 @@ static void process_dialog_result(FileDialogID id, const char* path)
             }
             pending_dialog_second_path.clear();
             pending_dialog_too_many = false;
-            break;
-        }
-        case FileDialog_InsertAdamMedia:
-        {
-            GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
-            if (!emu_replace_adam_media(slot, path, pending_dialog_bool_param1))
-                gui_set_error_message("Unable to insert ADAM media. Check the image type, exact size, slot, and working-copy status.");
-            else
-            {
-                std::string str_path = path;
-                std::string::size_type pos = str_path.find_last_of("\\/");
-                config_emulator.last_open_path.assign(str_path.substr(0, pos + 1));
-            }
             break;
         }
         case FileDialog_SaveAdamDisk:

@@ -386,7 +386,6 @@ std::vector<BreakpointInfo> DebugAdapter::ListBreakpoints()
     {
         BreakpointInfo info;
         info.enabled = brk.enabled;
-        info.type = brk.type;
         info.address1 = brk.address1;
         info.address2 = brk.address2;
         info.read = brk.read;
@@ -398,40 +397,6 @@ std::vector<BreakpointInfo> DebugAdapter::ListBreakpoints()
     }
 
     return result;
-}
-
-RegistersSnapshot DebugAdapter::GetRegisters()
-{
-    Debug("[MCP] GetRegisters: start");
-
-    Processor* cpu = m_core->GetProcessor();
-    Processor::ProcessorState* state = cpu->GetState();
-
-    Debug("[MCP] GetRegisters: creating snapshot");
-    RegistersSnapshot snapshot;
-
-    snapshot.AF = state->AF->GetValue();
-    snapshot.BC = state->BC->GetValue();
-    snapshot.DE = state->DE->GetValue();
-    snapshot.HL = state->HL->GetValue();
-    snapshot.AF2 = state->AF2->GetValue();
-    snapshot.BC2 = state->BC2->GetValue();
-    snapshot.DE2 = state->DE2->GetValue();
-    snapshot.HL2 = state->HL2->GetValue();
-    snapshot.IX = state->IX->GetValue();
-    snapshot.IY = state->IY->GetValue();
-    snapshot.SP = state->SP->GetValue();
-    snapshot.PC = state->PC->GetValue();
-    snapshot.WZ = state->WZ->GetValue();
-    snapshot.I = *state->I;
-    snapshot.R = *state->R;
-    snapshot.IFF1 = *state->IFF1;
-    snapshot.IFF2 = *state->IFF2;
-    snapshot.Halt = *state->Halt;
-    snapshot.InterruptMode = *state->InterruptMode;
-
-    Debug("[MCP] GetRegisters: done (PC=%04X)", snapshot.PC);
-    return snapshot;
 }
 
 void DebugAdapter::SetRegister(const std::string& name, u32 value)
@@ -625,9 +590,6 @@ std::vector<DisasmLine> DebugAdapter::GetDisassembly(u16 start_address, u16 end_
             line.size = record->size;
             line.jump = record->jump;
             line.jump_address = record->jump_address;
-            line.jump_bank = record->jump_bank;
-            line.has_operand_address = record->has_operand_address;
-            line.operand_address = record->operand_address;
             line.subroutine = record->subroutine;
             line.irq = record->irq;
 

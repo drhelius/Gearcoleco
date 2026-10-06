@@ -80,7 +80,6 @@ static const retro_vfs_interface* vfs_interface = NULL;
 struct RetroAdamHostMedia
 {
     char working_path[4096];
-    u32 base_crc;
 };
 
 struct RetroAdamDiskImage
@@ -1465,7 +1464,6 @@ static bool mount_adam_media(GC_AdamMediaSlot slot, GC_AdamMediaType type, const
         if (writable)
             snprintf(adam_host_media[slot].working_path,
                 sizeof(adam_host_media[slot].working_path), "%s", working_path);
-        adam_host_media[slot].base_crc = base_crc;
     }
 
     SafeDeleteArray(working);

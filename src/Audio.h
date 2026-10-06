@@ -48,11 +48,9 @@ public:
     void StopVgmRecording();
     bool IsVgmRecording() const;
     void EnablePSGDebug(bool enable);
-    bool IsPSGDebugEnabled();
     blip_sample_t* GetDebugChannelBuffer(int channel);
     int GetDebugChannelSamples(int channel);
     void EnableAY8910Debug(bool enable);
-    bool IsAY8910DebugEnabled();
     s16* GetAY8910DebugChannelBuffer(int channel);
     int GetAY8910DebugChannelSamples(int channel);
     Sms_Apu* GetPSG() { return m_pApu; }
@@ -128,11 +126,6 @@ inline void Audio::EnablePSGDebug(bool enable)
     }
 }
 
-inline bool Audio::IsPSGDebugEnabled()
-{
-    return m_pApu->is_debug_enabled();
-}
-
 inline blip_sample_t* Audio::GetDebugChannelBuffer(int channel)
 {
     if (channel < 0 || channel >= 4)
@@ -150,11 +143,6 @@ inline int Audio::GetDebugChannelSamples(int channel)
 inline void Audio::EnableAY8910Debug(bool enable)
 {
     m_pAY8910->EnableDebug(enable);
-}
-
-inline bool Audio::IsAY8910DebugEnabled()
-{
-    return m_pAY8910->IsDebugEnabled();
 }
 
 inline s16* Audio::GetAY8910DebugChannelBuffer(int channel)

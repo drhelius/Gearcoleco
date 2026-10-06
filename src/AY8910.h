@@ -51,7 +51,6 @@ public:
     u8 GetEnvelopeVolume() const { return m_EnvelopeVolume; }
     int GetClockRate() const { return m_iClockRate; }
     void EnableDebug(bool enable);
-    bool IsDebugEnabled() const { return m_DebugEnabled; }
     s16* GetDebugChannelBuffer(int channel);
     int GetDebugChannelSamples(int channel) const;
     bool* GetChannelMute(int channel);

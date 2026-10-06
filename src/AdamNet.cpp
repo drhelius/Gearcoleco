@@ -765,11 +765,6 @@ AdamMedia* AdamNet::GetDeviceMedia(u8 device)
     return slot >= 0 ? &m_Media[slot] : NULL;
 }
 
-const AdamMedia* AdamNet::GetDeviceMedia(u8 device) const
-{
-    return const_cast<AdamNet*>(this)->GetDeviceMedia(device);
-}
-
 void AdamNet::ResetMediaCache()
 {
     memset(m_MediaCacheValid, 0, sizeof(m_MediaCacheValid));
@@ -819,11 +814,6 @@ AdamMedia* AdamNet::GetMedia(GC_AdamMediaSlot slot)
     if ((slot < GC_ADAM_MEDIA_DISK_1) || (slot >= GC_ADAM_MEDIA_SLOT_COUNT))
         return NULL;
     return &m_Media[slot];
-}
-
-const AdamMedia* AdamNet::GetMedia(GC_AdamMediaSlot slot) const
-{
-    return const_cast<AdamNet*>(this)->GetMedia(slot);
 }
 
 void AdamNet::QueueKey(u8 code)
@@ -973,31 +963,6 @@ int AdamNet::GetPrinterSize() const
 void AdamNet::ClearPrinter()
 {
     m_PrinterSize = 0;
-}
-
-u16 AdamNet::GetPCBAddress() const
-{
-    return m_PCBAddress;
-}
-
-int AdamNet::GetCyclesUntilEvent() const
-{
-    return m_CyclesUntilEvent;
-}
-
-bool AdamNet::IsBusy() const
-{
-    return m_State == GC_ADAMNET_CONTROLLER_BUSY;
-}
-
-int AdamNet::GetKeyboardFIFOCount() const
-{
-    return m_KeyboardCount;
-}
-
-bool AdamNet::DidKeyboardOverflow() const
-{
-    return m_KeyboardOverflow;
 }
 
 void AdamNet::GetDebugState(GC_AdamDebugState* state) const

@@ -22,8 +22,6 @@
 
 #include "gearcoleco.h"
 
-void gui_adam_prepare_window(float width, float height);
-void gui_adam_keep_window_visible(void);
 void gui_adam_media_menu(void);
 void gui_adam_keyboard_menu(void);
 void gui_adam_controller_menu(void);

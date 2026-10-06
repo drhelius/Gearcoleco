@@ -25,7 +25,6 @@
 class Audio;
 class Video;
 class Input;
-class Cartridge;
 class Memory;
 class Processor;
 class TraceLogger;
@@ -33,7 +32,7 @@ class TraceLogger;
 class ColecoVisionIOPorts : public IOPorts
 {
 public:
-    ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Cartridge* pCartridge, Memory* pMemory, Processor* pProcessor);
+    ColecoVisionIOPorts(Audio* pAudio, Video* pVideo, Input* pInput, Memory* pMemory, Processor* pProcessor);
     ~ColecoVisionIOPorts();
     void Reset();
     void SetVideo(Video* pVideo);
@@ -58,7 +57,6 @@ private:
     Audio* m_pAudio;
     Video* m_pVideo;
     Input* m_pInput;
-    Cartridge* m_pCartridge;
     Memory* m_pMemory;
     Processor* m_pProcessor;
     TraceLogger* m_pTraceLogger;
@@ -67,7 +65,6 @@ private:
 #include "Video.h"
 #include "Audio.h"
 #include "Input.h"
-#include "Cartridge.h"
 #include "Memory.h"
 #include "Processor.h"
 #include "TraceLogger.h"

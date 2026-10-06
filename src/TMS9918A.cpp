@@ -18,13 +18,11 @@
  */
 
 #include "TMS9918A.h"
-#include "Memory.h"
 #include "Processor.h"
 #include "TraceLogger.h"
 
-TMS9918A::TMS9918A(Memory* pMemory, Processor* pProcessor)
+TMS9918A::TMS9918A(Processor* pProcessor)
 {
-    m_pMemory = pMemory;
     m_pProcessor = pProcessor;
     InitPointer(m_pTraceLogger);
     InitPointer(m_pInfoBuffer);

@@ -204,11 +204,6 @@ u32 AdamMedia::GetPosition() const
     return m_Position;
 }
 
-const u8* AdamMedia::GetData() const
-{
-    return m_pData;
-}
-
 u8* AdamMedia::GetData()
 {
     return m_pData;

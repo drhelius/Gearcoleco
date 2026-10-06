@@ -23,7 +23,6 @@
 #include "Video.h"
 #include "F18AGPU.h"
 
-class Memory;
 class Processor;
 class TraceLogger;
 
@@ -47,7 +46,7 @@ struct F18ADebugTileInfo
 class F18A : public Video
 {
 public:
-    F18A(Memory* pMemory, Processor* pProcessor);
+    F18A(Processor* pProcessor);
     ~F18A();
     void Init();
     void Reset(bool bPAL);
@@ -154,7 +153,6 @@ private:
     };
 
 private:
-    Memory* m_pMemory;
     Processor* m_pProcessor;
     TraceLogger* m_pTraceLogger;
     u8* m_pInfoBuffer;

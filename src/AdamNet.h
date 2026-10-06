@@ -141,15 +141,9 @@ public:
     GC_AdamMediaError InsertMedia(GC_AdamMediaSlot slot, GC_AdamMediaType type, const u8* data, size_t size, bool write_protected, u32 base_crc = 0);
     void EjectMedia(GC_AdamMediaSlot slot);
     AdamMedia* GetMedia(GC_AdamMediaSlot slot);
-    const AdamMedia* GetMedia(GC_AdamMediaSlot slot) const;
     const u8* GetPrinterData() const;
     int GetPrinterSize() const;
     void ClearPrinter();
-    u16 GetPCBAddress() const;
-    int GetCyclesUntilEvent() const;
-    bool IsBusy() const;
-    int GetKeyboardFIFOCount() const;
-    bool DidKeyboardOverflow() const;
     void GetDebugState(GC_AdamDebugState* state) const;
     void SaveState(std::ostream& stream) const;
     bool LoadState(std::istream& stream);
@@ -192,7 +186,6 @@ private:
     u8 GetMediaStatus(const AdamMedia* media) const;
     int GetMediaSlot(u8 device) const;
     AdamMedia* GetDeviceMedia(u8 device);
-    const AdamMedia* GetDeviceMedia(u8 device) const;
     void ResetMediaCache();
     void InvalidateMediaCache(int slot);
     void CompleteKeyboard(u8 dcb, u8 command, u8* response);

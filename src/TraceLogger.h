@@ -41,10 +41,6 @@ enum GC_Trace_Type : u8
 
 static_assert(TRACE_TYPE_COUNT < 32, "Trace category count exceeds flag width");
 
-#define TRACE_VDP_WRITE TRACE_VDP
-#define TRACE_VDP_STATUS TRACE_VDP
-#define TRACE_IO_PORT TRACE_IO
-
 #define TRACE_FLAG_CPU          (1U << TRACE_CPU)
 #define TRACE_FLAG_CPU_IRQ      (1U << TRACE_CPU_IRQ)
 #define TRACE_FLAG_VDP          (1U << TRACE_VDP)
@@ -55,11 +51,6 @@ static_assert(TRACE_TYPE_COUNT < 32, "Trace category count exceeds flag width");
 #define TRACE_FLAG_SGM          (1U << TRACE_SGM)
 #define TRACE_FLAG_ADAM         (1U << TRACE_ADAM)
 #define TRACE_FLAG_MAPPER       (1U << TRACE_MAPPER)
-#define TRACE_FLAG_ALL          ((1U << TRACE_TYPE_COUNT) - 1U)
-
-#define TRACE_FLAG_VDP_WRITE  TRACE_FLAG_VDP
-#define TRACE_FLAG_VDP_STATUS TRACE_FLAG_VDP
-#define TRACE_FLAG_IO_PORT    TRACE_FLAG_IO
 
 enum GC_Trace_VDP_Event : u8
 {
@@ -200,12 +191,6 @@ enum GC_Trace_Mapper_Event : u8
 #define TRACE_MAPPER_EVENT_ALL    (TRACE_MAPPER_EVENT_BANKS | TRACE_MAPPER_EVENT_EEPROM | TRACE_MAPPER_EVENT_SRAM)
 static_assert(TRACE_MAPPER_SRAM < 32, "Mapper trace events exceed u32 width");
 
-#define GC_VDP_EVENT_VINT        TRACE_VDP_VINT_FLAG
-#define GC_VDP_EVENT_VINT_FLAG   TRACE_VDP_VINT_FLAG
-#define GC_VDP_EVENT_DISPLAY     TRACE_VDP_DISPLAY_CHANGE
-#define GC_VDP_EVENT_SPRITE_OVR  TRACE_VDP_SPRITE_OVERFLOW
-#define GC_VDP_EVENT_SPRITE_COL  TRACE_VDP_SPRITE_COLLISION
-
 struct GC_Trace_Entry
 {
     GC_Trace_Type type;
@@ -229,9 +214,6 @@ struct GC_Trace_Entry
             u8 size;
             u8 opcodes[7];
             char name[64];
-            bool iff1;
-            bool iff2;
-            bool halt;
         } cpu;
 
         struct
@@ -284,7 +266,6 @@ struct GC_Trace_Entry
             u8 raw;
             u8 effective;
             u8 channel;
-            u8 mixer;
             u8 amplitude;
             bool envelope_enabled;
             u16 period;
@@ -362,12 +343,8 @@ public:
     INLINE void TraceLog(const GC_Trace_Entry& entry);
     void SetEnabledFlags(u32 flags);
     void SetEventFilter(GC_Trace_Type type, u32 filter);
-    u32 GetEnabledFlags() const;
-    u32 GetEventFilter(GC_Trace_Type type) const;
-    const GC_Trace_Entry* GetBuffer() const;
     u32 GetCount() const;
     u32 GetCapacity() const;
-    u32 GetPosition() const;
     u64 GetTotalLogged() const;
     u64 GetSequence() const;
     const GC_Trace_Entry& GetEntry(u32 index) const;

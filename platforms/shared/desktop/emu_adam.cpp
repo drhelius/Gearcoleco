@@ -51,7 +51,6 @@ struct AdamDesktopPlaylist
     int current;
     GC_AdamMediaSlot slot;
     EmuDesktopContentType type;
-    char playlist_path[4096];
     char paths[64][4096];
     char names[64][512];
 };
@@ -585,7 +584,6 @@ bool emu_adam_classify_content(const char* path, GC_Machine machine, EmuDesktopC
 static bool classify_playlist(const char* path, EmuDesktopContent* content)
 {
     clear_playlist(&loading_playlist);
-    strncpy_fit(loading_playlist.playlist_path, path, sizeof(loading_playlist.playlist_path));
 
     u8* text = NULL;
     size_t text_size = 0;
@@ -1192,14 +1190,6 @@ bool emu_is_adam_firmware_loaded(GC_AdamFirmware firmware)
         (emu_get_core()->GetAdam()->GetFirmwareCRC(firmware) != 0);
 }
 
-u32 emu_get_adam_firmware_crc(GC_AdamFirmware firmware)
-{
-    if (emu_is_busy() || (firmware < GC_ADAM_FIRMWARE_OS7) || (firmware >= GC_ADAM_FIRMWARE_COUNT))
-        return 0;
-
-    return emu_get_core()->GetAdam()->GetFirmwareCRC(firmware);
-}
-
 void emu_get_adam_firmware_path(GC_AdamFirmware firmware, char* path, size_t path_size)
 {
     resolve_firmware_path(firmware, path, path_size);
@@ -1239,11 +1229,6 @@ bool emu_are_adam_firmware_paths_valid(void)
     }
 
     return true;
-}
-
-bool emu_insert_adam_media(GC_AdamMediaSlot slot, const char* file_path)
-{
-    return emu_replace_adam_media(slot, file_path, false);
 }
 
 bool emu_replace_adam_media(GC_AdamMediaSlot slot, const char* file_path,
@@ -1309,11 +1294,6 @@ const char* emu_get_adam_playlist_name(GC_AdamMediaSlot slot, int index)
     }
 
     return playlists[slot].names[index];
-}
-
-const char* emu_get_adam_playlist_path(GC_AdamMediaSlot slot)
-{
-    return emu_get_adam_playlist_count(slot) > 0 ? playlists[slot].playlist_path : "";
 }
 
 bool emu_select_adam_playlist_entry(GC_AdamMediaSlot slot, int index, bool discard_current_changes)
