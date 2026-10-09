@@ -26,6 +26,7 @@
 #include "emu.h"
 #include "emu_adam.h"
 #include "gui_actions.h"
+#include "gui_notifications.h"
 #include "gui.h"
 #include "application.h"
 #include "gui_menus.h"
@@ -254,7 +255,7 @@ bool gui_adam_apply_firmware_path(GC_AdamFirmware firmware, const char* path)
 
     snprintf(message, sizeof(message), running ? "%s firmware selected for next power-on" : "%s firmware configured", metadata->role_name);
 
-    gui_set_status_message(message, 3000);
+    gui_notify(gui_NotificationSuccess, ICON_MD_MEMORY, message, path);
     return true;
 }
 
@@ -712,7 +713,7 @@ void gui_adam_drop_media(const char* path, bool disk)
 {
     if (dropped_media[0])
     {
-        gui_set_status_message("Choose a drive for the previous dropped image first.", 3000);
+        gui_notify(gui_NotificationWarning, NULL, "Choose a drive for the previous dropped image first");
         return;
     }
 
@@ -761,6 +762,8 @@ void gui_adam_start(void)
 
     if (!gui_start_adam(emu_get_machine() == GC_MACHINE_ADAM ? NULL : paths))
         gui_set_error_message("Unable to start ADAM. Check the selected images and save directory.");
+    else
+        gui_notify(gui_NotificationInfo, ICON_MD_POWER_SETTINGS_NEW, "ADAM powered on", NULL, "power");
 }
 
 void gui_adam_update_title(void)
@@ -804,7 +807,7 @@ void gui_adam_power_off(void)
     }
 
     application_reset_title();
-    gui_set_status_message("ADAM powered off", 3000);
+    gui_notify(gui_NotificationInfo, ICON_MD_POWER_SETTINGS_NEW, "ADAM powered off", NULL, "power");
 }
 
 void gui_adam_controller_menu(void)
@@ -861,7 +864,7 @@ void gui_adam_media_menu(void)
         if (emu_get_machine() == GC_MACHINE_ADAM)
         {
             if (!emu_swap_adam_disks())
-                gui_set_error_message("Unable to swap disks. Save any modified images first.");
+                gui_notify(gui_NotificationError, NULL, "Unable to swap disks", "Save any modified images first");
         }
         else
         {
@@ -903,8 +906,10 @@ static void draw_media_drive(GC_AdamMediaSlot slot, const char* label)
             pending_dirty_action = AdamMediaPendingEject;
             open_dirty_confirmation = true;
         }
-        else if (!emu_eject_adam_media(slot))
-            gui_set_error_message("Unable to eject ADAM media.");
+        else if (emu_eject_adam_media(slot))
+            gui_notify(gui_NotificationInfo, ICON_MD_EJECT, "ADAM media ejected", label);
+        else
+            gui_notify(gui_NotificationError, NULL, "Unable to eject ADAM media", label);
     }
 
     ImGui::Separator();
@@ -935,8 +940,10 @@ static void draw_media_drive(GC_AdamMediaSlot slot, const char* label)
 
     if (ImGui::MenuItem("Save Changes", NULL, false, adam && info.dirty && info.working_path[0]))
     {
-        if (!emu_save_adam_media(slot))
-            gui_set_error_message("Unable to save ADAM media changes.");
+        if (emu_save_adam_media(slot))
+            gui_notify(gui_NotificationSuccess, ICON_MD_SAVE, "ADAM media saved", info.working_path);
+        else
+            gui_notify(gui_NotificationError, NULL, "Unable to save ADAM media changes", label);
     }
 
     if (ImGui::MenuItem("Save As...", NULL, false, adam && inserted))

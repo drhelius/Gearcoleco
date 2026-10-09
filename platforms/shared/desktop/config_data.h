@@ -129,7 +129,7 @@ struct config_Emulator
     int spinner;
     int spinner_sensitivity;
     bool capture_mouse;
-    bool status_messages;
+    bool show_notifications;
     bool allow_screensaver;
     int mcp_tcp_port;
     std::string mcp_http_address;

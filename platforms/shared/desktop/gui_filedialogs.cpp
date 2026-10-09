@@ -26,6 +26,7 @@
 #include "gui.h"
 #include "gui_adam.h"
 #include "gui_actions.h"
+#include "gui_notifications.h"
 #include "gui_debug_memory.h"
 #include "gui_debug_disassembler.h"
 #include "gui_debug_trace_logger.h"
@@ -527,27 +528,23 @@ static void process_dialog_result(FileDialogID id, const char* path)
         case FileDialog_LoadRAM:
         {
             emu_load_ram(path, gui_get_force_configuration());
+            gui_notify(gui_NotificationInfo, ICON_MD_SD_STORAGE, "RAM loaded", path);
             break;
         }
         case FileDialog_SaveRAM:
         {
             emu_save_ram(path);
+            gui_notify(gui_NotificationInfo, ICON_MD_SD_STORAGE, "RAM saved", path);
             break;
         }
         case FileDialog_LoadState:
         {
-            std::string message("Loading state from ");
-            message += path;
-            gui_set_status_message(message.c_str(), 3000);
-            emu_load_state_file(path);
+            gui_action_load_state(path);
             break;
         }
         case FileDialog_SaveState:
         {
-            std::string message("Saving state to ");
-            message += path;
-            gui_set_status_message(message.c_str(), 3000);
-            emu_save_state_file(path);
+            gui_action_save_state(path);
             break;
         }
         case FileDialog_ChooseSavestatePath:
@@ -572,7 +569,11 @@ static void process_dialog_result(FileDialogID id, const char* path)
         case FileDialog_LoadSymbols:
         {
             gui_debug_reset_symbols();
-            gui_debug_load_symbols_file(path);
+
+            if (gui_debug_load_symbols_file(path))
+                gui_notify(gui_NotificationSuccess, ICON_MD_LABEL, "Symbols loaded", path);
+            else
+                gui_notify(gui_NotificationError, NULL, "Unable to load symbols", path);
             break;
         }
         case FileDialog_SaveScreenshot:
@@ -582,8 +583,10 @@ static void process_dialog_result(FileDialogID id, const char* path)
         }
         case FileDialog_SaveVGM:
         {
-            emu_start_vgm_recording(path);
-            gui_set_status_message("VGM recording started", 3000);
+            if (emu_start_vgm_recording(path))
+                gui_notify(gui_NotificationInfo, ICON_MD_FIBER_MANUAL_RECORD, "VGM recording started", path, "vgm");
+            else
+                gui_notify(gui_NotificationError, NULL, "Unable to start VGM recording", path, "vgm");
             break;
         }
         case FileDialog_SaveVideo:
@@ -614,43 +617,52 @@ static void process_dialog_result(FileDialogID id, const char* path)
         case FileDialog_SaveMemoryDumpBinary:
         {
             gui_debug_memory_save_dump(path, true);
+            gui_notify(gui_NotificationInfo, ICON_MD_SAVE, "Memory dump saved", path);
             break;
         }
         case FileDialog_SaveMemoryDumpText:
         {
             gui_debug_memory_save_dump(path, false);
+            gui_notify(gui_NotificationInfo, ICON_MD_SAVE, "Memory dump saved", path);
             break;
         }
         case FileDialog_LoadMemoryDumpBinary:
         {
             gui_debug_memory_load_dump(path);
+            gui_notify(gui_NotificationInfo, ICON_MD_FILE_UPLOAD, "Memory dump loaded", path);
             break;
         }
         case FileDialog_SaveDisassemblerFull:
-        {
-            gui_debug_save_disassembler(path, true);
-            break;
-        }
         case FileDialog_SaveDisassemblerVisible:
         {
-            gui_debug_save_disassembler(path, false);
+            if (gui_debug_save_disassembler(path, id == FileDialog_SaveDisassemblerFull))
+                gui_notify(gui_NotificationSuccess, ICON_MD_CODE, "Disassembly saved", path);
+            else
+                gui_notify(gui_NotificationError, NULL, "Unable to save the disassembly", path);
             break;
         }
         case FileDialog_SaveLog:
         {
-            gui_debug_save_log(path);
+            if (gui_debug_save_log(path))
+                gui_notify(gui_NotificationSuccess, ICON_MD_DESCRIPTION, "Trace log saved", path);
+            else
+                gui_notify(gui_NotificationError, NULL, "Unable to save the trace log", path);
             break;
         }
         case FileDialog_SaveDebugSettings:
         {
-            gui_debug_save_settings(path);
-            gui_set_status_message("Debug settings saved", 3000);
+            if (gui_debug_save_settings(path))
+                gui_notify(gui_NotificationSuccess, ICON_MD_BUG_REPORT, "Debug settings saved", path);
+            else
+                gui_notify(gui_NotificationError, NULL, "Unable to save debug settings", path);
             break;
         }
         case FileDialog_LoadDebugSettings:
         {
-            gui_debug_load_settings(path);
-            gui_set_status_message("Debug settings loaded", 3000);
+            if (gui_debug_load_settings(path))
+                gui_notify(gui_NotificationSuccess, ICON_MD_BUG_REPORT, "Debug settings loaded", path);
+            else
+                gui_notify(gui_NotificationError, NULL, "Unable to load debug settings", path);
             break;
         }
         case FileDialog_ChooseSavesPath:
@@ -692,6 +704,8 @@ static void process_dialog_result(FileDialogID id, const char* path)
                 char directory[4096];
                 get_directory(path, directory, sizeof(directory));
                 config_emulator.last_open_path = directory;
+                gui_notify(gui_NotificationInfo, ICON_MD_SAVE,
+                    (emu_get_machine() == GC_MACHINE_ADAM) ? "ADAM media inserted" : "ADAM media selected", path);
             }
             pending_dialog_second_path.clear();
             pending_dialog_too_many = false;
@@ -702,17 +716,17 @@ static void process_dialog_result(FileDialogID id, const char* path)
         {
             GC_AdamMediaSlot slot = (GC_AdamMediaSlot)pending_dialog_int_param1;
             if (!emu_save_adam_media_as(slot, path))
-                gui_set_error_message("Unable to save the ADAM state media image.");
+                gui_notify(gui_NotificationError, NULL, "Unable to save the ADAM media image", path);
             else
-                gui_set_status_message("ADAM media image saved", 3000);
+                gui_notify(gui_NotificationSuccess, ICON_MD_SAVE, "ADAM media image saved", path);
             break;
         }
         case FileDialog_SaveAdamPrinter:
         {
             if (!emu_save_adam_printer(path))
-                gui_set_error_message("Unable to save ADAM printer output.");
+                gui_notify(gui_NotificationError, NULL, "Unable to save ADAM printer output", path);
             else
-                gui_set_status_message("ADAM printer output saved", 3000);
+                gui_notify(gui_NotificationSuccess, ICON_MD_PRINT, "ADAM printer output saved", path);
             break;
         }
         default:

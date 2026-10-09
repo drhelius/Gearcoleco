@@ -60,6 +60,7 @@
     <ClCompile Include="..\shared\desktop\gui.cpp" />
     <ClCompile Include="..\shared\desktop\gui_adam.cpp" />
     <ClCompile Include="..\shared\desktop\gui_actions.cpp" />
+    <ClCompile Include="..\shared\desktop\gui_notifications.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_adam.cpp" />
     <ClCompile Include="..\shared\desktop\gui_debug_ay8910.cpp" />
@@ -209,6 +210,7 @@
     <ClInclude Include="..\shared\desktop\emu_adam.h" />
     <ClInclude Include="..\shared\desktop\gui.h" />
     <ClInclude Include="..\shared\desktop\gui_actions.h" />
+    <ClInclude Include="..\shared\desktop\gui_notifications.h" />
     <ClInclude Include="..\shared\desktop\gui_debug.h" />
     <ClInclude Include="..\shared\desktop\gui_adam.h" />
     <ClInclude Include="..\shared\desktop\gui_debug_adam.h" />

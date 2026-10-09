@@ -3,6 +3,7 @@
 
 #include "imgui.h"
 #include "gui.h"
+#include "gui_notifications.h"
 #include "gui_filedialogs.h"
 #include "gui_debug_constants.h"
 #include "gui_debug_text.h"
@@ -222,7 +223,7 @@ static bool trace_logger_start_disk(void)
     const char* path = trace_directory();
     if (!path || !path[0] || !trace_open_file(path, error, sizeof(error)))
     {
-        gui_set_error_message(error[0] ? error : "Unable to create the trace log file.");
+        gui_notify(gui_NotificationError, NULL, "Unable to create the trace log file", error);
         Error("Unable to start trace disk output: %s", error);
         return false;
     }
@@ -236,7 +237,8 @@ static bool trace_logger_start_disk(void)
     trace_last_flush = SDL_GetTicks();
     trace_disk_error = false;
     trace_disk_previous_valid = false;
-    gui_set_status_message("Trace recording started", 3000);
+    gui_notify(gui_NotificationInfo, ICON_MD_FIBER_MANUAL_RECORD, "Trace recording started", trace_file_path,
+        "trace");
     return true;
 }
 
@@ -321,7 +323,7 @@ void gui_debug_trace_logger_update(void)
     else if (!trace_enabled)
     {
         trace_logger_stop_disk(false, false);
-        gui_set_status_message("Trace recording stopped: maximum file size reached", 4000);
+        gui_notify(gui_NotificationWarning, NULL, "Trace recording stopped", "Maximum file size reached", "trace");
     }
 }
 
@@ -370,11 +372,11 @@ static bool trace_logger_stop_disk(bool show_status, bool flush_entries)
     if (success)
     {
         if (show_status)
-            gui_set_status_message("Trace recording stopped", 3000);
+            gui_notify(gui_NotificationInfo, ICON_MD_STOP, "Trace recording stopped", trace_file_path, "trace");
     }
     else
     {
-        gui_set_error_message("Trace recording stopped with a disk write, flush, or close error.");
+        gui_notify(gui_NotificationError, NULL, "Trace recording stopped", "Disk write error", "trace");
         Error("Trace recording stopped with a disk write, flush, or close error: %s", trace_file_path);
     }
     trace_disk_error = false;
@@ -482,13 +484,13 @@ static void format_entry_text(const GC_Trace_Entry& entry, char* buffer, size_t 
     format_entry_text(entry, config_debug.trace_cycles, trace_previous, buffer, size);
 }
 
-void gui_debug_save_log(const char* file_path)
+bool gui_debug_save_log(const char* file_path)
 {
     FILE* file = fopen_utf8(file_path, "w");
     if (!file)
     {
         Log("Unable to open trace log for writing: %s", file_path);
-        return;
+        return false;
     }
     TraceLogger* logger = emu_get_core()->GetTraceLogger();
     u32 count = logger->GetCount();
@@ -510,6 +512,8 @@ void gui_debug_save_log(const char* file_path)
         success = false;
     if (!success)
         Log("Unable to write trace log: %s", file_path);
+
+    return success;
 }
 
 static void trace_logger_menu_event_filter(const char* label, int* filter, u32 mask)
@@ -793,7 +797,7 @@ static bool trace_logger_apply_capacity(void)
         capacity = trace_capacities[config_debug.trace_capacity];
     if (!emu_get_core()->GetTraceLogger()->SetCapacity(capacity))
     {
-        gui_set_error_message("Unable to allocate the selected trace logger capacity.");
+        gui_notify(gui_NotificationError, NULL, "Unable to allocate the selected trace logger capacity");
         return false;
     }
     return true;

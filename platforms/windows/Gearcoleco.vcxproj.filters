@@ -38,6 +38,7 @@
     <ClCompile Include="..\shared\desktop\gui.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_adam.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_actions.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\gui_notifications.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_adam.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_debug_ay8910.cpp"><Filter>desktop</Filter></ClCompile>
@@ -122,6 +123,7 @@
     <ClInclude Include="..\shared\desktop\gamepad.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_actions.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\gui_notifications.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_adam.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_debug_adam.h"><Filter>desktop</Filter></ClInclude>

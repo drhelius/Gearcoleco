@@ -847,26 +847,29 @@ bool emu_load_state_slot(int index)
     return false;
 }
 
-void emu_save_state_file(const char* file_path)
+bool emu_save_state_file(const char* file_path)
 {
-    if (!emu_is_empty())
-        gearcoleco->SaveState(file_path, -1, gearcoleco->GetMachine() == GC_MACHINE_ADAM);
+    if (emu_is_empty())
+        return false;
+
+    return gearcoleco->SaveState(file_path, -1, gearcoleco->GetMachine() == GC_MACHINE_ADAM);
 }
 
-void emu_load_state_file(const char* file_path)
+bool emu_load_state_file(const char* file_path)
 {
-    if (!emu_is_empty())
-    {
-        if (gearcoleco->LoadState(file_path, -1))
-        {
-            emu_debug_state_restored();
-            emu_reconcile_adam_media_after_state_load();
-            emu_restore_adam_state_screenshot(file_path);
-            events_sync_input();
-            rewind_reset();
-            runahead_reset();
-        }
-    }
+    if (emu_is_empty())
+        return false;
+
+    if (!gearcoleco->LoadState(file_path, -1))
+        return false;
+
+    emu_debug_state_restored();
+    emu_reconcile_adam_media_after_state_load();
+    emu_restore_adam_state_screenshot(file_path);
+    events_sync_input();
+    rewind_reset();
+    runahead_reset();
+    return true;
 }
 
 void emu_debug_state_restored(void)
@@ -1113,23 +1116,26 @@ void emu_set_overscan(int overscan)
     }
 }
 
-void emu_save_screenshot(const char* file_path)
+bool emu_save_screenshot(const char* file_path)
 {
     if (!gearcoleco->IsReady())
-        return;
+        return false;
 
     GC_RuntimeInfo runtime;
     emu_get_runtime(runtime);
 
-    stbi_write_png(file_path, runtime.screen_width, runtime.screen_height, 4, emu_frame_buffer, runtime.screen_width * 4);
+    if (!stbi_write_png(file_path, runtime.screen_width, runtime.screen_height, 4, emu_frame_buffer,
+        runtime.screen_width * 4))
+        return false;
 
     Log("Screenshot saved to %s", file_path);
+    return true;
 }
 
-void emu_save_sprite(const char* file_path, int index)
+bool emu_save_sprite(const char* file_path, int index)
 {
     if (!gearcoleco->IsReady())
-        return;
+        return false;
 
     Video* video = gearcoleco->GetVideo();
     int sprite_size;
@@ -1149,41 +1155,49 @@ void emu_save_sprite(const char* file_path, int index)
         buffer = emu_debug_sprite_buffers[index];
     }
 
-    stbi_write_png(file_path, sprite_size, sprite_size, 4, buffer, 16 * 4);
+    if (!stbi_write_png(file_path, sprite_size, sprite_size, 4, buffer, 16 * 4))
+        return false;
 
     Log("Sprite saved to %s", file_path);
+    return true;
 }
 
-void emu_save_background(const char* file_path)
+bool emu_save_background(const char* file_path)
 {
     if (!gearcoleco->IsReady())
-        return;
+        return false;
 
     Video* video = gearcoleco->GetVideo();
+    bool saved = false;
     if (video->IsF18AHardware())
     {
         update_debug_f18a_nametable_buffer();
         video->Render32bit(debug_f18a_nametable_buffer, emu_debug_f18a_nametable_buffer,
             GC_PIXEL_RGBA8888, GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT);
-        stbi_write_png(file_path, video->GetScreenWidth(), video->GetScreenHeight(), 4,
-            emu_debug_f18a_nametable_buffer, GC_VIDEO_MAX_WIDTH * 4);
+        saved = stbi_write_png(file_path, video->GetScreenWidth(), video->GetScreenHeight(), 4,
+            emu_debug_f18a_nametable_buffer, GC_VIDEO_MAX_WIDTH * 4) != 0;
     }
     else
     {
         update_debug_background_buffer();
         video->Render32bit(debug_background_buffer, emu_debug_background_buffer, GC_PIXEL_RGBA8888, 256 * 256);
-        stbi_write_png(file_path, 256, 192, 4, emu_debug_background_buffer, 256 * 4);
+        saved = stbi_write_png(file_path, 256, 192, 4, emu_debug_background_buffer, 256 * 4) != 0;
     }
 
+    if (!saved)
+        return false;
+
     Log("Background saved to %s", file_path);
+    return true;
 }
 
-void emu_save_tiles(const char* file_path)
+bool emu_save_tiles(const char* file_path)
 {
     if (!gearcoleco->IsReady())
-        return;
+        return false;
 
     Video* video = gearcoleco->GetVideo();
+    bool saved = false;
     if (video->IsF18AHardware())
     {
         update_debug_f18a_pattern_buffer();
@@ -1191,16 +1205,20 @@ void emu_save_tiles(const char* file_path)
         u8* regs = video->GetRegisters();
         int mode = ((regs[0] & 0x04) << 1) | ((regs[0] & 0x02) << 1) | ((regs[1] & 0x08) >> 2) | ((regs[1] & 0x10) >> 4);
         int height = mode == 4 ? 192 : 64;
-        stbi_write_png(file_path, 256, height, 4, emu_debug_f18a_pattern_buffer, 256 * 4);
+        saved = stbi_write_png(file_path, 256, height, 4, emu_debug_f18a_pattern_buffer, 256 * 4) != 0;
     }
     else
     {
         update_debug_tile_buffer();
         video->Render32bit(debug_tile_buffer, emu_debug_tile_buffer, GC_PIXEL_RGBA8888, 256 * 256);
-        stbi_write_png(file_path, 256, 256, 4, emu_debug_tile_buffer, 256 * 4);
+        saved = stbi_write_png(file_path, 256, 256, 4, emu_debug_tile_buffer, 256 * 4) != 0;
     }
 
+    if (!saved)
+        return false;
+
     Log("Pattern table saved to %s", file_path);
+    return true;
 }
 
 int emu_get_screenshot_png(unsigned char** out_buffer)
@@ -1257,10 +1275,10 @@ int emu_get_sprite_png(int sprite_index, unsigned char** out_buffer)
     return len;
 }
 
-void emu_start_vgm_recording(const char* file_path)
+bool emu_start_vgm_recording(const char* file_path)
 {
     if (!gearcoleco->IsReady())
-        return;
+        return false;
 
     if (gearcoleco->GetAudio()->IsVgmRecording())
         emu_stop_vgm_recording();
@@ -1277,8 +1295,11 @@ void emu_start_vgm_recording(const char* file_path)
     metadata.system_name = gearcoleco->GetMachine() == GC_MACHINE_ADAM ? "Coleco ADAM" : "ColecoVision";
     metadata.comment = "Created with " GEARCOLECO_TITLE " " GEARCOLECO_VERSION;
 
-    if (gearcoleco->GetAudio()->StartVgmRecording(file_path, clock_rate, is_pal, metadata))
-        Log("VGM recording started: %s", file_path);
+    if (!gearcoleco->GetAudio()->StartVgmRecording(file_path, clock_rate, is_pal, metadata))
+        return false;
+
+    Log("VGM recording started: %s", file_path);
+    return true;
 }
 
 void emu_stop_vgm_recording(void)
