@@ -597,7 +597,10 @@ void emu_update(void)
     if (frame_executed)
     {
         if (frame_completed)
+        {
             emu_frame_counter++;
+            emu_adam_update();
+        }
         rewind_push();
         if (video_recorder_is_recording())
         {

@@ -53,6 +53,7 @@ bool emu_adam_classify_content(const char* path, GC_Machine machine, EmuDesktopC
 void emu_adam_destroy_content(EmuDesktopContent* content);
 bool emu_adam_load_content(const EmuDesktopContent* content, const char* requested_path, int boot_mode, Cartridge::ForceConfiguration* config, bool softpatching);
 void emu_adam_clear_host_media(void);
+void emu_adam_update(void);
 bool emu_adam_get_state_path(int index, char* path, size_t path_size);
 
 #endif /* EMU_ADAM_H */

@@ -34,6 +34,7 @@ AdamMedia::AdamMedia()
     m_Inserted = false;
     m_WriteProtected = false;
     m_Dirty = false;
+    m_WriteCount = 0;
 }
 
 AdamMedia::~AdamMedia()
@@ -137,7 +138,10 @@ GC_AdamMediaError AdamMedia::WriteBlock(u32 block, const u8* data, size_t length
     }
 
     if (length > 0)
+    {
         m_Dirty = true;
+        m_WriteCount++;
+    }
 
     m_Position = block;
 
@@ -172,6 +176,7 @@ void AdamMedia::ClearDirty()
 void AdamMedia::MarkDirty()
 {
     m_Dirty = true;
+    m_WriteCount++;
 }
 
 GC_AdamMediaType AdamMedia::GetType() const
@@ -197,6 +202,11 @@ u32 AdamMedia::GetBaseCRC() const
 u32 AdamMedia::GetGeneration() const
 {
     return m_Generation;
+}
+
+u32 AdamMedia::GetWriteCount() const
+{
+    return m_WriteCount;
 }
 
 u32 AdamMedia::GetPosition() const

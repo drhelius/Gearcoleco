@@ -42,6 +42,7 @@ static const char slash = '/';
 #define MAX_PADS 2
 #define JOYPAD_BUTTONS 16
 #define MAX_ADAM_DISK_IMAGES 64
+#define ADAM_IDLE_FLUSH_FRAMES 180
 #define RETRO_ADAM_SUBSYSTEM_ID 0xAD01
 #define RETRO_ADAM_STATE_MAGIC 0x4D414447
 
@@ -80,6 +81,9 @@ static const retro_vfs_interface* vfs_interface = NULL;
 struct RetroAdamHostMedia
 {
     char working_path[4096];
+    u32 write_count;
+    int idle_frames;
+    bool flush_failed;
 };
 
 struct RetroAdamDiskImage
@@ -197,6 +201,7 @@ static bool load_colecovision_firmware(void);
 static bool load_adam_firmware(void);
 static bool flush_adam_media(GC_AdamMediaSlot slot);
 static bool flush_all_adam_media(void);
+static void update_adam_media(void);
 static void clear_adam_host_media(void);
 static void clear_adam_disk_set(void);
 static void clear_adam_disk_sets(void);
@@ -1529,6 +1534,35 @@ static bool flush_all_adam_media(void)
     return flushed;
 }
 
+static void update_adam_media(void)
+{
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        AdamMedia* media = core->GetAdamMedia((GC_AdamMediaSlot)i);
+        RetroAdamHostMedia* host = &adam_host_media[i];
+
+        if (!media || !media->IsInserted() || !media->IsDirty() || !host->working_path[0])
+            continue;
+
+        if (media->GetWriteCount() != host->write_count)
+        {
+            host->write_count = media->GetWriteCount();
+            host->idle_frames = 0;
+            continue;
+        }
+
+        if (++host->idle_frames != ADAM_IDLE_FLUSH_FRAMES)
+            continue;
+
+        bool saved = flush_adam_media((GC_AdamMediaSlot)i);
+
+        if (!saved && !host->flush_failed)
+            log_cb(RETRO_LOG_ERROR, "Unable to save ADAM working copy: %s\n", host->working_path);
+
+        host->flush_failed = !saved;
+    }
+}
+
 static bool disk_set_eject_state(bool ejected)
 {
     if (!content_loaded || core->GetMachine() != GC_MACHINE_ADAM)
@@ -1767,6 +1801,12 @@ static void update_input(void)
     int16_t joypad_bits[MAX_PADS];
 
     input_poll_cb();
+
+    for (unsigned i = 0; i < RETROK_LAST; i++)
+    {
+        if (adam_retro_key_down[i] && !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, i))
+            keyboard_event(false, i, 0, 0);
+    }
 
     if (libretro_supports_bitmasks)
     {
@@ -2175,6 +2215,9 @@ void retro_run(void)
     update_input();
 
     core->RunToVBlank(frame_buffer, audio_buf, &audio_sample_count);
+
+    if (content_loaded && (core->GetMachine() == GC_MACHINE_ADAM))
+        update_adam_media();
 
     GC_RuntimeInfo runtime_info;
     core->GetRuntimeInfo(runtime_info);

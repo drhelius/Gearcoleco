@@ -43,6 +43,8 @@ struct AdamHostMediaRecord
     char working_path[4096];
     u32 base_crc;
     bool state_owned;
+    u32 write_count;
+    int idle_frames;
 };
 
 struct AdamDesktopPlaylist
@@ -62,6 +64,7 @@ static char loading_savefiles_path[4096];
 static char loading_bios_path[4096];
 static char loading_eos_path[4096];
 static char loading_smartwriter_path[4096];
+static const int k_idle_flush_frames = 180;
 static AdamHostMediaRecord host_media[GC_ADAM_MEDIA_SLOT_COUNT];
 static AdamDesktopPlaylist loading_playlist;
 static AdamDesktopPlaylist playlists[GC_ADAM_MEDIA_SLOT_COUNT];
@@ -1541,6 +1544,31 @@ bool emu_save_adam_printer(const char* file_path)
     file.close();
 
     return file.good();
+}
+
+void emu_adam_update(void)
+{
+    if (emu_get_core()->GetMachine() != GC_MACHINE_ADAM)
+        return;
+
+    for (int i = 0; i < GC_ADAM_MEDIA_SLOT_COUNT; i++)
+    {
+        AdamMedia* media = emu_get_core()->GetAdamMedia((GC_AdamMediaSlot)i);
+        AdamHostMediaRecord* record = &host_media[i];
+
+        if (!IsValidPointer(media) || !media->IsInserted() || !media->IsDirty() || (record->working_path[0] == '\0'))
+            continue;
+
+        if (media->GetWriteCount() != record->write_count)
+        {
+            record->write_count = media->GetWriteCount();
+            record->idle_frames = 0;
+            continue;
+        }
+
+        if (++record->idle_frames == k_idle_flush_frames)
+            write_working_copy((GC_AdamMediaSlot)i);
+    }
 }
 
 void emu_clear_adam_printer(void)

@@ -49,6 +49,7 @@ public:
     u32 GetBlockCount() const;
     u32 GetBaseCRC() const;
     u32 GetGeneration() const;
+    u32 GetWriteCount() const;
     u32 GetPosition() const;
     u8* GetData();
     void SaveState(std::ostream& stream) const;
@@ -72,6 +73,7 @@ private:
     bool m_Inserted;
     bool m_WriteProtected;
     bool m_Dirty;
+    u32 m_WriteCount;
 };
 
 #endif /* ADAM_MEDIA_H */
