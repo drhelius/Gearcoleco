@@ -45,6 +45,7 @@ struct AdamHostMediaRecord
     bool state_owned;
     u32 write_count;
     int idle_frames;
+    bool flush_failed;
 };
 
 struct AdamDesktopPlaylist
@@ -89,9 +90,10 @@ static void append_zip_candidate(std::string* candidates, const char* type, cons
 static void clear_host_media(GC_AdamMediaSlot slot);
 static void make_working_path(const char* source_path, GC_AdamMediaType type, GC_AdamMediaSlot slot, u32 base_crc, bool primary, char* path, size_t path_size);
 static bool mount_content(GC_AdamMediaSlot slot, const EmuDesktopContent* content, bool primary, bool discard_current_changes);
-static bool write_working_copy(GC_AdamMediaSlot slot);
+static bool write_working_copy(GC_AdamMediaSlot slot, bool report_errors = true);
 static bool check_working_path(const char* file_path);
-static bool write_media_file(AdamMedia* media, const char* file_path, bool clear_dirty = true);
+static bool write_media_file(AdamMedia* media, const char* file_path, bool clear_dirty = true,
+    bool report_errors = true);
 
 void emu_adam_init(void)
 {
@@ -1060,7 +1062,7 @@ bool emu_adam_load_content(const EmuDesktopContent* content, const char* request
     return core->StartAdam(selected_boot);
 }
 
-static bool write_working_copy(GC_AdamMediaSlot slot)
+static bool write_working_copy(GC_AdamMediaSlot slot, bool report_errors)
 {
     AdamMedia* media = emu_get_core()->GetAdamMedia(slot);
 
@@ -1072,7 +1074,7 @@ static bool write_working_copy(GC_AdamMediaSlot slot)
     if (record->working_path[0] == '\0')
         return false;
 
-    return write_media_file(media, record->working_path);
+    return write_media_file(media, record->working_path, true, report_errors);
 }
 
 static bool check_working_path(const char* file_path)
@@ -1101,7 +1103,7 @@ static bool check_working_path(const char* file_path)
     return writable;
 }
 
-static bool write_media_file(AdamMedia* media, const char* file_path, bool clear_dirty)
+static bool write_media_file(AdamMedia* media, const char* file_path, bool clear_dirty, bool report_errors)
 {
     if (!IsValidPointer(media) || !media->IsInserted() || !IsValidPointer(file_path) || (file_path[0] == '\0'))
         return false;
@@ -1113,7 +1115,9 @@ static bool write_media_file(AdamMedia* media, const char* file_path, bool clear
 
     if (!file.is_open())
     {
-        Error("Unable to open ADAM working copy for writing: %s", temporary_path.c_str());
+        if (report_errors)
+            Error("Unable to open ADAM working copy for writing: %s", temporary_path.c_str());
+
         return false;
     }
 
@@ -1123,14 +1127,20 @@ static bool write_media_file(AdamMedia* media, const char* file_path, bool clear
     if (!file.good())
     {
         SDL_RemovePath(temporary_path.c_str());
-        Error("Unable to write complete ADAM working copy: %s", temporary_path.c_str());
+
+        if (report_errors)
+            Error("Unable to write complete ADAM working copy: %s", temporary_path.c_str());
+
         return false;
     }
 
     if (!SDL_RenamePath(temporary_path.c_str(), file_path))
     {
         SDL_RemovePath(temporary_path.c_str());
-        Error("Unable to replace ADAM working copy %s: %s", file_path, SDL_GetError());
+
+        if (report_errors)
+            Error("Unable to replace ADAM working copy %s: %s", file_path, SDL_GetError());
+
         return false;
     }
 
@@ -1566,8 +1576,15 @@ void emu_adam_update(void)
             continue;
         }
 
-        if (++record->idle_frames == k_idle_flush_frames)
-            write_working_copy((GC_AdamMediaSlot)i);
+        if (++record->idle_frames != k_idle_flush_frames)
+            continue;
+
+        bool saved = write_working_copy((GC_AdamMediaSlot)i, !record->flush_failed);
+
+        if (!saved)
+            record->idle_frames = 0;
+
+        record->flush_failed = !saved;
     }
 }
 

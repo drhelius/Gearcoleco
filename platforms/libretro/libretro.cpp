@@ -1559,6 +1559,9 @@ static void update_adam_media(void)
         if (!saved && !host->flush_failed)
             log_cb(RETRO_LOG_ERROR, "Unable to save ADAM working copy: %s\n", host->working_path);
 
+        if (!saved)
+            host->idle_frames = 0;
+
         host->flush_failed = !saved;
     }
 }
