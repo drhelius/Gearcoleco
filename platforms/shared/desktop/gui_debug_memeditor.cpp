@@ -24,6 +24,7 @@
 
 #include "gui_debug_memeditor.h"
 #include "gui_debug_constants.h"
+#include "gui.h"
 
 MemEditor::MemEditor()
 {
@@ -938,6 +939,8 @@ void MemEditor::BookMarkPopup()
 
     PushGuiFont();
 
+    gui_center_next_window();
+
     if (ImGui::BeginPopupModal(popup_title, NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         static char address[9] = "";
@@ -1014,6 +1017,8 @@ void MemEditor::WatchPopup()
     }
 
     PushGuiFont();
+
+    gui_center_next_window();
 
     if (ImGui::BeginPopupModal(popup_title, NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {

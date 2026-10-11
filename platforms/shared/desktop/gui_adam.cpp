@@ -116,6 +116,8 @@ void gui_adam_windows(void)
         ImGui::OpenPopup("Insert ADAM Media");
     }
 
+    gui_center_next_window();
+
     if (ImGui::BeginPopupModal("Insert ADAM Media", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         gui_dialog_in_use = true;
@@ -315,6 +317,8 @@ void gui_adam_firmware_menu(const char* label, GC_AdamFirmware firmware)
 
 static void draw_missing_firmware(void)
 {
+    gui_center_next_window();
+
     if (!ImGui::BeginPopupModal("Firmware Required", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         return;
 
@@ -374,6 +378,8 @@ static void draw_missing_firmware(void)
 
 static void draw_quit_confirmation(void)
 {
+    gui_center_next_window();
+
     if (!ImGui::BeginPopupModal("Unsaved ADAM Media on Quit", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         return;
 
@@ -546,6 +552,8 @@ static void draw_keyboard_binding(int index)
 
 static void draw_keyboard_binding_popup(void)
 {
+    gui_center_next_window();
+
     if (!ImGui::BeginPopupModal("ADAM Key Mapping", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         return;
 
@@ -1005,6 +1013,8 @@ static void draw_media_drive(GC_AdamMediaSlot slot, const char* label)
 
 static void draw_dirty_confirmation(void)
 {
+    gui_center_next_window();
+
     if (!ImGui::BeginPopupModal("Unsaved ADAM Media", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         return;
 

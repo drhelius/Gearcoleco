@@ -138,6 +138,7 @@ EXTERN bool gui_finish_loading_rom(void);
 EXTERN Cartridge::ForceConfiguration gui_get_force_configuration(void);
 EXTERN void gui_set_style(void);
 EXTERN void gui_set_error_message(const char* message);
+EXTERN void gui_center_next_window(void);
 EXTERN void gui_update_palette(void);
 
 #undef GUI_IMPORT

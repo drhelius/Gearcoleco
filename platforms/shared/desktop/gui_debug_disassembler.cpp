@@ -1959,6 +1959,8 @@ static void add_bookmark_popup(void)
         add_bookmark_open = false;
     }
 
+    gui_center_next_window();
+
     if (ImGui::BeginPopupModal("Add Bookmark", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         static char address_bookmark[5] = "";
@@ -2038,6 +2040,8 @@ static void add_symbol_popup(void)
         ImGui::OpenPopup("Add Symbol");
         add_symbol_open = false;
     }
+
+    gui_center_next_window();
 
     if (ImGui::BeginPopupModal("Add Symbol", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
