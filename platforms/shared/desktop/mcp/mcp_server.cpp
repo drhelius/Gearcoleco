@@ -63,7 +63,8 @@ static bool parse_mcp_hex_with_prefix(const std::string& hex_str, T* result)
 
 static bool file_exists(const std::string& path)
 {
-    std::ifstream file(path.c_str());
+    std::ifstream file;
+    open_ifstream_utf8(file, path.c_str(), std::ios::in);
     return file.good();
 }
 
@@ -3098,7 +3099,8 @@ static bool IsValidResourceName(const std::string& name)
 
 void McpServer::LoadResourcesFromCategory(const std::string& category, const std::string& tocPath)
 {
-    std::ifstream file(tocPath);
+    std::ifstream file;
+    open_ifstream_utf8(file, tocPath.c_str(), std::ios::in);
     if (!file.is_open())
     {
         Log("[MCP] Warning: Resources TOC file not found: %s", tocPath.c_str());
@@ -3174,7 +3176,8 @@ void McpServer::LoadResourcesFromCategory(const std::string& category, const std
 bool McpServer::ReadFileContents(const std::string& filePath, std::string& content)
 {
     content.clear();
-    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    std::ifstream file;
+    open_ifstream_utf8(file, filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!file.is_open())
     {
         Log("[MCP] Warning: Failed to open resource file: %s", filePath.c_str());
