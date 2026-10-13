@@ -60,7 +60,7 @@ This server provides tools for ColecoVision and Coleco ADAM development, ROM hac
 - Profiler: per-function call counts, calls per frame, and inclusive/exclusive cycle statistics
 - Rewind (time travel debugging)
 - Screenshot capture as base64-encoded PNG
-- Video recording to AVI files (MJPEG or uncompressed video with PCM audio)
+- Video recording to AVI files (MJPEG, uncompressed or PNG compressed video with PCM audio)
 - Save state management (5 slots)
 - Controller input (directional, keypad 0-9, *, #, blue, purple, left/right buttons)
 - Effective input state inspection, including pending tap releases
@@ -403,7 +403,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `start_video_recording` | Start recording video and audio to an AVI file |
 | `stop_video_recording` | Stop recording and finalize the AVI file |
 
-`start_video_recording` writes MJPEG or uncompressed video with 16-bit PCM audio. Only the resulting `file_path` is returned; the video stays on disk. It takes optional `file_path` (absolute; if omitted, an automatic name in the configured video recordings directory), `scale` (1-20), `aspect_ratio` (`screen`, `square`, `4:3`, `16:9`, `16:10`), and `quality` (`low`, `medium`, `high`, `lossless`). Given options update the recording settings, same as the GUI menu. `screen` follows the display aspect ratio, which uses square pixels while debugging. Frames are recorded only while the emulator runs, so continue or step execution before stopping.
+`start_video_recording` writes MJPEG, uncompressed or PNG compressed video with 16-bit PCM audio. Only the resulting `file_path` is returned; the video stays on disk. It takes optional `file_path` (absolute; if omitted, an automatic name in the configured video recordings directory), `scale` (1-20), `aspect_ratio` (`screen`, `square`, `4:3`, `16:9`, `16:10`), and `quality` (`low`, `medium`, `high`, `lossless`, `lossless_compressed`). `lossless` is uncompressed; `lossless_compressed` stores PNG frames, much smaller but playable only with FFmpeg based players. Given options update the recording settings, same as the GUI menu. `screen` follows the display aspect ratio, which uses square pixels while debugging. When a shader preset is active outside debug mode, the shader output is recorded at the output window size and `scale` and `aspect_ratio` are ignored. Frames are recorded only while the emulator runs, so continue or step execution before stopping.
 
 `stop_video_recording` finalizes the file and returns `file_path` and the number of recorded `frames`.
 
