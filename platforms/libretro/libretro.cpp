@@ -1056,7 +1056,7 @@ static void make_image_label(const char* path, char* label, size_t size)
 
     const char* name = path_filename(path);
 
-    snprintf(label, size, "%s", name[0] ? name : "ADAM media");
+    strncpy_fit(label, name[0] ? name : "ADAM media", size);
 
     char* dot = strrchr(label, '.');
 
@@ -1338,7 +1338,7 @@ static void sanitize_content_name(const char* path, char* name, size_t size)
     if (!name || (size == 0))
         return;
 
-    snprintf(name, size, "%s", path_filename(path));
+    strncpy_fit(name, path_filename(path), size);
     char* dot = strrchr(name, '.');
 
     if (dot)
@@ -1369,7 +1369,7 @@ static bool make_working_path(const char* source_path, GC_AdamMediaType type, GC
     const char* media = type == GC_ADAM_MEDIA_DATA_PACK ? "ddp" : "dsk";
 
     int written = snprintf(path, size, "%s%c%s.%s.%08x.slot%d.gearcoleco.%s",
-        retro_save_directory, slash, name, media, base_crc, (int)slot + 1, media);
+        retro_save_directory, slash, name, media, (unsigned)base_crc, (int)slot + 1, media);
 
     return (written > 0) && ((size_t)written < size);
 }
