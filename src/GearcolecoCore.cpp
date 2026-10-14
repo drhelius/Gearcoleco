@@ -970,14 +970,15 @@ bool GearcolecoCore::SaveState(const char* path, int index, bool screenshot)
     using namespace std;
 
     string full_path = GetSaveStatePath(path, index);
+    string temp_path = full_path + ".tmp";
     Log("Save state file: %s", full_path.c_str());
 
     ofstream file;
-    open_ofstream_utf8(file, full_path.c_str(), ios::out | ios::binary);
+    open_ofstream_utf8(file, temp_path.c_str(), ios::out | ios::binary);
 
     if (!file.is_open())
     {
-        Error("Failed to open save state file for writing: %s", full_path.c_str());
+        Error("Failed to open save state file for writing: %s", temp_path.c_str());
         return false;
     }
 
@@ -985,14 +986,16 @@ bool GearcolecoCore::SaveState(const char* path, int index, bool screenshot)
     if (!SaveState(file, size, screenshot))
     {
         file.close();
+        remove_file_utf8(temp_path.c_str());
         Error("Failed to save state to file: %s", full_path.c_str());
         return false;
     }
 
     file.close();
 
-    if (!file.good())
+    if (!file.good() || !rename_file_utf8(temp_path.c_str(), full_path.c_str()))
     {
+        remove_file_utf8(temp_path.c_str());
         Error("Failed to write save state file: %s", full_path.c_str());
         return false;
     }
