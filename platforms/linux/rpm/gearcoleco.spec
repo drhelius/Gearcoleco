@@ -54,7 +54,9 @@ install -Dm644 platforms/linux/debian/%{name}.desktop %{buildroot}%{_datadir}/ap
 sed -i 's|/usr/games/gearcoleco|gearcoleco|g' %{buildroot}%{_datadir}/applications/%{name}.desktop
 install -Dm644 platforms/linux/debian/%{name}.xml %{buildroot}%{_datadir}/mime/packages/%{name}.xml
 
-install -Dm644 platforms/shared/desktop/mcp/icon.png %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/%{name}.png
+for size in 16 24 32 48 64 128 256 512; do
+    install -Dm644 platforms/shared/desktop/icons/gearcoleco-${size}.png %{buildroot}%{_datadir}/icons/hicolor/${size}x${size}/apps/%{name}.png
+done
 
 install -Dm644 platforms/linux/debian/%{name}.6 %{buildroot}%{_mandir}/man6/%{name}.6
 
@@ -65,7 +67,7 @@ install -Dm644 platforms/linux/debian/%{name}.6 %{buildroot}%{_mandir}/man6/%{na
 %{_prefix}/lib/%{name}/
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/mime/packages/%{name}.xml
-%{_datadir}/icons/hicolor/128x128/apps/%{name}.png
+%{_datadir}/icons/hicolor/*x*/apps/%{name}.png
 %{_mandir}/man6/%{name}.6*
 
 %changelog
