@@ -141,6 +141,7 @@ EXTERN void emu_reset(Cartridge::ForceConfiguration config, bool adam_computer =
 EXTERN void emu_audio_mute(bool mute);
 EXTERN void emu_audio_set_master_volume(float volume);
 EXTERN void emu_audio_reset(void);
+EXTERN void emu_audio_restart(void);
 EXTERN bool emu_is_audio_open(void);
 EXTERN void emu_palette(GC_Color* palette);
 EXTERN void emu_predefined_palette(int palette);
