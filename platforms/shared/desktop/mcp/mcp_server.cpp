@@ -1787,7 +1787,8 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "get_trace_log"},
         {"title", "Get Trace Log"},
-        {"description", "Read formatted trace lines using absolute sequence pagination."},
+        {"description", "Read formatted trace lines using absolute sequence pagination. enabled says whether it records; "
+            "after a reset or media change stopped it, stopped_by says which."},
         {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
@@ -1810,7 +1811,8 @@ json McpServer::BuildToolList()
     tools.push_back({
         {"name", "set_trace_log"},
         {"title", "Set Trace Log"},
-        {"description", "Configure memory or disk trace capture with exact event filters."},
+        {"description", "Configure memory or disk trace capture with exact event filters. "
+            "A reset or media change stops it."},
         {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", true}, {"openWorldHint", false}}},
         {"inputSchema", {
             {"type", "object"},
