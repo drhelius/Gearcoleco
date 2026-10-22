@@ -81,6 +81,9 @@ Run the emulator without a GUI, using only the MCP server for control. Ideal for
 
 Headless mode is debug mode without rendering, so the debug output settings apply: screenshots use the output overscan from the **Debug** menu instead of the one in the **Video** menu. By default, overscan is disabled. Headless instances read this setting from the configuration file, so set it in the GUI with debug enabled. The same setting applies when the MCP server runs alongside the GUI, because MCP always runs in debug mode.
 
+### Pause When Inactive
+While the MCP server is running, the emulator keeps running when its window loses focus, even with **Pause When Inactive** enabled in the **Emulator** menu. The setting keeps its value and applies again once the server stops.
+
 ### Concurrent Clients
 
 The HTTP server accepts repeated valid MCP initialization requests. All connected clients control the same Gearcoleco instance. Individual HTTP requests are serialized, but multi-request debugging workflows are not atomic. Concurrent agents can interfere with each other through pauses, resets, breakpoints, memory writes, media loads, and save states.

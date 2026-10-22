@@ -577,7 +577,7 @@ static void sdl_events_app(const SDL_Event* event)
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
         {
             display_use_vsync_if_enabled();
-            if (config_emulator.pause_when_inactive && !paused_when_focus_lost)
+            if (config_emulator.pause_when_inactive && !emu_mcp_is_running() && !paused_when_focus_lost)
                 emu_resume();
             break;
         }
@@ -585,7 +585,7 @@ static void sdl_events_app(const SDL_Event* event)
         {
             display_disable_vsync();
             events_release_adam_keys();
-            if (config_emulator.pause_when_inactive)
+            if (config_emulator.pause_when_inactive && !emu_mcp_is_running())
             {
                 paused_when_focus_lost = emu_is_paused();
                 emu_pause();
