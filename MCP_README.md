@@ -1,10 +1,12 @@
 # Gearcoleco MCP Server
 
-Gearcoleco includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like GitHub Copilot, Claude, Codex and similar.
+Gearcoleco includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server that enables AI-assisted debugging through AI agents like Claude Code, Codex and similar.
 
 This server provides tools for ColecoVision and Coleco ADAM development, ROM hacking, reverse engineering, and debugging through standardized MCP protocols.
 
 ## Downloads
+
+These MCP Bundles (`.mcpb`) package Gearcoleco with its MCP server configuration for MCP clients that install bundles, and are the packages published to the [MCP Registry](https://registry.modelcontextprotocol.io/). Claude Code and Codex use a regular Gearcoleco build instead, see [Quick Start](#quick-start).
 
 <table>
   <thead>
@@ -71,7 +73,7 @@ This server provides tools for ColecoVision and Coleco ADAM development, ROM hac
 ## Transport Modes
 
 ### STDIO Mode
-The server communicates through standard input/output using JSON-RPC 2.0 messages. This is the recommended mode for AI tool integration (VS Code, Claude Desktop, etc.).
+The server communicates through standard input/output using JSON-RPC 2.0 messages. This is the recommended mode for AI tool integration (Claude Code, Codex, etc.).
 
 ### HTTP Mode
 The server listens for HTTP POST requests on a configurable port (default: 7777). Useful for remote connections or custom tooling.
@@ -127,15 +129,25 @@ Without `--mcp-router`, call every MCP tool directly.
 
 ## Quick Start
 
-### STDIO Mode with VS Code
+Get a desktop build of Gearcoleco from the [downloads](README.md#downloads) or [build it from source](README.md#build-instructions). In the examples below, replace `/path/to/gearcoleco` with the full path to the executable:
 
-1. Install the [GitHub Copilot extension](https://code.visualstudio.com/docs/copilot/overview) in VS Code.
+- **macOS:** `/Applications/Gearcoleco.app/Contents/MacOS/gearcoleco`
+- **Linux:** `/path/to/gearcoleco`
+- **Windows:** `C:/path/to/gearcoleco.exe`
 
-2. Add `.vscode/mcp.json` to your workspace:
+### STDIO Mode with Claude Code
+
+1. **Add the Gearcoleco MCP server** using the CLI:
+
+   ```bash
+   claude mcp add --transport stdio --scope user gearcoleco -- /path/to/gearcoleco --mcp-stdio
+   ```
+
+   Everything after `--` is passed to Gearcoleco untouched. `--scope user` makes the server available in all your projects. Use `--scope local` (the default) to add it only to the current project, or `--scope project` to share it through a `.mcp.json` file in the project root:
 
    ```json
    {
-     "servers": {
+     "mcpServers": {
        "gearcoleco": {
          "command": "/path/to/gearcoleco",
          "args": ["--mcp-stdio"]
@@ -144,65 +156,43 @@ Without `--mcp-router`, call every MCP tool directly.
    }
    ```
 
-   Update the `command` path to match your build or release binary:
-   - macOS: `/path/to/gearcoleco`
-   - Linux: `/path/to/gearcoleco`
-   - Windows: `C:/path/to/Gearcoleco.exe`
+   Claude Code asks for approval the first time it uses a server from `.mcp.json`.
 
-3. Restart VS Code if the MCP server is not discovered immediately.
-
-### STDIO Mode with Claude Desktop
-
-#### Option 1: Desktop Extension (Recommended)
-
-The easiest way to install the Gearcoleco MCP server on Claude Desktop is with the MCPB package:
-
-1. Download the latest MCPB package for your platform from the [releases page](https://github.com/drhelius/Gearcoleco/releases).
-
-2. Install the extension:
-   - Open Claude Desktop
-   - Navigate to **Settings > Extensions**
-   - Click **Advanced settings**
-   - In the Extension Developer section, click **Install Extension...**
-   - Select the downloaded `.mcpb` file
-
-3. Start debugging. The extension is available in conversations and launches Gearcoleco when the tool is enabled.
-
-#### Option 2: Manual Configuration
-
-If you prefer to build from source or configure manually, edit Claude Desktop's MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "gearcoleco": {
-      "command": "/path/to/gearcoleco",
-      "args": ["--mcp-stdio"]
-    }
-  }
-}
-```
-
-Config file locations:
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- Linux: `~/.config/Claude/claude_desktop_config.json`
-
-Restart Claude Desktop after saving the configuration.
-
-### STDIO Mode with Claude Code
-
-1. Add the Gearcoleco MCP server using the CLI:
-
-   ```bash
-   claude mcp add --transport stdio gearcoleco -- /path/to/gearcoleco --mcp-stdio
-   ```
-
-2. Verify the server was added:
+2. **Verify the server was added**:
 
    ```bash
    claude mcp list
    ```
+
+3. **Start debugging**: Start Claude Code and ask about the game state. Gearcoleco launches when the session starts. Run `/mcp` inside Claude Code to check the server status or reconnect it.
+
+### STDIO Mode with Codex
+
+The Codex CLI, IDE extension, and desktop app share the same MCP configuration, so you only need to add the server once.
+
+1. **Add the Gearcoleco MCP server** using the CLI:
+
+   ```bash
+   codex mcp add gearcoleco -- /path/to/gearcoleco --mcp-stdio
+   ```
+
+   Or add it to `~/.codex/config.toml`:
+
+   ```toml
+   [mcp_servers.gearcoleco]
+   command = "/path/to/gearcoleco"
+   args = ["--mcp-stdio"]
+   ```
+
+   To use the server only in one project, add the same table to `.codex/config.toml` in that project. Codex loads project configuration only for trusted projects. In TOML, write Windows paths with forward slashes or in single quotes.
+
+2. **Verify the server was added**:
+
+   ```bash
+   codex mcp list
+   ```
+
+3. **Start debugging**: Start Codex and ask about the game state. Gearcoleco launches when the session starts. Type `/mcp` in the Codex CLI to see the active servers.
 
 ### HTTP Mode
 
@@ -210,67 +200,64 @@ Restart Claude Desktop after saving the configuration.
 
    ```bash
    ./gearcoleco --mcp-http
-  ```
-
-  The default endpoint is `http://127.0.0.1:7777/mcp`.
-
-  To use a custom port:
-
-  ```bash
-   ./gearcoleco --mcp-http --mcp-http-port 3000
-  ```
-
-  To bind to a custom address, set a bearer token first:
-
-  ```bash
-  GEARCOLECO_MCP_HTTP_TOKEN="change-this-token" ./gearcoleco --mcp-http --mcp-http-address 0.0.0.0 --mcp-http-port 3000
    ```
 
-  Clients must connect using the server's actual interface address, such as `http://192.168.1.50:3000/mcp`, not `0.0.0.0` or a spoofed loopback address.
+   The default endpoint is `http://127.0.0.1:7777/mcp`.
 
-  You can also start the server using the "MCP" menu in the GUI.
+   To use a custom port:
+
+   ```bash
+   ./gearcoleco --mcp-http --mcp-http-port 3000
+   ```
+
+   To bind to a custom address, set a bearer token first:
+
+   ```bash
+   GEARCOLECO_MCP_HTTP_TOKEN="change-this-token" ./gearcoleco --mcp-http --mcp-http-address 0.0.0.0 --mcp-http-port 3000
+   ```
+
+   Clients must connect using the server's actual interface address, such as `http://192.168.1.50:3000/mcp`, not `0.0.0.0` or a spoofed loopback address.
+
+   You can also start the server using the "MCP" menu in the GUI.
 
 2. **Configure bearer-token authentication**:
 
-  Set `GEARCOLECO_MCP_HTTP_TOKEN` before starting HTTP mode. Authentication is optional for loopback binds and required for wildcard or other non-loopback binds.
+   Set `GEARCOLECO_MCP_HTTP_TOKEN` before starting HTTP mode. Authentication is optional for loopback binds and required for wildcard or other non-loopback binds.
 
-  macOS and Linux:
+   macOS and Linux:
 
-  ```bash
-  GEARCOLECO_MCP_HTTP_TOKEN="change-this-token" ./gearcoleco --mcp-http
-  ```
-
-  Windows PowerShell:
-
-  ```powershell
-  $env:GEARCOLECO_MCP_HTTP_TOKEN = "change-this-token"
-  .\gearcoleco.exe --mcp-http
-  ```
-
-  Windows Command Prompt:
-
-  ```cmd
-  set GEARCOLECO_MCP_HTTP_TOKEN=change-this-token
-  gearcoleco.exe --mcp-http
-  ```
-
-3. **Configure VS Code** `.vscode/mcp.json`:
-
-   ```json
-   {
-     "servers": {
-       "gearcoleco": {
-         "type": "http",
-         "url": "http://127.0.0.1:7777/mcp",
-         "headers": {
-           "Authorization": "Bearer change-this-token"
-         }
-       }
-     }
-   }
+   ```bash
+   GEARCOLECO_MCP_HTTP_TOKEN="change-this-token" ./gearcoleco --mcp-http
    ```
 
-4. **Or configure Claude Desktop**:
+   Windows PowerShell:
+
+   ```powershell
+   $env:GEARCOLECO_MCP_HTTP_TOKEN = "change-this-token"
+   .\gearcoleco.exe --mcp-http
+   ```
+
+   Windows Command Prompt:
+
+   ```cmd
+   set GEARCOLECO_MCP_HTTP_TOKEN=change-this-token
+   gearcoleco.exe --mcp-http
+   ```
+
+3. **Configure Claude Code**:
+
+   ```bash
+   claude mcp add --transport http --scope user gearcoleco http://127.0.0.1:7777/mcp
+   ```
+
+   If the server uses a bearer token, add the header:
+
+   ```bash
+   claude mcp add --transport http --scope user gearcoleco http://127.0.0.1:7777/mcp \
+     --header "Authorization: Bearer change-this-token"
+   ```
+
+   In a shared `.mcp.json`, read the token from the environment instead of committing it:
 
    ```json
    {
@@ -279,20 +266,34 @@ Restart Claude Desktop after saving the configuration.
          "type": "http",
          "url": "http://127.0.0.1:7777/mcp",
          "headers": {
-           "Authorization": "Bearer change-this-token"
+           "Authorization": "Bearer ${GEARCOLECO_MCP_HTTP_TOKEN}"
          }
        }
      }
    }
    ```
 
-5. **Or configure Claude Code**:
+4. **Or configure Codex**:
 
    ```bash
-  claude mcp add --transport http gearcoleco http://127.0.0.1:7777/mcp
+   codex mcp add gearcoleco --url http://127.0.0.1:7777/mcp
    ```
 
-6. **Restart your AI client** and start debugging
+   If the server uses a bearer token, Codex reads it from an environment variable, so set `GEARCOLECO_MCP_HTTP_TOKEN` in the environment where Codex runs too:
+
+   ```bash
+   codex mcp add gearcoleco --url http://127.0.0.1:7777/mcp --bearer-token-env-var GEARCOLECO_MCP_HTTP_TOKEN
+   ```
+
+   The equivalent `~/.codex/config.toml` entry:
+
+   ```toml
+   [mcp_servers.gearcoleco]
+   url = "http://127.0.0.1:7777/mcp"
+   bearer_token_env_var = "GEARCOLECO_MCP_HTTP_TOKEN"
+   ```
+
+5. **Start a new Claude Code or Codex session** and start debugging
 
 > **Note:** The MCP HTTP Server must be running standalone before connecting the AI client.
 > **Security:** Without `GEARCOLECO_MCP_HTTP_TOKEN`, HTTP mode starts only on a loopback address. Wildcard and other non-loopback binds are refused. `Host` and browser `Origin` values are matched to the connection's actual destination address to prevent DNS rebinding and address spoofing.
@@ -483,8 +484,8 @@ The MCP server runs alongside the emulator GUI in a background thread.
 
 ```text
 +-----------------+                    +------------------+
-| VS Code /       |       stdio        | Gearcoleco       |
-| Claude Desktop  |<------------------>| MCP Server       |
+| Claude Code /   |       stdio        | Gearcoleco       |
+| Codex           |<------------------>| MCP Server       |
 | (AI Client)     |       pipes        | (background)     |
 +-----------------+                    +------------------+
   |                                      |
@@ -501,8 +502,8 @@ The MCP server runs alongside the emulator GUI in a background thread.
 
 ```text
 +-----------------+                    +------------------+
-| VS Code /       |  HTTP port 7777    | Gearcoleco       |
-| Claude Desktop  |<------------------>| MCP HTTP Server  |
+| Claude Code /   |  HTTP port 7777    | Gearcoleco       |
+| Codex           |<------------------>| MCP HTTP Server  |
 | (AI Client)     |                    | (listener)       |
 +-----------------+                    +------------------+
                  |
