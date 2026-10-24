@@ -79,6 +79,8 @@ The server listens for HTTP POST requests on a configurable port (default: 7777)
 ### Headless Mode
 Run the emulator without a GUI, using only the MCP server for control. Ideal for automated testing and CI/CD.
 
+A save state can be loaded at launch too, with `--load-state 1` for slot 1 or `--load-state FILE` for a state file; run `gearcoleco --help` for the full list.
+
 Headless mode is debug mode without rendering, so the debug output settings apply: screenshots use the output overscan from the **Debug** menu instead of the one in the **Video** menu. By default, overscan is disabled. Headless instances read this setting from the configuration file, so set it in the GUI with debug enabled. The same setting applies when the MCP server runs alongside the GUI, because MCP always runs in debug mode.
 
 ### Pause When Inactive

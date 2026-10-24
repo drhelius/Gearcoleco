@@ -135,6 +135,7 @@ EXTERN void gui_drop_media(const char* path);
 EXTERN bool gui_start_adam(const char* const* media_paths = NULL);
 EXTERN bool gui_is_rom_loading(void);
 EXTERN bool gui_finish_loading_rom(void);
+EXTERN void gui_load_state_after_media(int slot, const char* path);
 EXTERN Cartridge::ForceConfiguration gui_get_force_configuration(void);
 EXTERN void gui_set_style(void);
 EXTERN void gui_set_error_message(const char* message);

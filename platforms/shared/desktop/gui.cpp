@@ -49,6 +49,8 @@
 static bool error_window_active = false;
 static char error_message[4096] = "";
 static bool loading_rom_active = false;
+static int pending_state_slot = 0;
+static std::string pending_state_path;
 static char loading_rom_path[4096] = "";
 static char loading_symbol_path[4096] = "";
 
@@ -58,6 +60,7 @@ static void show_error_window(void);
 static void show_loading_popup(void);
 static void select_save_slot(int slot);
 static bool finish_started_content(bool load_symbols);
+static void load_pending_state(void);
 static void update_window_visibility_padding(void);
 static ImVec2 snap_to_physical_pixel(const ImVec2& pos);
 static GC_Color color_float_to_int(ImVec4 color);
@@ -471,7 +474,17 @@ bool gui_finish_loading_rom(void)
     }
 
 
+    load_pending_state();
     return success;
+}
+
+void gui_load_state_after_media(int slot, const char* path)
+{
+    pending_state_slot = slot;
+    pending_state_path = IsValidPointer(path) ? path : "";
+
+    if (!loading_rom_active)
+        load_pending_state();
 }
 
 Cartridge::ForceConfiguration gui_get_force_configuration(void)
@@ -846,6 +859,17 @@ static bool finish_started_content(bool load_symbols)
     }
 
     return true;
+}
+
+static void load_pending_state(void)
+{
+    if (!pending_state_path.empty())
+        gui_action_load_state(pending_state_path.c_str());
+    else if (pending_state_slot > 0)
+        gui_action_load_state_slot(pending_state_slot);
+
+    pending_state_slot = 0;
+    pending_state_path.clear();
 }
 
 static void show_error_window(void)
