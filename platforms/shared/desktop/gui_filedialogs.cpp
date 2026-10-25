@@ -97,6 +97,12 @@ static bool was_exclusive_fullscreen = false;
 static void SDLCALL file_dialog_callback(void* userdata, const char* const* filelist, int filter);
 static void SDLCALL finish_dialog(void* userdata);
 static const char* get_save_file_extension(FileDialogID id);
+static std::string* get_dialog_folder(FileDialogID id);
+static const char* get_dialog_location(FileDialogID id);
+static void remember_dialog_location(FileDialogID id, const char* path);
+static void show_open_file_dialog(FileDialogID id, const SDL_DialogFileFilter* filters, int filter_count, bool allow_many = false);
+static void show_save_file_dialog(FileDialogID id, const SDL_DialogFileFilter* filters, int filter_count);
+static void show_open_folder_dialog(FileDialogID id);
 static void process_dialog_result(FileDialogID id, const char* path);
 
 static bool begin_dialog(void)
@@ -153,14 +159,110 @@ static const char* get_save_file_extension(FileDialogID id)
     }
 }
 
+static std::string* get_dialog_folder(FileDialogID id)
+{
+    switch (id)
+    {
+        case FileDialog_OpenROM:
+        case FileDialog_OpenAdamCartridge:
+            return &config_file_dialogs.rom;
+        case FileDialog_LoadRAM:
+        case FileDialog_SaveRAM:
+            return &config_file_dialogs.ram;
+        case FileDialog_LoadState:
+        case FileDialog_SaveState:
+            return &config_file_dialogs.states;
+        case FileDialog_SaveScreenshot:
+            return &config_file_dialogs.screenshots;
+        case FileDialog_SaveVGM:
+        case FileDialog_SaveVideo:
+            return &config_file_dialogs.recordings;
+        case FileDialog_LoadSymbols:
+        case FileDialog_SaveSprite:
+        case FileDialog_SaveAllSprites:
+        case FileDialog_SaveBackground:
+        case FileDialog_SaveTiles:
+        case FileDialog_SaveMemoryDumpBinary:
+        case FileDialog_SaveMemoryDumpText:
+        case FileDialog_LoadMemoryDumpBinary:
+        case FileDialog_SaveDisassemblerFull:
+        case FileDialog_SaveDisassemblerVisible:
+        case FileDialog_SaveLog:
+        case FileDialog_SaveDebugSettings:
+        case FileDialog_LoadDebugSettings:
+            return &config_file_dialogs.debug;
+        case FileDialog_LoadBios:
+        case FileDialog_LoadAdamEOS:
+        case FileDialog_LoadAdamSmartWriter:
+            return &config_file_dialogs.bios;
+        case FileDialog_SelectAdamMedia:
+        case FileDialog_SaveAdamDisk:
+        case FileDialog_SaveAdamDataPack:
+            return &config_file_dialogs.adam_media;
+        case FileDialog_SaveAdamPrinter:
+            return &config_file_dialogs.adam_printer;
+        default:
+            return NULL;
+    }
+}
+
+static const char* get_dialog_location(FileDialogID id)
+{
+    std::string* folder = get_dialog_folder(id);
+
+    if (IsValidPointer(folder) && path_exists(folder->c_str()))
+        return folder->c_str();
+
+    return path_exists(config_file_dialogs.rom.c_str()) ? config_file_dialogs.rom.c_str() : NULL;
+}
+
+static void remember_dialog_location(FileDialogID id, const char* path)
+{
+    std::string* folder = get_dialog_folder(id);
+
+    if (!IsValidPointer(folder))
+        return;
+
+    std::string location(path);
+    SDL_PathInfo info;
+
+    if (!SDL_GetPathInfo(path, &info) || (info.type != SDL_PATHTYPE_DIRECTORY))
+        location.erase(location.find_last_of("/\\") + 1);
+    else if (location.find_last_of("/\\") != location.size() - 1)
+    {
+        // Windows file dialogs take a location without a trailing separator as a file name
+#if defined(_WIN32)
+        location += '\\';
+#else
+        location += '/';
+#endif
+    }
+
+    *folder = location;
+}
+
+static void show_open_file_dialog(FileDialogID id, const SDL_DialogFileFilter* filters, int filter_count, bool allow_many)
+{
+    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, filter_count, get_dialog_location(id), allow_many);
+}
+
+static void show_save_file_dialog(FileDialogID id, const SDL_DialogFileFilter* filters, int filter_count)
+{
+    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, filter_count, get_dialog_location(id));
+}
+
+static void show_open_folder_dialog(FileDialogID id)
+{
+    SDL_ShowOpenFolderDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, get_dialog_location(id), false);
+}
+
 void gui_file_dialog_open_rom(bool adam_cartridge)
 {
     if (!begin_dialog())
         return;
 
     SDL_DialogFileFilter filters[] = { { "Cartridge ROMs", "col;cv;rom;bin;zip" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)(adam_cartridge ? FileDialog_OpenAdamCartridge : FileDialog_OpenROM), application_sdl_window, filters, 1, default_path, false);
+    show_open_file_dialog(adam_cartridge ? FileDialog_OpenAdamCartridge : FileDialog_OpenROM, filters, 1);
 }
 
 void gui_file_dialog_load_ram(void)
@@ -169,8 +271,7 @@ void gui_file_dialog_load_ram(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "RAM Files", "sav" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadRAM, application_sdl_window, filters, 1, default_path, false);
+    show_open_file_dialog(FileDialog_LoadRAM, filters, 1);
 }
 
 void gui_file_dialog_save_ram(void)
@@ -179,8 +280,7 @@ void gui_file_dialog_save_ram(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "RAM Files", "sav" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveRAM, application_sdl_window, filters, 1, default_path);
+    show_save_file_dialog(FileDialog_SaveRAM, filters, 1);
 }
 
 void gui_file_dialog_load_state(void)
@@ -189,8 +289,7 @@ void gui_file_dialog_load_state(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Save State Files", "state;state1;state2;state3;state4;state5" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadState, application_sdl_window, filters, 1, default_path, false);
+    show_open_file_dialog(FileDialog_LoadState, filters, 1);
 }
 
 void gui_file_dialog_save_state(void)
@@ -199,8 +298,7 @@ void gui_file_dialog_save_state(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Save State Files", "state" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveState, application_sdl_window, filters, 1, default_path);
+    show_save_file_dialog(FileDialog_SaveState, filters, 1);
 }
 
 void gui_file_dialog_choose_savestate_path(void)
@@ -236,7 +334,7 @@ void gui_file_dialog_load_symbols(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Symbol Files", "sym;noi" }, { "All Files", "*" } };
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadSymbols, application_sdl_window, filters, 2, NULL, false);
+    show_open_file_dialog(FileDialog_LoadSymbols, filters, 2);
 }
 
 void gui_file_dialog_save_screenshot(void)
@@ -245,7 +343,7 @@ void gui_file_dialog_save_screenshot(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveScreenshot, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveScreenshot, filters, 1);
 }
 
 void gui_file_dialog_save_vgm(void)
@@ -254,7 +352,7 @@ void gui_file_dialog_save_vgm(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "VGM Files", "vgm" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveVGM, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveVGM, filters, 1);
 }
 
 void gui_file_dialog_save_video(void)
@@ -263,7 +361,7 @@ void gui_file_dialog_save_video(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "AVI Files", "avi" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveVideo, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveVideo, filters, 1);
 }
 
 void gui_file_dialog_save_sprite(int index)
@@ -273,7 +371,7 @@ void gui_file_dialog_save_sprite(int index)
 
     pending_dialog_int_param1 = index;
     SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveSprite, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveSprite, filters, 1);
 }
 
 void gui_file_dialog_save_all_sprites(void)
@@ -281,7 +379,7 @@ void gui_file_dialog_save_all_sprites(void)
     if (!begin_dialog())
         return;
 
-    SDL_ShowOpenFolderDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveAllSprites, application_sdl_window, NULL, false);
+    show_open_folder_dialog(FileDialog_SaveAllSprites);
 }
 
 void gui_file_dialog_save_background(void)
@@ -290,7 +388,7 @@ void gui_file_dialog_save_background(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveBackground, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveBackground, filters, 1);
 }
 
 void gui_file_dialog_save_tiles(void)
@@ -299,7 +397,7 @@ void gui_file_dialog_save_tiles(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "PNG Files", "png" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveTiles, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveTiles, filters, 1);
 }
 
 void gui_file_dialog_save_memory_dump(bool binary)
@@ -309,7 +407,7 @@ void gui_file_dialog_save_memory_dump(bool binary)
 
     FileDialogID id = binary ? FileDialog_SaveMemoryDumpBinary : FileDialog_SaveMemoryDumpText;
     SDL_DialogFileFilter filters[] = { { "Memory Dump Files", binary ? "bin" : "txt" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(id, filters, 1);
 }
 
 void gui_file_dialog_load_memory_dump()
@@ -318,8 +416,7 @@ void gui_file_dialog_load_memory_dump()
         return;
 
     SDL_DialogFileFilter filters[] = { { "Memory Dump Files", "bin" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadMemoryDumpBinary, application_sdl_window, filters, 1, default_path, false);
+    show_open_file_dialog(FileDialog_LoadMemoryDumpBinary, filters, 1);
 }
 
 void gui_file_dialog_save_disassembler(bool full)
@@ -329,7 +426,7 @@ void gui_file_dialog_save_disassembler(bool full)
 
     FileDialogID id = full ? FileDialog_SaveDisassemblerFull : FileDialog_SaveDisassemblerVisible;
     SDL_DialogFileFilter filters[] = { { "Disassembler Files", "txt" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(id, filters, 1);
 }
 
 void gui_file_dialog_save_log(void)
@@ -338,7 +435,7 @@ void gui_file_dialog_save_log(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Log Files", "txt" } };
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveLog, application_sdl_window, filters, 1, NULL);
+    show_save_file_dialog(FileDialog_SaveLog, filters, 1);
 }
 
 void gui_file_dialog_save_debug_settings(void)
@@ -347,8 +444,7 @@ void gui_file_dialog_save_debug_settings(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Debug Settings Files", "ggdebug" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveDebugSettings, application_sdl_window, filters, 1, default_path);
+    show_save_file_dialog(FileDialog_SaveDebugSettings, filters, 1);
 }
 
 void gui_file_dialog_load_debug_settings(void)
@@ -357,8 +453,7 @@ void gui_file_dialog_load_debug_settings(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "Debug Settings Files", "ggdebug" } };
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadDebugSettings, application_sdl_window, filters, 1, default_path, false);
+    show_open_file_dialog(FileDialog_LoadDebugSettings, filters, 1);
 }
 
 void gui_file_dialog_choose_saves_path(void)
@@ -385,7 +480,7 @@ void gui_file_dialog_load_bios(void)
         return;
 
     SDL_DialogFileFilter filters[] = { { "BIOS Files", "rom;bin;col;bios" }, { "All Files", "*" } };
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_LoadBios, application_sdl_window, filters, 2, NULL, false);
+    show_open_file_dialog(FileDialog_LoadBios, filters, 2);
 }
 
 void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware)
@@ -396,7 +491,7 @@ void gui_file_dialog_load_adam_firmware(GC_AdamFirmware firmware)
     FileDialogID id = firmware == GC_ADAM_FIRMWARE_EOS ? FileDialog_LoadAdamEOS : FileDialog_LoadAdamSmartWriter;
 
     SDL_DialogFileFilter filters[] = { { "Firmware Files", "rom;bin" }, { "All Files", "*" } };
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window, filters, 2, NULL, false);
+    show_open_file_dialog(id, filters, 2);
 }
 
 void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple)
@@ -409,8 +504,7 @@ void gui_file_dialog_select_adam_media(GC_AdamMediaSlot slot, bool multiple)
         { disk ? "ADAM Disks and Playlists" : "ADAM Data Packs and Playlists", disk ? "dsk;zip;m3u" : "ddp;zip;m3u" }
     };
 
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowOpenFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SelectAdamMedia, application_sdl_window, filters, 1, default_path, multiple);
+    show_open_file_dialog(FileDialog_SelectAdamMedia, filters, 1, multiple);
 }
 
 void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
@@ -426,9 +520,7 @@ void gui_file_dialog_save_adam_media(GC_AdamMediaSlot slot)
         { disk ? "ADAM Disk Images" : "ADAM Data Pack Images", disk ? "dsk" : "ddp" }
     };
 
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)id, application_sdl_window,
-        filters, 1, default_path);
+    show_save_file_dialog(id, filters, 1);
 }
 
 void gui_file_dialog_save_adam_printer(void)
@@ -438,9 +530,7 @@ void gui_file_dialog_save_adam_printer(void)
 
     SDL_DialogFileFilter filters[] = { { "Text Files", "txt" } };
 
-    const char* default_path = config_emulator.last_open_path.empty() ? NULL : config_emulator.last_open_path.c_str();
-
-    SDL_ShowSaveFileDialog(file_dialog_callback, (void*)(intptr_t)FileDialog_SaveAdamPrinter, application_sdl_window, filters, 1, default_path);
+    show_save_file_dialog(FileDialog_SaveAdamPrinter, filters, 1);
 }
 
 void gui_file_dialog_process_results(void)
@@ -464,6 +554,7 @@ void gui_file_dialog_process_results(void)
         std::string path = pending_dialog_path;
         pending_dialog_id = FileDialog_None;
         pending_dialog_path.clear();
+        remember_dialog_location(id, path.c_str());
         process_dialog_result(id, path.c_str());
     }
 
@@ -519,9 +610,6 @@ static void process_dialog_result(FileDialogID id, const char* path)
         case FileDialog_OpenROM:
         case FileDialog_OpenAdamCartridge:
         {
-            std::string str_path = path;
-            std::string::size_type pos = str_path.find_last_of("\\/");
-            config_emulator.last_open_path.assign(str_path.substr(0, pos + 1));
             gui_open_rom(path, id == FileDialog_OpenAdamCartridge);
             break;
         }
@@ -701,9 +789,6 @@ static void process_dialog_result(FileDialogID id, const char* path)
                 gui_set_error_message(error[0] ? error : "Unable to select ADAM media. Check the image types, sizes, and playlist paths.");
             else
             {
-                char directory[4096];
-                get_directory(path, directory, sizeof(directory));
-                config_emulator.last_open_path = directory;
                 gui_notify(gui_NotificationInfo, ICON_MD_SAVE,
                     (emu_get_machine() == GC_MACHINE_ADAM) ? "ADAM media inserted" : "ADAM media selected", path);
             }

@@ -24,7 +24,7 @@
 #include <string>
 #include "gearcoleco.h"
 
-static const int config_version = 8;
+static const int config_version = 9;
 static const int config_minimum_version = 2;
 static const int config_max_recent_roms = 15;
 static const int config_memory_editor_count = 7;
@@ -123,7 +123,6 @@ struct config_Emulator
     int video_recordings_dir_option;
     std::string screenshots_path;
     std::string video_recordings_path;
-    std::string last_open_path;
     int window_width;
     int window_height;
     int spinner;
@@ -133,6 +132,19 @@ struct config_Emulator
     bool allow_screensaver;
     int mcp_tcp_port;
     std::string mcp_http_address;
+};
+
+struct config_FileDialogs
+{
+    std::string rom;
+    std::string ram;
+    std::string states;
+    std::string screenshots;
+    std::string recordings;
+    std::string debug;
+    std::string bios;
+    std::string adam_media;
+    std::string adam_printer;
 };
 
 struct config_Video
@@ -351,6 +363,7 @@ struct config_Debug
 };
 
 EXTERN config_Emulator config_emulator;
+EXTERN config_FileDialogs config_file_dialogs;
 EXTERN config_Video config_video;
 EXTERN config_Audio config_audio;
 EXTERN config_Rewind config_rewind;
