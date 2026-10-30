@@ -2004,7 +2004,7 @@ static void gamepad_configuration_item(const char* text, int* button, int player
 static void hotkey_configuration_item(const char* text, config_Hotkey* hotkey)
 {
     ImGui::Text("%s", text);
-    ImGui::SameLine(150);
+    ImGui::SameLine(200);
 
     char button_label[256];
     snprintf(button_label, sizeof(button_label), "%s##%s", hotkey->str[0] != '\0' ? hotkey->str : "<None>", text);
