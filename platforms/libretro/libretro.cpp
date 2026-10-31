@@ -2347,6 +2347,7 @@ static bool setup_loaded_game(void)
     {
         struct retro_memory_descriptor descs[6];
         memset(descs, 0, sizeof(descs));
+        int rom_size = core->GetCartridge()->GetROMSize();
 
         descs[0].ptr   = core->GetMemory()->GetBios();
         descs[0].start = 0x0000;
@@ -2361,7 +2362,7 @@ static bool setup_loaded_game(void)
         descs[2].len        = 0x0400;
         descs[3].ptr   = core->GetCartridge()->GetROM();
         descs[3].start = 0x8000;
-        descs[3].len   = core->GetCartridge()->GetROMSize();
+        descs[3].len   = (rom_size < 0x8000) ? rom_size : 0x8000;
         descs[4].ptr   = core->GetMemory()->GetSGMRam();
         descs[4].start = 0x010000;
         descs[4].len   = 0x2000;
