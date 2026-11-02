@@ -56,6 +56,7 @@
     <ClCompile Include="..\shared\desktop\gui_filedialogs.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_menus.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_popups.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\gui_shader.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\main.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\ogl_renderer.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\ogl_shader_program.cpp"><Filter>desktop</Filter></ClCompile>
@@ -146,6 +147,7 @@
     <ClInclude Include="..\shared\desktop\gui_filedialogs.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_menus.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_popups.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\gui_shader.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\..\src\ips_patch.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\keyboard.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\license.h"><Filter>desktop</Filter></ClInclude>

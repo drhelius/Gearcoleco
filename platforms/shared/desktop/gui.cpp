@@ -36,6 +36,7 @@
 #include "gui_adam.h"
 #include "emu_adam.h"
 #include "gui_menus.h"
+#include "gui_shader.h"
 #include "gui_popups.h"
 #include "gui_actions.h"
 #include "gui_notifications.h"
@@ -195,6 +196,7 @@ void gui_render(void)
 
     gui_debug_windows();
     gui_adam_windows();
+    gui_shader_parameters_window();
 
     if (config_emulator.show_info)
         gui_show_info();
