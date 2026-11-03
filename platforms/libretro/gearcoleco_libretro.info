@@ -11,6 +11,8 @@ license = "GPLv3"
 permissions = ""
 display_version = "1.0.0"
 supports_no_game = "true"
+savestate = "true"
+savestate_features = "deterministic"
 
 firmware_count = 3
 firmware0_desc = "colecovision.rom (ColecoVision / ADAM OS-7 BIOS)"
