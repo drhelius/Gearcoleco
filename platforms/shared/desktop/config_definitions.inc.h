@@ -169,6 +169,7 @@ static inline void process(config_Operation operation)
     CONFIG_BOOL("Emulator", "AdamDataPack2WriteProtected", config_emulator.adam_media_write_protected[GC_ADAM_MEDIA_DATA_PACK_2], false);
     CONFIG_INT("Emulator", "Spinner", config_emulator.spinner, 0);
     CONFIG_INT("Emulator", "SpinnerSensitivity", config_emulator.spinner_sensitivity, 4);
+    CONFIG_BOOL("Emulator", "AllowSharedGamepads", config_emulator.allow_shared_gamepads, false);
 
     // Files and paths
     CONFIG_INT("Emulator", "SaveFilesDirOption", config_emulator.savefiles_dir_option, 0);

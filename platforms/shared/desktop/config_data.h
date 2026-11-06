@@ -128,6 +128,7 @@ struct config_Emulator
     int spinner;
     int spinner_sensitivity;
     bool capture_mouse;
+    bool allow_shared_gamepads;
     bool show_notifications;
     bool allow_screensaver;
     int mcp_tcp_port;
