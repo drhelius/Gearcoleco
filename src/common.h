@@ -224,6 +224,13 @@ inline bool parse_hex_with_prefix(const std::string& hex_str, T* result)
     return parse_hex_string(str, len, result);
 }
 
+inline std::string int_to_string(int value)
+{
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%d", value);
+    return buffer;
+}
+
 inline char* strncpy_fit(char* dest, const char* src, size_t dest_size)
 {
     if (dest_size == 0)

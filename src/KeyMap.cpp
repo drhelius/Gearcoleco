@@ -20,6 +20,7 @@
 #include "KeyMap.h"
 #include "HostKeys.h"
 #include "AdamKeys.h"
+#include "common.h"
 
 static const GC_KeyMapEntry kKeyMapEmpty = { false, 0, { 0, 0, 0, 0 } };
 
@@ -261,7 +262,7 @@ bool KeyMap::SetLayer(GC_KeyMapLayer layer, const char* text, std::string* error
         if (!message.empty())
         {
             if (IsValidPointer(error))
-                *error = "Line " + std::to_string(number) + ": " + message;
+                *error = "Line " + int_to_string(number) + ": " + message;
 
             return false;
         }
@@ -539,7 +540,7 @@ bool KeyMap::ParseEntry(const std::string& host, const std::string& value, u16* 
 
         if (entry->count == GC_KEY_MAP_TARGETS)
         {
-            *error = "More than " + std::to_string(GC_KEY_MAP_TARGETS) + " keys for " + name;
+            *error = "More than " + int_to_string(GC_KEY_MAP_TARGETS) + " keys for " + name;
             return false;
         }
 
