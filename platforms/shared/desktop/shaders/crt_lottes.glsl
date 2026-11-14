@@ -250,7 +250,7 @@ void main()
         color += bloom(pos) * BloomAmount;
 
     if (ShadowMask >= 0.5)
-        color *= mask(floor(vTexCoord * OutputSize.xy) + vec2(0.5));
+        color *= mask(floor(pos * OutputSize.xy) + vec2(0.5));
 
     FragColor = vec4(to_srgb(max(color, vec3(0.0))), 1.0);
 }

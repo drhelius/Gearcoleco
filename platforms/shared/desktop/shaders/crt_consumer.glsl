@@ -211,7 +211,7 @@ void main()
         color = color * scanline_weight(scan_pos, luminance) + color * scanline_weight(1.0 - scan_pos, luminance);
 
     float masked_luminance = color.r * 0.3 + color.g * 0.6 + color.b * 0.1;
-    color *= default_mask(vTexCoord * OutputSize.xy, masked_luminance);
+    color *= default_mask(pos * OutputSize.xy, masked_luminance);
     color *= mix(brightboost1, brightboost2, max(max(color.r, color.g), color.b));
     color = pow(max(color, vec3(0.0)), vec3(1.0 / GAMMA_OUT));
 
