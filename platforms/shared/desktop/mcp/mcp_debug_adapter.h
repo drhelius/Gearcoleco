@@ -139,6 +139,11 @@ public:
     // Controller input
     json ControllerButton(int player, const std::string& button, const std::string& action);
     json AdamKeyboard(const std::string& key, const std::string& action);
+    json GetKeyMap();
+    json SetKeyBinding(const std::string& host, const std::string& keys);
+    json SetKeyMapping(bool enabled);
+    json HostKey(const std::string& key, const std::string& action);
+    json SetKeyMapperOpen(bool open);
     json GetInputState();
 
     // Disassembler operations

@@ -25,6 +25,7 @@
 #include "emu.h"
 #include "application.h"
 #include "gamepad.h"
+#include "KeyMap.h"
 
 #define EVENTS_IMPORT
 #include "events.h"
@@ -43,8 +44,6 @@ static bool roller_mouse_buttons[2] = { };
 static float spinner_remainder[2] = { };
 static bool adam_scancode_down[SDL_SCANCODE_COUNT] = { };
 static bool adam_controller_keys[SDL_SCANCODE_COUNT] = { };
-static GC_AdamKey adam_pressed_keys[SDL_SCANCODE_COUNT];
-static int adam_key_references[GC_ADAM_KEY_COUNT] = { };
 
 static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat);
 static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
@@ -52,7 +51,6 @@ static void input_force_key(int controller, int index, GC_Keys key, bool pressed
 static void input_poll_controller(int controller);
 static void input_filter_opposing_directions(int controller, bool* left, bool* right, bool* up, bool* down);
 static void input_send_key(int controller, int index, GC_Keys key, bool pressed);
-static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode);
 static void send_adam_key(SDL_Scancode scancode, bool pressed);
 static bool adam_keyboard_captures_event(const SDL_Event* event);
 static bool adam_controller_uses_key(SDL_Scancode scancode);
@@ -93,6 +91,18 @@ bool events_shortcuts(const SDL_Event* event)
     if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Fullscreen], false))
     {
         gui_shortcut(gui_ShortcutFullscreen);
+        return true;
+    }
+
+    if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_KeyboardMapper], false))
+    {
+        gui_shortcut(gui_ShortcutKeyboardMapper);
+        return true;
+    }
+
+    if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_KeyMapping], false))
+    {
+        gui_shortcut(gui_ShortcutKeyMapping);
         return true;
     }
 
@@ -170,7 +180,7 @@ void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
         return;
     }
 
-    if ((gui_in_use || shortcut_consumed) && (event->type != SDL_EVENT_MOUSE_BUTTON_UP))
+    if ((gui_in_use || shortcut_consumed || emu_key_mapper_is_open()) && (event->type != SDL_EVENT_MOUSE_BUTTON_UP))
         return;
 
     switch (event->type)
@@ -309,8 +319,8 @@ void events_release_adam_keys(void)
 {
     memset(adam_scancode_down, 0, sizeof(adam_scancode_down));
     memset(adam_controller_keys, 0, sizeof(adam_controller_keys));
-    memset(adam_key_references, 0, sizeof(adam_key_references));
 
+    emu_adam_release_all_host_keys();
     emu_adam_release_all_keys();
 
     if (emu_get_machine() == GC_MACHINE_ADAM)
@@ -557,71 +567,8 @@ static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Ho
 
 GC_AdamKey events_adam_typing_key(SDL_Scancode scancode)
 {
-    switch (scancode)
-    {
-        case SDL_SCANCODE_A: return GC_ADAM_KEY_A;
-        case SDL_SCANCODE_B: return GC_ADAM_KEY_B;
-        case SDL_SCANCODE_C: return GC_ADAM_KEY_C;
-        case SDL_SCANCODE_D: return GC_ADAM_KEY_D;
-        case SDL_SCANCODE_E: return GC_ADAM_KEY_E;
-        case SDL_SCANCODE_F: return GC_ADAM_KEY_F;
-        case SDL_SCANCODE_G: return GC_ADAM_KEY_G;
-        case SDL_SCANCODE_H: return GC_ADAM_KEY_H;
-        case SDL_SCANCODE_I: return GC_ADAM_KEY_I;
-        case SDL_SCANCODE_J: return GC_ADAM_KEY_J;
-        case SDL_SCANCODE_K: return GC_ADAM_KEY_K;
-        case SDL_SCANCODE_L: return GC_ADAM_KEY_L;
-        case SDL_SCANCODE_M: return GC_ADAM_KEY_M;
-        case SDL_SCANCODE_N: return GC_ADAM_KEY_N;
-        case SDL_SCANCODE_O: return GC_ADAM_KEY_O;
-        case SDL_SCANCODE_P: return GC_ADAM_KEY_P;
-        case SDL_SCANCODE_Q: return GC_ADAM_KEY_Q;
-        case SDL_SCANCODE_R: return GC_ADAM_KEY_R;
-        case SDL_SCANCODE_S: return GC_ADAM_KEY_S;
-        case SDL_SCANCODE_T: return GC_ADAM_KEY_T;
-        case SDL_SCANCODE_U: return GC_ADAM_KEY_U;
-        case SDL_SCANCODE_V: return GC_ADAM_KEY_V;
-        case SDL_SCANCODE_W: return GC_ADAM_KEY_W;
-        case SDL_SCANCODE_X: return GC_ADAM_KEY_X;
-        case SDL_SCANCODE_Y: return GC_ADAM_KEY_Y;
-        case SDL_SCANCODE_Z: return GC_ADAM_KEY_Z;
-        case SDL_SCANCODE_0: return GC_ADAM_KEY_0;
-        case SDL_SCANCODE_1: return GC_ADAM_KEY_1;
-        case SDL_SCANCODE_2: return GC_ADAM_KEY_2;
-        case SDL_SCANCODE_3: return GC_ADAM_KEY_3;
-        case SDL_SCANCODE_4: return GC_ADAM_KEY_4;
-        case SDL_SCANCODE_5: return GC_ADAM_KEY_5;
-        case SDL_SCANCODE_6: return GC_ADAM_KEY_6;
-        case SDL_SCANCODE_7: return GC_ADAM_KEY_7;
-        case SDL_SCANCODE_8: return GC_ADAM_KEY_8;
-        case SDL_SCANCODE_9: return GC_ADAM_KEY_9;
-        case SDL_SCANCODE_SPACE: return GC_ADAM_KEY_SPACE;
-        case SDL_SCANCODE_MINUS: return GC_ADAM_KEY_MINUS;
-        case SDL_SCANCODE_EQUALS: return GC_ADAM_KEY_PLUS;
-        case SDL_SCANCODE_GRAVE: return GC_ADAM_KEY_CARET;
-        case SDL_SCANCODE_SEMICOLON: return GC_ADAM_KEY_SEMICOLON;
-        case SDL_SCANCODE_APOSTROPHE: return GC_ADAM_KEY_QUOTE;
-        case SDL_SCANCODE_LEFTBRACKET: return GC_ADAM_KEY_OPEN_BRACKET;
-        case SDL_SCANCODE_RIGHTBRACKET: return GC_ADAM_KEY_CLOSE_BRACKET;
-        case SDL_SCANCODE_BACKSLASH: return GC_ADAM_KEY_BACKSLASH;
-        case SDL_SCANCODE_COMMA: return GC_ADAM_KEY_COMMA;
-        case SDL_SCANCODE_PERIOD: return GC_ADAM_KEY_PERIOD;
-        case SDL_SCANCODE_SLASH: return GC_ADAM_KEY_SLASH;
-        case SDL_SCANCODE_RETURN:
-        case SDL_SCANCODE_KP_ENTER: return GC_ADAM_KEY_RETURN;
-        case SDL_SCANCODE_BACKSPACE: return GC_ADAM_KEY_BACKSPACE;
-        case SDL_SCANCODE_TAB: return GC_ADAM_KEY_TAB;
-        case SDL_SCANCODE_UP: return GC_ADAM_KEY_UP;
-        case SDL_SCANCODE_RIGHT: return GC_ADAM_KEY_RIGHT;
-        case SDL_SCANCODE_DOWN: return GC_ADAM_KEY_DOWN;
-        case SDL_SCANCODE_LEFT: return GC_ADAM_KEY_LEFT;
-        case SDL_SCANCODE_LSHIFT:
-        case SDL_SCANCODE_RSHIFT: return GC_ADAM_KEY_SHIFT;
-        case SDL_SCANCODE_LCTRL:
-        case SDL_SCANCODE_RCTRL: return GC_ADAM_KEY_CONTROL;
-        case SDL_SCANCODE_CAPSLOCK: return GC_ADAM_KEY_LOCK;
-        default: return GC_ADAM_KEY_COUNT;
-    }
+    int key = KeyMap::GetDefaultKey((u16)scancode);
+    return (key < 0) ? GC_ADAM_KEY_COUNT : (GC_AdamKey)key;
 }
 
 const char* events_adam_reserved_key(SDL_Scancode scancode)
@@ -649,55 +596,20 @@ const char* events_adam_reserved_key(SDL_Scancode scancode)
     return NULL;
 }
 
-static GC_AdamKey adam_key_from_scancode(SDL_Scancode scancode)
-{
-    if (scancode == SDL_SCANCODE_UNKNOWN)
-        return GC_ADAM_KEY_COUNT;
-
-    if (!events_adam_reserved_key(scancode))
-    {
-        for (int i = 0; i < config_adam_key_count; i++)
-        {
-            if (config_emulator.adam_keys[i] == scancode)
-                return config_adam_keys[i].key;
-        }
-    }
-
-    return events_adam_typing_key(scancode);
-}
-
 static void send_adam_key(SDL_Scancode scancode, bool pressed)
 {
-    if ((scancode < 0) || (scancode >= SDL_SCANCODE_COUNT))
+    if ((scancode <= SDL_SCANCODE_UNKNOWN) || (scancode >= SDL_SCANCODE_COUNT))
         return;
 
+    if (adam_scancode_down[scancode] == pressed)
+        return;
+
+    adam_scancode_down[scancode] = pressed;
+
     if (pressed)
-    {
-        if (adam_scancode_down[scancode])
-            return;
-
-        GC_AdamKey key = adam_key_from_scancode(scancode);
-
-        if (key >= GC_ADAM_KEY_COUNT)
-            return;
-
-        adam_scancode_down[scancode] = true;
-        adam_pressed_keys[scancode] = key;
-
-        if (adam_key_references[key]++ == 0)
-            emu_adam_key_pressed(key);
-    }
+        emu_adam_host_key_pressed((int)scancode);
     else
-    {
-        if (!adam_scancode_down[scancode])
-            return;
-
-        adam_scancode_down[scancode] = false;
-        GC_AdamKey key = adam_pressed_keys[scancode];
-
-        if ((adam_key_references[key] > 0) && (--adam_key_references[key] == 0))
-            emu_adam_key_released(key);
-    }
+        emu_adam_host_key_released((int)scancode);
 }
 
 // Fractions carry over so slow movements are not lost

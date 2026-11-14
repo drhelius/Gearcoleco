@@ -449,7 +449,8 @@ static void sdl_destroy(void)
 
 static bool is_mouse_captured(void)
 {
-    return config_emulator.capture_mouse && !ImGui::IsPopupOpen(NULL, ImGuiPopupFlags_AnyPopup);
+    return config_emulator.capture_mouse && !ImGui::IsPopupOpen(NULL, ImGuiPopupFlags_AnyPopup) &&
+        !emu_key_mapper_is_open();
 }
 
 static bool is_captured_mouse_event(const SDL_Event* event)
@@ -466,7 +467,7 @@ static bool is_captured_mouse_event(const SDL_Event* event)
 
 static void handle_mouse_cursor(void)
 {
-    if (!config_debug.debug && gui_main_window_hovered && !gui_has_open_window())
+    if (gui_main_window_hovered && (emu_key_mapper_is_open() || (!config_debug.debug && !gui_has_open_window())))
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
     else if (!config_debug.debug && config_emulator.fullscreen && !config_emulator.always_show_menu)
     {

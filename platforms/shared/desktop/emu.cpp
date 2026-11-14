@@ -37,6 +37,9 @@
 #include "ogl_renderer.h"
 #include "events.h"
 #include "gui_debug_trace_logger.h"
+#include "gui_notifications.h"
+#include "KeyMap.h"
+#include "KeyMapper.h"
 #include "mcp/mcp_manager.h"
 #include "utils.h"
 
@@ -54,6 +57,9 @@ static const int kDebugHaltStepMaxFrames = 4;
 static Uint64 rewind_last_counter = 0;
 static double rewind_pop_accumulator = 0.0;
 static bool video_recording_output = false;
+static std::string key_map_path;
+static SDL_Scancode key_map_built_in_keys[config_adam_key_count];
+static bool key_map_built_in_valid = false;
 
 u16* debug_background_buffer;
 u16* debug_tile_buffer;
@@ -102,6 +108,10 @@ static void get_video_recording_size(const GC_RuntimeInfo& runtime, int* width, 
 static void reset_rewind_timing(void);
 static int get_rewind_pop_budget(void);
 static void set_debug_identity(GC_Machine machine, const char* content_name);
+static void update_key_map(void);
+static void update_key_map_built_in(void);
+static std::string get_key_map_path(std::string* title);
+static void save_key_map(void);
 
 bool emu_init(void)
 {
@@ -162,6 +172,9 @@ void emu_destroy(void)
 
     emu_stop_video_recording();
     save_ram();
+
+    gearcoleco->GetKeyMapper()->Close();
+    save_key_map();
 
     if (!emu_flush_adam_media())
         Error("Unable to flush one or more ADAM working copies during shutdown");
@@ -494,7 +507,23 @@ void emu_update(void)
     emu_mcp_pump_commands();
 
     if (emu_is_empty())
+    {
+        gearcoleco->GetKeyMapper()->Close();
+        update_key_map();
         return;
+    }
+
+    update_key_map();
+
+    if (gearcoleco->GetKeyMapper()->IsOpen())
+    {
+        int mapper_samples = 0;
+        gearcoleco->RunToVBlank(emu_frame_buffer, audio_buffer, &mapper_samples);
+        emu_video_recording_frame_pending = false;
+        memset(audio_buffer, 0, GC_AUDIO_QUEUE_SIZE * sizeof(s16));
+        sound_queue_write(audio_buffer, GC_AUDIO_QUEUE_SIZE, false);
+        return;
+    }
 
     int sampleCount = 0;
     bool frame_executed = false;
@@ -681,6 +710,74 @@ void emu_key_pressed(GC_Controllers controller, GC_Keys key)
 void emu_key_released(GC_Controllers controller, GC_Keys key)
 {
     gearcoleco->KeyReleased(controller, key);
+}
+
+bool emu_key_mapper_is_open(void)
+{
+    return IsValidPointer(gearcoleco) && gearcoleco->GetKeyMapper()->IsOpen();
+}
+
+void emu_key_mapper_toggle(void)
+{
+    if (emu_is_busy())
+        return;
+
+    KeyMapper* mapper = gearcoleco->GetKeyMapper();
+
+    if (mapper->IsOpen())
+    {
+        mapper->Close();
+        save_key_map();
+        return;
+    }
+
+    if (emu_is_empty() || (gearcoleco->GetMachine() != GC_MACHINE_ADAM))
+        return;
+
+    update_key_map();
+    mapper->SetHotkeyNames(config_hotkeys[config_HotkeyIndex_KeyboardMapper].str,
+        config_hotkeys[config_HotkeyIndex_KeyMapping].str);
+    mapper->Open();
+}
+
+void emu_key_mapper_set_pointer(int x, int y)
+{
+    if (!emu_is_busy())
+        gearcoleco->GetKeyMapper()->SetPointer(x, y);
+}
+
+void emu_key_mapper_set_buttons(u8 buttons)
+{
+    if (emu_is_busy())
+        return;
+
+    KeyMapper* mapper = gearcoleco->GetKeyMapper();
+    mapper->SetPointerButtons(buttons);
+
+    if (!mapper->IsOpen())
+        save_key_map();
+}
+
+bool emu_key_mapping_is_enabled(void)
+{
+    return !IsValidPointer(gearcoleco) || gearcoleco->GetKeyMap()->IsEnabled();
+}
+
+void emu_key_mapping_toggle(void)
+{
+    if (!emu_is_busy())
+        gearcoleco->GetKeyMap()->SetEnabled(!gearcoleco->GetKeyMap()->IsEnabled());
+}
+
+const char* emu_key_map_get_path(void)
+{
+    return key_map_path.c_str();
+}
+
+void emu_key_map_save(void)
+{
+    if (!emu_is_busy())
+        save_key_map();
 }
 
 void emu_spinner1(int movement)
@@ -1420,6 +1517,141 @@ static void load_ram(void)
 {
     const char* dir = get_configurated_dir(config_emulator.savefiles_dir_option, config_emulator.savefiles_path.c_str());
     gearcoleco->LoadRam(dir);
+}
+
+static void update_key_map(void)
+{
+    update_key_map_built_in();
+
+    std::string title;
+    std::string path = get_key_map_path(&title);
+    KeyMap* key_map = gearcoleco->GetKeyMap();
+
+    gearcoleco->GetKeyMapper()->SetTitle(title.c_str());
+
+    if (path == key_map_path)
+        return;
+
+    save_key_map();
+    key_map_path = path;
+    key_map->SetEnabled(true);
+    key_map->ClearLayer(GC_KEY_MAP_USER);
+    key_map->SetChanged(false);
+
+    if (path.empty())
+        return;
+
+    std::ifstream file;
+    open_ifstream_utf8(file, path.c_str(), std::ios::in | std::ios::binary);
+
+    if (!file.is_open())
+        return;
+
+    std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    std::string error;
+
+    if (!key_map->SetLayer(GC_KEY_MAP_USER, text.c_str(), &error))
+    {
+        key_map->ClearLayer(GC_KEY_MAP_USER);
+        Log("Ignoring the key map %s: %s", path.c_str(), error.c_str());
+        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Key map ignored", error.c_str(), "key_map", 6000);
+    }
+}
+
+static void update_key_map_built_in(void)
+{
+    SDL_Scancode keys[config_adam_key_count];
+
+    for (int i = 0; i < config_adam_key_count; i++)
+    {
+        SDL_Scancode key = config_emulator.adam_keys[i];
+        keys[i] = ((key != SDL_SCANCODE_UNKNOWN) && !events_adam_reserved_key(key)) ? key : SDL_SCANCODE_UNKNOWN;
+    }
+
+    if (key_map_built_in_valid && (memcmp(keys, key_map_built_in_keys, sizeof(keys)) == 0))
+        return;
+
+    memcpy(key_map_built_in_keys, keys, sizeof(keys));
+    key_map_built_in_valid = true;
+
+    KeyMap* key_map = gearcoleco->GetKeyMap();
+    key_map->ResetBuiltIn(false);
+
+    for (int i = config_adam_key_count - 1; i >= 0; i--)
+    {
+        if ((keys[i] == SDL_SCANCODE_UNKNOWN) || (keys[i] >= GC_HOST_KEY_COUNT))
+            continue;
+
+        GC_KeyMapEntry entry;
+        memset(&entry, 0, sizeof(entry));
+        entry.set = true;
+        entry.count = 1;
+        entry.keys[0] = (u8)config_adam_keys[i].key;
+        key_map->SetEntry(GC_KEY_MAP_BUILT_IN, (u16)keys[i], entry);
+    }
+}
+
+static std::string get_key_map_path(std::string* title)
+{
+    *title = "";
+
+    if (gearcoleco->GetMachine() != GC_MACHINE_ADAM)
+        return "";
+
+    const char* content = emu_get_content_path();
+    const char* directory = get_configurated_dir(config_emulator.savefiles_dir_option, config_emulator.savefiles_path.c_str());
+    char folder[4096];
+    char name[1024];
+    char path[4096];
+
+    if (!IsValidPointer(directory))
+    {
+        if (content[0] != '\0')
+            get_directory(content, folder, sizeof(folder));
+        else
+            strncpy_fit(folder, config_root_path, sizeof(folder));
+
+        directory = folder;
+    }
+
+    if (content[0] != '\0')
+        get_filename_without_extension(content, name, sizeof(name));
+    else
+        strncpy_fit(name, "ADAM", sizeof(name));
+
+    *title = content[0] != '\0' ? get_filename(content) : "ADAM";
+    join_path(directory, (std::string(name) + ".keys").c_str(), path, sizeof(path));
+    return path;
+}
+
+static void save_key_map(void)
+{
+    KeyMap* key_map = gearcoleco->GetKeyMap();
+
+    if (!key_map->IsChanged() || key_map_path.empty())
+        return;
+
+    key_map->SetChanged(false);
+
+    if (key_map->IsLayerEmpty(GC_KEY_MAP_USER))
+    {
+        remove_file_utf8(key_map_path.c_str());
+        return;
+    }
+
+    std::string text = "[keys]\n" + key_map->GetLayer(GC_KEY_MAP_USER);
+    std::ofstream file;
+    open_ofstream_utf8(file, key_map_path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+
+    if (file.is_open())
+        file.write(text.c_str(), (std::streamsize)text.size());
+
+    if (!file.is_open() || file.fail())
+    {
+        Log("Unable to save the key map %s", key_map_path.c_str());
+        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Unable to save the key map", key_map_path.c_str(),
+            "key_map", 6000);
+    }
 }
 
 static void reset_buffers(void)

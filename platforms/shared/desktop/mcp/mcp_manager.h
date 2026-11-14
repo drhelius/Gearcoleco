@@ -41,6 +41,7 @@ struct DelayedButtonRelease
 {
     int player;
     std::string button;
+    int host_key;
     u64 release_at_cycle;
 };
 
@@ -188,7 +189,10 @@ public:
         {
             if (current_cycles >= m_delayedReleases[i].release_at_cycle)
             {
-                m_debugAdapter->ControllerButton(m_delayedReleases[i].player, m_delayedReleases[i].button, "release");
+                if (m_delayedReleases[i].host_key >= 0)
+                    emu_adam_host_key_released(m_delayedReleases[i].host_key);
+                else
+                    m_debugAdapter->ControllerButton(m_delayedReleases[i].player, m_delayedReleases[i].button, "release");
                 m_delayedReleases.erase(m_delayedReleases.begin() + i);
             }
             else
@@ -395,10 +399,13 @@ private:
         json pending_releases = json::array();
         for (size_t i = 0; i < m_delayedReleases.size(); i++)
         {
-            pending_releases.push_back({
-                {"player", m_delayedReleases[i].player},
-                {"button", m_delayedReleases[i].button}
-            });
+            if (m_delayedReleases[i].host_key >= 0)
+                pending_releases.push_back({{"host_key", m_delayedReleases[i].host_key}});
+            else
+                pending_releases.push_back({
+                    {"player", m_delayedReleases[i].player},
+                    {"button", m_delayedReleases[i].button}
+                });
         }
 
         result["pending_releases"] = pending_releases;
@@ -766,10 +773,22 @@ private:
             DelayedButtonRelease release;
             release.player = result["player"];
             release.button = result["button"];
+            release.host_key = -1;
             release.release_at_cycle = core->GetMasterClockCycles() + 3000000; // around 10 frames
             m_delayedReleases.push_back(release);
 
             result.erase("__delayed_release");
+        }
+
+        if (result.contains("__delayed_host_release"))
+        {
+            DelayedButtonRelease release;
+            release.player = 0;
+            release.host_key = result["__delayed_host_release"];
+            release.release_at_cycle = core->GetMasterClockCycles() + 3000000;
+            m_delayedReleases.push_back(release);
+
+            result.erase("__delayed_host_release");
         }
     }
 

@@ -263,6 +263,8 @@ enum config_HotkeyIndex
     config_HotkeyIndex_Rewind,
     config_HotkeyIndex_Mute,
     config_HotkeyIndex_VideoRecording,
+    config_HotkeyIndex_KeyboardMapper,
+    config_HotkeyIndex_KeyMapping,
     config_HotkeyIndex_COUNT
 };
 

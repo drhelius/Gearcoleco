@@ -1612,6 +1612,24 @@ void emu_adam_release_all_keys(void)
         emu_get_core()->AdamReleaseAllKeys();
 }
 
+void emu_adam_host_key_pressed(int usage)
+{
+    if (!emu_is_busy())
+        emu_get_core()->HostKeyPressed((u16)usage);
+}
+
+void emu_adam_host_key_released(int usage)
+{
+    if (!emu_is_busy())
+        emu_get_core()->HostKeyReleased((u16)usage);
+}
+
+void emu_adam_release_all_host_keys(void)
+{
+    if (!emu_is_busy())
+        emu_get_core()->ReleaseAllHostKeys();
+}
+
 bool emu_adam_get_state_path(int index, char* path, size_t path_size)
 {
     if (!IsValidPointer(path) || (path_size == 0) || (index < 1))

@@ -31,6 +31,7 @@
 #include "ogl_renderer.h"
 #include "utils.h"
 #include "gearcoleco.h"
+#include "KeyMapper.h"
 
 #define GUI_IMPORT
 #include "gui.h"
@@ -58,6 +59,7 @@ static char loading_symbol_path[4096] = "";
 
 
 static void main_window(void);
+static void update_key_mapper_pointer(const ImVec2& min, const ImVec2& max);
 static void show_error_window(void);
 static void show_loading_popup(void);
 static void select_save_slot(int slot);
@@ -276,6 +278,12 @@ void gui_shortcut(gui_ShortCutEvent event)
             break;
         config_emulator.fullscreen = !config_emulator.fullscreen;
         application_trigger_fullscreen(config_emulator.fullscreen);
+        break;
+    case gui_ShortcutKeyboardMapper:
+        emu_key_mapper_toggle();
+        break;
+    case gui_ShortcutKeyMapping:
+        gui_action_toggle_key_mapping();
         break;
     case gui_ShortcutCaptureMouse:
         config_emulator.capture_mouse = !config_emulator.capture_mouse;
@@ -570,7 +578,9 @@ static void main_window(void)
     int physical_w = (int)floorf(logical_w * framebuffer_scale_x);
     int physical_h = (int)floorf(logical_h * framebuffer_scale_y);
 
-    int selected_ratio = config_debug.debug ? 0 : config_video.ratio;
+    bool key_mapper = emu_key_mapper_is_open();
+    int selected_ratio = key_mapper ? 1 : (config_debug.debug ? 0 : config_video.ratio);
+    int selected_scale = (key_mapper && (config_video.scale == 3)) ? 2 : config_video.scale;
     float ratio = 0;
 
     switch (selected_ratio)
@@ -588,7 +598,7 @@ static void main_window(void)
             ratio = (float)runtime.screen_width / (float)runtime.screen_height;
     }
 
-    if (!config_debug.debug && config_video.scale == 3)
+    if (!config_debug.debug && selected_scale == 3)
     {
         ratio = logical_w / logical_h;
     }
@@ -602,7 +612,7 @@ static void main_window(void)
     if (config_debug.debug)
     {
         scale_multiplier = config_debug.scale;
-        w_corrected = base_width;
+        w_corrected = key_mapper ? (int)round(base_height * ratio) : base_width;
         h_corrected = base_height;
     }
     else
@@ -618,7 +628,7 @@ static void main_window(void)
             h_corrected = base_height;
         }
 
-        switch (config_video.scale)
+        switch (selected_scale)
         {
         case 0:
         {
@@ -645,7 +655,7 @@ static void main_window(void)
             break;
         }
 
-        if (config_video.scale <= 1)
+        if (selected_scale <= 1)
         {
             if (scale_multiplier < 1)
                 scale_multiplier = 1;
@@ -655,7 +665,7 @@ static void main_window(void)
     float image_w = (float)(w_corrected * scale_multiplier);
     float image_h = (float)(h_corrected * scale_multiplier);
 
-    if (config_debug.debug || config_video.scale <= 1)
+    if (config_debug.debug || selected_scale <= 1)
     {
         image_w /= framebuffer_scale_x;
         image_h /= framebuffer_scale_y;
@@ -752,6 +762,10 @@ static void main_window(void)
         draw_list->PushClipRect(clip_min, clip_max, false);
         draw_list->AddImage((ImTextureID)(intptr_t)ogl_renderer_get_screen_texture(), image_min, image_max, ImVec2(0, 0), ImVec2(tex_h, tex_v));
         draw_list->PopClipRect();
+
+        if (key_mapper)
+            update_key_mapper_pointer(image_min, image_max);
+
         gui_notifications_render_output(image_min, image_max);
 
         if (config_video.fps)
@@ -766,6 +780,33 @@ static void main_window(void)
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
+}
+
+static void update_key_mapper_pointer(const ImVec2& min, const ImVec2& max)
+{
+    GC_RuntimeInfo runtime;
+    emu_get_runtime(runtime);
+    ImVec2 mouse = ImGui::GetMousePos();
+    float width = max.x - min.x;
+    float height = max.y - min.y;
+
+    if ((width <= 0.0f) || (height <= 0.0f) || !ImGui::IsMousePosValid(&mouse))
+        return;
+
+    int x = (int)(((mouse.x - min.x) * (float)runtime.screen_width) / width);
+    int y = (int)(((mouse.y - min.y) * (float)runtime.screen_height) / height);
+    emu_key_mapper_set_pointer(x, y);
+
+    bool over = gui_main_window_hovered && !gui_in_use;
+    u8 buttons = 0;
+
+    if (over && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+        buttons |= GC_KEY_MAPPER_BUTTON_LEFT;
+
+    if (over && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        buttons |= GC_KEY_MAPPER_BUTTON_RIGHT;
+
+    emu_key_mapper_set_buttons(buttons);
 }
 
 static ImVec2 snap_to_physical_pixel(const ImVec2& pos)

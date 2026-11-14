@@ -22,6 +22,8 @@
 #include "AdamNet.h"
 #include "F18AGPU.h"
 #include "Input.h"
+#include "KeyMap.h"
+#include "KeyMapper.h"
 #include "log.h"
 #include "../utils.h"
 #include "../emu.h"
@@ -2180,6 +2182,160 @@ json DebugAdapter::AdamKeyboard(const std::string& key, const std::string& actio
     if ((action == "release") || (action == "tap"))
         emu_adam_key_released(adam_key);
     return {{"success", true}, {"key", key_name}, {"action", action}};
+}
+
+static json KeyMapLayer(KeyMap* key_map, GC_KeyMapLayer layer)
+{
+    json entries = json::object();
+
+    for (int usage = 0; usage < GC_HOST_KEY_COUNT; usage++)
+    {
+        const GC_KeyMapEntry& entry = key_map->GetLayerEntry(layer, (u16)usage);
+        const char* name = KeyMap::GetHostKeyName((u16)usage);
+
+        if (entry.set && IsValidPointer(name))
+            entries[name] = KeyMap::FormatTargets(entry);
+    }
+
+    return entries;
+}
+
+json DebugAdapter::GetKeyMap()
+{
+    KeyMap* key_map = m_core->GetKeyMap();
+    bool reached[GC_ADAM_KEY_COUNT] = { };
+    json remapped = json::object();
+
+    for (int usage = 0; usage < GC_HOST_KEY_COUNT; usage++)
+    {
+        GC_KeyMapLayer layer = GC_KEY_MAP_BUILT_IN;
+        const GC_KeyMapEntry& entry = key_map->GetEntry((u16)usage, &layer);
+        const char* name = KeyMap::GetHostKeyName((u16)usage);
+
+        for (int i = 0; i < entry.count; i++)
+            reached[entry.keys[i]] = true;
+
+        if ((layer != GC_KEY_MAP_BUILT_IN) && IsValidPointer(name))
+            remapped[name] = KeyMap::FormatTargets(entry);
+    }
+
+    json unreachable = json::array();
+
+    for (int key = 0; key < GC_ADAM_KEY_COUNT; key++)
+    {
+        const char* name = KeyMap::GetKeyName((GC_AdamKey)key);
+
+        if (IsValidPointer(name) && !reached[key])
+            unreachable.push_back(name);
+    }
+
+    json result;
+    result["enabled"] = key_map->IsEnabled();
+    result["mapper_open"] = m_core->GetKeyMapper()->IsOpen();
+    result["file"] = emu_key_map_get_path();
+    result["user"] = KeyMapLayer(key_map, GC_KEY_MAP_USER);
+    result["remapped"] = remapped;
+    result["unreachable"] = unreachable;
+    return result;
+}
+
+json DebugAdapter::SetKeyBinding(const std::string& host, const std::string& keys)
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    KeyMap* key_map = m_core->GetKeyMap();
+    u16 usage = 0;
+    GC_KeyMapEntry entry;
+    std::string error;
+
+    if (keys == "default")
+    {
+        int found = KeyMap::FindHostKey(host.c_str());
+
+        if (found < 0)
+            return {{"error", "Unknown host key " + host}};
+
+        GC_KeyMapEntry empty;
+        memset(&empty, 0, sizeof(empty));
+        key_map->SetEntry(GC_KEY_MAP_USER, (u16)found, empty);
+        key_map->SetChanged(true);
+        usage = (u16)found;
+    }
+    else
+    {
+        if (!KeyMap::ParseEntry(host, keys, &usage, &entry, &error))
+            return {{"error", error}};
+
+        GC_AdamKey targets[GC_KEY_MAP_TARGETS];
+
+        for (int i = 0; i < entry.count; i++)
+            targets[i] = (GC_AdamKey)entry.keys[i];
+
+        key_map->Bind(usage, targets, entry.count);
+    }
+
+    emu_key_map_save();
+    return {{"success", true}, {"host", KeyMap::GetHostKeyName(usage)},
+        {"keys", KeyMap::FormatTargets(key_map->GetEntry(usage))}, {"file", emu_key_map_get_path()}};
+}
+
+json DebugAdapter::SetKeyMapping(bool enabled)
+{
+    if (m_core->GetKeyMap()->IsEnabled() != enabled)
+        emu_key_mapping_toggle();
+
+    return {{"success", true}, {"enabled", m_core->GetKeyMap()->IsEnabled()}};
+}
+
+json DebugAdapter::HostKey(const std::string& key, const std::string& action)
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    std::string name = key;
+    std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+    int usage = KeyMap::FindHostKey(name.c_str());
+
+    if (usage < 0)
+        return {{"error", "Unknown host key '" + key + "'"}};
+
+    bool delayed_release = false;
+
+    if (action == "press")
+        emu_adam_host_key_pressed(usage);
+    else if (action == "release")
+        emu_adam_host_key_released(usage);
+    else if (action == "press_and_release")
+    {
+        emu_adam_host_key_pressed(usage);
+
+        if (m_core->GetKeyMapper()->IsOpen())
+            emu_adam_host_key_released(usage);
+        else
+            delayed_release = true;
+    }
+    else
+        return {{"error", "Invalid action (must be: press, release, press_and_release)"}};
+
+    json result = {{"success", true}, {"key", KeyMap::GetHostKeyName((u16)usage)}, {"action", action},
+        {"drives", KeyMap::FormatTargets(m_core->GetKeyMap()->GetEntry((u16)usage))}};
+
+    if (delayed_release)
+        result["__delayed_host_release"] = usage;
+
+    return result;
+}
+
+json DebugAdapter::SetKeyMapperOpen(bool open)
+{
+    if (!m_core || !m_core->IsReady() || (m_core->GetMachine() != GC_MACHINE_ADAM))
+        return {{"error", "ADAM is not running"}};
+
+    if (emu_key_mapper_is_open() != open)
+        emu_key_mapper_toggle();
+
+    return {{"success", true}, {"open", emu_key_mapper_is_open()}};
 }
 
 json DebugAdapter::GetInputState()

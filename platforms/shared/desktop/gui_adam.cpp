@@ -498,6 +498,25 @@ void gui_adam_keyboard_menu(void)
         for (int i = 0; i < config_adam_key_count; i++)
             config_emulator.adam_keys[i] = config_adam_keys[i].default_scancode;
     }
+
+    ImGui::Separator();
+
+    bool adam_running = !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
+
+    if (ImGui::MenuItem("Keyboard Mapper...", config_hotkeys[config_HotkeyIndex_KeyboardMapper].str,
+        emu_key_mapper_is_open(), adam_running))
+        emu_key_mapper_toggle();
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("Shows the ADAM keyboard to bind host keys to it, for this game only.\nADAM stops while it's open.");
+
+    bool key_mapping = emu_key_mapping_is_enabled();
+
+    if (ImGui::MenuItem("Key Mapping", config_hotkeys[config_HotkeyIndex_KeyMapping].str, &key_mapping, adam_running))
+        gui_action_toggle_key_mapping();
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("Off: every key types its own, to type text in a\ngame whose keys were moved.");
 }
 
 static void draw_keyboard_binding(int index)

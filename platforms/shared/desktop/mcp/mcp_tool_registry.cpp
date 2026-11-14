@@ -293,7 +293,8 @@ static const char* const kMcpRewindTools[] =
 
 static const char* const kMcpInputTools[] =
 {
-    "controller_button", "adam_keyboard", "controller_macro", "get_input_state"
+    "controller_button", "adam_keyboard", "controller_macro", "get_input_state",
+    "get_key_map", "set_key_binding", "set_key_mapping", "host_key", "open_key_mapper", "close_key_mapper"
 };
 
 static const char* const kMcpTraceTools[] =

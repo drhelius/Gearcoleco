@@ -731,6 +731,8 @@ static void menu_emulator(void)
             hotkey_configuration_item("Fullscreen:", &config_hotkeys[config_HotkeyIndex_Fullscreen]);
             hotkey_configuration_item("Capture Mouse:", &config_hotkeys[config_HotkeyIndex_CaptureMouse]);
             hotkey_configuration_item("Show Main Menu:", &config_hotkeys[config_HotkeyIndex_ShowMainMenu]);
+            hotkey_configuration_item("Keyboard Mapper:", &config_hotkeys[config_HotkeyIndex_KeyboardMapper]);
+            hotkey_configuration_item("Key Mapping:", &config_hotkeys[config_HotkeyIndex_KeyMapping]);
 
             gui_popup_modal_hotkey();
 
@@ -1139,6 +1141,7 @@ static void menu_input(void)
                     gamepad_configuration_item("Fullscreen:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_Fullscreen], 0);
                     gamepad_configuration_item("Capture Mouse:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_CaptureMouse], 0);
                     gamepad_configuration_item("Show Main Menu:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_ShowMainMenu], 0);
+                    gamepad_configuration_item("Keyboard Mapper:", &config_input_gamepad_shortcuts[0].gamepad_shortcuts[config_HotkeyIndex_KeyboardMapper], 0);
 
                     gui_popup_modal_gamepad(0);
 
@@ -1221,6 +1224,7 @@ static void menu_input(void)
                     gamepad_configuration_item("Fullscreen:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_Fullscreen], 1);
                     gamepad_configuration_item("Capture Mouse:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_CaptureMouse], 1);
                     gamepad_configuration_item("Show Main Menu:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_ShowMainMenu], 1);
+                    gamepad_configuration_item("Keyboard Mapper:", &config_input_gamepad_shortcuts[1].gamepad_shortcuts[config_HotkeyIndex_KeyboardMapper], 1);
 
                     gui_popup_modal_gamepad(1);
 

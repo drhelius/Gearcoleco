@@ -362,6 +362,16 @@ void gui_action_load_state_slot(int slot)
     }
 }
 
+void gui_action_toggle_key_mapping(void)
+{
+    if (emu_is_empty() || (emu_get_machine() != GC_MACHINE_ADAM))
+        return;
+
+    emu_key_mapping_toggle();
+    gui_notify(gui_NotificationInfo, ICON_MD_KEYBOARD, emu_key_mapping_is_enabled() ? "Key mapping on" :
+        "Key mapping off", NULL, "key_mapping", 1500);
+}
+
 static std::string get_auto_file_path(int dir_option, const std::string& custom_path, const char* extension)
 {
     using namespace std;

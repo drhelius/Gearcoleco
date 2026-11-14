@@ -402,6 +402,13 @@ static inline void process(config_Operation operation)
     CONFIG_HOTKEY("SelectSlot5", config_hotkeys[config_HotkeyIndex_SelectSlot5], SDL_SCANCODE_5, SDL_KMOD_CTRL);
     CONFIG_HOTKEY("Mute", config_hotkeys[config_HotkeyIndex_Mute], SDL_SCANCODE_U, SDL_KMOD_CTRL);
     CONFIG_HOTKEY("VideoRecording", config_hotkeys[config_HotkeyIndex_VideoRecording], SDL_SCANCODE_R, (SDL_Keymod)(SDL_KMOD_CTRL | SDL_KMOD_SHIFT));
+#if defined(__APPLE__)
+    CONFIG_HOTKEY("KeyboardMapper", config_hotkeys[config_HotkeyIndex_KeyboardMapper], SDL_SCANCODE_F1, SDL_KMOD_GUI);
+    CONFIG_HOTKEY("KeyMapping", config_hotkeys[config_HotkeyIndex_KeyMapping], SDL_SCANCODE_F2, SDL_KMOD_GUI);
+#else
+    CONFIG_HOTKEY("KeyboardMapper", config_hotkeys[config_HotkeyIndex_KeyboardMapper], SDL_SCANCODE_F1, SDL_KMOD_CTRL);
+    CONFIG_HOTKEY("KeyMapping", config_hotkeys[config_HotkeyIndex_KeyMapping], SDL_SCANCODE_F2, SDL_KMOD_CTRL);
+#endif
 }
 
 //**************************************

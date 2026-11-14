@@ -1279,6 +1279,103 @@ json McpServer::BuildToolList()
     });
 
     tools.push_back({
+        {"name", "get_key_map"},
+        {"title", "Get Key Map"},
+        {"description", "The host key map of the running ADAM: whether mapping is on, whether the keyboard mapper is "
+            "open, the per-game file, the user's bindings, every host key that doesn't drive its built-in key, and the "
+            "ADAM keys no host key reaches. Host keys are USB HID key names."},
+        {"annotations", {{"readOnlyHint", true}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "set_key_binding"},
+        {"title", "Set Key Binding"},
+        {"description", "Bind a host key to ADAM keys for this game, saved to its .keys file, as the keyboard mapper "
+            "does. keys: one key, up to 4 joined with '+', 'none', or 'default' to drop the user's binding."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"host", {
+                    {"type", "string"},
+                    {"description", "Host key name, e.g. up, w, f13, right_gui, kp_8."}
+                }},
+                {"keys", {
+                    {"type", "string"},
+                    {"description", "ADAM key names, e.g. smart_1, wild_card, control + c, none, default."}
+                }}
+            }},
+            {"required", json::array({"host", "keys"})}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "set_key_mapping"},
+        {"title", "Set Key Mapping"},
+        {"description", "Turn the game's key mapping on or off. Off, every host key types its built-in key."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"enabled", {{"type", "boolean"}}}
+            }},
+            {"required", json::array({"enabled"})}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "host_key"},
+        {"title", "Host Key"},
+        {"description", "Press, release or tap a host key through the key map, as the host keyboard would. While "
+            "the keyboard mapper is open it goes to the mapper instead."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", true}, {"idempotentHint", false}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", {
+                {"key", {
+                    {"type", "string"},
+                    {"description", "Host key name, e.g. a, up, kp_8, left_ctrl, f13."}
+                }},
+                {"action", {
+                    {"type", "string"},
+                    {"description", "press_and_release releases after some frames."},
+                    {"enum", json::array({"press", "release", "press_and_release"})}
+                }}
+            }},
+            {"required", json::array({"key", "action"})}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "open_key_mapper"},
+        {"title", "Open Key Mapper"},
+        {"description", "Open the full screen keyboard mapper. ADAM stops until it closes."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
+        {"name", "close_key_mapper"},
+        {"title", "Close Key Mapper"},
+        {"description", "Close the keyboard mapper, saving the game's bindings."},
+        {"annotations", {{"readOnlyHint", false}, {"destructiveHint", false}, {"idempotentHint", true}, {"openWorldHint", false}}},
+        {"inputSchema", {
+            {"type", "object"},
+            {"properties", json::object()},
+            {"additionalProperties", false}
+        }}
+    });
+
+    tools.push_back({
         {"name", "get_input_state"},
         {"title", "Get Input State"},
         {"description", "Get effective pressed buttons and pending tap releases."},
@@ -2801,6 +2898,30 @@ json McpServer::ExecuteCommand(const std::string& toolName, const json& argument
         std::string key = arguments["key"];
         std::string action = arguments["action"];
         return m_debugAdapter.AdamKeyboard(key, action);
+    }
+    else if (normalizedTool == "get_key_map")
+    {
+        return m_debugAdapter.GetKeyMap();
+    }
+    else if (normalizedTool == "set_key_binding")
+    {
+        return m_debugAdapter.SetKeyBinding(arguments["host"], arguments["keys"]);
+    }
+    else if (normalizedTool == "set_key_mapping")
+    {
+        return m_debugAdapter.SetKeyMapping(arguments["enabled"]);
+    }
+    else if (normalizedTool == "host_key")
+    {
+        return m_debugAdapter.HostKey(arguments["key"], arguments["action"]);
+    }
+    else if (normalizedTool == "open_key_mapper")
+    {
+        return m_debugAdapter.SetKeyMapperOpen(true);
+    }
+    else if (normalizedTool == "close_key_mapper")
+    {
+        return m_debugAdapter.SetKeyMapperOpen(false);
     }
     else if (normalizedTool == "get_input_state")
     {
