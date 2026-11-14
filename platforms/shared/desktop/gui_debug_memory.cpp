@@ -107,7 +107,6 @@ void gui_debug_window_memory(void)
     for (int i = 0; i < MEMORY_EDITOR_MAX; i++)
     {
         mem_edit[i].SetGuiFont(gui_roboto_font);
-        mem_edit[i].WatchPopup();
         mem_edit[i].BookMarkPopup();
     }
 
@@ -173,6 +172,12 @@ void gui_debug_memory_find_bytes_window(void)
         ImGui::PushFont(gui_default_font);
         mem_edit[i].DrawFindBytesWindow();
         ImGui::PopFont();
+
+        if (mem_edit[i].ConsumeShowRequest())
+        {
+            config_debug.show_memory = true;
+            mem_edit_select = i;
+        }
     }
 }
 
@@ -180,6 +185,8 @@ void gui_debug_memory_watches_window(void)
 {
     for (int i = 0; i < MEMORY_EDITOR_MAX; i++)
     {
+        mem_edit[i].SetGuiFont(gui_roboto_font);
+        mem_edit[i].WatchPopup();
         ImGui::PushFont(gui_default_font);
         mem_edit[i].DrawWatchWindow();
         ImGui::PopFont();
@@ -211,6 +218,7 @@ void gui_debug_memory_select_all(void)
 
 void gui_debug_memory_goto(int editor, int address)
 {
+    config_debug.show_memory = true;
     mem_edit_select = editor;
     mem_edit[mem_edit_select].JumpToAddress(address);
 }
@@ -440,6 +448,7 @@ bool gui_debug_memory_select_range(int editor, int start_address, int end_addres
     if (!mem_edit[editor].SetSelection(start_address, end_address))
         return false;
 
+    config_debug.show_memory = true;
     mem_edit_select = editor;
     mem_edit[editor].ScrollToAddress(start_address);
 
