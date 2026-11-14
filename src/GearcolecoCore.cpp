@@ -27,6 +27,9 @@
 #include "TMS9918A.h"
 #include "F18A.h"
 #include "Input.h"
+#include "KeyMap.h"
+#include "KeyMapper.h"
+#include "HostKeys.h"
 #include "Cartridge.h"
 #include "ColecoVisionIOPorts.h"
 #include "Adam.h"
@@ -54,10 +57,13 @@ GearcolecoCore::GearcolecoCore()
     InitPointer(m_pTraceLogger);
     InitPointer(m_pProfiler);
     InitPointer(m_pAdam);
+    InitPointer(m_pKeyMap);
+    InitPointer(m_pKeyMapper);
     InitPointer(m_pStateBackup);
     m_StateBackupCapacity = 0;
     InitPointer(m_pFrameBuffer);
     m_bPaused = true;
+    m_bHostHotkeys = false;
     m_pixelFormat = GC_PIXEL_RGBA8888;
     m_MasterClockCycles = 0;
     m_requested_video_chip = GC_VIDEO_CHIP_AUTO;
@@ -72,6 +78,8 @@ GearcolecoCore::~GearcolecoCore()
 {
     SafeDeleteArray(m_pStateBackup);
     SafeDelete(m_pAdam);
+    SafeDelete(m_pKeyMapper);
+    SafeDelete(m_pKeyMap);
     SafeDelete(m_pColecoVisionIOPorts);
 #if !defined(GEARCOLECO_DISABLE_DISASSEMBLER)
     SafeDelete(m_pTraceLogger);
@@ -106,6 +114,10 @@ void GearcolecoCore::Init(GC_Color_Format pixelFormat)
     m_pColecoVisionIOPorts = new ColecoVisionIOPorts(m_pAudio, m_pVideo, m_pInput, m_pMemory, m_pProcessor);
     m_pAdam = new Adam();
     m_pAdam->Init(m_pColecoVisionIOPorts);
+    m_pKeyMap = new KeyMap();
+    m_pKeyMap->Init(&GearcolecoCore::KeyMapCallback, this);
+    m_pKeyMapper = new KeyMapper();
+    m_pKeyMapper->Init(m_pKeyMap, m_pixelFormat);
 
     m_pMemory->Init();
     m_pProcessor->Init();
@@ -177,6 +189,20 @@ void GearcolecoCore::SelectVideoChipForCartridge()
 bool GearcolecoCore::RunToVBlank(u8* pFrameBuffer, s16* pSampleBuffer, int* pSampleCount, GC_Debug_Run* debug, bool render)
 {
     m_pFrameBuffer = pFrameBuffer;
+
+    if (m_pKeyMapper->IsOpen() && ((m_machine != GC_MACHINE_ADAM) || !IsReady()))
+        m_pKeyMapper->Close();
+
+    if (m_pKeyMapper->IsOpen())
+    {
+        if (IsValidPointer(pSampleCount))
+            *pSampleCount = 0;
+
+        if (render)
+            m_pKeyMapper->Render(pFrameBuffer);
+
+        return false;
+    }
 
     if (!IsReady())
     {
@@ -536,6 +562,61 @@ void GearcolecoCore::AdamReleaseAllKeys()
         m_pAdam->ReleaseAllKeys();
 }
 
+void GearcolecoCore::HostKeyPressed(u16 usage)
+{
+    if (m_machine != GC_MACHINE_ADAM)
+        return;
+
+    bool mod = m_pKeyMap->IsHostKeyDown(kHostKeyLeftHotkeyMod) || m_pKeyMap->IsHostKeyDown(kHostKeyRightHotkeyMod);
+
+    if (m_bHostHotkeys && mod && ((usage == kHostKeyF1) || (usage == kHostKeyF2)))
+    {
+        if (usage == kHostKeyF2)
+            m_pKeyMap->SetEnabled(!m_pKeyMap->IsEnabled());
+        else if (m_pKeyMapper->IsOpen())
+            m_pKeyMapper->Close();
+        else if (IsReady())
+            m_pKeyMapper->Open();
+
+        m_pKeyMap->IgnoreHostKey(usage);
+        return;
+    }
+
+    m_pKeyMap->HostKeyPressed(usage);
+
+    if (m_pKeyMapper->IsOpen())
+        m_pKeyMapper->HostKey(usage, true);
+}
+
+void GearcolecoCore::HostKeyReleased(u16 usage)
+{
+    m_pKeyMap->HostKeyReleased(usage);
+
+    if (m_pKeyMapper->IsOpen())
+        m_pKeyMapper->HostKey(usage, false);
+}
+
+void GearcolecoCore::ReleaseAllHostKeys()
+{
+    m_pKeyMap->ReleaseAll();
+    m_pKeyMapper->ReleaseHostKeys();
+}
+
+void GearcolecoCore::EnableHostHotkeys(bool enable)
+{
+    m_bHostHotkeys = enable;
+}
+
+void GearcolecoCore::KeyMapCallback(void* core, GC_AdamKey key, bool pressed)
+{
+    GearcolecoCore* gearcoleco = static_cast<GearcolecoCore*>(core);
+
+    if (pressed)
+        gearcoleco->AdamKeyPressed(key);
+    else
+        gearcoleco->AdamKeyReleased(key);
+}
+
 bool GearcolecoCore::IsReady() const
 {
     if (m_machine == GC_MACHINE_ADAM)
@@ -582,6 +663,12 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
             runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (pal ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
 
         runtime_info.region = pal ? Region_PAL : Region_NTSC;
+
+        if (IsValidPointer(m_pKeyMapper) && m_pKeyMapper->IsOpen())
+        {
+            runtime_info.screen_width = m_pKeyMapper->GetWidth();
+            runtime_info.screen_height = m_pKeyMapper->GetHeight();
+        }
 
         return true;
     }
@@ -632,6 +719,16 @@ Profiler* GearcolecoCore::GetProfiler()
 Adam* GearcolecoCore::GetAdam()
 {
     return m_pAdam;
+}
+
+KeyMap* GearcolecoCore::GetKeyMap()
+{
+    return m_pKeyMap;
+}
+
+KeyMapper* GearcolecoCore::GetKeyMapper()
+{
+    return m_pKeyMapper;
 }
 
 u64 GearcolecoCore::GetMasterClockCycles()
@@ -1151,7 +1248,7 @@ bool GearcolecoCore::SaveState(std::ostream& stream, size_t& size, bool screensh
         Debug("Save state header magic: 0x%08x", header.magic);
         Debug("Save state header version: %d", header.version);
 
-        if (screenshot && IsValidPointer(m_pFrameBuffer))
+        if (screenshot && IsValidPointer(m_pFrameBuffer) && !m_pKeyMapper->IsOpen())
         {
             GC_RuntimeInfo runtime_info;
             GetRuntimeInfo(runtime_info);

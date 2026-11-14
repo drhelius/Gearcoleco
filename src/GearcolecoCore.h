@@ -36,6 +36,8 @@ class TraceLogger;
 class Profiler;
 class Adam;
 class AdamMedia;
+class KeyMap;
+class KeyMapper;
 
 class GearcolecoCore
 {
@@ -73,6 +75,10 @@ public:
     void AdamKeyPressed(GC_AdamKey key);
     void AdamKeyReleased(GC_AdamKey key);
     void AdamReleaseAllKeys();
+    void HostKeyPressed(u16 usage);
+    void HostKeyReleased(u16 usage);
+    void ReleaseAllHostKeys();
+    void EnableHostHotkeys(bool enable);
     bool IsReady() const;
     GC_Machine GetMachine() const;
     GC_ContentType GetContentType() const;
@@ -109,6 +115,8 @@ public:
     TraceLogger* GetTraceLogger();
     Profiler* GetProfiler();
     Adam* GetAdam();
+    KeyMap* GetKeyMap();
+    KeyMapper* GetKeyMapper();
     u64 GetMasterClockCycles();
     bool GetAdamDebugState(GC_AdamDebugState* state);
     void RenderFrameBuffer(u8* finalFrameBuffer);
@@ -123,6 +131,7 @@ private:
     bool LoadStateTransactional(std::istream& stream);
     bool LoadStateInternal(std::istream& stream);
     std::string GetSaveStatePath(const char* path, int index);
+    static void KeyMapCallback(void* core, GC_AdamKey key, bool pressed);
 
 private:
     Memory* m_pMemory;
@@ -138,9 +147,12 @@ private:
     TraceLogger* m_pTraceLogger;
     Profiler* m_pProfiler;
     Adam* m_pAdam;
+    KeyMap* m_pKeyMap;
+    KeyMapper* m_pKeyMapper;
     u8* m_pStateBackup;
     size_t m_StateBackupCapacity;
     bool m_bPaused;
+    bool m_bHostHotkeys;
     GC_Color_Format m_pixelFormat;
     u8* m_pFrameBuffer;
     u64 m_MasterClockCycles;

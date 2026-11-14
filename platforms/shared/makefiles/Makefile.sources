@@ -68,6 +68,9 @@ SOURCES_CXX := \
     $(SRC_DIR)/ColecoVisionIOPorts.cpp \
     $(SRC_DIR)/GearcolecoCore.cpp \
     $(SRC_DIR)/Input.cpp \
+    $(SRC_DIR)/KeyMap.cpp \
+    $(SRC_DIR)/KeyMapper.cpp \
+    $(SRC_DIR)/OsdCanvas.cpp \
     $(SRC_DIR)/Mapper.cpp \
     $(SRC_DIR)/Memory.cpp \
     $(SRC_DIR)/opcodes.cpp \

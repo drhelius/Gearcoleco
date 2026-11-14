@@ -76,6 +76,9 @@
     <ClCompile Include="..\..\src\ColecoVisionIOPorts.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\GearcolecoCore.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\Input.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\KeyMap.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\KeyMapper.cpp"><Filter>core</Filter></ClCompile>
+    <ClCompile Include="..\..\src\OsdCanvas.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\Mapper.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\Memory.cpp"><Filter>core</Filter></ClCompile>
     <ClCompile Include="..\..\src\opcodes.cpp"><Filter>core</Filter></ClCompile>
@@ -176,6 +179,13 @@
     <ClInclude Include="..\..\src\gearcoleco.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\GearcolecoCore.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Input.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\AdamKeys.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\AdamKeyMapperLayout.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\HostKeys.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\KeyMap.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\KeyMapper.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\OsdCanvas.h"><Filter>core</Filter></ClInclude>
+    <ClInclude Include="..\..\src\OsdFont.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\IOPorts.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\log.h"><Filter>core</Filter></ClInclude>
     <ClInclude Include="..\..\src\Mapper.h"><Filter>core</Filter></ClInclude>

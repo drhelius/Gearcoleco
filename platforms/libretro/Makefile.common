@@ -14,6 +14,9 @@ SOURCES_CXX := $(CORE_DIR)/libretro.cpp \
                $(SOURCE_DIR)/Audio.cpp \
                $(SOURCE_DIR)/AY8910.cpp \
                $(SOURCE_DIR)/Input.cpp \
+               $(SOURCE_DIR)/KeyMap.cpp \
+               $(SOURCE_DIR)/KeyMapper.cpp \
+               $(SOURCE_DIR)/OsdCanvas.cpp \
                $(SOURCE_DIR)/Cartridge.cpp \
                $(SOURCE_DIR)/ColecoVisionIOPorts.cpp \
                $(SOURCE_DIR)/opcodes.cpp \

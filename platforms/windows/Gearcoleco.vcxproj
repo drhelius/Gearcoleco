@@ -32,6 +32,9 @@
     <ClCompile Include="..\..\src\ColecoVisionIOPorts.cpp" />
     <ClCompile Include="..\..\src\GearcolecoCore.cpp" />
     <ClCompile Include="..\..\src\Input.cpp" />
+    <ClCompile Include="..\..\src\KeyMap.cpp" />
+    <ClCompile Include="..\..\src\KeyMapper.cpp" />
+    <ClCompile Include="..\..\src\OsdCanvas.cpp" />
     <ClCompile Include="..\..\src\Mapper.cpp" />
     <ClCompile Include="..\..\src\Memory.cpp" />
     <ClCompile Include="..\..\src\opcodes.cpp" />
@@ -147,6 +150,13 @@
     <ClInclude Include="..\..\src\gearcoleco.h" />
     <ClInclude Include="..\..\src\GearcolecoCore.h" />
     <ClInclude Include="..\..\src\Input.h" />
+    <ClInclude Include="..\..\src\AdamKeys.h" />
+    <ClInclude Include="..\..\src\AdamKeyMapperLayout.h" />
+    <ClInclude Include="..\..\src\HostKeys.h" />
+    <ClInclude Include="..\..\src\KeyMap.h" />
+    <ClInclude Include="..\..\src\KeyMapper.h" />
+    <ClInclude Include="..\..\src\OsdCanvas.h" />
+    <ClInclude Include="..\..\src\OsdFont.h" />
     <ClInclude Include="..\..\src\IOPorts.h" />
     <ClInclude Include="..\..\src\Mapper.h" />
     <ClInclude Include="..\..\src\MegaCartMapper.h" />
