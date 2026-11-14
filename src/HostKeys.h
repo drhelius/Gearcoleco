@@ -124,6 +124,9 @@ static const int kHostKeyCount = (int)(sizeof(kHostKeys) / sizeof(kHostKeys[0]))
 
 static const u16 kHostKeyF1 = 0x3A;
 static const u16 kHostKeyF2 = 0x3B;
+static const u16 kHostKeyFirstModifier = 0xE0;
+static const u16 kHostKeyLeftGui = 0xE3;
+static const u16 kHostKeyRightGui = 0xE7;
 #if defined(__APPLE__)
 static const u16 kHostKeyLeftHotkeyMod = 0xE3;
 static const u16 kHostKeyRightHotkeyMod = 0xE7;

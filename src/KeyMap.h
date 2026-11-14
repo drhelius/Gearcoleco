@@ -51,6 +51,7 @@ public:
     void HostKeyPressed(u16 usage);
     void HostKeyReleased(u16 usage);
     void IgnoreHostKey(u16 usage);
+    void DiscardDeferredHostKeys();
     bool IsHostKeyDown(u16 usage) const;
     void ReleaseAll();
     void Suspend();
@@ -90,6 +91,9 @@ private:
     const GC_KeyMapEntry& GetActiveEntry(u16 usage) const;
     const GC_KeyMapEntry& GetBaseEntry(GC_KeyMapLayer layer, u16 usage) const;
     void SetUserEntry(u16 usage, const GC_KeyMapEntry& entry);
+    void PressHostTargets(u16 usage);
+    void FlushDeferredHostKeys();
+    static bool IsDeferredHostKey(u16 usage);
     void PressKey(u8 key);
     void ReleaseKey(u8 key);
     void SyncKey(u8 key);
@@ -101,6 +105,7 @@ private:
     GC_KeyMapEntry m_Layers[GC_KEY_MAP_LAYER_COUNT][GC_HOST_KEY_COUNT];
     GC_KeyMapEntry m_HostTargets[GC_HOST_KEY_COUNT];
     bool m_HostDown[GC_HOST_KEY_COUNT];
+    bool m_HostDeferred[GC_HOST_KEY_COUNT];
     int m_References[GC_ADAM_KEY_COUNT];
     bool m_bEnabled;
     bool m_bBlocked;

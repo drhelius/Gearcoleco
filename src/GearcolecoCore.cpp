@@ -579,6 +579,7 @@ void GearcolecoCore::HostKeyPressed(u16 usage)
             m_pKeyMapper->Open();
 
         m_pKeyMap->IgnoreHostKey(usage);
+        m_pKeyMap->DiscardDeferredHostKeys();
         return;
     }
 
@@ -600,6 +601,11 @@ void GearcolecoCore::ReleaseAllHostKeys()
 {
     m_pKeyMap->ReleaseAll();
     m_pKeyMapper->ReleaseHostKeys();
+}
+
+void GearcolecoCore::DiscardDeferredHostKeys()
+{
+    m_pKeyMap->DiscardDeferredHostKeys();
 }
 
 void GearcolecoCore::EnableHostHotkeys(bool enable)
