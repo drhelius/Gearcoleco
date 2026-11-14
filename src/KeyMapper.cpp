@@ -299,6 +299,7 @@ void KeyMapper::Click(int x, int y)
     {
         int key = kKeyMapperLayout[index].key;
         m_Selected = key == m_Selected ? -1 : key;
+        m_Message.clear();
     }
 }
 
@@ -508,7 +509,9 @@ void KeyMapper::DrawInfo()
         DrawLine(kMargin, y, "Select a key to show its mapping", kColorText);
     else
     {
-        DrawLine(kMargin, y, KeyMap::GetKeyLabel((GC_AdamKey)m_Selected), kColorText);
+        const char* label = KeyMap::GetKeyLabel((GC_AdamKey)m_Selected);
+        DrawLine(kMargin, y, label, kColorText);
+        DrawLine(kMargin + OsdCanvas::GetTextWidth(label) + 24, y, DescribeOwnHostKeys(m_Selected), kColorText);
         DrawChips(y + kLineHeight + 2);
     }
 
@@ -643,6 +646,27 @@ std::string KeyMapper::DescribeHostKey(u16 usage) const
 
     char text[16];
     snprintf(text, sizeof(text), "Key %02Xh", usage);
+    return text;
+}
+
+std::string KeyMapper::DescribeOwnHostKeys(int key) const
+{
+    std::string text;
+
+    for (int usage = 0; usage < GC_HOST_KEY_COUNT; usage++)
+    {
+        GC_KeyMapLayer layer = GC_KEY_MAP_BUILT_IN;
+        const GC_KeyMapEntry& entry = m_pKeyMap->GetEntry((u16)usage, &layer);
+
+        if ((layer == GC_KEY_MAP_BUILT_IN) || !Drives(m_pKeyMap->GetLayerEntry(GC_KEY_MAP_BUILT_IN, (u16)usage), key))
+            continue;
+
+        if ((entry.count == 1) && (entry.keys[0] == (u8)key))
+            continue;
+
+        text += (text.empty() ? "Host " : ", ") + DescribeHostKey((u16)usage) + " \x1A " + DescribeTargets(entry);
+    }
+
     return text;
 }
 
