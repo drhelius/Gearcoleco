@@ -32,6 +32,8 @@
 #include "../../src/Mapper.h"
 #include "../../src/Adam.h"
 #include "../../src/AdamMedia.h"
+#include "../../src/KeyMap.h"
+#include "../../src/KeyMapper.h"
 
 #ifdef _WIN32
 static const char slash = '\\';
@@ -144,7 +146,11 @@ static bool mouse[2];
 static bool mousepre[2];
 static float spinner_remainder[2];
 static bool adam_retro_key_down[RETROK_LAST];
-static int adam_key_references[GC_ADAM_KEY_COUNT];
+static int pointer_last_x = 0;
+static int pointer_last_y = 0;
+static std::string key_map_path;
+static bool key_mapper_was_open = false;
+static bool key_mapping_was_enabled = true;
 
 static GC_Keys keymap[] = {
     Key_Up,
@@ -212,6 +218,12 @@ static bool initialize_disk_set(const struct retro_game_info* info, GC_AdamMedia
 static bool load_disk_set_image(unsigned index);
 static bool setup_loaded_game(void);
 static void keyboard_event(bool down, unsigned keycode, uint32_t character, uint16_t key_modifiers);
+static void apply_key_mapper_pointer(void);
+static u16 usage_from_retro_key(unsigned keycode);
+static void key_map_load(void);
+static void key_map_save(void);
+static void key_map_update(void);
+static void show_message(const char* message, unsigned frames);
 static bool disk_set_eject_state(bool ejected);
 static bool disk_get_eject_state(void);
 static unsigned disk_get_image_index(void);
@@ -265,6 +277,8 @@ void retro_init(void)
 #else
     core->Init(GC_PIXEL_RGB565);
 #endif
+
+    core->EnableHostHotkeys(true);
 
     frame_buffer = new u8[GC_VIDEO_MAX_WIDTH * GC_VIDEO_MAX_HEIGHT * 2];
 
@@ -346,10 +360,12 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
 static void clear_adam_keyboard_state(void)
 {
     memset(adam_retro_key_down, 0, sizeof(adam_retro_key_down));
-    memset(adam_key_references, 0, sizeof(adam_key_references));
 
     if (core)
+    {
+        core->ReleaseAllHostKeys();
         core->AdamReleaseAllKeys();
+    }
 }
 
 static void clear_input_state(void)
@@ -1706,61 +1722,264 @@ static bool disk_get_image_label(unsigned index, char* label, size_t len)
     return true;
 }
 
-static GC_AdamKey adam_key_from_retro_key(unsigned keycode)
+static void apply_key_mapper_pointer(void)
 {
-    if (keycode == RETROK_UNKNOWN)
-        return GC_ADAM_KEY_COUNT;
-    if ((keycode >= RETROK_a) && (keycode <= RETROK_z))
-        return (GC_AdamKey)(GC_ADAM_KEY_A + (keycode - RETROK_a));
-    if ((keycode >= RETROK_0) && (keycode <= RETROK_9))
-        return (GC_AdamKey)(GC_ADAM_KEY_0 + (keycode - RETROK_0));
+    KeyMapper* mapper = core->GetKeyMapper();
+    int x = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+    int y = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
+    int dx = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+    int dy = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
 
+    if ((x != pointer_last_x) || (y != pointer_last_y))
+    {
+        pointer_last_x = x;
+        pointer_last_y = y;
+        mapper->SetPointer(((x + 0x7FFF) * mapper->GetWidth()) / 0xFFFE, ((y + 0x7FFF) * mapper->GetHeight()) / 0xFFFE);
+    }
+    else if ((dx != 0) || (dy != 0))
+        mapper->MovePointer(dx, dy);
+
+    u8 buttons = 0;
+
+    if (input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT) ||
+        input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
+        buttons |= GC_KEY_MAPPER_BUTTON_LEFT;
+
+    if (input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT))
+        buttons |= GC_KEY_MAPPER_BUTTON_RIGHT;
+
+    mapper->SetPointerButtons(buttons);
+}
+
+static void show_message(const char* message, unsigned frames)
+{
+    struct retro_message msg = {};
+    msg.msg = message;
+    msg.frames = frames;
+    environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+}
+
+static void key_map_load(void)
+{
+    KeyMap* key_map = core->GetKeyMap();
+    u8* data = NULL;
+    size_t size = 0;
+    char name[4096];
+
+    key_map_path.clear();
+    key_map->SetEnabled(true);
+    key_map->ClearLayer(GC_KEY_MAP_USER);
+    key_map->SetChanged(false);
+    key_mapper_was_open = false;
+    key_mapping_was_enabled = true;
+
+    if (core->GetMachine() != GC_MACHINE_ADAM)
+        return;
+
+    strncpy_fit(name, retro_game_path[0] ? path_filename(retro_game_path) : "ADAM", sizeof(name));
+    core->GetKeyMapper()->SetTitle(name);
+
+    char* dot = strrchr(name, '.');
+
+    if (dot)
+        *dot = '\0';
+
+    if (!retro_save_directory[0])
+        return;
+
+    key_map_path = std::string(retro_save_directory) + slash + name + ".keys";
+
+    if (!read_file(key_map_path.c_str(), &data, &size))
+        return;
+
+    std::string text((const char*)data, size);
+    std::string error;
+    SafeDeleteArray(data);
+
+    if (!key_map->SetLayer(GC_KEY_MAP_USER, text.c_str(), &error))
+    {
+        key_map->ClearLayer(GC_KEY_MAP_USER);
+        log_cb(RETRO_LOG_ERROR, "Ignoring the key map %s: %s\n", key_map_path.c_str(), error.c_str());
+        show_message(("Key map ignored: " + error).c_str(), 240);
+    }
+}
+
+static void key_map_save(void)
+{
+    KeyMap* key_map = core->GetKeyMap();
+
+    if (!key_map->IsChanged() || key_map_path.empty())
+        return;
+
+    key_map->SetChanged(false);
+
+    if (key_map->IsLayerEmpty(GC_KEY_MAP_USER))
+    {
+        if (IsValidPointer(vfs_interface) && IsValidPointer(vfs_interface->remove))
+            vfs_interface->remove(key_map_path.c_str());
+        else
+            remove(key_map_path.c_str());
+
+        return;
+    }
+
+    std::string text = "[keys]\n" + key_map->GetLayer(GC_KEY_MAP_USER);
+    bool saved = false;
+
+    if (IsValidPointer(vfs_interface))
+        saved = vfs_write_file(key_map_path.c_str(), (const u8*)text.data(), text.size());
+    else
+    {
+        FILE* file = fopen_utf8(key_map_path.c_str(), "wb");
+
+        if (file)
+        {
+            saved = fwrite(text.data(), 1, text.size(), file) == text.size();
+            saved = (fclose(file) == 0) && saved;
+        }
+    }
+
+    if (!saved)
+    {
+        log_cb(RETRO_LOG_ERROR, "Unable to save the key map %s\n", key_map_path.c_str());
+        show_message("Unable to save the key map", 180);
+    }
+}
+
+static void key_map_update(void)
+{
+    bool open = core->GetKeyMapper()->IsOpen();
+    bool enabled = core->GetKeyMap()->IsEnabled();
+
+    if (!open && key_mapper_was_open)
+        key_map_save();
+
+    if (enabled != key_mapping_was_enabled)
+        show_message(enabled ? "Key mapping on" : "Key mapping off", 90);
+
+    key_mapper_was_open = open;
+    key_mapping_was_enabled = enabled;
+}
+
+static u16 usage_from_retro_key(unsigned keycode)
+{
     switch (keycode)
     {
-        case RETROK_F1: return GC_ADAM_KEY_SMART_1;
-        case RETROK_F2: return GC_ADAM_KEY_SMART_2;
-        case RETROK_F3: return GC_ADAM_KEY_SMART_3;
-        case RETROK_F4: return GC_ADAM_KEY_SMART_4;
-        case RETROK_F5: return GC_ADAM_KEY_SMART_5;
-        case RETROK_F6: return GC_ADAM_KEY_SMART_6;
-        case RETROK_F7: return GC_ADAM_KEY_UNDO;
-        case RETROK_F8: return GC_ADAM_KEY_WILD_CARD;
-        case RETROK_HOME: return GC_ADAM_KEY_HOME;
-        case RETROK_INSERT: return GC_ADAM_KEY_INSERT;
-        case RETROK_DELETE: return GC_ADAM_KEY_DELETE;
-        case RETROK_PAGEUP: return GC_ADAM_KEY_MOVE;
-        case RETROK_PAGEDOWN: return GC_ADAM_KEY_STORE;
-        case RETROK_END: return GC_ADAM_KEY_CLEAR;
-        case RETROK_PRINT: return GC_ADAM_KEY_PRINT;
-        case RETROK_ESCAPE: return GC_ADAM_KEY_ESCAPE;
-        case RETROK_SPACE: return GC_ADAM_KEY_SPACE;
-        case RETROK_MINUS: return GC_ADAM_KEY_MINUS;
-        case RETROK_EQUALS:
-        case RETROK_PLUS: return GC_ADAM_KEY_PLUS;
-        case RETROK_BACKQUOTE:
-        case RETROK_CARET: return GC_ADAM_KEY_CARET;
-        case RETROK_SEMICOLON: return GC_ADAM_KEY_SEMICOLON;
-        case RETROK_QUOTE: return GC_ADAM_KEY_QUOTE;
-        case RETROK_LEFTBRACKET: return GC_ADAM_KEY_OPEN_BRACKET;
-        case RETROK_RIGHTBRACKET: return GC_ADAM_KEY_CLOSE_BRACKET;
-        case RETROK_BACKSLASH: return GC_ADAM_KEY_BACKSLASH;
-        case RETROK_COMMA: return GC_ADAM_KEY_COMMA;
-        case RETROK_PERIOD: return GC_ADAM_KEY_PERIOD;
-        case RETROK_SLASH: return GC_ADAM_KEY_SLASH;
-        case RETROK_RETURN:
-        case RETROK_KP_ENTER: return GC_ADAM_KEY_RETURN;
-        case RETROK_BACKSPACE: return GC_ADAM_KEY_BACKSPACE;
-        case RETROK_TAB: return GC_ADAM_KEY_TAB;
-        case RETROK_UP: return GC_ADAM_KEY_UP;
-        case RETROK_RIGHT: return GC_ADAM_KEY_RIGHT;
-        case RETROK_DOWN: return GC_ADAM_KEY_DOWN;
-        case RETROK_LEFT: return GC_ADAM_KEY_LEFT;
-        case RETROK_LSHIFT:
-        case RETROK_RSHIFT: return GC_ADAM_KEY_SHIFT;
-        case RETROK_LCTRL:
-        case RETROK_RCTRL: return GC_ADAM_KEY_CONTROL;
-        case RETROK_CAPSLOCK: return GC_ADAM_KEY_LOCK;
-        default: return GC_ADAM_KEY_COUNT;
+        case RETROK_a: return 0x04;
+        case RETROK_b: return 0x05;
+        case RETROK_c: return 0x06;
+        case RETROK_d: return 0x07;
+        case RETROK_e: return 0x08;
+        case RETROK_f: return 0x09;
+        case RETROK_g: return 0x0A;
+        case RETROK_h: return 0x0B;
+        case RETROK_i: return 0x0C;
+        case RETROK_j: return 0x0D;
+        case RETROK_k: return 0x0E;
+        case RETROK_l: return 0x0F;
+        case RETROK_m: return 0x10;
+        case RETROK_n: return 0x11;
+        case RETROK_o: return 0x12;
+        case RETROK_p: return 0x13;
+        case RETROK_q: return 0x14;
+        case RETROK_r: return 0x15;
+        case RETROK_s: return 0x16;
+        case RETROK_t: return 0x17;
+        case RETROK_u: return 0x18;
+        case RETROK_v: return 0x19;
+        case RETROK_w: return 0x1A;
+        case RETROK_x: return 0x1B;
+        case RETROK_y: return 0x1C;
+        case RETROK_z: return 0x1D;
+        case RETROK_1: return 0x1E;
+        case RETROK_2: return 0x1F;
+        case RETROK_3: return 0x20;
+        case RETROK_4: return 0x21;
+        case RETROK_5: return 0x22;
+        case RETROK_6: return 0x23;
+        case RETROK_7: return 0x24;
+        case RETROK_8: return 0x25;
+        case RETROK_9: return 0x26;
+        case RETROK_0: return 0x27;
+        case RETROK_RETURN: return 0x28;
+        case RETROK_ESCAPE: return 0x29;
+        case RETROK_BACKSPACE: return 0x2A;
+        case RETROK_TAB: return 0x2B;
+        case RETROK_SPACE: return 0x2C;
+        case RETROK_MINUS: return 0x2D;
+        case RETROK_EQUALS: return 0x2E;
+        case RETROK_PLUS: return 0x2E;
+        case RETROK_CARET: return 0x35;
+        case RETROK_LEFTBRACKET: return 0x2F;
+        case RETROK_RIGHTBRACKET: return 0x30;
+        case RETROK_BACKSLASH: return 0x31;
+        case RETROK_HASH: return 0x32;
+        case RETROK_SEMICOLON: return 0x33;
+        case RETROK_QUOTE: return 0x34;
+        case RETROK_BACKQUOTE: return 0x35;
+        case RETROK_COMMA: return 0x36;
+        case RETROK_PERIOD: return 0x37;
+        case RETROK_SLASH: return 0x38;
+        case RETROK_OEM_102: return 0x64;
+        case RETROK_UNDERSCORE: return 0x87;
+        case RETROK_CAPSLOCK: return 0x39;
+        case RETROK_F1: return 0x3A;
+        case RETROK_F2: return 0x3B;
+        case RETROK_F3: return 0x3C;
+        case RETROK_F4: return 0x3D;
+        case RETROK_F5: return 0x3E;
+        case RETROK_F6: return 0x3F;
+        case RETROK_F7: return 0x40;
+        case RETROK_F8: return 0x41;
+        case RETROK_F9: return 0x42;
+        case RETROK_F10: return 0x43;
+        case RETROK_F11: return 0x44;
+        case RETROK_F12: return 0x45;
+        case RETROK_F13: return 0x68;
+        case RETROK_F14: return 0x69;
+        case RETROK_F15: return 0x6A;
+        case RETROK_PRINT: return 0x46;
+        case RETROK_PAUSE: return 0x48;
+        case RETROK_BREAK: return 0x48;
+        case RETROK_INSERT: return 0x49;
+        case RETROK_HOME: return 0x4A;
+        case RETROK_PAGEUP: return 0x4B;
+        case RETROK_DELETE: return 0x4C;
+        case RETROK_END: return 0x4D;
+        case RETROK_PAGEDOWN: return 0x4E;
+        case RETROK_RIGHT: return 0x4F;
+        case RETROK_LEFT: return 0x50;
+        case RETROK_DOWN: return 0x51;
+        case RETROK_UP: return 0x52;
+        case RETROK_KP_DIVIDE: return 0x54;
+        case RETROK_KP_MULTIPLY: return 0x55;
+        case RETROK_KP_MINUS: return 0x56;
+        case RETROK_KP_PLUS: return 0x57;
+        case RETROK_KP_ENTER: return 0x58;
+        case RETROK_KP1: return 0x59;
+        case RETROK_KP2: return 0x5A;
+        case RETROK_KP3: return 0x5B;
+        case RETROK_KP4: return 0x5C;
+        case RETROK_KP5: return 0x5D;
+        case RETROK_KP6: return 0x5E;
+        case RETROK_KP7: return 0x5F;
+        case RETROK_KP8: return 0x60;
+        case RETROK_KP9: return 0x61;
+        case RETROK_KP0: return 0x62;
+        case RETROK_KP_PERIOD: return 0x63;
+        case RETROK_KP_EQUALS: return 0x67;
+        case RETROK_LCTRL: return 0xE0;
+        case RETROK_RCTRL: return 0xE4;
+        case RETROK_LSHIFT: return 0xE1;
+        case RETROK_RSHIFT: return 0xE5;
+        case RETROK_LALT: return 0xE2;
+        case RETROK_RALT: return 0xE6;
+        case RETROK_LSUPER: return 0xE3;
+        case RETROK_RSUPER: return 0xE7;
+        case RETROK_LMETA: return 0xE3;
+        case RETROK_RMETA: return 0xE7;
+        case RETROK_MENU: return 0x65;
+        default: return 0;
     }
 }
 
@@ -1772,31 +1991,17 @@ static void keyboard_event(bool down, unsigned keycode, uint32_t character, uint
     if (!content_loaded || (core->GetMachine() != GC_MACHINE_ADAM) || (keycode >= RETROK_LAST))
         return;
 
-    GC_AdamKey key = adam_key_from_retro_key(keycode);
+    u16 usage = usage_from_retro_key(keycode);
 
-    if (key >= GC_ADAM_KEY_COUNT)
+    if ((usage == 0) || (adam_retro_key_down[keycode] == down))
         return;
 
+    adam_retro_key_down[keycode] = down;
+
     if (down)
-    {
-        if (adam_retro_key_down[keycode])
-            return;
-
-        adam_retro_key_down[keycode] = true;
-
-        if (adam_key_references[key]++ == 0)
-            core->AdamKeyPressed(key);
-    }
+        core->HostKeyPressed(usage);
     else
-    {
-        if (!adam_retro_key_down[keycode])
-            return;
-
-        adam_retro_key_down[keycode] = false;
-
-        if ((adam_key_references[key] > 0) && (--adam_key_references[key] == 0))
-            core->AdamKeyReleased(key);
-    }
+        core->HostKeyReleased(usage);
 }
 
 static void update_input(void)
@@ -1809,6 +2014,12 @@ static void update_input(void)
     {
         if (adam_retro_key_down[i] && !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, i))
             keyboard_event(false, i, 0, 0);
+    }
+
+    if (core->GetKeyMapper()->IsOpen())
+    {
+        apply_key_mapper_pointer();
+        return;
     }
 
     if (libretro_supports_bitmasks)
@@ -2218,6 +2429,7 @@ void retro_run(void)
     update_input();
 
     core->RunToVBlank(frame_buffer, audio_buf, &audio_sample_count);
+    key_map_update();
 
     if (content_loaded && (core->GetMachine() == GC_MACHINE_ADAM))
         update_adam_media();
@@ -2225,13 +2437,16 @@ void retro_run(void)
     GC_RuntimeInfo runtime_info;
     core->GetRuntimeInfo(runtime_info);
 
+    bool key_mapper_open = core->GetKeyMapper()->IsOpen();
+    float display_aspect_ratio = key_mapper_open ? (4.0f / 3.0f) : aspect_ratio;
+
     if ((runtime_info.screen_width != current_screen_width) ||
         (runtime_info.screen_height != current_screen_height) ||
-        (aspect_ratio != current_aspect_ratio))
+        (display_aspect_ratio != current_aspect_ratio))
     {
         current_screen_width = runtime_info.screen_width;
         current_screen_height = runtime_info.screen_height;
-        current_aspect_ratio = aspect_ratio;
+        current_aspect_ratio = display_aspect_ratio;
 
         retro_system_av_info info;
         info.geometry.base_width   = runtime_info.screen_width;
@@ -2244,6 +2459,13 @@ void retro_run(void)
     }
 
     video_cb((uint8_t*)frame_buffer, runtime_info.screen_width, runtime_info.screen_height, runtime_info.screen_width * sizeof(u8) * 2);
+
+    if (key_mapper_open)
+    {
+        int frames = MIN((int)(44100.0 / runtime_info.fps), GC_AUDIO_BUFFER_SIZE / 2);
+        memset(audio_buf, 0, (size_t)frames * 2 * sizeof(s16));
+        audio_sample_count = frames * 2;
+    }
 
     if (audio_sample_count > 0)
         audio_batch_cb(audio_buf, audio_sample_count / 2);
@@ -2381,6 +2603,7 @@ static bool setup_loaded_game(void)
     }
 
     clear_input_state();
+    key_map_load();
     content_loaded = true;
     adam_disk_set = &adam_disk_sets[adam_control_drive >= 0 ? adam_control_drive : adam_primary_slot];
 
@@ -2522,6 +2745,9 @@ void retro_unload_game(void)
     if (!flush_all_adam_media())
         log_cb(RETRO_LOG_ERROR, "Unable to flush one or more ADAM working copies during unload.\n");
 
+    core->GetKeyMapper()->Close();
+    key_map_save();
+    key_map_path.clear();
     core->AdamReleaseAllKeys();
     core->UnloadContent();
 
