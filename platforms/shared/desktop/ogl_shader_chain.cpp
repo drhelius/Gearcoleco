@@ -104,6 +104,7 @@ struct PresetProgramState
     int uniform_frame_count;
     int uniform_frame_direction;
     int uniform_original_aspect;
+    int uniform_framebuffer_scale;
     int uniform_background_color;
     int uniform_parameters[SHADER_PRESET_MAX_PARAMETERS];
 };
@@ -663,6 +664,9 @@ void ogl_shader_chain_apply_preset_uniforms(int index, const OglShaderChainUnifo
     if (state->uniform_original_aspect >= 0)
         glUniform1f(state->uniform_original_aspect, uniforms->original_aspect);
 
+    if (state->uniform_framebuffer_scale >= 0)
+        glUniform1f(state->uniform_framebuffer_scale, uniforms->framebuffer_scale);
+
     if (state->uniform_background_color >= 0)
         glUniform4f(state->uniform_background_color, uniforms->background_color[0], uniforms->background_color[1], uniforms->background_color[2], 1.0f);
 
@@ -912,6 +916,7 @@ static void bind_preset_uniform_locations(int index)
     state->uniform_frame_count = glGetUniformLocation(program, "FrameCount");
     state->uniform_frame_direction = glGetUniformLocation(program, "FrameDirection");
     state->uniform_original_aspect = glGetUniformLocation(program, "OriginalAspect");
+    state->uniform_framebuffer_scale = glGetUniformLocation(program, "FramebufferScale");
     state->uniform_background_color = glGetUniformLocation(program, "BackgroundColor");
 
     for (int i = 0; i < SHADER_PRESET_MAX_PARAMETERS; i++)

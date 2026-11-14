@@ -50,6 +50,7 @@ struct OglShaderChainUniforms
     int viewport_width;
     int viewport_height;
     float original_aspect;
+    float framebuffer_scale;
     float background_color[3];
 };
 

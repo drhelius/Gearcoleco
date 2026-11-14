@@ -4,6 +4,7 @@ out vec4 FragColor;
 uniform sampler2D Source;
 uniform vec4 SourceSize;
 uniform vec4 OutputSize;
+uniform float FramebufferScale;
 uniform float BlurAmountX;
 uniform float ScanlineDarknessLow;
 uniform float ScanlineDarknessHigh;
@@ -24,7 +25,7 @@ void main()
     float y = phase.y * phase.y;
     float yy = y * y;
 
-    float mask_phase = fract(gl_FragCoord.x * -0.4999);
+    float mask_phase = fract((floor(gl_FragCoord.x / FramebufferScale) + 0.5) * -0.4999);
     float mask = 1.0 - ((mask_phase < 0.5) ? MaskAmount : 0.0);
 
     float scanline_dark = DarkPixelBoost - ScanlineDarknessLow * (y - 2.05 * yy);

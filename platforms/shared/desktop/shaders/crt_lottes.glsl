@@ -7,6 +7,7 @@ out vec4 FragColor;
 uniform sampler2D Source;
 uniform vec4 SourceSize;
 uniform vec4 OutputSize;
+uniform float FramebufferScale;
 uniform vec4 BackgroundColor;
 uniform float HardScan;
 uniform float HardPix;
@@ -250,7 +251,7 @@ void main()
         color += bloom(pos) * BloomAmount;
 
     if (ShadowMask >= 0.5)
-        color *= mask(floor(pos * OutputSize.xy) + vec2(0.5));
+        color *= mask(floor(pos * OutputSize.xy / FramebufferScale) + vec2(0.5));
 
     FragColor = vec4(to_srgb(max(color, vec3(0.0))), 1.0);
 }

@@ -78,6 +78,7 @@ static void load_configured_shader_preset(void);
 static void apply_shader_parameter_config(void);
 static bool get_active_shader_preset_file(char* preset_file, size_t preset_file_size);
 static float get_original_aspect(void);
+static float get_framebuffer_scale(void);
 static void configure_texture_2d(bool filter_linear);
 static void create_texture_2d(uint32_t* texture, int width, int height, int internal_format, uint32_t format, uint32_t type, const void* pixels, bool filter_linear);
 static void resize_texture_2d(uint32_t texture, int width, int height, int internal_format, uint32_t format, uint32_t type, const void* pixels, bool filter_linear);
@@ -657,6 +658,7 @@ static void render_quad_preset(int pass_index, uint32_t program, uint32_t textur
     uniforms.viewport_width = screen_geometry.physical_width;
     uniforms.viewport_height = screen_geometry.physical_height;
     uniforms.original_aspect = get_original_aspect();
+    uniforms.framebuffer_scale = get_framebuffer_scale();
     uniforms.background_color[0] = config_video.background_color[config_emulator.theme][0];
     uniforms.background_color[1] = config_video.background_color[config_emulator.theme][1];
     uniforms.background_color[2] = config_video.background_color[config_emulator.theme][2];
@@ -747,6 +749,12 @@ static float get_original_aspect(void)
         return 1.0f;
 
     return (float)current_runtime.screen_width / (float)current_runtime.screen_height;
+}
+
+static float get_framebuffer_scale(void)
+{
+    float scale = roundf(screen_geometry.framebuffer_scale);
+    return scale < 1.0f ? 1.0f : scale;
 }
 
 static void configure_texture_2d(bool filter_linear)

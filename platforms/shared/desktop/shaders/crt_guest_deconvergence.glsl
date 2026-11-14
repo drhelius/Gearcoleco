@@ -52,6 +52,7 @@ uniform float pr_scan;
 uniform vec4 SourceSize;
 uniform vec4 OriginalSize;
 uniform vec4 OutputSize;
+uniform float FramebufferScale;
 uniform int FrameCount;
 uniform float bloom;
 uniform float halation;
@@ -542,7 +543,7 @@ if ((abs(deconrr) + abs(deconrry) + abs(deconrg) + abs(deconrgy) + abs(deconrb) 
 	
 if (shadowMask > -0.5)
 {	
-	vec2 maskcoord = pos0 * OutputSize.xy + vec2(laysh*masksize, 0.0);
+	vec2 maskcoord = floor(pos0 * OutputSize.xy / FramebufferScale) + vec2(0.5) + vec2(laysh*masksize, 0.0);
 	vec2 scoord = maskcoord;
 	
 	mwidth = floor(mwidth) * masksize;
