@@ -28,6 +28,7 @@
 #include "application.h"
 #include "emu.h"
 #include "events.h"
+#include "game_focus.h"
 #include "ogl_renderer.h"
 #include "utils.h"
 #include "gearcoleco.h"
@@ -220,125 +221,130 @@ void gui_render(void)
     ImGui::Render();
 }
 
-void gui_shortcut(gui_ShortCutEvent event)
+void gui_hotkey(config_HotkeyIndex hotkey, bool pressed)
 {
-    switch (event)
+    if (hotkey == config_HotkeyIndex_Rewind)
+    {
+        if (pressed)
+            gui_action_rewind_pressed();
+        else
+            gui_action_rewind_released();
+
+        return;
+    }
+
+    if (!pressed)
+        return;
+
+    switch (hotkey)
     {  
-    case gui_ShortcutOpenROM:
+    case config_HotkeyIndex_OpenROM:
         gui_shortcut_open_rom = true;
         break;
-    case gui_ShortcutReloadROM:
+    case config_HotkeyIndex_ReloadROM:
         gui_action_reload_rom();
         break;
-    case gui_ShortcutReset:
+    case config_HotkeyIndex_Quit:
+        application_trigger_quit();
+        break;
+    case config_HotkeyIndex_Reset:
         gui_action_reset();
         break;
-    case gui_ShortcutPause:
+    case config_HotkeyIndex_Pause:
         gui_action_pause();
         break;
-    case gui_ShortcutFFWD:
+    case config_HotkeyIndex_FFWD:
         config_emulator.ffwd = !config_emulator.ffwd;
         gui_action_ffwd();
         break;
-    case gui_ShortcutMute:
+    case config_HotkeyIndex_Mute:
         config_audio.enable = !config_audio.enable;
         emu_audio_mute(!config_audio.enable);
         gui_notify(gui_NotificationInfo, config_audio.enable ? ICON_MD_VOLUME_UP : ICON_MD_VOLUME_OFF,
             config_audio.enable ? "Audio unmuted" : "Audio muted", NULL, "mute", 1500);
         break;
-    case gui_ShortcutSaveState:
+    case config_HotkeyIndex_SaveState:
         gui_action_save_state(NULL);
         break;
-    case gui_ShortcutLoadState:
+    case config_HotkeyIndex_LoadState:
         gui_action_load_state(NULL);
         break;
-    case gui_ShortcutSelectSlot1:
+    case config_HotkeyIndex_SelectSlot1:
         select_save_slot(0);
         break;
-    case gui_ShortcutSelectSlot2:
+    case config_HotkeyIndex_SelectSlot2:
         select_save_slot(1);
         break;
-    case gui_ShortcutSelectSlot3:
+    case config_HotkeyIndex_SelectSlot3:
         select_save_slot(2);
         break;
-    case gui_ShortcutSelectSlot4:
+    case config_HotkeyIndex_SelectSlot4:
         select_save_slot(3);
         break;
-    case gui_ShortcutSelectSlot5:
+    case config_HotkeyIndex_SelectSlot5:
         select_save_slot(4);
         break;
-    case gui_ShortcutScreenshot:
+    case config_HotkeyIndex_Screenshot:
         gui_action_save_screenshot(NULL);
         break;
-    case gui_ShortcutVideoRecording:
+    case config_HotkeyIndex_VideoRecording:
         gui_action_toggle_video_recording();
         break;
-    case gui_ShortcutFullscreen:
+    case config_HotkeyIndex_Fullscreen:
         if (emu_is_video_recording())
             break;
         config_emulator.fullscreen = !config_emulator.fullscreen;
         application_trigger_fullscreen(config_emulator.fullscreen);
         break;
-    case gui_ShortcutKeyboardMapper:
+    case config_HotkeyIndex_KeyboardMapper:
         emu_key_mapper_toggle();
         break;
-    case gui_ShortcutKeyMapping:
+    case config_HotkeyIndex_KeyMapping:
         gui_action_toggle_key_mapping();
         break;
-    case gui_ShortcutCaptureMouse:
-        config_emulator.capture_mouse = !config_emulator.capture_mouse;
-        gui_notify(gui_NotificationInfo, ICON_MD_MOUSE,
-            config_emulator.capture_mouse ? "Mouse captured" : "Mouse released", NULL, "mouse", 1500);
+    case config_HotkeyIndex_GameFocus:
+        game_focus_toggle();
         break;
-    case gui_ShortcutDebugStepOver:
+    case config_HotkeyIndex_DebugStepOver:
         if (config_debug.debug)
             emu_debug_step_over();
         break;
-    case gui_ShortcutDebugStepInto:
+    case config_HotkeyIndex_DebugStepInto:
         if (config_debug.debug)
             emu_debug_step_into();
         break;
-    case gui_ShortcutDebugStepOut:
+    case config_HotkeyIndex_DebugStepOut:
         if (config_debug.debug)
             emu_debug_step_out();
         break;
-    case gui_ShortcutDebugStepFrame:
+    case config_HotkeyIndex_DebugStepFrame:
         if (config_debug.debug)
         {
             emu_debug_step_frame();
             gui_debug_memory_step_frame();
         }
         break;
-    case gui_ShortcutDebugBreak:
+    case config_HotkeyIndex_DebugBreak:
         if (config_debug.debug)
             emu_debug_break();
         break;
-    case gui_ShortcutDebugContinue:
+    case config_HotkeyIndex_DebugContinue:
         if (config_debug.debug)
             emu_debug_continue();
         break;
-    case gui_ShortcutDebugRuntocursor:
+    case config_HotkeyIndex_DebugRunToCursor:
         if (config_debug.debug)
             gui_debug_runtocursor();
         break;
-    case gui_ShortcutDebugGoBack:
+    case config_HotkeyIndex_DebugGoBack:
         if (config_debug.debug)
             gui_debug_go_back();
         break;
-    case gui_ShortcutDebugBreakpoint:
+    case config_HotkeyIndex_DebugBreakpoint:
         if (config_debug.debug)
             gui_debug_toggle_breakpoint();
         break;
-    case gui_ShortcutDebugCopy:
-        gui_debug_memory_copy();
-        break;
-    case gui_ShortcutDebugPaste:
-        gui_debug_memory_paste();
-        break;
-    case gui_ShortcutDebugSelectAll:
-        gui_debug_memory_select_all();
-        break;
-    case gui_ShortcutShowMainMenu:
+    case config_HotkeyIndex_ShowMainMenu:
         config_emulator.always_show_menu = !config_emulator.always_show_menu;
         break;
     default:

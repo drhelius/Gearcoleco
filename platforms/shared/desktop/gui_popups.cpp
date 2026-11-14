@@ -138,7 +138,12 @@ void gui_popup_modal_hotkey()
     {
         gui_dialog_in_use = true;
         ImGui::Text("Press any key combination...\n");
-        ImGui::Text("Hold Ctrl, Shift, or Alt before pressing the key\n\n");
+#if defined(__APPLE__)
+        ImGui::Text("Hold Cmd, Ctrl, Shift or Option before pressing the key.");
+#else
+        ImGui::Text("Hold Ctrl, Shift or Alt before pressing the key.");
+#endif
+        ImGui::Text("Without one, that key won't reach the ADAM while hotkeys are on.\n\n");
         ImGui::Separator();
 
         SDL_Keymod mods = (SDL_Keymod)(SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_ALT | SDL_KMOD_GUI));

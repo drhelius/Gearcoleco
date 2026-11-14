@@ -21,8 +21,8 @@
 #include "gearcoleco.h"
 #include "config.h"
 #include "gui.h"
-#include "gui_actions.h"
 #include "gui_notifications.h"
+#include "hotkeys.h"
 #include "utils.h"
 
 #define GAMEPAD_IMPORT
@@ -393,30 +393,13 @@ void gamepad_check_shortcuts(int controller)
             continue;
         }
 
-        if (i == config_HotkeyIndex_Rewind)
-        {
-            if (button_pressed && !gamepad_shortcut_prev[controller][i])
-                gui_action_rewind_pressed();
-            else if (!button_pressed && gamepad_shortcut_prev[controller][i])
-                gui_action_rewind_released();
-
-            gamepad_shortcut_prev[controller][i] = button_pressed;
-            continue;
-        }
-
-        if (button_pressed && !gamepad_shortcut_prev[controller][i])
-        {
-            for (int j = 0; j < GUI_HOTKEY_MAP_COUNT; j++)
-            {
-                if (gui_hotkey_map[j].config_index == i)
-                {
-                    gui_shortcut(gui_hotkey_map[j].shortcut);
-                    break;
-                }
-            }
-        }
-
+        bool was_pressed = gamepad_shortcut_prev[controller][i];
         gamepad_shortcut_prev[controller][i] = button_pressed;
+
+        if (button_pressed && !was_pressed)
+            gui_hotkey((config_HotkeyIndex)i, true);
+        else if (!button_pressed && was_pressed && ((hotkey_definitions[i].flags & HOTKEY_FLAG_HOLD) != 0))
+            gui_hotkey((config_HotkeyIndex)i, false);
     }
 }
 

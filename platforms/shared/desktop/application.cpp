@@ -33,6 +33,8 @@
 #include "single_instance.h"
 #include "gamepad.h"
 #include "events.h"
+#include "game_focus.h"
+#include "hotkeys.h"
 
 #define APPLICATION_IMPORT
 #include "application.h"
@@ -50,6 +52,8 @@ static bool window_settings_pending = false;
 static bool window_resizable = true;
 static Uint64 mouse_last_motion_time = 0;
 static const Uint64 mouse_hide_timeout_ms = 1500;
+static char title_rom[256] = "";
+static bool title_game_focus = false;
 static SDL_DisplayID current_display_id = 0;
 
 bool g_mcp_stdio_mode = false;
@@ -60,9 +64,9 @@ static void sdl_events(void);
 static void sdl_events_quit(const SDL_Event* event);
 static void request_quit(void);
 static void sdl_events_app(const SDL_Event* event);
-static bool is_mouse_captured(void);
-static bool is_captured_mouse_event(const SDL_Event* event);
 static void handle_mouse_cursor(void);
+static void handle_title(void);
+static void apply_title(void);
 static void handle_menu(void);
 static void handle_window_resizable(void);
 static void handle_single_instance(void);
@@ -302,18 +306,14 @@ void application_refocus_window(void)
 
 void application_update_title_with_rom(const char* rom)
 {
-    if (!application_sdl_window)
-        return;
-
-    char final_title[256];
-    snprintf(final_title, 256, "%s - %s", WINDOW_TITLE, rom);
-    SDL_SetWindowTitle(application_sdl_window, final_title);
+    strncpy_fit(title_rom, rom, sizeof(title_rom));
+    apply_title();
 }
 
 void application_reset_title(void)
 {
-    if (application_sdl_window)
-        SDL_SetWindowTitle(application_sdl_window, WINDOW_TITLE);
+    title_rom[0] = 0;
+    apply_title();
 }
 
 bool application_check_single_instance(const char* rom_file, const char* symbol_file)
@@ -447,27 +447,13 @@ static void sdl_destroy(void)
     SDL_Quit();
 }
 
-static bool is_mouse_captured(void)
-{
-    return config_emulator.capture_mouse && !ImGui::IsPopupOpen(NULL, ImGuiPopupFlags_AnyPopup) &&
-        !emu_key_mapper_is_open();
-}
-
-static bool is_captured_mouse_event(const SDL_Event* event)
-{
-    if (!is_mouse_captured())
-        return false;
-
-    if (event->type != SDL_EVENT_MOUSE_MOTION && event->type != SDL_EVENT_MOUSE_WHEEL &&
-        event->type != SDL_EVENT_MOUSE_BUTTON_DOWN)
-        return false;
-
-    return SDL_GetWindowFromEvent(event) == application_sdl_window;
-}
-
 static void handle_mouse_cursor(void)
 {
-    if (gui_main_window_hovered && (emu_key_mapper_is_open() || (!config_debug.debug && !gui_has_open_window())))
+    game_focus_update();
+    handle_title();
+
+    if (game_focus_pointer_captured() ||
+        (gui_main_window_hovered && (emu_key_mapper_is_open() || (!config_debug.debug && !gui_has_open_window()))))
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
     else if (!config_debug.debug && config_emulator.fullscreen && !config_emulator.always_show_menu)
     {
@@ -480,13 +466,36 @@ static void handle_mouse_cursor(void)
     }
     else
         ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+}
 
-    bool mouse_captured = is_mouse_captured();
+static void handle_title(void)
+{
+    if (game_focus_is_on() == title_game_focus)
+        return;
 
-    if (mouse_captured && !SDL_GetWindowRelativeMouseMode(application_sdl_window))
-        ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+    title_game_focus = game_focus_is_on();
+    apply_title();
+}
 
-    SDL_SetWindowRelativeMouseMode(application_sdl_window, mouse_captured);
+static void apply_title(void)
+{
+    if (!application_sdl_window)
+        return;
+
+    char title[512];
+    const char* hotkey = config_hotkeys[config_HotkeyIndex_GameFocus].str;
+
+    if (title_rom[0] == 0)
+        strncpy_fit(title, WINDOW_TITLE, sizeof(title));
+    else
+        snprintf(title, sizeof(title), "%s - %s", WINDOW_TITLE, title_rom);
+
+    if (title_game_focus && (hotkey[0] != 0))
+        snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Game Focus: %s to leave)", hotkey);
+    else if (title_game_focus)
+        snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Game Focus)");
+
+    SDL_SetWindowTitle(application_sdl_window, title);
 }
 
 static void handle_menu(void)
@@ -547,16 +556,17 @@ static void sdl_events(void)
         {
             sdl_events_app(&event);
 
-            if (!file_dialog_active && !is_captured_mouse_event(&event))
+            if (!file_dialog_active && !game_focus_is_captured_mouse_event(&event))
                 ImGui_ImplSDL3_ProcessEvent(&event);
 
             bool keyboard_captured = file_dialog_active || ImGui::GetIO().WantCaptureKeyboard;
-            bool shortcut_consumed = false;
+            bool hotkey_consumed = false;
+
             if (!keyboard_captured)
-                shortcut_consumed = events_shortcuts(&event);
+                hotkey_consumed = hotkeys_process_event(&event);
 
             if (!file_dialog_active)
-                events_handle_emu_event(&event, shortcut_consumed || keyboard_captured);
+                events_handle_emu_event(&event, hotkey_consumed || keyboard_captured);
         }
     }
 }
@@ -612,6 +622,7 @@ static void sdl_events_app(const SDL_Event* event)
         case SDL_EVENT_WINDOW_FOCUS_LOST:
         {
             display_disable_vsync();
+            game_focus_set(false);
             events_release_adam_keys();
             if (config_emulator.pause_when_inactive && !emu_mcp_is_running())
             {

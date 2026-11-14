@@ -90,6 +90,8 @@
     <ClCompile Include="..\shared\desktop\display.cpp" />
     <ClCompile Include="..\shared\desktop\events.cpp" />
     <ClCompile Include="..\shared\desktop\gamepad.cpp" />
+    <ClCompile Include="..\shared\desktop\game_focus.cpp" />
+    <ClCompile Include="..\shared\desktop\hotkeys.cpp" />
     <ClCompile Include="..\shared\desktop\mcp\mcp_debug_adapter.cpp" />
     <ClCompile Include="..\shared\desktop\mcp\mcp_tool_registry.cpp" />
     <ClCompile Include="..\shared\desktop\mcp\mcp_server.cpp" />
@@ -261,6 +263,8 @@
     <ClInclude Include="..\shared\desktop\video_recorder.h" />
     <ClInclude Include="..\shared\desktop\events.h" />
     <ClInclude Include="..\shared\desktop\gamepad.h" />
+    <ClInclude Include="..\shared\desktop\game_focus.h" />
+    <ClInclude Include="..\shared\desktop\hotkeys.h" />
     <ClInclude Include="..\shared\desktop\utils.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

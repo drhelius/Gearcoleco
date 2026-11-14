@@ -35,6 +35,8 @@ SOURCES_CXX := \
     $(DESKTOP_SRC_DIR)/display.cpp \
     $(DESKTOP_SRC_DIR)/events.cpp \
     $(DESKTOP_SRC_DIR)/gamepad.cpp \
+    $(DESKTOP_SRC_DIR)/game_focus.cpp \
+    $(DESKTOP_SRC_DIR)/hotkeys.cpp \
     $(DESKTOP_SRC_DIR)/emu.cpp \
     $(DESKTOP_SRC_DIR)/emu_adam.cpp \
     $(DESKTOP_SRC_DIR)/rewind.cpp \

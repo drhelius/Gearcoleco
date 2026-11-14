@@ -21,7 +21,6 @@
 #include "gearcoleco.h"
 #include "config.h"
 #include "gui.h"
-#include "gui_actions.h"
 #include "emu.h"
 #include "application.h"
 #include "gamepad.h"
@@ -45,8 +44,6 @@ static float spinner_remainder[2] = { };
 static bool adam_scancode_down[SDL_SCANCODE_COUNT] = { };
 static bool adam_controller_keys[SDL_SCANCODE_COUNT] = { };
 
-static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat);
-static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey);
 static void input_force_key(int controller, int index, GC_Keys key, bool pressed);
 static void input_poll_controller(int controller);
 static void input_filter_opposing_directions(int controller, bool* left, bool* right, bool* up, bool* down);
@@ -55,105 +52,6 @@ static void send_adam_key(SDL_Scancode scancode, bool pressed);
 static bool adam_keyboard_captures_event(const SDL_Event* event);
 static bool adam_controller_uses_key(SDL_Scancode scancode);
 static int spinner_movement(int spinner, float movement);
-
-bool events_shortcuts(const SDL_Event* event)
-{
-    bool adam = (emu_get_machine() == GC_MACHINE_ADAM) && !emu_is_empty();
-    bool adam_captured = adam && adam_keyboard_captures_event(event);
-
-    if (event->type == SDL_EVENT_KEY_UP)
-    {
-        if (!adam_captured && events_match_hotkey_scancode(event, config_hotkeys[config_HotkeyIndex_Rewind]))
-        {
-            gui_action_rewind_released();
-            return true;
-        }
-
-        return false;
-    }
-
-    if (event->type != SDL_EVENT_KEY_DOWN)
-        return false;
-
-    if (!adam_captured && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Rewind], false))
-    {
-        gui_action_rewind_pressed();
-        return true;
-    }
-
-    // Check special case hotkeys first
-    if (events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Quit], false))
-    {
-        application_trigger_quit();
-        return true;
-    }
-
-    if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_Fullscreen], false))
-    {
-        gui_shortcut(gui_ShortcutFullscreen);
-        return true;
-    }
-
-    if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_KeyboardMapper], false))
-    {
-        gui_shortcut(gui_ShortcutKeyboardMapper);
-        return true;
-    }
-
-    if (adam && events_check_hotkey(event, config_hotkeys[config_HotkeyIndex_KeyMapping], false))
-    {
-        gui_shortcut(gui_ShortcutKeyMapping);
-        return true;
-    }
-
-    if (adam_captured)
-        return false;
-
-    // Check all hotkeys mapped to gui shortcuts
-    for (int i = 0; i < GUI_HOTKEY_MAP_COUNT; i++)
-    {
-        if (events_check_hotkey(event, config_hotkeys[gui_hotkey_map[i].config_index], gui_hotkey_map[i].allow_repeat))
-        {
-            gui_shortcut(gui_hotkey_map[i].shortcut);
-            return true;
-        }
-    }
-
-    // Fixed hotkeys for debug copy/paste/select operations
-    int key = event->key.scancode;
-    SDL_Keymod mods = event->key.mod;
-
-    if (config_debug.debug && event->key.repeat == 0 && key == SDL_SCANCODE_A && (mods & SDL_KMOD_CTRL))
-    {
-        gui_shortcut(gui_ShortcutDebugSelectAll);
-        return true;
-    }
-
-    if (config_debug.debug && event->key.repeat == 0 && key == SDL_SCANCODE_C && (mods & SDL_KMOD_CTRL))
-    {
-        gui_shortcut(gui_ShortcutDebugCopy);
-        return true;
-    }
-
-    if (config_debug.debug && event->key.repeat == 0 && key == SDL_SCANCODE_V && (mods & SDL_KMOD_CTRL))
-    {
-        gui_shortcut(gui_ShortcutDebugPaste);
-        return true;
-    }
-
-    // ESC to exit fullscreen
-    if (event->key.repeat == 0 && key == SDL_SCANCODE_ESCAPE)
-    {
-        if (config_emulator.fullscreen && !config_emulator.always_show_menu && !emu_is_video_recording())
-        {
-            config_emulator.fullscreen = false;
-            application_trigger_fullscreen(false);
-            return true;
-        }
-    }
-
-    return false;
-}
 
 void events_handle_emu_event(const SDL_Event* event, bool shortcut_consumed)
 {
@@ -313,6 +211,12 @@ void events_sync_input(void)
 
         input_poll_controller(controller);
     }
+}
+
+void events_release_mouse(void)
+{
+    memset(roller_mouse_buttons, 0, sizeof(roller_mouse_buttons));
+    memset(spinner_remainder, 0, sizeof(spinner_remainder));
 }
 
 void events_release_adam_keys(void)
@@ -529,40 +433,6 @@ static void input_poll_controller(int controller)
         // Left/Right buttons also map from directional for non-keypad
         input_send_key(controller, 4 + i, button_map[i].gc_key, pressed);
     }
-}
-
-static bool events_check_hotkey(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat)
-{
-    if (event->type != SDL_EVENT_KEY_DOWN)
-        return false;
-
-    if (!allow_repeat && event->key.repeat != 0)
-        return false;
-
-    if (event->key.scancode != hotkey.key)
-        return false;
-
-    SDL_Keymod mods = event->key.mod;
-    SDL_Keymod expected = hotkey.mod;
-
-    SDL_Keymod mods_normalized = (SDL_Keymod)0;
-    if (mods & (SDL_KMOD_LCTRL | SDL_KMOD_RCTRL)) mods_normalized = (SDL_Keymod)(mods_normalized | SDL_KMOD_CTRL);
-    if (mods & (SDL_KMOD_LSHIFT | SDL_KMOD_RSHIFT)) mods_normalized = (SDL_Keymod)(mods_normalized | SDL_KMOD_SHIFT);
-    if (mods & (SDL_KMOD_LALT | SDL_KMOD_RALT)) mods_normalized = (SDL_Keymod)(mods_normalized | SDL_KMOD_ALT);
-    if (mods & (SDL_KMOD_LGUI | SDL_KMOD_RGUI)) mods_normalized = (SDL_Keymod)(mods_normalized | SDL_KMOD_GUI);
-
-    SDL_Keymod expected_normalized = (SDL_Keymod)0;
-    if (expected & (SDL_KMOD_LCTRL | SDL_KMOD_RCTRL | SDL_KMOD_CTRL)) expected_normalized = (SDL_Keymod)(expected_normalized | SDL_KMOD_CTRL);
-    if (expected & (SDL_KMOD_LSHIFT | SDL_KMOD_RSHIFT | SDL_KMOD_SHIFT)) expected_normalized = (SDL_Keymod)(expected_normalized | SDL_KMOD_SHIFT);
-    if (expected & (SDL_KMOD_LALT | SDL_KMOD_RALT | SDL_KMOD_ALT)) expected_normalized = (SDL_Keymod)(expected_normalized | SDL_KMOD_ALT);
-    if (expected & (SDL_KMOD_LGUI | SDL_KMOD_RGUI | SDL_KMOD_GUI)) expected_normalized = (SDL_Keymod)(expected_normalized | SDL_KMOD_GUI);
-
-    return mods_normalized == expected_normalized;
-}
-
-static bool events_match_hotkey_scancode(const SDL_Event* event, const config_Hotkey& hotkey)
-{
-    return event->key.scancode == hotkey.key;
 }
 
 GC_AdamKey events_adam_typing_key(SDL_Scancode scancode)

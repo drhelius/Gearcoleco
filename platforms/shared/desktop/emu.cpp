@@ -712,6 +712,17 @@ void emu_key_released(GC_Controllers controller, GC_Keys key)
     gearcoleco->KeyReleased(controller, key);
 }
 
+void emu_host_hotkey_used(void)
+{
+    if (IsValidPointer(gearcoleco))
+        gearcoleco->DiscardDeferredHostKeys();
+}
+
+bool emu_has_pointer(void)
+{
+    return !emu_is_empty() && (config_emulator.spinner > 0);
+}
+
 bool emu_key_mapper_is_open(void)
 {
     return IsValidPointer(gearcoleco) && gearcoleco->GetKeyMapper()->IsOpen();

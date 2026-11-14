@@ -18,6 +18,7 @@
  */
 
 #include "config_macros.h"
+#include "hotkeys.h"
 #include "shader_preset.h"
 
 static inline void process(config_Operation operation)
@@ -369,46 +370,18 @@ static inline void process(config_Operation operation)
     {
         char section[32];
         snprintf(section, sizeof(section), "InputGamepadShortcuts%d", i + 1);
-        CONFIG_INT_ARRAY(section, "Shortcut%d", config_input_gamepad_shortcuts[i].gamepad_shortcuts, config_HotkeyIndex_COUNT, SDL_GAMEPAD_BUTTON_INVALID);
+
+        for (int j = 0; j < config_HotkeyIndex_COUNT; j++)
+        {
+            char key[64];
+            snprintf(key, sizeof(key), "Shortcut%s", hotkey_definitions[j].name);
+            CONFIG_INT(section, key, config_input_gamepad_shortcuts[i].gamepad_shortcuts[j], SDL_GAMEPAD_BUTTON_INVALID);
+        }
     }
 
     // Hotkeys
-    CONFIG_HOTKEY("OpenROM", config_hotkeys[config_HotkeyIndex_OpenROM], SDL_SCANCODE_O, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("ReloadROM", config_hotkeys[config_HotkeyIndex_ReloadROM], SDL_SCANCODE_D, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Quit", config_hotkeys[config_HotkeyIndex_Quit], SDL_SCANCODE_Q, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Reset", config_hotkeys[config_HotkeyIndex_Reset], SDL_SCANCODE_R, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Pause", config_hotkeys[config_HotkeyIndex_Pause], SDL_SCANCODE_P, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("FFWD", config_hotkeys[config_HotkeyIndex_FFWD], SDL_SCANCODE_F, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Rewind", config_hotkeys[config_HotkeyIndex_Rewind], SDL_SCANCODE_BACKSPACE, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("SaveState", config_hotkeys[config_HotkeyIndex_SaveState], SDL_SCANCODE_S, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("LoadState", config_hotkeys[config_HotkeyIndex_LoadState], SDL_SCANCODE_L, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Screenshot", config_hotkeys[config_HotkeyIndex_Screenshot], SDL_SCANCODE_X, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Fullscreen", config_hotkeys[config_HotkeyIndex_Fullscreen], SDL_SCANCODE_F12, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("CaptureMouse", config_hotkeys[config_HotkeyIndex_CaptureMouse], SDL_SCANCODE_F1, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("ShowMainMenu", config_hotkeys[config_HotkeyIndex_ShowMainMenu], SDL_SCANCODE_M, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("DebugStepInto", config_hotkeys[config_HotkeyIndex_DebugStepInto], SDL_SCANCODE_F11, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugStepOver", config_hotkeys[config_HotkeyIndex_DebugStepOver], SDL_SCANCODE_F10, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugStepOut", config_hotkeys[config_HotkeyIndex_DebugStepOut], SDL_SCANCODE_F11, SDL_KMOD_SHIFT);
-    CONFIG_HOTKEY("DebugStepFrame", config_hotkeys[config_HotkeyIndex_DebugStepFrame], SDL_SCANCODE_F6, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugContinue", config_hotkeys[config_HotkeyIndex_DebugContinue], SDL_SCANCODE_F5, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugBreak", config_hotkeys[config_HotkeyIndex_DebugBreak], SDL_SCANCODE_F7, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugRunToCursor", config_hotkeys[config_HotkeyIndex_DebugRunToCursor], SDL_SCANCODE_F8, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugBreakpoint", config_hotkeys[config_HotkeyIndex_DebugBreakpoint], SDL_SCANCODE_F9, SDL_KMOD_NONE);
-    CONFIG_HOTKEY("DebugGoBack", config_hotkeys[config_HotkeyIndex_DebugGoBack], SDL_SCANCODE_BACKSPACE, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("SelectSlot1", config_hotkeys[config_HotkeyIndex_SelectSlot1], SDL_SCANCODE_1, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("SelectSlot2", config_hotkeys[config_HotkeyIndex_SelectSlot2], SDL_SCANCODE_2, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("SelectSlot3", config_hotkeys[config_HotkeyIndex_SelectSlot3], SDL_SCANCODE_3, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("SelectSlot4", config_hotkeys[config_HotkeyIndex_SelectSlot4], SDL_SCANCODE_4, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("SelectSlot5", config_hotkeys[config_HotkeyIndex_SelectSlot5], SDL_SCANCODE_5, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("Mute", config_hotkeys[config_HotkeyIndex_Mute], SDL_SCANCODE_U, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("VideoRecording", config_hotkeys[config_HotkeyIndex_VideoRecording], SDL_SCANCODE_R, (SDL_Keymod)(SDL_KMOD_CTRL | SDL_KMOD_SHIFT));
-#if defined(__APPLE__)
-    CONFIG_HOTKEY("KeyboardMapper", config_hotkeys[config_HotkeyIndex_KeyboardMapper], SDL_SCANCODE_F1, SDL_KMOD_GUI);
-    CONFIG_HOTKEY("KeyMapping", config_hotkeys[config_HotkeyIndex_KeyMapping], SDL_SCANCODE_F2, SDL_KMOD_GUI);
-#else
-    CONFIG_HOTKEY("KeyboardMapper", config_hotkeys[config_HotkeyIndex_KeyboardMapper], SDL_SCANCODE_F1, SDL_KMOD_CTRL);
-    CONFIG_HOTKEY("KeyMapping", config_hotkeys[config_HotkeyIndex_KeyMapping], SDL_SCANCODE_F2, SDL_KMOD_CTRL);
-#endif
+    for (int i = 0; i < config_HotkeyIndex_COUNT; i++)
+        CONFIG_HOTKEY(hotkey_definitions[i].name, config_hotkeys[i], hotkey_definitions[i].key, hotkeys_default_mod(i));
 }
 
 //**************************************
@@ -423,6 +396,7 @@ static void before_defaults(void);
 static void after_defaults(void);
 static void normalize(void);
 static void migrate(int file_version);
+static void migrate_hotkeys(void);
 static void sync_shader_preset_parameter_defaults(void);
 
 static void before_read(int file_version)
@@ -456,7 +430,6 @@ static void after_defaults(void)
     config_emulator.paused = false;
     config_emulator.ffwd = false;
     config_emulator.show_info = false;
-    config_emulator.capture_mouse = false;
 }
 
 static void normalize(void)
@@ -559,6 +532,92 @@ static void migrate(int file_version)
             write_string("FileDialogs", "ROM", stored);
 
         config_ini_data["Emulator"].remove("LastOpenPath");
+    }
+
+    if (file_version < 10)
+        migrate_hotkeys();
+}
+
+static void migrate_hotkeys(void)
+{
+    struct migrate_Hotkey
+    {
+        const char* name;
+        int key;
+        int mod;
+    };
+
+    static const migrate_Hotkey old_defaults[] =
+    {
+        { "OpenROM", SDL_SCANCODE_O, SDL_KMOD_CTRL }, { "ReloadROM", SDL_SCANCODE_D, SDL_KMOD_CTRL },
+        { "Quit", SDL_SCANCODE_Q, SDL_KMOD_CTRL }, { "Reset", SDL_SCANCODE_R, SDL_KMOD_CTRL },
+        { "Pause", SDL_SCANCODE_P, SDL_KMOD_CTRL }, { "FFWD", SDL_SCANCODE_F, SDL_KMOD_CTRL },
+        { "Rewind", SDL_SCANCODE_BACKSPACE, SDL_KMOD_NONE }, { "SaveState", SDL_SCANCODE_S, SDL_KMOD_CTRL },
+        { "LoadState", SDL_SCANCODE_L, SDL_KMOD_CTRL }, { "Screenshot", SDL_SCANCODE_X, SDL_KMOD_CTRL },
+        { "Fullscreen", SDL_SCANCODE_F12, SDL_KMOD_NONE }, { "ShowMainMenu", SDL_SCANCODE_M, SDL_KMOD_CTRL },
+        { "SelectSlot1", SDL_SCANCODE_1, SDL_KMOD_CTRL }, { "SelectSlot2", SDL_SCANCODE_2, SDL_KMOD_CTRL },
+        { "SelectSlot3", SDL_SCANCODE_3, SDL_KMOD_CTRL }, { "SelectSlot4", SDL_SCANCODE_4, SDL_KMOD_CTRL },
+        { "SelectSlot5", SDL_SCANCODE_5, SDL_KMOD_CTRL }, { "Mute", SDL_SCANCODE_U, SDL_KMOD_CTRL },
+        { "VideoRecording", SDL_SCANCODE_R, SDL_KMOD_CTRL | SDL_KMOD_SHIFT }
+    };
+
+    static const char* const old_shortcuts[] =
+    {
+        "OpenROM", "ReloadROM", "Quit", "Reset", "Pause", "FFWD", "SaveState", "LoadState", "Screenshot", "Fullscreen",
+        "GameFocus", "ShowMainMenu", "DebugStepInto", "DebugStepOver", "DebugStepOut", "DebugStepFrame",
+        "DebugContinue", "DebugBreak", "DebugRunToCursor", "DebugBreakpoint", "DebugGoBack", "SelectSlot1",
+        "SelectSlot2", "SelectSlot3", "SelectSlot4", "SelectSlot5", "Rewind", "Mute", "VideoRecording",
+        "KeyboardMapper", "KeyMapping"
+    };
+
+    char scancode_key[64];
+    char mod_key[64];
+
+    for (size_t i = 0; i < sizeof(old_defaults) / sizeof(old_defaults[0]); i++)
+    {
+        snprintf(scancode_key, sizeof(scancode_key), "%sScancode", old_defaults[i].name);
+        snprintf(mod_key, sizeof(mod_key), "%sMod", old_defaults[i].name);
+
+        if ((read_int("Hotkeys", scancode_key, old_defaults[i].key) == old_defaults[i].key) &&
+            (read_int("Hotkeys", mod_key, old_defaults[i].mod) == old_defaults[i].mod))
+        {
+            config_ini_data["Hotkeys"].remove(scancode_key);
+            config_ini_data["Hotkeys"].remove(mod_key);
+        }
+    }
+
+    int capture_key = read_int("Hotkeys", "CaptureMouseScancode", SDL_SCANCODE_F1);
+    int capture_mod = read_int("Hotkeys", "CaptureMouseMod", SDL_KMOD_NONE);
+
+    if ((capture_key != SDL_SCANCODE_UNKNOWN) && ((capture_key != SDL_SCANCODE_F1) || (capture_mod != SDL_KMOD_NONE)))
+    {
+        write_int("Hotkeys", "GameFocusScancode", capture_key);
+        write_int("Hotkeys", "GameFocusMod", capture_mod);
+    }
+
+    config_ini_data["Hotkeys"].remove("CaptureMouseScancode");
+    config_ini_data["Hotkeys"].remove("CaptureMouseMod");
+
+    for (int i = 0; i < 2; i++)
+    {
+        char section[32];
+        snprintf(section, sizeof(section), "InputGamepadShortcuts%d", i + 1);
+
+        for (size_t j = 0; j < sizeof(old_shortcuts) / sizeof(old_shortcuts[0]); j++)
+        {
+            char old_key[32];
+            snprintf(old_key, sizeof(old_key), "Shortcut%d", (int)j);
+            std::string stored;
+
+            if (!get_setting(section, old_key, &stored))
+                continue;
+
+            config_ini_data[section].remove(old_key);
+
+            char new_key[64];
+            snprintf(new_key, sizeof(new_key), "Shortcut%s", old_shortcuts[j]);
+            write_int(section, new_key, atoi(stored.c_str()));
+        }
     }
 }
 

@@ -35,6 +35,8 @@
     <ClCompile Include="..\shared\desktop\emu_adam.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\events.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gamepad.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\game_focus.cpp"><Filter>desktop</Filter></ClCompile>
+    <ClCompile Include="..\shared\desktop\hotkeys.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_adam.cpp"><Filter>desktop</Filter></ClCompile>
     <ClCompile Include="..\shared\desktop\gui_actions.cpp"><Filter>desktop</Filter></ClCompile>
@@ -125,6 +127,8 @@
     <ClInclude Include="..\shared\desktop\emu_adam.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\events.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gamepad.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\game_focus.h"><Filter>desktop</Filter></ClInclude>
+    <ClInclude Include="..\shared\desktop\hotkeys.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_actions.h"><Filter>desktop</Filter></ClInclude>
     <ClInclude Include="..\shared\desktop\gui_notifications.h"><Filter>desktop</Filter></ClInclude>
