@@ -542,7 +542,7 @@ if ((abs(deconrr) + abs(deconrry) + abs(deconrg) + abs(deconrgy) + abs(deconrb) 
 	
 if (shadowMask > -0.5)
 {	
-	vec2 maskcoord = gl_FragCoord.xy + vec2(laysh*masksize, 0.0);
+	vec2 maskcoord = pos0 * OutputSize.xy + vec2(laysh*masksize, 0.0);
 	vec2 scoord = maskcoord;
 	
 	mwidth = floor(mwidth) * masksize;
