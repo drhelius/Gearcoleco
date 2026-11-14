@@ -16,6 +16,7 @@ Features:
     - Optional original F18A V1.9 host, video, palette, interrupt, DMA and GPU emulation.
     - ColecoVision Super Game Module and MegaCart support.
     - Super Action Controller, Wheel Controller and Roller Controller support.
+    - In-game ADAM keyboard mapper to bind host keys per game.
     - Save states with preview and rewind, and run-ahead.
     - ZIP ROM loading, Game Genie and Pro Action Replay cheats, and VGM recording.
     - Full debugger with disassembly, breakpoints, symbols, memory editor, IO inspector and VRAM viewer.
@@ -30,6 +31,7 @@ Licensing:
     - mINI: Copyright 2018 Danijel Durakovic, MIT.
     - miniz: Copyright Rich Geldreich and contributors, Unlicense.
     - stb: Copyright Sean Barrett and contributors, public domain or MIT.
+    - VGA fonts from SeaBIOS vgafonts.c (fntcol16.zip by Joseph Gil): public domain.
     - glad: glad contributors, WTFPL or CC0-1.0 and Apache-2.0.
     - libretro API header: Copyright 2010-2024 The RetroArch team, MIT.
     - Shader assets: respective authors, GPL-2+, MIT and public domain.

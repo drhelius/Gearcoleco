@@ -102,6 +102,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - Very accurate Z80 core, TMS9918A VDP, SN76489 PSG and AY-3-8910 SGM emulation.
 - Support for ColecoVision Super Game Module (SGM) and MegaCart ROMs.
 - Coleco ADAM computer and cartridge boot modes, full keyboard, ADAMnet, printer, Digital Data Pack and floppy support.
+- In-game ADAM keyboard mapper to bind host keys per game.
 - Optional F18A v1.9 emulation.
 - Support for Super Action Controller (SAC), Wheel Controller and Roller Controller.
 - Save states with preview and rewind support.
@@ -125,7 +126,7 @@ Don't hesitate to report bugs or ask for new features by [opening an issue](http
 - **BIOS and ADAM Firmware**: Firmware is not included. Select the ColecoVision BIOS (OS-7) under **Emulator > BIOS**; the original BIOS is recommended (CRC32 `3aa93ef3`; filenames `colecovision.rom`, `coleco.rom` or `os7.u2`). ADAM additionally needs **ADAM > EOS ROM** (`eos.rom`, 8192 bytes, common CRC32 `05a37a34`) and **ADAM > SmartWriter ROM** (`writer.rom`, `wp.rom` or `wp_r80.rom`, 32768 bytes, common CRC32 `58d86a2a`).
 - **ADAM Startup and Media**: Insert images through the **ADAM** menu's disk or data pack submenus, then select **Power On**. Supported formats are 256 KiB `.ddp`, 160/320 KiB `.dsk`, ZIP archives containing one valid ADAM image, and `.m3u` playlists containing images of the same type. Each drive has its own recent images, playlist and write protection controls. Insert/eject affects only that drive; dropped images use an available matching drive or prompt for a destination. **Gearcoleco > Open ROM...** starts ColecoVision cartridges.
 - **ADAM Power and Saves**: **Power Off** saves modified media and keeps it inserted. Firmware changes apply at the next **Power On**; **Computer Reset** retains the current firmware and mounted media. Changes are stored as complete images under **Save Files**, leaving source files untouched. Drive menus also provide **Save Changes** and **Save As**; a failed save keeps the modified image mounted.
-- **ADAM Input**: Type directly into ADAM; in debug mode, focus **Output** to type or a debugger tool to use its shortcuts. Configure special keys under **ADAM > Keyboard** (see [defaults below](#desktop-adam-keyboard)); `F12` toggles fullscreen. **ADAM > Controller 1 / Controller 2** selects gamepad (default), keyboard or no hand controller per port. Bindings come from **Input > Gamepads** or **Input > Keyboard Configuration**; keys mapped to a hand controller do not type into ADAM. ADAM controller choices are saved separately from ColecoVision settings.
+- **ADAM Input**: Type directly into ADAM; in debug mode, focus **Output** to type or a debugger tool to use its shortcuts. Configure special keys under **ADAM > Keyboard** (see [defaults below](#desktop-adam-keyboard)) and change them per game with the [keyboard mapper](#adam-keyboard-mapper); `F12` toggles fullscreen. **ADAM > Controller 1 / Controller 2** selects gamepad (default), keyboard or no hand controller per port. Bindings come from **Input > Gamepads** or **Input > Keyboard Configuration**; keys mapped to a hand controller do not type into ADAM. ADAM controller choices are saved separately from ColecoVision settings.
 - **Spinners**: Use **Input > Spinners > Capture Mouse** or the configured Capture Mouse shortcut. Disable spinners for software that does not use them.
 - **Rewind**: Hold the configured rewind hotkey (`Backspace` by default) or a mapped gamepad shortcut to step backwards through recent gameplay.
 - **Overscan**: For a precise representation of the original image, select **Overscan** `Top+Bottom` and **Aspect Ratio** `Standard (4:3 DAR)` in the **Video** menu.
@@ -147,16 +148,44 @@ Normal letters, digits, punctuation, Return, Escape, Backspace, Tab, Shift, Cont
 
 Saved keyboard mappings are preserved. Use **ADAM > Keyboard > Restore Defaults** to adopt this layout in an existing configuration.
 
-When ADAM owns keyboard focus, overlapping emulator hotkeys are available from the menus so SmartKeys and editing keys reach the emulated keyboard. Leaving the window releases every held ADAM key.
+When ADAM owns keyboard focus, only the Quit, Fullscreen, Keyboard Mapper and Key Mapping hotkeys stay active. The others are available from the menus so SmartKeys and editing keys reach the emulated keyboard. Leaving the window releases every held ADAM key.
+
+On Windows and Linux, `Ctrl+F1` and `Ctrl+F2` belong to the [keyboard mapper](#adam-keyboard-mapper), so software that needs Control with SmartKey I or II needs them moved in **Emulator > Hotkeys**.
 
 ADAM keyboard input follows focus automatically. In normal use, type directly; in debug mode, focus Output to type into ADAM or focus a debugger tool to use its shortcuts. `F12` remains the default fullscreen shortcut.
+
+### ADAM Keyboard Mapper
+
+Press `Ctrl+F1` (`Cmd+F1` on macOS), or use **ADAM > Keyboard > Keyboard Mapper...**, to stop ADAM and show its keyboard:
+
+- Click an ADAM key, then press the host key that should drive it, on its own. It stays selected for more host keys; click it again to deselect it.
+- Each ADAM key lists the host keys that drive it, built-in ones first. Click the **x** on one to remove it, or right click the ADAM key to remove all but the built-in ones.
+- Red keys are ones no host key reaches.
+- **Reset All**, clicked twice, drops the game's changes.
+- Press the same hotkey again, or click **Close**, to go back.
+
+`Ctrl+F2` (`Cmd+F2` on macOS), or **ADAM > Keyboard > Key Mapping**, turns the game's changes off and on, for instance to type text in a game whose letter keys were moved. Every game starts with them on. Both hotkeys can be changed in **Emulator > Hotkeys**, and the mapper can also have a gamepad shortcut.
+
+The mapper's changes sit on top of the **ADAM > Keyboard** bindings and are kept for that game only, in a `.keys` file named after the content (`ADAM.keys` with nothing loaded) in the **Save Files** folder, written when the mapper closes. The file can be edited by hand. Host keys without a line keep their usual job:
+
+```ini
+[keys]
+w = up
+s = down
+f9 = control + smart_1
+grave = none
+```
+
+- **Host keys**: `a`-`z`, `0`-`9`, `f1`-`f24`, `return`, `escape`, `backspace`, `tab`, `space`, `minus`, `equals`, `left_bracket`, `right_bracket`, `backslash`, `non_us_hash`, `semicolon`, `apostrophe`, `grave`, `comma`, `period`, `slash`, `non_us_backslash`, `caps_lock`, `print_screen`, `scroll_lock`, `pause`, `insert`, `home`, `page_up`, `delete`, `end`, `page_down`, `up`, `down`, `left`, `right`, `num_lock`, `kp_0`-`kp_9`, `kp_00`, `kp_000`, `kp_divide`, `kp_multiply`, `kp_minus`, `kp_plus`, `kp_enter`, `kp_period`, `kp_equals`, `kp_comma`, `menu`, `help`, `sysreq`, `international1`-`international5`, `lang1`-`lang5`, `left_ctrl`, `left_shift`, `left_alt`, `left_gui`, `right_ctrl`, `right_shift`, `right_alt`, `right_gui`.
+- **ADAM keys**: `a`-`z`, `0`-`9`, `smart_1`-`smart_6`, `space`, `minus`, `plus`, `caret`, `semicolon`, `quote`, `open_bracket`, `close_bracket`, `backslash`, `comma`, `period`, `slash`, `return`, `escape`, `backspace`, `tab`, `home`, `wild_card`, `undo`, `move`, `store`, `insert`, `print`, `clear`, `delete`, `up`, `down`, `left`, `right`, `shift`, `control`, `lock`.
+- A host key takes up to four ADAM keys joined with `+`, pressed in that order, such as `control + smart_1`, or `none` to do nothing.
 
 ### ADAM in Libretro
 
 - **Startup**: Place OS-7, EOS and SmartWriter in the frontend system directory or its `gearcoleco` subdirectory using the [firmware names above](#basic-usage). ADAM starts automatically for `.ddp`, `.dsk`, ADAM `.zip`, `.m3u` or no content; without bootable media it opens SmartWriter. Cartridges use ColecoVision unless **Cartridge Hardware** is set to ADAM.
 - **Media and Saves**: Media is write protected by default. Enable `Save-directory working copy` to save complete modified images in the frontend save directory, leaving source files untouched. **ADAM Disk Control Drive** selects Disk 1/2 or Data Pack 1/2; **Loaded media** (default) targets the primary content drive. Each drive has its own image list. Swap through the frontend's eject, select and close sequence; other drives stay mounted.
 - **Multiple Images**: The optional **ADAM** subsystem (`adam`) loads up to five slots before boot: **Cartridge, Disk 1, Disk 2, Data Pack 1, Data Pack 2**, in that order. All slots are optional and each drive supports playlists. Update older three-slot configurations to this layout; use normal content loading for a single image or playlist.
-- **Keyboard**: Bindings are fixed to the [desktop defaults](#desktop-adam-keyboard), including Escape for Escape/WP and Shift/Control as modifiers. In RetroArch, set **Settings > Input > Auto Enable 'Game Focus' Mode** to **Detect**, or toggle Game Focus with Scroll Lock before typing. Turn it off to use RetroArch shortcuts. Without Scroll Lock, assign **Game Focus Toggle** to F10; F9-F12 and Scroll Lock are unmapped in ADAM.
+- **Keyboard**: Bindings start from the [desktop defaults](#desktop-adam-keyboard), including Escape for Escape/WP and Shift/Control as modifiers. `Ctrl+F1` (`Cmd+F1` on macOS) opens the [keyboard mapper](#adam-keyboard-mapper), clicked with the mouse or a touch screen, and `Ctrl+F2` (`Cmd+F2`) turns its changes off and on. They are kept in `<content>.keys` in the save directory (`ADAM.keys` without content). In RetroArch, set **Settings > Input > Auto Enable 'Game Focus' Mode** to **Detect**, or toggle Game Focus with Scroll Lock before typing or using these hotkeys. Turn it off to use RetroArch shortcuts. Without Scroll Lock, assign **Game Focus Toggle** to F10; F9-F12 and Scroll Lock are unmapped in ADAM.
 - **Reset**: Frontend Reset keeps the current boot mode. **ADAM Computer Reset** boots from mounted media without ejecting it; if the option does not return to Idle automatically, select Idle before requesting another reset.
 
 ### Debugging Features

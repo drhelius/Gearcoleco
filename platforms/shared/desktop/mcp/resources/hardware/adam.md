@@ -43,3 +43,5 @@ ADAM tracing is disabled by default. `set_trace_log` accepts `adam.map`, `adam.c
 ## Keyboard control
 
 MCP tool `adam_keyboard` accepts semantic key names with `press`, `release`, or `tap`. It covers letters, digits, punctuation, editing keys, SmartKeys I-VI, directional keys, Shift, Control, and Lock.
+
+`adam_keyboard` skips the host key map. Host keys reach ADAM through the **ADAM > Keyboard** bindings and then the game's `.keys` file. `host_key` presses a host key through that map by its USB HID name (`a`, `f1`, `left_shift`). `get_key_map` shows the map, `set_key_binding` changes one host key, and `set_key_mapping` turns the game's bindings off. `open_key_mapper` and `close_key_mapper` show and hide the in-game keyboard mapper, and ADAM stops while it's open.
