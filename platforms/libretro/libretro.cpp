@@ -1753,6 +1753,22 @@ static void apply_key_mapper_pointer(void)
 
 static void show_message(const char* message, unsigned frames)
 {
+    unsigned version = 0;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION, &version) && (version >= 1))
+    {
+        struct retro_message_ext msg = {};
+        msg.msg = message;
+        msg.duration = (frames * 1000) / 60;
+        msg.priority = 3;
+        msg.level = RETRO_LOG_INFO;
+        msg.target = RETRO_MESSAGE_TARGET_OSD;
+        msg.type = RETRO_MESSAGE_TYPE_NOTIFICATION;
+        msg.progress = -1;
+        environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &msg);
+        return;
+    }
+
     struct retro_message msg = {};
     msg.msg = message;
     msg.frames = frames;
@@ -2553,6 +2569,7 @@ static bool setup_loaded_game(void)
     {
         struct retro_keyboard_callback keyboard = { keyboard_event };
         environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard);
+        show_message("Turn on Game Focus to use the keyboard and mouse (Scroll Lock by default)", 240);
         struct retro_memory_descriptor desc = {};
 
         desc.ptr = core->GetAdam()->GetMainRAM();
