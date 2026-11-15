@@ -44,6 +44,7 @@
 #include "gui_actions.h"
 #include "gui_notifications.h"
 #include "gui_colors.h"
+#include "gui_filedialogs.h"
 #include "gui_debug.h"
 #include "gui_debug_memory.h"
 #include "gui_debug_disassembler.h"
@@ -57,9 +58,17 @@ static int pending_state_slot = 0;
 static std::string pending_state_path;
 static char loading_rom_path[4096] = "";
 static char loading_symbol_path[4096] = "";
+static bool output_focus_requested = false;
+static bool output_focus_restore = false;
+static bool output_blocked = false;
+static bool output_debug = false;
+static bool output_powered = false;
+static bool output_game_focus = false;
+static bool output_captured = false;
 
 
 static void main_window(void);
+static void update_output_focus(bool output_was_focused);
 static void update_key_mapper_pointer(const ImVec2& min, const ImVec2& max);
 static void show_error_window(void);
 static void show_loading_popup(void);
@@ -182,6 +191,8 @@ void gui_destroy(void)
 void gui_render(void)
 {
     bool keyboard_was_active = events_is_adam_keyboard_active();
+    bool output_was_focused = gui_main_window_focused;
+    output_captured = events_is_adam_keyboard_captured();
     ImGui::NewFrame();
 
     update_window_visibility_padding();
@@ -192,6 +203,7 @@ void gui_render(void)
     gui_in_use = gui_dialog_in_use;
 
     gui_main_menu();
+    update_output_focus(output_was_focused);
 
     gui_main_window_hovered = false;
     gui_main_window_focused = false;
@@ -705,7 +717,14 @@ static void main_window(void)
         ImGui::SetNextWindowPos(ImVec2(631, 26), ImGuiCond_FirstUseEver);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
-        window_visible = ImGui::Begin("Output###debug_output", &config_debug.show_screen, flags);
+        if (output_focus_requested && !output_blocked)
+        {
+            ImGui::SetNextWindowFocus();
+            output_focus_requested = false;
+        }
+
+        const char* title = output_captured ? "Output (Keyboard Captured)###debug_output" : "Output###debug_output";
+        window_visible = ImGui::Begin(title, &config_debug.show_screen, flags);
         gui_main_window_hovered = ImGui::IsWindowHovered();
         gui_main_window_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     }
@@ -788,6 +807,34 @@ static void main_window(void)
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
+}
+
+static void update_output_focus(bool output_was_focused)
+{
+    if (!config_debug.debug)
+    {
+        output_debug = false;
+        output_focus_requested = false;
+        return;
+    }
+
+    bool blocked = gui_in_use || gui_dialog_in_use || gui_file_dialog_is_active() ||
+        ImGui::IsPopupOpen((const char*)NULL, ImGuiPopupFlags_AnyPopup);
+    bool powered = !emu_is_empty();
+    bool game_focus = game_focus_is_on();
+
+    if (!output_debug || (powered && !output_powered) || (game_focus && !output_game_focus))
+        output_focus_requested = true;
+
+    if (blocked && !output_blocked)
+        output_focus_restore = output_was_focused;
+    else if (!blocked && output_blocked && output_focus_restore)
+        output_focus_requested = true;
+
+    output_debug = true;
+    output_blocked = blocked;
+    output_powered = powered;
+    output_game_focus = game_focus;
 }
 
 static void update_key_mapper_pointer(const ImVec2& min, const ImVec2& max)

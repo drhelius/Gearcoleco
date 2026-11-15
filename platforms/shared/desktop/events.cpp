@@ -248,6 +248,11 @@ bool events_is_adam_keyboard_active(void)
     return gui_main_window_focused && !gui_in_use && !gui_dialog_in_use && !emu_is_empty() && (emu_get_machine() == GC_MACHINE_ADAM);
 }
 
+bool events_is_adam_keyboard_captured(void)
+{
+    return config_debug.debug && events_is_adam_keyboard_active();
+}
+
 static bool adam_keyboard_captures_event(const SDL_Event* event)
 {
     if (!events_is_adam_keyboard_active())
@@ -456,12 +461,6 @@ const char* events_adam_reserved_key(SDL_Scancode scancode)
             return "Keyboard modifier";
         default: break;
     }
-
-    if (config_hotkeys[config_HotkeyIndex_Fullscreen].key == scancode && config_hotkeys[config_HotkeyIndex_Fullscreen].mod == SDL_KMOD_NONE)
-        return "Fullscreen";
-
-    if (config_hotkeys[config_HotkeyIndex_Quit].key == scancode && config_hotkeys[config_HotkeyIndex_Quit].mod == SDL_KMOD_NONE)
-        return "Quit";
 
     return NULL;
 }

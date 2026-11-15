@@ -30,6 +30,7 @@
 #include "application.h"
 #include "gamepad.h"
 #include "emu.h"
+#include "hotkeys.h"
 #include "license.h"
 #include "backers.h"
 #include "ogl_renderer.h"
@@ -137,13 +138,25 @@ void gui_popup_modal_hotkey()
     if (ImGui::BeginPopupModal("Hotkey Configuration", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         gui_dialog_in_use = true;
-        ImGui::Text("Press any key combination...\n");
+        int hotkey = (int)(gui_configured_hotkey - config_hotkeys);
 #if defined(__APPLE__)
-        ImGui::Text("Hold Cmd, Ctrl, Shift or Option before pressing the key.");
+        const char* hint = "Hold Cmd, Ctrl or Option, and Shift if needed, before pressing the key.";
+        const char* adam_hint = "Without Cmd, Ctrl or Option, it won't work while the ADAM has the keyboard.";
 #else
-        ImGui::Text("Hold Ctrl, Shift or Alt before pressing the key.");
+        const char* hint = "Hold Ctrl or Alt, and Shift if needed, before pressing the key.";
+        const char* adam_hint = "Without Ctrl or Alt, it won't work while the ADAM has the keyboard.";
 #endif
-        ImGui::Text("Without one, that key won't reach the ADAM while hotkeys are on.\n\n");
+
+        ImGui::Text("Press any key combination...\n");
+
+        if ((hotkey_definitions[hotkey].flags & HOTKEY_FLAG_DEBUG) != 0)
+            ImGui::Text("Debugger hotkeys don't work while the Output window has the ADAM keyboard.\n\n");
+        else
+        {
+            ImGui::Text("%s", hint);
+            ImGui::Text("%s\n\n", adam_hint);
+        }
+
         ImGui::Separator();
 
         SDL_Keymod mods = (SDL_Keymod)(SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_ALT | SDL_KMOD_GUI));

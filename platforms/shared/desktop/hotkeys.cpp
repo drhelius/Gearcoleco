@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include "emu.h"
+#include "events.h"
 #include "game_focus.h"
 #include "gui.h"
 #include "gui_debug_memory.h"
@@ -157,6 +158,14 @@ SDL_Keymod hotkeys_default_mod(int hotkey)
     return (SDL_Keymod)resolved;
 }
 
+bool hotkeys_is_allowed(int hotkey, int mod)
+{
+    if ((hotkey_definitions[hotkey].flags & HOTKEY_FLAG_DEBUG) != 0)
+        return true;
+
+    return (mod & (SDL_KMOD_CTRL | SDL_KMOD_ALT | SDL_KMOD_GUI)) != 0;
+}
+
 static bool is_available(int hotkey)
 {
     const hotkey_Definition& definition = hotkey_definitions[hotkey];
@@ -164,7 +173,13 @@ static bool is_available(int hotkey)
     if (((definition.flags & HOTKEY_FLAG_DEBUG) != 0) && !config_debug.debug)
         return false;
 
-    return !game_focus_is_on() || ((definition.flags & HOTKEY_FLAG_GAME_FOCUS) != 0);
+    if (events_is_adam_keyboard_active() && !hotkeys_is_allowed(hotkey, config_hotkeys[hotkey].mod))
+        return false;
+
+    if (!game_focus_is_on() && !events_is_adam_keyboard_captured())
+        return true;
+
+    return (definition.flags & HOTKEY_FLAG_GAME_FOCUS) != 0;
 }
 
 static bool matches(const SDL_Event* event, const config_Hotkey& hotkey, bool allow_repeat)
@@ -199,7 +214,8 @@ static SDL_Keymod normalize_mod(int mod)
 
 static bool process_debug_edit(const SDL_Event* event)
 {
-    if (!config_debug.debug || game_focus_is_on() || event->key.repeat || ((event->key.mod & SDL_KMOD_CTRL) == 0))
+    if (!config_debug.debug || game_focus_is_on() || events_is_adam_keyboard_captured() || event->key.repeat ||
+        ((event->key.mod & SDL_KMOD_CTRL) == 0))
         return false;
 
     switch (event->key.scancode)

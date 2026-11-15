@@ -54,6 +54,7 @@ static Uint64 mouse_last_motion_time = 0;
 static const Uint64 mouse_hide_timeout_ms = 1500;
 static char title_rom[256] = "";
 static bool title_game_focus = false;
+static bool title_keyboard_captured = false;
 static SDL_DisplayID current_display_id = 0;
 
 bool g_mcp_stdio_mode = false;
@@ -470,10 +471,11 @@ static void handle_mouse_cursor(void)
 
 static void handle_title(void)
 {
-    if (game_focus_is_on() == title_game_focus)
+    if ((game_focus_is_on() == title_game_focus) && (events_is_adam_keyboard_captured() == title_keyboard_captured))
         return;
 
     title_game_focus = game_focus_is_on();
+    title_keyboard_captured = events_is_adam_keyboard_captured();
     apply_title();
 }
 
@@ -494,6 +496,8 @@ static void apply_title(void)
         snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Game Focus: %s to leave)", hotkey);
     else if (title_game_focus)
         snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Game Focus)");
+    else if (title_keyboard_captured)
+        snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Keyboard Captured)");
 
     SDL_SetWindowTitle(application_sdl_window, title);
 }

@@ -52,6 +52,7 @@ EXTERN bool hotkeys_process_event(const SDL_Event* event);
 EXTERN void hotkeys_release_held(void);
 EXTERN void hotkeys_reset_defaults(bool debug);
 EXTERN SDL_Keymod hotkeys_default_mod(int hotkey);
+EXTERN bool hotkeys_is_allowed(int hotkey, int mod);
 
 #undef HOTKEYS_IMPORT
 #undef EXTERN
