@@ -22,6 +22,9 @@
 #include "Adam.h"
 #include "TraceLogger.h"
 
+const int AdamNet::kKeyboardFIFOSize;
+const int AdamNet::kPrinterSpoolSize;
+
 static const int kKeyRepeatDelayCycles = GC_MASTER_CLOCK_NTSC / 2;
 static const int kKeyRepeatIntervalCycles = GC_MASTER_CLOCK_NTSC / 20;
 
