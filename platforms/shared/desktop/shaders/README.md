@@ -163,7 +163,7 @@ ColecoVision video uniforms, updated every frame:
 - `float OriginalFPS`: emulated frame rate in Hz, about `59.92` on NTSC and `50.16` on PAL.
 - `float PixelClock`: rate of the `Original` texels in MHz. It is `5.369`, the TMS9918A dot clock of 1.5 times the
   3.579545 MHz CPU clock, with one texel per VDP pixel: in every TMS9918A mode, with or without overscan, and in the
-  F18A 256 and 240 pixel wide modes. It is `10.739` when `Original` is more than 320 texels wide, which are the F18A 480
+  F18A 256 pixel wide modes and its unlocked 240 pixel text mode. It is `10.739` when `Original` is more than 320 texels wide, which are the F18A 480
   pixel 80-column text and 512 pixel modes and the Adam key mapper screen. PAL machines report the same values
   because the core uses the same 3.579545 MHz clock for both regions.
 - `float LineRate`: horizontal scan rate in kHz, `15.700`: 228 CPU clocks per line.
@@ -181,7 +181,9 @@ ColecoVision video uniforms, updated every frame:
   the `256x192` picture without the overscan border: `x` is `0` for `Disabled` and `Top+Bottom`, `14` for
   `Full (284 width)` and `32` for `Full (320 width)`, and `y` is `0` with overscan disabled, otherwise `24` on NTSC or
   `48` on PAL. In Text mode the picture is the `240` pixel window with 6 backdrop pixels on its left and 10 on its
-  right, so `x` is 6 higher and `width` is `240`. It is the whole frame on the F18A and with the Adam key mapper.
+  right, so `x` is 6 higher and `width` is `240`. While it is locked, the F18A centers its Text mode window with 8
+  backdrop pixels on each side, so `x` is `8` and `width` is `240`. It is the whole frame in the other F18A modes
+  and with the Adam key mapper.
 - `vec4 BorderColor`: backdrop color from the low nibble of VDP register 7 as `vec4(r, g, b, 1)`, taken from the
   palette in use (`Video > Palette`). A backdrop of `0` is shown as black, like the picture does. On the F18A it comes
   from the F18A palette, including the palette select bits of register 24 in its enhanced modes. `vec4(0.0)` while the

@@ -705,7 +705,9 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
     runtime_info.active_region[2] = runtime_info.screen_width;
     runtime_info.active_region[3] = runtime_info.screen_height;
 
-    if (IsReady() && !f18a && !key_mapper)
+    bool legacy_frame = !f18a || (!m_pVideo->IsF18AUnlocked() && (runtime_info.screen_width == GC_RESOLUTION_WIDTH));
+
+    if (IsReady() && !key_mapper && legacy_frame)
     {
         runtime_info.active_region[0] = overscan_left;
         runtime_info.active_region[1] = overscan_top;
@@ -714,7 +716,7 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 
         if ((m_pVideo->GetMode() & 0x01) != 0)
         {
-            runtime_info.active_region[0] += GC_RESOLUTION_TEXT_BORDER_L;
+            runtime_info.active_region[0] += f18a ? ((GC_RESOLUTION_WIDTH - GC_RESOLUTION_TEXT_WIDTH) / 2) : GC_RESOLUTION_TEXT_BORDER_L;
             runtime_info.active_region[2] = GC_RESOLUTION_TEXT_WIDTH;
         }
     }

@@ -478,7 +478,7 @@ void F18A::UpdateF18AMode()
     m_f18a_mode.sprites_enabled = !m_f18a_mode.text_mode || m_f18a_unlocked;
     m_f18a_mode.tile_ecm = m_f18a_unlocked ? ((m_VdpRegister[49] >> 4) & 3) : 0;
     m_f18a_mode.sprite_ecm = m_f18a_unlocked ? (m_VdpRegister[49] & 3) : 0;
-    m_pending_screen_width = m_f18a_mode.width;
+    m_pending_screen_width = (m_f18a_unlocked || (mode >= 9)) ? m_f18a_mode.width : GC_RESOLUTION_WIDTH;
     m_pending_screen_height = m_f18a_mode.height;
     m_f18a_mode_dirty = false;
 }
