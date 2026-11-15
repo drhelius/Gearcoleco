@@ -96,14 +96,14 @@ void gui_debug_window_tms9918a_nametable(void)
         float x = p.x;
         for (int n = 0; n <= cols; n++)
         {
-            draw_list->AddLine(ImVec2(x, p.y), ImVec2(x, p.y + size_v), ImColor(dark_gray), 1.0f);
+            draw_list->AddLineV(x, p.y, p.y + size_v, ImColor(dark_gray), 1.0f);
             x += spacing_h;
         }
 
         float y = p.y;
         for (int n = 0; n <= lines; n++)
         {
-            draw_list->AddLine(ImVec2(p.x, y), ImVec2(p.x + size_h, y), ImColor(dark_gray), 1.0f);
+            draw_list->AddLineH(p.x, p.x + size_h, y, ImColor(dark_gray), 1.0f);
             y += spacing_v;
         }
     }
@@ -154,14 +154,14 @@ void gui_debug_window_tms9918a_nametable(void)
         }
 
         if (!(hovered_bg_tile_x == selected_bg_tile_x && hovered_bg_tile_y == selected_bg_tile_y))
-            draw_list->AddRect(ImVec2(p.x + (hovered_bg_tile_x * spacing_h), p.y + (hovered_bg_tile_y * spacing_v)), ImVec2(p.x + ((hovered_bg_tile_x + 1) * spacing_h), p.y + ((hovered_bg_tile_y + 1) * spacing_v)), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+            draw_list->AddRect(ImVec2(p.x + (hovered_bg_tile_x * spacing_h), p.y + (hovered_bg_tile_y * spacing_v)), ImVec2(p.x + ((hovered_bg_tile_x + 1) * spacing_h), p.y + ((hovered_bg_tile_y + 1) * spacing_v)), ImColor(cyan), 2.0f, 2.0f, ImDrawFlags_StrokeCenterBiased);
     }
 
     if (selected_bg_tile_x >= 0 && selected_bg_tile_y >= 0)
     {
         float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
         ImVec4 pulse_color = gui_lerp_color(red, white, t);
-        draw_list->AddRect(ImVec2(p.x + (selected_bg_tile_x * spacing_h), p.y + (selected_bg_tile_y * spacing_v)), ImVec2(p.x + ((selected_bg_tile_x + 1) * spacing_h), p.y + ((selected_bg_tile_y + 1) * spacing_v)), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+        draw_list->AddRect(ImVec2(p.x + (selected_bg_tile_x * spacing_h), p.y + (selected_bg_tile_y * spacing_v)), ImVec2(p.x + ((selected_bg_tile_x + 1) * spacing_h), p.y + ((selected_bg_tile_y + 1) * spacing_v)), ImColor(pulse_color), 2.0f, 2.0f, ImDrawFlags_StrokeCenterBiased);
     }
 
     int tile_x = (hovered_bg_tile_x >= 0) ? hovered_bg_tile_x : selected_bg_tile_x;
@@ -302,14 +302,14 @@ void gui_debug_window_tms9918a_patterns(void)
             float x = p_tiles.x;
             for (int grid_col = 0; grid_col <= 32; grid_col++)
             {
-                draw_list->AddLine(ImVec2(x, p_tiles.y), ImVec2(x, p_tiles.y + section_height), ImColor(dark_gray), 1.0f);
+                draw_list->AddLineV(x, p_tiles.y, p_tiles.y + section_height, ImColor(dark_gray), 1.0f);
                 x += spacing;
             }
 
             float y = p_tiles.y;
             for (int grid_row = 0; grid_row <= lines_per_section; grid_row++)
             {
-                draw_list->AddLine(ImVec2(p_tiles.x, y), ImVec2(p_tiles.x + width, y), ImColor(dark_gray), 1.0f);
+                draw_list->AddLineH(p_tiles.x, p_tiles.x + width, y, ImColor(dark_gray), 1.0f);
                 y += spacing;
             }
         }
@@ -332,13 +332,13 @@ void gui_debug_window_tms9918a_patterns(void)
             int selected_local_y = selected_tile_y - section_first_line;
             float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
             ImVec4 pulse_color = gui_lerp_color(red, white, t);
-            draw_list->AddRect(ImVec2(p_tiles.x + (selected_tile_x * spacing), p_tiles.y + (selected_local_y * spacing)), ImVec2(p_tiles.x + ((selected_tile_x + 1) * spacing), p_tiles.y + ((selected_local_y + 1) * spacing)), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+            draw_list->AddRect(ImVec2(p_tiles.x + (selected_tile_x * spacing), p_tiles.y + (selected_local_y * spacing)), ImVec2(p_tiles.x + ((selected_tile_x + 1) * spacing), p_tiles.y + ((selected_local_y + 1) * spacing)), ImColor(pulse_color), 2.0f, 2.0f, ImDrawFlags_StrokeCenterBiased);
         }
 
         if ((hovered_section == section) && !(hovered_tile_x == selected_tile_x && hovered_tile_y == selected_tile_y))
         {
             int hovered_local_y = hovered_tile_y - section_first_line;
-            draw_list->AddRect(ImVec2(p_tiles.x + (hovered_tile_x * spacing), p_tiles.y + (hovered_local_y * spacing)), ImVec2(p_tiles.x + ((hovered_tile_x + 1) * spacing), p_tiles.y + ((hovered_local_y + 1) * spacing)), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+            draw_list->AddRect(ImVec2(p_tiles.x + (hovered_tile_x * spacing), p_tiles.y + (hovered_local_y * spacing)), ImVec2(p_tiles.x + ((hovered_tile_x + 1) * spacing), p_tiles.y + ((hovered_local_y + 1) * spacing)), ImColor(cyan), 2.0f, 2.0f, ImDrawFlags_StrokeCenterBiased);
         }
 
         if (section < section_count - 1)
@@ -467,7 +467,7 @@ void gui_debug_window_tms9918a_sprites(void)
         if (is_hovered && selected_sprite != s)
         {
             ImDrawList* dl = ImGui::GetWindowDrawList();
-            dl->AddRect(ImVec2(spr_pos[s].x, spr_pos[s].y), ImVec2(spr_pos[s].x + spr_width, spr_pos[s].y + spr_height), ImColor(cyan), 2.0f, ImDrawFlags_RoundCornersAll, 3.0f);
+            dl->AddRect(ImVec2(spr_pos[s].x, spr_pos[s].y), ImVec2(spr_pos[s].x + spr_width, spr_pos[s].y + spr_height), ImColor(cyan), 2.0f, 3.0f, ImDrawFlags_StrokeCenterBiased);
         }
 
         if (selected_sprite == s)
@@ -475,7 +475,7 @@ void gui_debug_window_tms9918a_sprites(void)
             float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
             ImVec4 pulse_color = gui_lerp_color(red, white, t);
             ImDrawList* dl = ImGui::GetWindowDrawList();
-            dl->AddRect(ImVec2(spr_pos[s].x, spr_pos[s].y), ImVec2(spr_pos[s].x + spr_width, spr_pos[s].y + spr_height), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 3.0f);
+            dl->AddRect(ImVec2(spr_pos[s].x, spr_pos[s].y), ImVec2(spr_pos[s].x + spr_width, spr_pos[s].y + spr_height), ImColor(pulse_color), 2.0f, 3.0f, ImDrawFlags_StrokeCenterBiased);
         }
 
         if (s % 4 < 3)
@@ -550,7 +550,7 @@ void gui_debug_window_tms9918a_sprites(void)
         float t = (float)(0.5 + 0.5 * sin(ImGui::GetTime() * 4.0));
         ImVec4 pulse_color = gui_lerp_color(red, white, t);
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        dl->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(pulse_color), 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+        dl->AddRect(ImVec2(rectx_min, recty_min), ImVec2(rectx_max, recty_max), ImColor(pulse_color), 2.0f, 2.0f, ImDrawFlags_StrokeCenterBiased);
 
         ImGui::TextColored(brown, "DETAILS:");
         ImGui::TextColored(cyan, " X:"); ImGui::SameLine();
