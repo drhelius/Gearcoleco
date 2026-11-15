@@ -729,10 +729,10 @@ static void main_window(void)
     }
 
     ImGuiViewport* output_viewport = ImGui::GetWindowViewport();
-    SDL_Window* output_window = output_viewport ? (SDL_Window*)output_viewport->PlatformHandle : NULL;
+    SDL_WindowID output_window_id = output_viewport ? (SDL_WindowID)(intptr_t)output_viewport->PlatformHandle : 0;
 
-    if (output_window)
-        gui_main_window_sdl_window_id = SDL_GetWindowID(output_window);
+    if (output_window_id != 0)
+        gui_main_window_sdl_window_id = output_window_id;
     else if (application_sdl_window)
         gui_main_window_sdl_window_id = SDL_GetWindowID(application_sdl_window);
 
