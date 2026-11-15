@@ -121,6 +121,7 @@ public:
     u64 GetMasterClockCycles();
     bool GetAdamDebugState(GC_AdamDebugState* state);
     void RenderFrameBuffer(u8* finalFrameBuffer);
+    void RenderIndexFrame(u8* finalIndexBuffer);
 
 private:
     static bool IsValidStateScreenshot(const GC_SaveState_Header& header, size_t file_size);

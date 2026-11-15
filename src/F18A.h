@@ -63,8 +63,10 @@ public:
     int GetMode();
     void Render32bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
     void Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format pixelFormat, int size, bool overscan = false);
+    void RenderIndices(u16* srcFrameBuffer, u8* dstIndexBuffer, int size, bool overscan = false);
     void SetOverscan(Overscan overscan);
     Overscan GetOverscan();
+    void GetBackdropColor(u8* rgb);
     void SetCustomPalette(GC_Color* palette);
     void SetPredefinedPalette(int palette);
     void SetNoSpriteLimit(bool noSpriteLimit);

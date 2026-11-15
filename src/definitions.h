@@ -122,9 +122,12 @@ typedef int64_t s64;
 #define GC_RESOLUTION_SMS_OVERSCAN_H_284_R 14
 #define GC_RESOLUTION_OVERSCAN_V 24
 #define GC_RESOLUTION_OVERSCAN_V_PAL 48
+#define GC_RESOLUTION_TEXT_WIDTH 240
+#define GC_RESOLUTION_TEXT_BORDER_L 6
 #define GC_VIDEO_MAX_HEIGHT GC_RESOLUTION_HEIGHT_WITH_OVERSCAN
 
 #define GC_CYCLES_PER_LINE 228
+#define GC_PIXELS_PER_LINE 342
 
 #define GC_MASTER_CLOCK_NTSC 3579545
 #define GC_LINES_PER_FRAME_NTSC 262
@@ -482,6 +485,18 @@ struct GC_RuntimeInfo
     int screen_height;
     GC_Region region;
     double fps;
+    float pixel_clock;
+    float line_rate;
+    int source_lines;
+    int active_region[4];
+    float chroma_origin;
+    float chroma_texel_cycles;
+    float chroma_line_cycles;
+    float chroma_frame_cycles;
+    u8 border_color[3];
+    bool border_valid;
+    int system_type;
+    int video_mode;
 };
 
 enum GC_Disassembler_Syntax

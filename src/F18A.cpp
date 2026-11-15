@@ -969,6 +969,14 @@ void F18A::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_Format 
     }
 }
 
+void F18A::RenderIndices(u16* srcFrameBuffer, u8* dstIndexBuffer, int size, bool overscan)
+{
+    UNUSED(overscan);
+
+    for (int i = 0; i < size; i++)
+        dstIndexBuffer[i] = (u8)srcFrameBuffer[i];
+}
+
 void F18A::SetCustomPalette(GC_Color* palette)
 {
     for (int i = 0; i < 16; i++)
@@ -1034,6 +1042,26 @@ void F18A::SetOverscan(Overscan overscan)
 F18A::Overscan F18A::GetOverscan()
 {
     return m_Overscan;
+}
+
+void F18A::GetBackdropColor(u8* rgb)
+{
+    int color;
+    int legacy_mode = ((m_VdpRegister[0] & 0x04) << 1) | ((m_VdpRegister[0] & 0x02) << 1) |
+        ((m_VdpRegister[1] & 0x08) >> 2) | ((m_VdpRegister[1] & 0x10) >> 4);
+
+    if (m_f18a_unlocked || (legacy_mode >= 9))
+        color = ((m_VdpRegister[24] & 3) << 4) | (m_VdpRegister[7] & 0x0F);
+    else
+    {
+        color = m_VdpRegister[7] & 0x0F;
+        color = (color > 0) ? color : 1;
+    }
+
+    color *= 3;
+    rgb[0] = m_f18a_palette_888_rgb[color];
+    rgb[1] = m_f18a_palette_888_rgb[color + 1];
+    rgb[2] = m_f18a_palette_888_rgb[color + 2];
 }
 
 void F18A::SaveState(std::ostream& stream)

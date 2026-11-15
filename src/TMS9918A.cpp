@@ -968,6 +968,67 @@ void TMS9918A::Render16bit(u16* srcFrameBuffer, u8* dstFrameBuffer, GC_Color_For
     }
 }
 
+void TMS9918A::RenderIndices(u16* srcFrameBuffer, u8* dstIndexBuffer, int size, bool overscan)
+{
+    int x = 0;
+    int y = 0;
+    int overscan_h_l = 0;
+    int overscan_v = 0;
+    int overscan_content_v = 0;
+    int overscan_content_h = 0;
+    int overscan_total_width = GC_RESOLUTION_WIDTH;
+    int overscan_total_height = 0;
+    bool overscan_enabled = false;
+    u8 overscan_color = (u8)ResolveBackdropColor();
+
+    if (overscan && (m_Overscan != OverscanDisabled))
+    {
+        overscan_enabled = true;
+        overscan_content_v = GC_RESOLUTION_HEIGHT;
+        overscan_v = m_bPAL ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V;
+        overscan_total_height = overscan_content_v + (overscan_v * 2);
+    }
+
+    if (overscan && (m_Overscan == OverscanFull320))
+    {
+        overscan_content_h = GC_RESOLUTION_WIDTH;
+        overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_320_L;
+        overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
+    }
+
+    if (overscan && (m_Overscan == OverscanFull284))
+    {
+        overscan_content_h = GC_RESOLUTION_WIDTH;
+        overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_284_L;
+        overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
+    }
+
+    for (int i = 0, j = 0; j < size; j++)
+    {
+        if (overscan_enabled)
+        {
+            bool is_h_overscan = (overscan_h_l > 0) && (x < overscan_h_l || x >= (overscan_h_l + overscan_content_h));
+            bool is_v_overscan = (overscan_v > 0) && (y < overscan_v || y >= (overscan_v + overscan_content_v));
+
+            if (is_h_overscan || is_v_overscan)
+                dstIndexBuffer[j] = overscan_color;
+            else
+                dstIndexBuffer[j] = (u8)srcFrameBuffer[i++];
+
+            if (++x == overscan_total_width)
+            {
+                x = 0;
+                if (++y == overscan_total_height)
+                {
+                    y = 0;
+                }
+            }
+        }
+        else
+            dstIndexBuffer[j] = (u8)srcFrameBuffer[i++];
+    }
+}
+
 void TMS9918A::SetCustomPalette(GC_Color* palette)
 {
     for (int i = 0; i < 16; i++)
@@ -1033,6 +1094,14 @@ void TMS9918A::SetOverscan(Overscan overscan)
 TMS9918A::Overscan TMS9918A::GetOverscan()
 {
     return m_Overscan;
+}
+
+void TMS9918A::GetBackdropColor(u8* rgb)
+{
+    int color = ResolveBackdropColor() * 3;
+    rgb[0] = m_pCurrentPalette[color];
+    rgb[1] = m_pCurrentPalette[color + 1];
+    rgb[2] = m_pCurrentPalette[color + 2];
 }
 
 void TMS9918A::SaveState(std::ostream& stream)

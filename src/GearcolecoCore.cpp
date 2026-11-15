@@ -19,6 +19,7 @@
 
 #include <string>
 #include <string.h>
+#include <math.h>
 #include "GearcolecoCore.h"
 #include "Memory.h"
 #include "Processor.h"
@@ -651,6 +652,10 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
     bool pal = (m_machine == GC_MACHINE_ADAM) ? m_pVideo->IsPAL() : m_pCartridge->IsPAL();
     double master_clock = pal ? GC_MASTER_CLOCK_PAL : GC_MASTER_CLOCK_NTSC;
     int lines_per_frame = pal ? GC_LINES_PER_FRAME_PAL : GC_LINES_PER_FRAME_NTSC;
+    bool f18a = m_pVideo->IsF18AHardware();
+    bool key_mapper = false;
+    int overscan_left = 0;
+    int overscan_top = 0;
 
     runtime_info.screen_width = m_pVideo->GetScreenWidth();
     runtime_info.screen_height = m_pVideo->GetScreenHeight();
@@ -659,27 +664,90 @@ bool GearcolecoCore::GetRuntimeInfo(GC_RuntimeInfo& runtime_info)
 
     if (IsReady())
     {
-        if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull284))
+        if (!f18a && (m_pVideo->GetOverscan() == Video::OverscanFull284))
+        {
+            overscan_left = GC_RESOLUTION_SMS_OVERSCAN_H_284_L;
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_284_L + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
+        }
 
-        if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() == Video::OverscanFull320))
+        if (!f18a && (m_pVideo->GetOverscan() == Video::OverscanFull320))
+        {
+            overscan_left = GC_RESOLUTION_SMS_OVERSCAN_H_320_L;
             runtime_info.screen_width = GC_RESOLUTION_WIDTH + GC_RESOLUTION_SMS_OVERSCAN_H_320_L + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
+        }
 
-        if (!m_pVideo->IsF18AHardware() && (m_pVideo->GetOverscan() != Video::OverscanDisabled))
-            runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * (pal ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V));
+        if (!f18a && (m_pVideo->GetOverscan() != Video::OverscanDisabled))
+        {
+            overscan_top = pal ? GC_RESOLUTION_OVERSCAN_V_PAL : GC_RESOLUTION_OVERSCAN_V;
+            runtime_info.screen_height = GC_RESOLUTION_HEIGHT + (2 * overscan_top);
+        }
 
         runtime_info.region = pal ? Region_PAL : Region_NTSC;
 
         if (IsValidPointer(m_pKeyMapper) && m_pKeyMapper->IsOpen())
         {
+            key_mapper = true;
             runtime_info.screen_width = m_pKeyMapper->GetWidth();
             runtime_info.screen_height = m_pKeyMapper->GetHeight();
         }
-
-        return true;
     }
 
-    return false;
+    double pixel_clock = master_clock * GC_PIXELS_PER_LINE / GC_CYCLES_PER_LINE;
+    if (runtime_info.screen_width > GC_RESOLUTION_WIDTH_WITH_OVERSCAN)
+        pixel_clock *= 2.0;
+
+    runtime_info.pixel_clock = (float)(pixel_clock / 1000000.0);
+    runtime_info.line_rate = (float)(master_clock / GC_CYCLES_PER_LINE / 1000.0);
+    runtime_info.source_lines = runtime_info.screen_height;
+
+    runtime_info.active_region[0] = 0;
+    runtime_info.active_region[1] = 0;
+    runtime_info.active_region[2] = runtime_info.screen_width;
+    runtime_info.active_region[3] = runtime_info.screen_height;
+
+    if (IsReady() && !f18a && !key_mapper)
+    {
+        runtime_info.active_region[0] = overscan_left;
+        runtime_info.active_region[1] = overscan_top;
+        runtime_info.active_region[2] = GC_RESOLUTION_WIDTH;
+        runtime_info.active_region[3] = GC_RESOLUTION_HEIGHT;
+
+        if ((m_pVideo->GetMode() & 0x01) != 0)
+        {
+            runtime_info.active_region[0] += GC_RESOLUTION_TEXT_BORDER_L;
+            runtime_info.active_region[2] = GC_RESOLUTION_TEXT_WIDTH;
+        }
+    }
+
+    runtime_info.chroma_origin = 0.0f;
+    runtime_info.chroma_texel_cycles = 0.0f;
+    runtime_info.chroma_line_cycles = 0.0f;
+    runtime_info.chroma_frame_cycles = 0.0f;
+
+    if (!pal && !f18a && !key_mapper)
+    {
+        double texel_cycles = (double)GC_CYCLES_PER_LINE / (double)GC_PIXELS_PER_LINE;
+        double origin = 1.0 - fmod((double)overscan_left * texel_cycles, 1.0);
+        if (origin >= 1.0)
+            origin -= 1.0;
+
+        runtime_info.chroma_origin = (float)origin;
+        runtime_info.chroma_texel_cycles = (float)texel_cycles;
+        runtime_info.chroma_line_cycles = (float)GC_CYCLES_PER_LINE;
+    }
+
+    runtime_info.border_color[0] = 0;
+    runtime_info.border_color[1] = 0;
+    runtime_info.border_color[2] = 0;
+    runtime_info.border_valid = IsReady() && !key_mapper;
+
+    if (runtime_info.border_valid)
+        m_pVideo->GetBackdropColor(runtime_info.border_color);
+
+    runtime_info.system_type = f18a ? 1 : 0;
+    runtime_info.video_mode = m_pVideo->GetMode();
+
+    return IsReady();
 }
 
 Memory* GearcolecoCore::GetMemory()
@@ -1838,4 +1906,21 @@ void GearcolecoCore::RenderFrameBuffer(u8* finalFrameBuffer)
             break;
         }
     }
+}
+
+void GearcolecoCore::RenderIndexFrame(u8* finalIndexBuffer)
+{
+    GC_RuntimeInfo runtime_info;
+    GetRuntimeInfo(runtime_info);
+    int size = IsReady() ? runtime_info.screen_width * runtime_info.screen_height :
+        GC_RESOLUTION_WIDTH * GC_RESOLUTION_HEIGHT;
+
+    if (IsReady() && IsValidPointer(m_pKeyMapper) && m_pKeyMapper->IsOpen())
+    {
+        memset(finalIndexBuffer, 0, size);
+        return;
+    }
+
+    u16* srcBuffer = (IsReady() ? m_pVideo->GetFrameBuffer() : kNoBiosImage);
+    m_pVideo->RenderIndices(srcBuffer, finalIndexBuffer, size, true);
 }

@@ -58,8 +58,10 @@ public:
         int size, bool overscan = false) = 0;
     virtual void Render16bit(u16* source, u8* destination, GC_Color_Format pixel_format,
         int size, bool overscan = false) = 0;
+    virtual void RenderIndices(u16* source, u8* destination, int size, bool overscan = false) = 0;
     virtual void SetOverscan(Overscan overscan) = 0;
     virtual Overscan GetOverscan() = 0;
+    virtual void GetBackdropColor(u8* rgb) = 0;
     virtual void SetCustomPalette(GC_Color* palette) = 0;
     virtual void SetPredefinedPalette(int palette) = 0;
     virtual void SetNoSpriteLimit(bool no_sprite_limit) = 0;
