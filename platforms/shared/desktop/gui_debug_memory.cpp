@@ -29,6 +29,7 @@
 #include "config.h"
 #include "gui.h"
 #include "emu.h"
+#include "hotkeys.h"
 
 static MemEditor mem_edit[MEMORY_EDITOR_MAX];
 static_assert(config_memory_editor_count == MEMORY_EDITOR_MAX,
@@ -301,12 +302,12 @@ static void memory_editor_menu(void)
 
     if (ImGui::BeginMenu("Edit"))
     {
-        if (ImGui::MenuItem("Copy", "Ctrl+C"))
+        if (ImGui::MenuItem("Copy", HOTKEY_PRIMARY_LABEL "C"))
         {
             gui_debug_memory_copy();
         }
 
-        if (ImGui::MenuItem("Paste", "Ctrl+V"))
+        if (ImGui::MenuItem("Paste", HOTKEY_PRIMARY_LABEL "V"))
         {
             gui_debug_memory_paste();
         }
@@ -316,7 +317,7 @@ static void memory_editor_menu(void)
 
     if (ImGui::BeginMenu("Selection"))
     {
-        if (ImGui::MenuItem("Select All", "Ctrl+A"))
+        if (ImGui::MenuItem("Select All", HOTKEY_PRIMARY_LABEL "A"))
         {
             mem_edit[current_mem_edit].SelectAll();
         }

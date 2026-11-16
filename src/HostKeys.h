@@ -33,9 +33,13 @@ struct GC_HostKeyInfo
 #define GC_HOST_LABEL_ALT(side) side " Option"
 #define GC_HOST_LABEL_GUI(side) side " Cmd"
 #define GC_HOST_HOTKEY_LABEL(key) "Cmd+" key
-#else
+#elif defined(_WIN32)
 #define GC_HOST_LABEL_ALT(side) side " Alt"
 #define GC_HOST_LABEL_GUI(side) side " Win"
+#define GC_HOST_HOTKEY_LABEL(key) "Ctrl+" key
+#else
+#define GC_HOST_LABEL_ALT(side) side " Alt"
+#define GC_HOST_LABEL_GUI(side) side " Super"
 #define GC_HOST_HOTKEY_LABEL(key) "Ctrl+" key
 #endif
 

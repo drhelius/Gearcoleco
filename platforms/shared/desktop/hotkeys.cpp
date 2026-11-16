@@ -147,13 +147,7 @@ SDL_Keymod hotkeys_default_mod(int hotkey)
     int resolved = mod & ~HOTKEY_MOD_PRIMARY;
 
     if ((mod & HOTKEY_MOD_PRIMARY) != 0)
-    {
-#if defined(__APPLE__)
-        resolved |= SDL_KMOD_GUI;
-#else
-        resolved |= SDL_KMOD_CTRL;
-#endif
-    }
+        resolved |= HOTKEY_PRIMARY_KMOD;
 
     return (SDL_Keymod)resolved;
 }
@@ -215,7 +209,7 @@ static SDL_Keymod normalize_mod(int mod)
 static bool process_debug_edit(const SDL_Event* event)
 {
     if (!config_debug.debug || game_focus_is_on() || events_is_adam_keyboard_captured() || event->key.repeat ||
-        ((event->key.mod & SDL_KMOD_CTRL) == 0))
+        ((event->key.mod & HOTKEY_PRIMARY_KMOD) == 0))
         return false;
 
     switch (event->key.scancode)
