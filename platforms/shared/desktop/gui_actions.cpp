@@ -115,12 +115,12 @@ void gui_action_pause(void)
 {
     if (emu_is_paused())
     {
-        gui_notify(gui_NotificationInfo, ICON_MD_PLAY_ARROW, "Resumed", NULL, "pause", 1500);
+        gui_notify(gui_NotificationInfo, ICON_MD_PLAY_ARROW, "Resumed", NULL, "pause", gui_NotificationDurationShort);
         emu_resume();
     }
     else
     {
-        gui_notify(gui_NotificationInfo, ICON_MD_PAUSE, "Paused", NULL, "pause", 1500);
+        gui_notify(gui_NotificationInfo, ICON_MD_PAUSE, "Paused", NULL, "pause", gui_NotificationDurationShort);
         emu_pause();
     }
 }
@@ -131,12 +131,12 @@ void gui_action_ffwd(void)
 
     if (config_emulator.ffwd)
     {
-        gui_notify(gui_NotificationInfo, ICON_MD_FAST_FORWARD, "Fast forward on", NULL, "ffwd", 1500);
+        gui_notify(gui_NotificationInfo, ICON_MD_FAST_FORWARD, "Fast forward on", NULL, "ffwd", gui_NotificationDurationShort);
         display_disable_vsync();
     }
     else
     {
-        gui_notify(gui_NotificationInfo, ICON_MD_FAST_FORWARD, "Fast forward off", NULL, "ffwd", 1500);
+        gui_notify(gui_NotificationInfo, ICON_MD_FAST_FORWARD, "Fast forward off", NULL, "ffwd", gui_NotificationDurationShort);
         display_use_vsync_if_enabled();
         emu_audio_reset();
     }
@@ -154,7 +154,7 @@ void gui_action_rewind_pressed(void)
     emu_reset_rewind_timing();
     rewind_set_active(true);
     display_use_vsync_if_enabled();
-    gui_notify(gui_NotificationInfo, ICON_MD_FAST_REWIND, "Rewinding", NULL, "rewind", 500);
+    gui_notify(gui_NotificationInfo, ICON_MD_FAST_REWIND, "Rewinding", NULL, "rewind", gui_NotificationDurationBlink);
 }
 
 void gui_action_rewind_released(void)
@@ -369,7 +369,7 @@ void gui_action_toggle_key_mapping(void)
 
     emu_key_mapping_toggle();
     gui_notify(gui_NotificationInfo, ICON_MD_KEYBOARD, emu_key_mapping_is_enabled() ? "Key mapping on" :
-        "Key mapping off", NULL, "key_mapping", 1500);
+        "Key mapping off", NULL, "key_mapping", gui_NotificationDurationShort);
 }
 
 static std::string get_auto_file_path(int dir_option, const std::string& custom_path, const char* extension)

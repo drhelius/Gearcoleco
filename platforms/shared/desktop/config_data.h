@@ -129,6 +129,7 @@ struct config_Emulator
     int spinner_sensitivity;
     bool allow_shared_gamepads;
     bool show_notifications;
+    int notification_duration;
     bool allow_screensaver;
     int mcp_tcp_port;
     std::string mcp_http_address;

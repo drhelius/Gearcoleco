@@ -65,7 +65,7 @@ void game_focus_set(bool on)
 
     if (!on)
     {
-        gui_notify(gui_NotificationInfo, ICON_MD_VIDEOGAME_ASSET, "Game Focus off", NULL, "game_focus", 1500);
+        gui_notify(gui_NotificationInfo, ICON_MD_VIDEOGAME_ASSET, "Game Focus off", NULL, "game_focus", gui_NotificationDurationShort);
         return;
     }
 

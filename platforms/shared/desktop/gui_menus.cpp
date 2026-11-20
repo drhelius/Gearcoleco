@@ -696,7 +696,20 @@ static void menu_emulator(void)
         ImGui::Separator();
 
         ImGui::MenuItem("Show content info", "", &config_emulator.show_info);
-        ImGui::MenuItem("Show Notifications", "", &config_emulator.show_notifications);
+
+        if (ImGui::BeginMenu("Notifications"))
+        {
+            ImGui::MenuItem("Enabled", "", &config_emulator.show_notifications);
+
+            if (ImGui::BeginMenu("Duration"))
+            {
+                ImGui::SliderInt("##notification_duration", &config_emulator.notification_duration, 3, 10, "Seconds = %d",
+                    ImGuiSliderFlags_AlwaysClamp);
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenu();
+        }
 
         ImGui::Separator();
 

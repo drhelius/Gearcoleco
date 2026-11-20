@@ -1568,7 +1568,7 @@ static void update_key_map(void)
     {
         key_map->ClearLayer(GC_KEY_MAP_USER);
         Log("Ignoring the key map %s: %s", path.c_str(), error.c_str());
-        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Key map ignored", error.c_str(), "key_map", 6000);
+        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Key map ignored", error.c_str(), "key_map");
     }
 }
 
@@ -1663,8 +1663,7 @@ static void save_key_map(void)
     if (!file.is_open() || file.fail())
     {
         Log("Unable to save the key map %s", key_map_path.c_str());
-        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Unable to save the key map", key_map_path.c_str(),
-            "key_map", 6000);
+        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Unable to save the key map", key_map_path.c_str(), "key_map");
     }
 }
 
