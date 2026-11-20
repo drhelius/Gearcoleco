@@ -376,7 +376,8 @@ bool KeyMap::Unbind(u16 usage, GC_AdamKey key)
     if (!IsValidPointer(GetHostKeyName(usage)))
         return false;
 
-    const GC_KeyMapEntry& current = GetEntry(usage);
+    GC_KeyMapLayer layer = GC_KEY_MAP_BUILT_IN;
+    const GC_KeyMapEntry& current = GetEntry(usage, &layer);
     GC_KeyMapEntry entry = kKeyMapEmpty;
     entry.set = true;
 
@@ -388,6 +389,13 @@ bool KeyMap::Unbind(u16 usage, GC_AdamKey key)
 
     if (entry.count == current.count)
         return false;
+
+    if ((entry.count == 0) && (layer == GC_KEY_MAP_USER))
+    {
+        m_Layers[GC_KEY_MAP_USER][usage] = kKeyMapEmpty;
+        m_bChanged = true;
+        return true;
+    }
 
     SetUserEntry(usage, entry);
     return true;

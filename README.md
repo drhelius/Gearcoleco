@@ -160,7 +160,7 @@ ADAM keyboard input follows focus automatically. In normal use, type directly; i
 Press `Ctrl+F1` (`Cmd+F1` on macOS), or use **ADAM > Keyboard > Keyboard Mapper...**, to stop ADAM and show its keyboard:
 
 - Click an ADAM key, then press the host key that should drive it, on its own. It stays selected for more host keys; click it again to deselect it.
-- Each ADAM key lists the host keys that drive it, built-in ones first. Click the **x** on one to remove it, or right click the ADAM key to remove all but the built-in ones.
+- Each ADAM key lists the host keys that drive it, built-in ones first. Click the **x** on one to remove it. Removing a host key's last user binding gives it back its default mapping, while removing a built-in one leaves the host key unbound. Right click the ADAM key to remove all but the built-in ones.
 - Red keys are ones no host key reaches.
 - **Reset All**, clicked twice, drops the game's changes.
 - Press the same hotkey again, or click **Close**, to go back.
