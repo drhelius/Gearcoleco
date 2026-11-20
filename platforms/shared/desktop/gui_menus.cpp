@@ -153,7 +153,7 @@ static void menu_gearcoleco(void)
                 gui_adam_open_missing_firmware(false);
         }
 
-        if (ImGui::BeginMenu("Open Recent ROM", !emu_is_busy()))
+        if (ImGui::BeginMenu("Open Recent", !emu_is_busy()))
         {
             for (int i = 0; i < config_max_recent_roms; i++)
             {
@@ -223,16 +223,21 @@ static void menu_gearcoleco(void)
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Fast Forward", config_hotkeys[config_HotkeyIndex_FFWD].str, &config_emulator.ffwd, media_actions_enabled))
+        if (ImGui::BeginMenu("Fast Forward"))
         {
-            gui_action_ffwd();
-        }
+            if (ImGui::MenuItem("Enabled", config_hotkeys[config_HotkeyIndex_FFWD].str, &config_emulator.ffwd, media_actions_enabled))
+            {
+                gui_action_ffwd();
+            }
 
-        if (ImGui::BeginMenu("Fast Forward Speed"))
-        {
-            ImGui::PushItemWidth(100.0f);
-            ImGui::Combo("##fwd", &config_emulator.ffwd_speed, "X 1.5\0X 2\0X 2.5\0X 3\0Unlimited\0\0");
-            ImGui::PopItemWidth();
+            if (ImGui::BeginMenu("Speed"))
+            {
+                ImGui::PushItemWidth(100.0f);
+                ImGui::Combo("##fwd", &config_emulator.ffwd_speed, "X 1.5\0X 2\0X 2.5\0X 3\0Unlimited\0\0");
+                ImGui::PopItemWidth();
+                ImGui::EndMenu();
+            }
+
             ImGui::EndMenu();
         }
 
@@ -447,6 +452,10 @@ static void menu_adam(void)
     }
     ImGui::Separator();
     gui_adam_media_menu();
+    ImGui::MenuItem("Remember Media Changes", NULL,
+        &config_emulator.adam_media_persistence);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Applies to newly inserted images. Changes are saved in a separate copy; original images are preserved.");
     ImGui::Separator();
     gui_adam_controller_menu();
     ImGui::EndDisabled();
@@ -460,11 +469,6 @@ static void menu_adam(void)
     ImGui::Separator();
     gui_adam_firmware_menu("EOS ROM", GC_ADAM_FIRMWARE_EOS);
     gui_adam_firmware_menu("SmartWriter ROM", GC_ADAM_FIRMWARE_SMARTWRITER);
-    ImGui::Separator();
-    ImGui::MenuItem("Remember Media Changes", NULL,
-        &config_emulator.adam_media_persistence);
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Applies to newly inserted images. Changes are saved in a separate copy; original images are preserved.");
 
     // ImGui::Separator();
 
@@ -663,9 +667,6 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
-        gui_adam_firmware_menu("BIOS", GC_ADAM_FIRMWARE_OS7);
-        ImGui::Separator();
-
         ImGui::BeginDisabled(!cartridge_options);
         if (ImGui::BeginMenu("Mapper"))
         {
@@ -695,7 +696,23 @@ static void menu_emulator(void)
 
         ImGui::Separator();
 
-        ImGui::MenuItem("Show content info", "", &config_emulator.show_info);
+        gui_adam_firmware_menu("BIOS", GC_ADAM_FIRMWARE_OS7);
+
+        ImGui::Separator();
+
+        ImGui::MenuItem("Start Paused", "", &config_emulator.start_paused);
+        ImGui::MenuItem("Pause When Inactive", "", &config_emulator.pause_when_inactive);
+        if (ImGui::MenuItem("Allow Screen Saver", "", &config_emulator.allow_screensaver))
+        {
+            if (config_emulator.allow_screensaver)
+                SDL_EnableScreenSaver();
+            else
+                SDL_DisableScreenSaver();
+        }
+
+        ImGui::Separator();
+
+        ImGui::MenuItem("Show Content Info", "", &config_emulator.show_info);
 
         if (ImGui::BeginMenu("Notifications"))
         {
@@ -709,18 +726,6 @@ static void menu_emulator(void)
             }
 
             ImGui::EndMenu();
-        }
-
-        ImGui::Separator();
-
-        ImGui::MenuItem("Start Paused", "", &config_emulator.start_paused);
-        ImGui::MenuItem("Pause When Inactive", "", &config_emulator.pause_when_inactive);
-        if (ImGui::MenuItem("Allow Screen Saver", "", &config_emulator.allow_screensaver))
-        {
-            if (config_emulator.allow_screensaver)
-                SDL_EnableScreenSaver();
-            else
-                SDL_DisableScreenSaver();
         }
 
         ImGui::Separator();
@@ -803,15 +808,6 @@ static void menu_video(void)
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Video Chip"))
-        {
-            ImGui::PushItemWidth(150.0f);
-            ImGui::Combo("##video_chip", &config_video.video_chip,
-                "Auto\0TMS9918A\0F18A\0\0");
-            ImGui::PopItemWidth();
-            ImGui::EndMenu();
-        }
-
         if (ImGui::BeginMenu("Scale"))
         {
             ImGui::PushItemWidth(250.0f);
@@ -877,6 +873,15 @@ static void menu_video(void)
         gui_shader_menu();
 
         ImGui::Separator();
+
+        if (ImGui::BeginMenu("Video Chip"))
+        {
+            ImGui::PushItemWidth(150.0f);
+            ImGui::Combo("##video_chip", &config_video.video_chip,
+                "Auto\0TMS9918A\0F18A\0\0");
+            ImGui::PopItemWidth();
+            ImGui::EndMenu();
+        }
 
         if (ImGui::MenuItem("Disable Sprite Limit", "", &config_video.sprite_limit))
         {
@@ -1465,6 +1470,10 @@ static void menu_debug(void)
         ImGui::Separator();
 
         ImGui::MenuItem("Show Disassembler", "", &config_debug.show_disassembler, config_debug.debug);
+        ImGui::MenuItem("Show Memory Editor", "", &config_debug.show_memory, config_debug.debug);
+        ImGui::MenuItem("Show Trace Logger", "", &config_debug.show_trace_logger, config_debug.debug);
+
+        ImGui::Separator();
 
         if (ImGui::BeginMenu("CPU", config_debug.debug))
         {
@@ -1476,40 +1485,38 @@ static void menu_debug(void)
             ImGui::EndMenu();
         }
 
-        ImGui::MenuItem("Show Memory Editor", "", &config_debug.show_memory, config_debug.debug);
-
         if (ImGui::BeginMenu("Video", config_debug.debug))
         {
             bool f18a_active = emu_get_core()->GetVideoChip() == GC_VIDEO_CHIP_F18A;
 
             if (ImGui::BeginMenu("TMS9918A"))
             {
-                ImGui::MenuItem("Name Table", "", &config_debug.show_tms9918a_nametable,
+                ImGui::MenuItem("Show Name Table", "", &config_debug.show_tms9918a_nametable,
                     !f18a_active);
-                ImGui::MenuItem("Pattern Table", "", &config_debug.show_tms9918a_patterns,
+                ImGui::MenuItem("Show Pattern Table", "", &config_debug.show_tms9918a_patterns,
                     !f18a_active);
-                ImGui::MenuItem("Sprites", "", &config_debug.show_tms9918a_sprites,
+                ImGui::MenuItem("Show Sprites", "", &config_debug.show_tms9918a_sprites,
                     !f18a_active);
-                ImGui::MenuItem("Palettes", "", &config_debug.show_tms9918a_palettes,
+                ImGui::MenuItem("Show Palettes", "", &config_debug.show_tms9918a_palettes,
                     !f18a_active);
-                ImGui::MenuItem("Registers", "", &config_debug.show_tms9918a_regs,
+                ImGui::MenuItem("Show Registers", "", &config_debug.show_tms9918a_regs,
                     !f18a_active);
                 ImGui::EndMenu();
             }
 
             if (ImGui::BeginMenu("F18A"))
             {
-                ImGui::MenuItem("Name Tables", "", &config_debug.show_f18a_nametables,
+                ImGui::MenuItem("Show Name Tables", "", &config_debug.show_f18a_nametables,
                     f18a_active);
-                ImGui::MenuItem("Pattern Table", "", &config_debug.show_f18a_patterns,
+                ImGui::MenuItem("Show Pattern Table", "", &config_debug.show_f18a_patterns,
                     f18a_active);
-                ImGui::MenuItem("Sprites", "", &config_debug.show_f18a_sprites,
+                ImGui::MenuItem("Show Sprites", "", &config_debug.show_f18a_sprites,
                     f18a_active);
-                ImGui::MenuItem("Palette RAM", "", &config_debug.show_f18a_palette,
+                ImGui::MenuItem("Show Palette RAM", "", &config_debug.show_f18a_palette,
                     f18a_active);
-                ImGui::MenuItem("Registers", "", &config_debug.show_f18a_regs,
+                ImGui::MenuItem("Show Registers", "", &config_debug.show_f18a_regs,
                     f18a_active);
-                ImGui::MenuItem("Extended Registers", "",
+                ImGui::MenuItem("Show Extended Registers", "",
                     &config_debug.show_f18a_extended_regs, f18a_active);
                 ImGui::EndMenu();
             }
@@ -1537,9 +1544,9 @@ static void menu_debug(void)
             ImGui::EndMenu();
         }
 
-        ImGui::MenuItem("Show Trace Logger", "", &config_debug.show_trace_logger, config_debug.debug);
-        ImGui::MenuItem("Show Rewind", "", &config_debug.show_rewind, config_debug.debug);
+        ImGui::Separator();
 
+        ImGui::MenuItem("Show Rewind", "", &config_debug.show_rewind, config_debug.debug);
 
 #if defined(__APPLE__) || defined(_WIN32)
         ImGui::Separator();
