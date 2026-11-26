@@ -54,6 +54,7 @@ static Uint64 mouse_last_motion_time = 0;
 static const Uint64 mouse_hide_timeout_ms = 1500;
 static char title_rom[256] = "";
 static bool title_game_focus = false;
+static bool title_mouse_capture = false;
 static bool title_keyboard_captured = false;
 static SDL_DisplayID current_display_id = 0;
 
@@ -471,10 +472,12 @@ static void handle_mouse_cursor(void)
 
 static void handle_title(void)
 {
-    if ((game_focus_is_on() == title_game_focus) && (events_is_adam_keyboard_captured() == title_keyboard_captured))
+    if ((game_focus_is_on() == title_game_focus) && (game_focus_is_mouse_on() == title_mouse_capture) &&
+        (events_is_adam_keyboard_captured() == title_keyboard_captured))
         return;
 
     title_game_focus = game_focus_is_on();
+    title_mouse_capture = game_focus_is_mouse_on();
     title_keyboard_captured = events_is_adam_keyboard_captured();
     apply_title();
 }
@@ -486,6 +489,7 @@ static void apply_title(void)
 
     char title[512];
     const char* hotkey = config_hotkeys[config_HotkeyIndex_GameFocus].str;
+    const char* mouse_hotkey = config_hotkeys[config_HotkeyIndex_MouseCapture].str;
 
     if (title_rom[0] == 0)
         strncpy_fit(title, WINDOW_TITLE, sizeof(title));
@@ -496,6 +500,11 @@ static void apply_title(void)
         snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Game Focus: %s to leave)", hotkey);
     else if (title_game_focus)
         snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Game Focus)");
+    else if (title_mouse_capture && (mouse_hotkey[0] != 0))
+        snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Mouse Captured: %s to release)",
+            mouse_hotkey);
+    else if (title_mouse_capture)
+        snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Mouse Captured)");
     else if (title_keyboard_captured)
         snprintf(title + strlen(title), sizeof(title) - strlen(title), " (Keyboard Captured)");
 

@@ -35,6 +35,7 @@ static const int flags_debug = HOTKEY_FLAG_DEBUG | HOTKEY_FLAG_REPEAT;
 const hotkey_Definition hotkey_definitions[] =
 {
     { "GameFocus", "Game Focus", flags_focus, SDL_SCANCODE_F10, mod_primary },
+    { "MouseCapture", "Capture Mouse", HOTKEY_FLAG_GAMEPAD, SDL_SCANCODE_F11, mod_primary },
     { "KeyboardMapper", "Keyboard Mapper", flags_focus, SDL_SCANCODE_F1, mod_primary },
     { "KeyMapping", "Key Mapping", HOTKEY_FLAG_GAME_FOCUS, SDL_SCANCODE_F2, mod_primary },
     { "Fullscreen", "Fullscreen", flags_focus, SDL_SCANCODE_RETURN, SDL_KMOD_ALT },

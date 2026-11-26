@@ -985,6 +985,18 @@ static void menu_input(void)
         gui_in_use = true;
         bool adam_running = !emu_is_empty() && emu_get_machine() == GC_MACHINE_ADAM;
 
+        if (ImGui::MenuItem("Capture Mouse", config_hotkeys[config_HotkeyIndex_MouseCapture].str, false,
+            !emu_is_empty() && emu_has_pointer()))
+            game_focus_set_mouse(true);
+
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Locks the mouse in the window. Hotkeys keep working.");
+            ImGui::Text("Going fullscreen also captures it.");
+            ImGui::EndTooltip();
+        }
+
         if (ImGui::MenuItem("Game Focus", config_hotkeys[config_HotkeyIndex_GameFocus].str, false, !emu_is_empty()))
             game_focus_set(true);
 
@@ -993,7 +1005,6 @@ static void menu_input(void)
             ImGui::BeginTooltip();
             ImGui::Text("Locks the mouse in the window and turns hotkeys off,");
             ImGui::Text("except Game Focus, Fullscreen and the keyboard mapper's.");
-            ImGui::Text("Going fullscreen also enters it.");
             ImGui::EndTooltip();
         }
 

@@ -29,8 +29,11 @@
 #endif
 
 EXTERN bool game_focus_is_on(void);
+EXTERN bool game_focus_is_mouse_on(void);
 EXTERN void game_focus_set(bool on);
 EXTERN void game_focus_toggle(void);
+EXTERN void game_focus_set_mouse(bool on);
+EXTERN void game_focus_toggle_mouse(void);
 EXTERN bool game_focus_is_captured_mouse_event(const SDL_Event* event);
 EXTERN bool game_focus_pointer_captured(void);
 EXTERN void game_focus_update(void);

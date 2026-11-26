@@ -235,6 +235,7 @@ struct config_Input
 enum config_HotkeyIndex
 {
     config_HotkeyIndex_GameFocus = 0,
+    config_HotkeyIndex_MouseCapture,
     config_HotkeyIndex_KeyboardMapper,
     config_HotkeyIndex_KeyMapping,
     config_HotkeyIndex_Fullscreen,
