@@ -162,7 +162,7 @@ Press `Ctrl+F1` (`Cmd+F1` on macOS), or use **ADAM > Keyboard > Keyboard Mapper.
 - Click an ADAM key, then press the host key that should drive it, on its own. It stays selected for more host keys; click it again to deselect it.
 - Each ADAM key lists the host keys that drive it, built-in ones first. Click the **x** on one to remove it. Removing a host key's last user binding gives it back its default mapping, while removing a built-in one leaves the host key unbound. Right click the ADAM key to remove all but the built-in ones.
 - Red keys are ones no host key reaches.
-- **This Game** and **All Games**, at the bottom, pick what the changes are for. The mapper starts on This Game. All Games is for fixes to your own keyboard, applied to every game under each game's own changes. With nothing loaded it edits All Games.
+- **This Game** and **All Games**, at the bottom, choose where the changes go. The mapper opens on **This Game**, for the game you're running. **All Games** is for fixes to your own keyboard: they apply to every game, and a game's own change to the same key wins over them. With nothing loaded, only All Games is available.
 - **Reset All**, clicked twice, drops the changes of the side shown.
 - Press the same hotkey again, or click **Close**, to go back.
 
