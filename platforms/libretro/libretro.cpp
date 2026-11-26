@@ -149,6 +149,7 @@ static bool adam_retro_key_down[RETROK_LAST];
 static int pointer_last_x = 0;
 static int pointer_last_y = 0;
 static std::string key_map_path;
+static std::string global_key_map_path;
 static bool key_mapper_was_open = false;
 static bool key_mapping_was_enabled = true;
 
@@ -1775,78 +1776,56 @@ static void show_message(const char* message, unsigned frames)
     environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
 }
 
-static void key_map_load(void)
+static void key_map_read(GC_KeyMapLayer layer, const std::string& path)
 {
     KeyMap* key_map = core->GetKeyMap();
     u8* data = NULL;
     size_t size = 0;
-    char name[4096];
 
-    key_map_path.clear();
-    key_map->SetEnabled(true);
-    key_map->ClearLayer(GC_KEY_MAP_USER);
-    key_map->SetChanged(false);
-    key_mapper_was_open = false;
-    key_mapping_was_enabled = true;
+    key_map->ClearLayer(layer);
+    key_map->SetChanged(layer, false);
 
-    if (core->GetMachine() != GC_MACHINE_ADAM)
-        return;
-
-    strncpy_fit(name, retro_game_path[0] ? path_filename(retro_game_path) : "ADAM", sizeof(name));
-    core->GetKeyMapper()->SetTitle(name);
-
-    char* dot = strrchr(name, '.');
-
-    if (dot)
-        *dot = '\0';
-
-    if (!retro_save_directory[0])
-        return;
-
-    key_map_path = std::string(retro_save_directory) + slash + name + ".keys";
-
-    if (!read_file(key_map_path.c_str(), &data, &size))
+    if (path.empty() || !read_file(path.c_str(), &data, &size))
         return;
 
     std::string text((const char*)data, size);
     std::string error;
     SafeDeleteArray(data);
 
-    if (!key_map->SetLayer(GC_KEY_MAP_USER, text.c_str(), &error))
+    if (!key_map->SetLayer(layer, text.c_str(), &error))
     {
-        key_map->ClearLayer(GC_KEY_MAP_USER);
-        log_cb(RETRO_LOG_ERROR, "Ignoring the key map %s: %s\n", key_map_path.c_str(), error.c_str());
+        key_map->ClearLayer(layer);
+        log_cb(RETRO_LOG_ERROR, "Ignoring the key map %s: %s\n", path.c_str(), error.c_str());
         show_message(("Key map ignored: " + error).c_str(), 240);
     }
 }
 
-static void key_map_save(void)
+static void key_map_write(GC_KeyMapLayer layer, const std::string& path)
 {
     KeyMap* key_map = core->GetKeyMap();
 
-    if (!key_map->IsChanged() || key_map_path.empty())
+    if (!key_map->IsChanged(layer) || path.empty())
         return;
 
-    key_map->SetChanged(false);
-
-    if (key_map->IsLayerEmpty(GC_KEY_MAP_USER))
+    if (key_map->IsLayerEmpty(layer))
     {
         if (IsValidPointer(vfs_interface) && IsValidPointer(vfs_interface->remove))
-            vfs_interface->remove(key_map_path.c_str());
+            vfs_interface->remove(path.c_str());
         else
-            remove(key_map_path.c_str());
+            remove(path.c_str());
 
+        key_map->SetChanged(layer, false);
         return;
     }
 
-    std::string text = "[keys]\n" + key_map->GetLayer(GC_KEY_MAP_USER);
+    std::string text = "[keys]\n" + key_map->GetLayer(layer);
     bool saved = false;
 
     if (IsValidPointer(vfs_interface))
-        saved = vfs_write_file(key_map_path.c_str(), (const u8*)text.data(), text.size());
+        saved = vfs_write_file(path.c_str(), (const u8*)text.data(), text.size());
     else
     {
-        FILE* file = fopen_utf8(key_map_path.c_str(), "wb");
+        FILE* file = fopen_utf8(path.c_str(), "wb");
 
         if (file)
         {
@@ -1855,11 +1834,67 @@ static void key_map_save(void)
         }
     }
 
-    if (!saved)
+    if (saved)
+        key_map->SetChanged(layer, false);
+    else
     {
-        log_cb(RETRO_LOG_ERROR, "Unable to save the key map %s\n", key_map_path.c_str());
+        log_cb(RETRO_LOG_ERROR, "Unable to save the key map %s\n", path.c_str());
         show_message("Unable to save the key map", 180);
     }
+}
+
+static void key_map_load(void)
+{
+    KeyMap* key_map = core->GetKeyMap();
+    char name[4096];
+
+    key_map_path.clear();
+    global_key_map_path.clear();
+    key_map->SetEnabled(true);
+    key_map_read(GC_KEY_MAP_USER, key_map_path);
+    key_map_read(GC_KEY_MAP_GLOBAL, global_key_map_path);
+    key_mapper_was_open = false;
+    key_mapping_was_enabled = true;
+
+    if (core->GetMachine() != GC_MACHINE_ADAM)
+        return;
+
+    if (retro_game_path[0])
+    {
+        strncpy_fit(name, path_filename(retro_game_path), sizeof(name));
+        core->GetKeyMapper()->SetTitle(name);
+
+        char* dot = strrchr(name, '.');
+
+        if (dot)
+            *dot = '\0';
+    }
+    else
+        core->GetKeyMapper()->SetTitle("");
+
+    if (!retro_save_directory[0])
+        return;
+
+    global_key_map_path = std::string(retro_save_directory) + slash + "ADAM.keys";
+    key_map_read(GC_KEY_MAP_GLOBAL, global_key_map_path);
+
+    if (retro_game_path[0])
+        key_map_path = std::string(retro_save_directory) + slash + name + ".keys";
+
+    if ((key_map_path.size() == global_key_map_path.size()) &&
+        ends_with_no_case(key_map_path.c_str(), global_key_map_path.c_str()))
+    {
+        key_map_path.clear();
+        core->GetKeyMapper()->SetTitle("");
+    }
+
+    key_map_read(GC_KEY_MAP_USER, key_map_path);
+}
+
+static void key_map_save(void)
+{
+    key_map_write(GC_KEY_MAP_USER, key_map_path);
+    key_map_write(GC_KEY_MAP_GLOBAL, global_key_map_path);
 }
 
 static void key_map_update(void)
@@ -2765,6 +2800,7 @@ void retro_unload_game(void)
     core->GetKeyMapper()->Close();
     key_map_save();
     key_map_path.clear();
+    global_key_map_path.clear();
     core->AdamReleaseAllKeys();
     core->UnloadContent();
 

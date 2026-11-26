@@ -450,8 +450,8 @@ Exact filters are `cpu.instructions`, `cpu.interrupts`, `vdp.registers`, `vdp.in
 | `controller_macro` | Run ordered `tap`, `press`, `release`, and `wait` input commands |
 | `get_input_state` | Get effective pressed buttons and pending tap releases |
 | `host_key` | Press, release or tap a host key through the ADAM key map, as the host keyboard would; while the keyboard mapper is open it goes to the mapper. Host keys are USB HID names (`a`, `up`, `f1`, `left_shift`...) |
-| `get_key_map` | Get the ADAM key map: `enabled` (key mapping on), `mapper_open`, the per-game `.keys` `file`, the `user` bindings, `remapped` host keys with what they drive now, and the `unreachable` ADAM keys |
-| `set_key_binding` | Bind a `host` key to `keys` for this game and save its `.keys` file: one ADAM key, up to 4 joined with `+`, `none`, or `default` to drop the binding |
+| `get_key_map` | Get the ADAM key map: `enabled` (key mapping on), `mapper_open`, the per-game `.keys` `file`, the `user` bindings, the `global` bindings of `ADAM.keys` (all games), `remapped` host keys with what they drive now, and the `unreachable` ADAM keys |
+| `set_key_binding` | Bind a `host` key to `keys` for this game and save its `.keys` file (with nothing loaded, for all games in `ADAM.keys`): one ADAM key, up to 4 joined with `+`, `none`, or `default` to drop the binding |
 | `set_key_mapping` | Turn the game's key mapping on or off with `enabled`; off, every host key types its **ADAM > Keyboard** key |
 | `open_key_mapper` / `close_key_mapper` | Open the full screen keyboard mapper (ADAM stops until it closes), or close it and save the game's bindings |
 

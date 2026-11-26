@@ -146,6 +146,7 @@ EXTERN void emu_key_mapper_set_buttons(u8 buttons);
 EXTERN bool emu_key_mapping_is_enabled(void);
 EXTERN void emu_key_mapping_toggle(void);
 EXTERN const char* emu_key_map_get_path(void);
+EXTERN const char* emu_key_map_get_global_path(void);
 EXTERN void emu_key_map_save(void);
 EXTERN GC_Machine emu_get_machine(void);
 EXTERN const char* emu_get_content_path(void);

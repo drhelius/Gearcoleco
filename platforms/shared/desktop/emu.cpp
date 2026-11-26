@@ -58,6 +58,7 @@ static Uint64 rewind_last_counter = 0;
 static double rewind_pop_accumulator = 0.0;
 static bool video_recording_output = false;
 static std::string key_map_path;
+static std::string global_key_map_path;
 static SDL_Scancode key_map_built_in_keys[config_adam_key_count];
 static bool key_map_built_in_valid = false;
 
@@ -111,6 +112,9 @@ static void set_debug_identity(GC_Machine machine, const char* content_name);
 static void update_key_map(void);
 static void update_key_map_built_in(void);
 static std::string get_key_map_path(std::string* title);
+static std::string get_global_key_map_path(void);
+static void load_key_map_layer(GC_KeyMapLayer layer, const std::string& path);
+static void save_key_map_layer(GC_KeyMapLayer layer, const std::string& path);
 static void save_key_map(void);
 
 bool emu_init(void)
@@ -786,6 +790,11 @@ void emu_key_mapping_toggle(void)
 const char* emu_key_map_get_path(void)
 {
     return key_map_path.c_str();
+}
+
+const char* emu_key_map_get_global_path(void)
+{
+    return global_key_map_path.c_str();
 }
 
 void emu_key_map_save(void)
@@ -1539,18 +1548,36 @@ static void update_key_map(void)
 
     std::string title;
     std::string path = get_key_map_path(&title);
+    std::string global_path = get_global_key_map_path();
     KeyMap* key_map = gearcoleco->GetKeyMap();
 
     gearcoleco->GetKeyMapper()->SetTitle(title.c_str());
 
-    if (path == key_map_path)
+    if ((path == key_map_path) && (global_path == global_key_map_path))
         return;
 
     save_key_map();
+
+    if (global_path != global_key_map_path)
+    {
+        global_key_map_path = global_path;
+        load_key_map_layer(GC_KEY_MAP_GLOBAL, global_path);
+    }
+
+    if (path == key_map_path)
+        return;
+
     key_map_path = path;
     key_map->SetEnabled(true);
-    key_map->ClearLayer(GC_KEY_MAP_USER);
-    key_map->SetChanged(false);
+    load_key_map_layer(GC_KEY_MAP_USER, path);
+}
+
+static void load_key_map_layer(GC_KeyMapLayer layer, const std::string& path)
+{
+    KeyMap* key_map = gearcoleco->GetKeyMap();
+
+    key_map->ClearLayer(layer);
+    key_map->SetChanged(layer, false);
 
     if (path.empty())
         return;
@@ -1564,9 +1591,9 @@ static void update_key_map(void)
     std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     std::string error;
 
-    if (!key_map->SetLayer(GC_KEY_MAP_USER, text.c_str(), &error))
+    if (!key_map->SetLayer(layer, text.c_str(), &error))
     {
-        key_map->ClearLayer(GC_KEY_MAP_USER);
+        key_map->ClearLayer(layer);
         Log("Ignoring the key map %s: %s", path.c_str(), error.c_str());
         gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Key map ignored", error.c_str(), "key_map");
     }
@@ -1613,6 +1640,10 @@ static std::string get_key_map_path(std::string* title)
         return "";
 
     const char* content = emu_get_content_path();
+
+    if (content[0] == '\0')
+        return "";
+
     const char* directory = get_configurated_dir(config_emulator.savefiles_dir_option, config_emulator.savefiles_path.c_str());
     char folder[4096];
     char name[1024];
@@ -1620,51 +1651,65 @@ static std::string get_key_map_path(std::string* title)
 
     if (!IsValidPointer(directory))
     {
-        if (content[0] != '\0')
-            get_directory(content, folder, sizeof(folder));
-        else
-            strncpy_fit(folder, config_root_path, sizeof(folder));
-
+        get_directory(content, folder, sizeof(folder));
         directory = folder;
     }
 
-    if (content[0] != '\0')
-        get_filename_without_extension(content, name, sizeof(name));
-    else
-        strncpy_fit(name, "ADAM", sizeof(name));
-
-    *title = content[0] != '\0' ? get_filename(content) : "ADAM";
+    get_filename_without_extension(content, name, sizeof(name));
     join_path(directory, (std::string(name) + ".keys").c_str(), path, sizeof(path));
+
+    std::string global = get_global_key_map_path();
+
+    if ((global.size() == strlen(path)) && ends_with_no_case(path, global.c_str()))
+        return "";
+
+    *title = get_filename(content);
     return path;
 }
 
-static void save_key_map(void)
+static std::string get_global_key_map_path(void)
+{
+    const char* directory = get_configurated_dir(config_emulator.savefiles_dir_option, config_emulator.savefiles_path.c_str());
+    char path[4096];
+
+    join_path(IsValidPointer(directory) ? directory : config_root_path, "ADAM.keys", path, sizeof(path));
+    return path;
+}
+
+static void save_key_map_layer(GC_KeyMapLayer layer, const std::string& path)
 {
     KeyMap* key_map = gearcoleco->GetKeyMap();
 
-    if (!key_map->IsChanged() || key_map_path.empty())
+    if (!key_map->IsChanged(layer) || path.empty())
         return;
 
-    key_map->SetChanged(false);
-
-    if (key_map->IsLayerEmpty(GC_KEY_MAP_USER))
+    if (key_map->IsLayerEmpty(layer))
     {
-        remove_file_utf8(key_map_path.c_str());
+        remove_file_utf8(path.c_str());
+        key_map->SetChanged(layer, false);
         return;
     }
 
-    std::string text = "[keys]\n" + key_map->GetLayer(GC_KEY_MAP_USER);
+    std::string text = "[keys]\n" + key_map->GetLayer(layer);
     std::ofstream file;
-    open_ofstream_utf8(file, key_map_path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+    open_ofstream_utf8(file, path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
 
     if (file.is_open())
         file.write(text.c_str(), (std::streamsize)text.size());
 
-    if (!file.is_open() || file.fail())
+    if (file.is_open() && !file.fail())
+        key_map->SetChanged(layer, false);
+    else
     {
-        Log("Unable to save the key map %s", key_map_path.c_str());
-        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Unable to save the key map", key_map_path.c_str(), "key_map");
+        Log("Unable to save the key map %s", path.c_str());
+        gui_notify(gui_NotificationError, ICON_MD_KEYBOARD, "Unable to save the key map", path.c_str(), "key_map");
     }
+}
+
+static void save_key_map(void)
+{
+    save_key_map_layer(GC_KEY_MAP_USER, key_map_path);
+    save_key_map_layer(GC_KEY_MAP_GLOBAL, global_key_map_path);
 }
 
 static void reset_buffers(void)

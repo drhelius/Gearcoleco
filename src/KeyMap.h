@@ -31,6 +31,7 @@ typedef void (*GC_KeyEventFn)(void* context, GC_AdamKey key, bool pressed);
 enum GC_KeyMapLayer
 {
     GC_KEY_MAP_BUILT_IN = 0,
+    GC_KEY_MAP_GLOBAL,
     GC_KEY_MAP_GAME,
     GC_KEY_MAP_USER,
     GC_KEY_MAP_LAYER_COUNT
@@ -72,8 +73,10 @@ public:
     bool Bind(u16 usage, const GC_AdamKey* keys, int count);
     bool Unbind(u16 usage, GC_AdamKey key);
     bool RestoreBuiltIn(u16 usage);
-    bool IsChanged() const;
-    void SetChanged(bool changed);
+    void SetEditLayer(GC_KeyMapLayer layer);
+    GC_KeyMapLayer GetEditLayer() const;
+    bool IsChanged(GC_KeyMapLayer layer) const;
+    void SetChanged(GC_KeyMapLayer layer, bool changed);
 
     static bool IsHostKey(u16 usage);
     static int FindHostKey(const char* name);
@@ -89,8 +92,9 @@ public:
 
 private:
     const GC_KeyMapEntry& GetActiveEntry(u16 usage) const;
+    const GC_KeyMapEntry& GetEntryUpTo(int top, u16 usage, GC_KeyMapLayer* layer) const;
     const GC_KeyMapEntry& GetBaseEntry(GC_KeyMapLayer layer, u16 usage) const;
-    void SetUserEntry(u16 usage, const GC_KeyMapEntry& entry);
+    void SetEditEntry(u16 usage, const GC_KeyMapEntry& entry);
     void PressHostTargets(u16 usage);
     void FlushDeferredHostKeys();
     static bool IsDeferredHostKey(u16 usage);
@@ -109,7 +113,8 @@ private:
     int m_References[GC_ADAM_KEY_COUNT];
     bool m_bEnabled;
     bool m_bBlocked;
-    bool m_bChanged;
+    bool m_bChanged[GC_KEY_MAP_LAYER_COUNT];
+    GC_KeyMapLayer m_EditLayer;
     GC_KeyEventFn m_Callback;
     void* m_pContext;
 };

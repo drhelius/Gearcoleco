@@ -74,8 +74,11 @@ private:
     void DrawLine(int x, int y, const std::string& text, u8 color);
     void DrawChips(int y);
     void DrawButtons();
-    void DrawButton(int x, int y, int width, const char* text);
+    void DrawButton(int x, int y, int width, const char* text, bool active = false, bool enabled = true);
+    void SetEditLayer(GC_KeyMapLayer layer);
+    bool HasGame() const;
     void GetResetRect(int* x, int* y, int* width, int* height) const;
+    void GetLayerRect(int index, int* x, int* y, int* width, int* height) const;
     void GetCloseRect(int* x, int* y, int* width, int* height) const;
     bool IsPointerIn(int x, int y, int width, int height) const;
     std::string DescribeHostKey(u16 usage) const;

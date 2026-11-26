@@ -2203,6 +2203,8 @@ static json KeyMapLayer(KeyMap* key_map, GC_KeyMapLayer layer)
 json DebugAdapter::GetKeyMap()
 {
     KeyMap* key_map = m_core->GetKeyMap();
+    GC_KeyMapLayer edit_layer = key_map->GetEditLayer();
+    key_map->SetEditLayer(GC_KEY_MAP_USER);
     bool reached[GC_ADAM_KEY_COUNT] = { };
     json remapped = json::object();
 
@@ -2234,8 +2236,10 @@ json DebugAdapter::GetKeyMap()
     result["mapper_open"] = m_core->GetKeyMapper()->IsOpen();
     result["file"] = emu_key_map_get_path();
     result["user"] = KeyMapLayer(key_map, GC_KEY_MAP_USER);
+    result["global"] = KeyMapLayer(key_map, GC_KEY_MAP_GLOBAL);
     result["remapped"] = remapped;
     result["unreachable"] = unreachable;
+    key_map->SetEditLayer(edit_layer);
     return result;
 }
 
@@ -2248,6 +2252,8 @@ json DebugAdapter::SetKeyBinding(const std::string& host, const std::string& key
     u16 usage = 0;
     GC_KeyMapEntry entry;
     std::string error;
+    GC_KeyMapLayer layer = emu_key_map_get_path()[0] != 0 ? GC_KEY_MAP_USER : GC_KEY_MAP_GLOBAL;
+    GC_KeyMapLayer edit_layer = key_map->GetEditLayer();
 
     if (keys == "default")
     {
@@ -2258,8 +2264,8 @@ json DebugAdapter::SetKeyBinding(const std::string& host, const std::string& key
 
         GC_KeyMapEntry empty;
         memset(&empty, 0, sizeof(empty));
-        key_map->SetEntry(GC_KEY_MAP_USER, (u16)found, empty);
-        key_map->SetChanged(true);
+        key_map->SetEntry(layer, (u16)found, empty);
+        key_map->SetChanged(layer, true);
         usage = (u16)found;
     }
     else
@@ -2272,12 +2278,16 @@ json DebugAdapter::SetKeyBinding(const std::string& host, const std::string& key
         for (int i = 0; i < entry.count; i++)
             targets[i] = (GC_AdamKey)entry.keys[i];
 
+        key_map->SetEditLayer(layer);
         key_map->Bind(usage, targets, entry.count);
     }
 
     emu_key_map_save();
-    return {{"success", true}, {"host", KeyMap::GetHostKeyName(usage)},
-        {"keys", KeyMap::FormatTargets(key_map->GetEntry(usage))}, {"file", emu_key_map_get_path()}};
+    key_map->SetEditLayer(GC_KEY_MAP_USER);
+    std::string bound = KeyMap::FormatTargets(key_map->GetEntry(usage));
+    key_map->SetEditLayer(edit_layer);
+    const char* file = layer == GC_KEY_MAP_GLOBAL ? emu_key_map_get_global_path() : emu_key_map_get_path();
+    return {{"success", true}, {"host", KeyMap::GetHostKeyName(usage)}, {"keys", bound}, {"file", file}};
 }
 
 json DebugAdapter::SetKeyMapping(bool enabled)

@@ -56,7 +56,8 @@ KeyMap::KeyMap()
     memset(m_References, 0, sizeof(m_References));
     m_bEnabled = true;
     m_bBlocked = false;
-    m_bChanged = false;
+    memset(m_bChanged, 0, sizeof(m_bChanged));
+    m_EditLayer = GC_KEY_MAP_USER;
     ResetBuiltIn();
 }
 
@@ -326,6 +327,11 @@ const GC_KeyMapEntry& KeyMap::GetLayerEntry(GC_KeyMapLayer layer, u16 usage) con
 
 const GC_KeyMapEntry& KeyMap::GetEntry(u16 usage, GC_KeyMapLayer* layer) const
 {
+    return GetEntryUpTo(m_EditLayer, usage, layer);
+}
+
+const GC_KeyMapEntry& KeyMap::GetEntryUpTo(int top, u16 usage, GC_KeyMapLayer* layer) const
+{
     if (!IsHostKey(usage))
     {
         if (IsValidPointer(layer))
@@ -334,7 +340,7 @@ const GC_KeyMapEntry& KeyMap::GetEntry(u16 usage, GC_KeyMapLayer* layer) const
         return kKeyMapEmpty;
     }
 
-    for (int l = GC_KEY_MAP_USER; l > GC_KEY_MAP_BUILT_IN; l--)
+    for (int l = top; l > GC_KEY_MAP_BUILT_IN; l--)
     {
         if (m_Layers[l][usage].set)
         {
@@ -367,7 +373,7 @@ bool KeyMap::Bind(u16 usage, const GC_AdamKey* keys, int count)
         entry.keys[entry.count++] = (u8)keys[i];
     }
 
-    SetUserEntry(usage, entry);
+    SetEditEntry(usage, entry);
     return true;
 }
 
@@ -390,14 +396,14 @@ bool KeyMap::Unbind(u16 usage, GC_AdamKey key)
     if (entry.count == current.count)
         return false;
 
-    if ((entry.count == 0) && (layer == GC_KEY_MAP_USER))
+    if ((entry.count == 0) && (layer == m_EditLayer))
     {
-        m_Layers[GC_KEY_MAP_USER][usage] = kKeyMapEmpty;
-        m_bChanged = true;
+        m_Layers[m_EditLayer][usage] = kKeyMapEmpty;
+        m_bChanged[m_EditLayer] = true;
         return true;
     }
 
-    SetUserEntry(usage, entry);
+    SetEditEntry(usage, entry);
     return true;
 }
 
@@ -408,18 +414,28 @@ bool KeyMap::RestoreBuiltIn(u16 usage)
 
     GC_KeyMapEntry entry = m_Layers[GC_KEY_MAP_BUILT_IN][usage];
     entry.set = true;
-    SetUserEntry(usage, entry);
+    SetEditEntry(usage, entry);
     return true;
 }
 
-bool KeyMap::IsChanged() const
+void KeyMap::SetEditLayer(GC_KeyMapLayer layer)
 {
-    return m_bChanged;
+    m_EditLayer = layer == GC_KEY_MAP_GLOBAL ? GC_KEY_MAP_GLOBAL : GC_KEY_MAP_USER;
 }
 
-void KeyMap::SetChanged(bool changed)
+GC_KeyMapLayer KeyMap::GetEditLayer() const
 {
-    m_bChanged = changed;
+    return m_EditLayer;
+}
+
+bool KeyMap::IsChanged(GC_KeyMapLayer layer) const
+{
+    return m_bChanged[layer];
+}
+
+void KeyMap::SetChanged(GC_KeyMapLayer layer, bool changed)
+{
+    m_bChanged[layer] = changed;
 }
 
 bool KeyMap::IsHostKey(u16 usage)
@@ -585,7 +601,7 @@ std::string KeyMap::FormatTargets(const GC_KeyMapEntry& entry)
 
 const GC_KeyMapEntry& KeyMap::GetActiveEntry(u16 usage) const
 {
-    return m_bEnabled ? GetEntry(usage) : m_Layers[GC_KEY_MAP_BUILT_IN][usage];
+    return GetEntryUpTo(m_bEnabled ? m_EditLayer : GC_KEY_MAP_GLOBAL, usage, NULL);
 }
 
 const GC_KeyMapEntry& KeyMap::GetBaseEntry(GC_KeyMapLayer layer, u16 usage) const
@@ -599,14 +615,14 @@ const GC_KeyMapEntry& KeyMap::GetBaseEntry(GC_KeyMapLayer layer, u16 usage) cons
     return m_Layers[GC_KEY_MAP_BUILT_IN][usage];
 }
 
-void KeyMap::SetUserEntry(u16 usage, const GC_KeyMapEntry& entry)
+void KeyMap::SetEditEntry(u16 usage, const GC_KeyMapEntry& entry)
 {
-    if (SameTargets(entry, GetBaseEntry(GC_KEY_MAP_USER, usage)))
-        m_Layers[GC_KEY_MAP_USER][usage] = kKeyMapEmpty;
+    if (SameTargets(entry, GetBaseEntry(m_EditLayer, usage)))
+        m_Layers[m_EditLayer][usage] = kKeyMapEmpty;
     else
-        m_Layers[GC_KEY_MAP_USER][usage] = entry;
+        m_Layers[m_EditLayer][usage] = entry;
 
-    m_bChanged = true;
+    m_bChanged[m_EditLayer] = true;
 }
 
 void KeyMap::PressHostTargets(u16 usage)

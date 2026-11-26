@@ -37,6 +37,7 @@ static const u8 kColorButton = 12;
 static const u8 kColorWarning = 13;
 static const u8 kColorGame = 14;
 static const u8 kColorBlack = 15;
+static const u8 kColorGlobal = 16;
 
 static const u8 kKeyFlagReachable = 0x01;
 static const u8 kKeyFlagRemapped = 0x02;
@@ -108,11 +109,15 @@ void KeyMapper::Init(KeyMap* pKeyMap, GC_Color_Format format)
     m_Canvas.SetColor(kColorWarning, 250, 196, 72);
     m_Canvas.SetColor(kColorGame, 30, 132, 140);
     m_Canvas.SetColor(kColorBlack, 0, 0, 0);
+    m_Canvas.SetColor(kColorGlobal, 116, 72, 168);
 }
 
 void KeyMapper::SetTitle(const char* title)
 {
     m_Title = IsValidPointer(title) ? title : "";
+
+    if (m_bOpen && !HasGame())
+        m_pKeyMap->SetEditLayer(GC_KEY_MAP_GLOBAL);
 }
 
 void KeyMapper::Open()
@@ -130,6 +135,7 @@ void KeyMapper::Open()
     m_bResetArmed = false;
     m_Message.clear();
     m_ChipCount = 0;
+    m_pKeyMap->SetEditLayer(HasGame() ? GC_KEY_MAP_USER : GC_KEY_MAP_GLOBAL);
     m_pKeyMap->SetBlocked(true);
 }
 
@@ -139,6 +145,7 @@ void KeyMapper::Close()
         return;
 
     m_bOpen = false;
+    m_pKeyMap->SetEditLayer(GC_KEY_MAP_USER);
     m_pKeyMap->SetBlocked(false);
 }
 
@@ -262,9 +269,10 @@ void KeyMapper::Click(int x, int y)
     {
         if (m_bResetArmed)
         {
-            m_pKeyMap->ClearLayer(GC_KEY_MAP_USER);
-            m_pKeyMap->SetChanged(true);
-            m_Message = "Reset to defaults";
+            GC_KeyMapLayer layer = m_pKeyMap->GetEditLayer();
+            m_pKeyMap->ClearLayer(layer);
+            m_pKeyMap->SetChanged(layer, true);
+            m_Message = layer == GC_KEY_MAP_GLOBAL ? "Reset the keys of all games" : "Reset to defaults";
         }
 
         m_bResetArmed = !m_bResetArmed;
@@ -272,6 +280,18 @@ void KeyMapper::Click(int x, int y)
     }
 
     m_bResetArmed = false;
+
+    for (int i = 0; i < 2; i++)
+    {
+        GetLayerRect(i, &bx, &by, &bw, &bh);
+
+        if (IsInside(x, y, bx, by, bw, bh))
+        {
+            SetEditLayer(i == 0 ? GC_KEY_MAP_USER : GC_KEY_MAP_GLOBAL);
+            return;
+        }
+    }
+
     GetCloseRect(&bx, &by, &bw, &bh);
 
     if (IsInside(x, y, bx, by, bw, bh))
@@ -414,7 +434,7 @@ void KeyMapper::DrawTitle()
 {
     std::string hint = m_MapperHotkey.empty() ? "" : m_MapperHotkey + " closes";
     int hint_width = OsdCanvas::GetTextWidth(hint.c_str());
-    std::string title = m_Title;
+    std::string title = m_pKeyMap->GetEditLayer() == GC_KEY_MAP_GLOBAL ? std::string("All games") : m_Title;
     size_t fit = (size_t)MAX(0, (kKeyMapperWidth - (kMargin * 2) - hint_width - 16) / 8);
 
     if (title.size() > fit)
@@ -525,7 +545,7 @@ void KeyMapper::DrawInfo()
     if (m_bResetArmed)
         warning = "Click Reset All again to confirm";
     else if (!m_pKeyMap->IsEnabled())
-        warning = "Mapping off (" + m_MappingHotkey + "): using built-in keys";
+        warning = "Mapping off (" + m_MappingHotkey + "): using built-in and all games keys";
 
     int bx, by, bw, bh;
     GetResetRect(&bx, &by, &bw, &bh);
@@ -541,8 +561,8 @@ void KeyMapper::DrawLine(int x, int y, const std::string& text, u8 color)
 void KeyMapper::DrawChips(int y)
 {
     static const char* const kHead = "Host keys:";
-    static const char* const kTags[GC_KEY_MAP_LAYER_COUNT] = { " (built in)", " (game)", " (user)" };
-    static const u8 kFills[GC_KEY_MAP_LAYER_COUNT] = { kColorKey, kColorGame, kColorRemapped };
+    static const char* const kTags[GC_KEY_MAP_LAYER_COUNT] = { " (built in)", " (all games)", " (game)", " (user)" };
+    static const u8 kFills[GC_KEY_MAP_LAYER_COUNT] = { kColorKey, kColorGlobal, kColorGame, kColorRemapped };
     int start = kMargin + OsdCanvas::GetTextWidth(kHead) + 8;
     int x = start;
     int row = 0;
@@ -606,19 +626,48 @@ void KeyMapper::DrawButtons()
     DrawButton(x, y, width, "Reset All");
     GetCloseRect(&x, &y, &width, &height);
     DrawButton(x, y, width, "Close");
+
+    bool global = m_pKeyMap->GetEditLayer() == GC_KEY_MAP_GLOBAL;
+    GetLayerRect(0, &x, &y, &width, &height);
+    DrawButton(x, y, width, "This Game", !global, HasGame());
+    GetLayerRect(1, &x, &y, &width, &height);
+    DrawButton(x, y, width, "All Games", global);
 }
 
-void KeyMapper::DrawButton(int x, int y, int width, const char* text)
+void KeyMapper::DrawButton(int x, int y, int width, const char* text, bool active, bool enabled)
 {
-    bool hover = IsPointerIn(x, y, width, kButtonHeight);
-    m_Canvas.FillRect(x, y, width, kButtonHeight, kColorButton);
+    bool hover = enabled && IsPointerIn(x, y, width, kButtonHeight);
+    m_Canvas.FillRect(x, y, width, kButtonHeight, active ? kColorSelected : kColorButton);
     m_Canvas.FrameRect(x, y, width, kButtonHeight, hover ? kColorHover : kColorBorder);
-    m_Canvas.DrawText(x + ((width - OsdCanvas::GetTextWidth(text)) / 2), y + 5, text, kColorText, false);
+    m_Canvas.DrawText(x + ((width - OsdCanvas::GetTextWidth(text)) / 2), y + 5, text,
+        !enabled ? kColorDim : active ? kColorDark : kColorText, false);
+}
+
+void KeyMapper::SetEditLayer(GC_KeyMapLayer layer)
+{
+    if ((layer == GC_KEY_MAP_USER) && !HasGame())
+        return;
+
+    m_pKeyMap->SetEditLayer(layer);
+    m_Message = layer == GC_KEY_MAP_GLOBAL ? "Changes now apply to all games" : "Changes now apply to this game";
+}
+
+bool KeyMapper::HasGame() const
+{
+    return !m_Title.empty();
 }
 
 void KeyMapper::GetResetRect(int* x, int* y, int* width, int* height) const
 {
     *x = kMargin;
+    *y = kKeyMapperHeight - kButtonHeight - 6;
+    *width = kButtonWidth;
+    *height = kButtonHeight;
+}
+
+void KeyMapper::GetLayerRect(int index, int* x, int* y, int* width, int* height) const
+{
+    *x = (kKeyMapperWidth / 2) - kButtonWidth - 2 + (index * (kButtonWidth + 4));
     *y = kKeyMapperHeight - kButtonHeight - 6;
     *width = kButtonWidth;
     *height = kButtonHeight;
