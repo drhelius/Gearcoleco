@@ -288,27 +288,34 @@ void DebugAdapter::StepFrame(int frames)
 
 json DebugAdapter::Reset(const json& stop_at_start)
 {
+    OverrideStart(stop_at_start);
     emu_reset(gui_get_force_configuration());
 
     json result = {{"success", true}};
-    ApplyStopAtStart(stop_at_start, result);
+    FinishStart(stop_at_start, result);
     return result;
 }
 
-void DebugAdapter::ApplyStopAtStart(const json& stop_at_start, json& result)
+void DebugAdapter::OverrideStart(const json& stop_at_start)
 {
+    if (!stop_at_start.is_boolean())
+        return;
+
+    config_debug.debug = true;
+    emu_debug_override_start(stop_at_start.get<bool>());
+}
+
+void DebugAdapter::FinishStart(const json& stop_at_start, json& result)
+{
+    emu_debug_clear_start_override();
+
+    if (result.contains("error"))
+        return;
+
     if (stop_at_start.is_boolean())
-    {
-        bool stop = stop_at_start.get<bool>();
-
-        if (stop)
-            config_debug.debug = true;
-
-        emu_debug_start_paused(stop);
         emu_resume();
-    }
 
-    result["paused"] = emu_is_debug_idle();
+    result["paused"] = emu_is_debug_idle() || emu_is_paused();
 }
 
 json DebugAdapter::GetDebugStatus()
@@ -1732,8 +1739,13 @@ json DebugAdapter::StartAdam(const json& stop_at_start)
             {"error_code", "load_in_progress"}};
     if (!emu_are_adam_firmware_paths_valid())
         return AdamFirmwareError(true);
+    OverrideStart(stop_at_start);
+
     if (!gui_start_adam())
+    {
+        emu_debug_clear_start_override();
         return {{"error", "Unable to start ADAM"}, {"error_code", "adam_start_failed"}};
+    }
 
     json result = {
         {"success", true},
@@ -1742,7 +1754,7 @@ json DebugAdapter::StartAdam(const json& stop_at_start)
         {"content_name", emu_get_content_name()}
     };
 
-    ApplyStopAtStart(stop_at_start, result);
+    FinishStart(stop_at_start, result);
     return result;
 }
 
