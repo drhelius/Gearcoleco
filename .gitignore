@@ -77,6 +77,8 @@ platforms/raspberry*/**/gearcoleco
 #Switch
 *.a
 *.d
+*.elf
+*.nro
 
 #Android
 platforms/libretro/libs/
