@@ -94,6 +94,7 @@ public:
         m_tcp_address = "127.0.0.1";
         m_pending_media_load = false;
         m_pending_media_load_request_id = json();
+        m_pending_media_load_stop = json();
         reset_frame_step();
         reset_input_macro();
     }
@@ -129,6 +130,7 @@ public:
         m_responseQueue.Reset();
         m_pending_media_load = false;
         m_pending_media_load_file_path.clear();
+        m_pending_media_load_stop = json();
         reset_frame_step();
         reset_input_macro();
 
@@ -239,10 +241,14 @@ public:
             resp->isError = false;
             resp->result = m_debugAdapter->FinishLoadMedia(m_pending_media_load_file_path);
 
+            if (!resp->result.contains("error"))
+                m_debugAdapter->ApplyStopAtStart(m_pending_media_load_stop, resp->result);
+
             update_response_error(resp);
 
             m_pending_media_load = false;
             m_pending_media_load_file_path.clear();
+            m_pending_media_load_stop = json();
             m_responseQueue.Push(resp);
         }
 
@@ -306,6 +312,7 @@ public:
                     m_pending_media_load = true;
                     m_pending_media_load_request_id = resp->requestId;
                     m_pending_media_load_file_path = file_path;
+                    m_pending_media_load_stop = cmd->arguments.value("stop_at_start", json());
                     SafeDelete(resp);
                 }
 
@@ -802,6 +809,7 @@ private:
     bool m_pending_media_load;
     json m_pending_media_load_request_id;
     std::string m_pending_media_load_file_path;
+    json m_pending_media_load_stop;
     std::vector<DelayedButtonRelease> m_delayedReleases;
     McpFrameStepState m_frameStep;
     McpInputMacroState m_inputMacro;

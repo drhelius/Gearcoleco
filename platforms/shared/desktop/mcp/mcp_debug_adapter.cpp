@@ -286,9 +286,29 @@ void DebugAdapter::StepFrame(int frames)
     emu_debug_step_frames(frames);
 }
 
-void DebugAdapter::Reset()
+json DebugAdapter::Reset(const json& stop_at_start)
 {
     emu_reset(gui_get_force_configuration());
+
+    json result = {{"success", true}};
+    ApplyStopAtStart(stop_at_start, result);
+    return result;
+}
+
+void DebugAdapter::ApplyStopAtStart(const json& stop_at_start, json& result)
+{
+    if (stop_at_start.is_boolean())
+    {
+        bool stop = stop_at_start.get<bool>();
+
+        if (stop)
+            config_debug.debug = true;
+
+        emu_debug_start_paused(stop);
+        emu_resume();
+    }
+
+    result["paused"] = emu_is_debug_idle();
 }
 
 json DebugAdapter::GetDebugStatus()
@@ -1705,7 +1725,7 @@ json DebugAdapter::FinishLoadMedia(const std::string& file_path)
     return result;
 }
 
-json DebugAdapter::StartAdam()
+json DebugAdapter::StartAdam(const json& stop_at_start)
 {
     if (gui_is_rom_loading())
         return {{"error", "Another media load is already in progress"},
@@ -1715,12 +1735,15 @@ json DebugAdapter::StartAdam()
     if (!gui_start_adam())
         return {{"error", "Unable to start ADAM"}, {"error_code", "adam_start_failed"}};
 
-    return {
+    json result = {
         {"success", true},
         {"machine", "ADAM"},
         {"boot_mode", "computer"},
         {"content_name", emu_get_content_name()}
     };
+
+    ApplyStopAtStart(stop_at_start, result);
+    return result;
 }
 
 json DebugAdapter::LoadBios(const std::string& file_path, GC_AdamFirmware firmware)

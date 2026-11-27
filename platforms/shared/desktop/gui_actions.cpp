@@ -89,7 +89,7 @@ void gui_action_reset(void)
     emu_resume();
     emu_reset(gui_get_force_configuration(), emu_get_machine() == GC_MACHINE_ADAM);
 
-    if (config_emulator.start_paused)
+    if (config_emulator.start_paused && !config_debug.debug)
     {
         emu_pause();
 

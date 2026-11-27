@@ -89,6 +89,10 @@ Headless mode is debug mode without rendering, so the debug output settings appl
 ### Pause When Inactive
 While the MCP server is running, the emulator keeps running when its window loses focus, even with **Pause When Inactive** enabled in the **Emulator** menu. The setting keeps its value and applies again once the server stops.
 
+### Start Paused
+
+`--mcp-stdio` and `--mcp-http` turn the debugger on. Loads and resets then follow **Start Paused** in the **Emulator** menu, as outside the debugger: with it off (the default) the game runs, with it on the debugger stops before the first instruction. `load_media`, `start_adam` and `debug_reset` take an optional `stop_at_start` to choose for one call, and their answers say whether emulation is `paused`.
+
 ### Concurrent Clients
 
 The HTTP server accepts repeated valid MCP initialization requests. All connected clients control the same Gearcoleco instance. Individual HTTP requests are serialized, but multi-request debugging workflows are not atomic. Concurrent agents can interfere with each other through pauses, resets, breakpoints, memory writes, media loads, and save states.
@@ -338,7 +342,7 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | `debug_step_over` | Step over calls |
 | `debug_step_out` | Step out of current call |
 | `debug_step_frame` | Step one or more frames. Optional `frames` is 1-1000 (default 1). Optional `mode` is `async` (default, returns after scheduling) or `sync` (returns after all requested frames complete at VBlank). Use `mode: "sync"` when issuing dependent tool calls. |
-| `debug_reset` | Reset the active ColecoVision or ADAM machine |
+| `debug_reset` | Reset the active ColecoVision or ADAM machine; optional `stop_at_start` stops the debugger before the first instruction (default: the Start Paused setting), the answer has `paused` |
 | `debug_get_status` | Get current debug state |
 
 ### CPU & Registers
@@ -418,8 +422,8 @@ This is the full tool catalog. All tools are exposed directly by default. With `
 | Tool | Description |
 |------|-------------|
 | `list_recent_media` | List the 15 most recent cartridge or ADAM media files opened by Gearcoleco |
-| `start_adam` | Start a firmware-only ADAM SmartWriter session |
-| `load_media` | Load a cartridge or ADAM `.ddp`/`.dsk`/`.zip`/`.m3u` file |
+| `start_adam` | Start a firmware-only ADAM SmartWriter session; optional `stop_at_start` as in `debug_reset` |
+| `load_media` | Load a cartridge or ADAM `.ddp`/`.dsk`/`.zip`/`.m3u` file; optional `stop_at_start` as in `debug_reset` |
 | `load_bios` | Load a BIOS or firmware file and save its path. Types: `os7` (ColecoVision BIOS, default), `eos`, and `smartwriter` |
 | `list_save_state_slots` | List save state slots |
 | `select_save_state_slot` | Select active slot |

@@ -967,7 +967,7 @@ static bool finish_started_content(bool load_symbols)
 
     gui_debug_auto_load_settings();
 
-    if (config_emulator.start_paused)
+    if (config_emulator.start_paused && !config_debug.debug)
     {
         emu_pause();
 
